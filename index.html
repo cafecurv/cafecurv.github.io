@@ -1230,8 +1230,9 @@
         <label class="form-label">Your Order</label>
         <textarea class="form-textarea" id="f-order" placeholder="e.g. 1x Einspanner Matcha, 1x OG Takoyaki 8 pcs..."></textarea>
       </div>
-      <button class="submit-btn" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
-      <button class="submit-btn" style="margin-top:0.5rem; background: #1877F2;" onclick="openMessenger()">Open Messenger →</button>
+      <button class="submit-btn" onclick="sendOrderDirect()">
+  Order via Messenger →
+</button>
     </div>
   </div>
 </div>
@@ -1321,41 +1322,24 @@
       msg: `Hi Curv! I'd like to place an order 🍵\n\n👤 Name: ${name}\n📞 Contact: ${contact}\n📍 Address: ${address}\n🚗 Delivery: ${delivery}\n💳 Payment: ${payment}\n\n🛒 Order:\n${order}` };
   }
 
-  function copyOrder() {
-    const { name, contact, address, order, msg } = buildMessage();
-    if (!name || !contact || !address || !order) {
-      alert('Please fill in your name, contact number, address, and order first.');
-      return;
-    }
-    navigator.clipboard.writeText(msg).then(() => {
-      const btn = document.getElementById('copyBtn');
-      btn.textContent = '✓ Copied! Now open Messenger';
-      btn.style.background = '#4a7c59';
-      setTimeout(() => {
-        btn.textContent = 'Copy Order Message';
-        btn.style.background = '';
-      }, 3000);
-    }).catch(() => {
-      // fallback for older browsers
-      const ta = document.createElement('textarea');
-      ta.value = msg;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      const btn = document.getElementById('copyBtn');
-      btn.textContent = '✓ Copied! Now open Messenger';
-      btn.style.background = '#4a7c59';
-      setTimeout(() => {
-        btn.textContent = 'Copy Order Message';
-        btn.style.background = '';
-      }, 3000);
-    });
+function sendOrderDirect() {
+  const { name, contact, address, order, msg } = buildMessage();
+
+  if (!name || !contact || !address || !order) {
+    alert('Please fill in your details first.');
+    return;
   }
 
-  function openMessenger() {
-    window.open('https://www.facebook.com/messages/t/curvsideph', '_blank');
-  }
+  navigator.clipboard.writeText(msg).then(() => {
+    alert("Order copied! Opening Messenger...");
+
+    window.open("https://m.me/curvsideph", "_blank");
+  }).catch(() => {
+    alert("Copy failed. Please copy manually.");
+
+    window.open("https://m.me/curvsideph", "_blank");
+  });
+}
 </script>
 </body>
 </html>
