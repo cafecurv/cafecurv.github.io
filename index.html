@@ -636,7 +636,7 @@
       <span class="category-label seasonal">Matcha</span>
       <div class="menu-item">
         <div class="item-info">
-          <div class="item-name">Matcha Ube Latte <span class="seasonal-badge">Seasonal</span></div>
+          <div class="item-name">Matcha Ube De Leche <span class="seasonal-badge">Seasonal</span></div>
           <div class="item-desc">ceremonial matcha · ube sauce · condensed milk</div>
         </div>
         <div class="item-price"><span class="price-single">₱220</span></div>
@@ -784,7 +784,7 @@
       <span class="category-label seasonal">Seasonal</span>
       <div class="menu-item">
         <div class="item-info">
-          <div class="item-name">Matcha Ube Latte <span class="seasonal-badge">Seasonal</span></div>
+          <div class="item-name">Matcha Ube De Leche <span class="seasonal-badge">Seasonal</span></div>
           <div class="item-desc">ceremonial matcha · ube sauce · condensed milk</div>
         </div>
         <div class="item-price"><span class="price-single">₱220</span></div>
@@ -1230,7 +1230,8 @@
         <label class="form-label">Your Order</label>
         <textarea class="form-textarea" id="f-order" placeholder="e.g. 1x Einspanner Matcha, 1x OG Takoyaki 8 pcs..."></textarea>
       </div>
-      <button class="submit-btn" onclick="sendToMessenger()">Send Order via Messenger →</button>
+      <button class="submit-btn" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
+      <button class="submit-btn" style="margin-top:0.5rem; background: #1877F2;" onclick="openMessenger()">Open Messenger →</button>
     </div>
   </div>
 </div>
@@ -1307,7 +1308,7 @@
     }
   });
 
-  function sendToMessenger() {
+  function buildMessage() {
     const name     = document.getElementById('f-name').value.trim();
     const contact  = document.getElementById('f-contact').value.trim();
     const address  = document.getElementById('f-address').value.trim();
@@ -1316,14 +1317,44 @@
     const delivery = dSel.options[dSel.selectedIndex].text;
     const payment  = pSel.options[pSel.selectedIndex].text;
     const order    = document.getElementById('f-order').value.trim();
+    return { name, contact, address, order,
+      msg: `Hi Curv! I'd like to place an order 🍵\n\n👤 Name: ${name}\n📞 Contact: ${contact}\n📍 Address: ${address}\n🚗 Delivery: ${delivery}\n💳 Payment: ${payment}\n\n🛒 Order:\n${order}` };
+  }
 
+  function copyOrder() {
+    const { name, contact, address, order, msg } = buildMessage();
     if (!name || !contact || !address || !order) {
-      alert('Please fill in your name, contact number, address, and order before sending.');
+      alert('Please fill in your name, contact number, address, and order first.');
       return;
     }
+    navigator.clipboard.writeText(msg).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied! Now open Messenger';
+      btn.style.background = '#4a7c59';
+      setTimeout(() => {
+        btn.textContent = 'Copy Order Message';
+        btn.style.background = '';
+      }, 3000);
+    }).catch(() => {
+      // fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = msg;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied! Now open Messenger';
+      btn.style.background = '#4a7c59';
+      setTimeout(() => {
+        btn.textContent = 'Copy Order Message';
+        btn.style.background = '';
+      }, 3000);
+    });
+  }
 
-    const msg = `Hi Curv! I'd like to place an order 🍵\n\n👤 Name: ${name}\n📞 Contact: ${contact}\n📍 Address: ${address}\n🚗 Delivery: ${delivery}\n💳 Payment: ${payment}\n\n🛒 Order:\n${order}`;
-    window.open(`https://facebook.com/messages/t/curvsideph?text=${encodeURIComponent(msg)}`, '_blank');
+  function openMessenger() {
+    window.open('https://www.facebook.com/messages/t/curvsideph', '_blank');
   }
 </script>
 </body>
