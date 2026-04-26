@@ -984,6 +984,366 @@
 
   .hto-banner-text strong { color: var(--navy); font-weight: 600; }
 
+  /* ── HOW TO ORDER POPUP ── */
+  .hto-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(33,40,66,0.6);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .hto-overlay.show { opacity: 1; pointer-events: all; }
+
+  .hto-card {
+    background: var(--bg);
+    border-radius: 16px;
+    max-width: 360px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(33,40,66,0.25);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+  }
+
+  .hto-overlay.show .hto-card { transform: translateY(0); }
+
+  .hto-top {
+    background: var(--navy);
+    padding: 1.4rem 1.4rem 1.1rem;
+    text-align: center;
+  }
+
+  .hto-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(200,184,154,0.15);
+    border: 1px solid rgba(200,184,154,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+  }
+
+  .hto-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--bg);
+  }
+
+  .hto-subtitle {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.66rem;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  .hto-steps {
+    padding: 1.1rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .hto-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .hto-num {
+    background: var(--navy);
+    color: var(--bg);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .hto-step-title {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--navy);
+  }
+
+  .hto-step-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.64rem;
+    color: var(--gray-mid);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+
+  .hto-footer { padding: 0 1.3rem 1.3rem; }
+
+  .hto-btn {
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .hto-btn:hover { background: #2e3a5c; }
+
+  /* ── FAQ ── */
+  .faq-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(33,40,66,0.4);
+    z-index: 300;
+    backdrop-filter: blur(2px);
+  }
+
+  body.faq-open .faq-overlay { display: block; }
+
+  .faq-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-radius: 16px 16px 0 0;
+    z-index: 301;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .faq-sheet.open { transform: translateY(0); }
+
+  .faq-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.3rem;
+    border-bottom: 0.5px solid var(--bg3);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+  }
+
+  .faq-sheet-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--navy);
+  }
+
+  .faq-close {
+    background: var(--bg3);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    color: var(--navy);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .faq-close:hover { background: var(--accent); }
+
+  .faq-list { padding: 0.5rem 0 2rem; }
+
+  .faq-item { border-bottom: 0.5px solid var(--bg3); }
+  .faq-item:last-child { border-bottom: none; }
+
+  .faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.3rem;
+    cursor: pointer;
+    gap: 1rem;
+    user-select: none;
+  }
+
+  .faq-question span:first-child {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--navy);
+    line-height: 1.4;
+  }
+
+  .faq-arrow {
+    font-size: 0.6rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    transition: transform 0.25s;
+  }
+
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+  .faq-answer {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+    line-height: 1.8;
+    padding: 0 1.3rem 1rem;
+    display: none;
+  }
+
+  .faq-answer strong { color: var(--navy); font-style: normal; }
+  .faq-item.open .faq-answer { display: block; }
+
+  .faq-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 1.2rem;
+    width: 42px;
+    height: 42px;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 50%;
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 198;
+    box-shadow: 0 4px 16px rgba(33,40,66,0.2);
+    transition: background 0.2s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .faq-btn:hover { background: #2e3a5c; transform: scale(1.08); }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--navy);
+    color: var(--bg);
+    padding: 2rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+
+  .footer-logo-line {
+    width: 50px;
+    height: 3px;
+    background: var(--accent);
+    margin: 0 auto 0;
+    border-radius: 2px;
+  }
+
+  .footer-divider {
+    width: 40px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.3);
+    margin: 1rem auto;
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.4rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .footer-info-row {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 300;
+    color: rgba(247,245,240,0.65);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1.6;
+  }
+
+  .footer-info-row strong { color: var(--bg); font-weight: 500; }
+
+  .footer-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.4rem;
+  }
+
+  .footer-social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(247,245,240,0.06);
+    border: 0.5px solid rgba(200,184,154,0.25);
+    color: var(--accent);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 1.5px;
+    font-weight: 400;
+    padding: 0.5rem 0.9rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .footer-social-btn:hover {
+    background: rgba(200,184,154,0.12);
+    border-color: var(--accent);
+  }
+
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(247,245,240,0.25);
+    letter-spacing: 1px;
+  }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -1009,73 +1369,139 @@
 <body>
 
 <!-- HOW TO ORDER POPUP -->
-<div class="hto-overlay hidden" id="htoOverlay">
+<div class="hto-overlay" id="htoOverlay">
   <div class="hto-card">
-    <div class="hto-card-top">
-      <span class="hto-emoji">🍵</span>
-      <div class="hto-card-title">How to Order</div>
-      <div class="hto-card-subtitle">Easy as 1-2-3, promise!</div>
+    <div class="hto-top">
+      <div class="hto-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="hto-title">How to Order</div>
+      <div class="hto-subtitle">Simple steps, fresh sips 🍵</div>
     </div>
     <div class="hto-steps">
       <div class="hto-step">
         <div class="hto-num">1</div>
         <div>
-          <div class="hto-step-title">Browse the menu</div>
-          <div class="hto-step-desc">Use the tabs to explore our drinks, bites, and salads.</div>
+          <div class="hto-step-title">Browse & add items</div>
+          <div class="hto-step-desc">Tap <strong>+</strong> on any item. For sized drinks, choose <strong>R</strong> or <strong>L</strong>.</div>
         </div>
       </div>
       <div class="hto-step">
         <div class="hto-num">2</div>
         <div>
-          <div class="hto-step-title">Tap + to add items</div>
-          <div class="hto-step-desc">Each item has a + button. For drinks, tap R+ or L+ for your preferred size.</div>
+          <div class="hto-step-title">Fill in your details</div>
+          <div class="hto-step-desc">Name, contact number, address, delivery type, and payment.</div>
         </div>
       </div>
       <div class="hto-step">
         <div class="hto-num">3</div>
         <div>
-          <div class="hto-step-title">Fill in your details</div>
-          <div class="hto-step-desc">Name, contact, address, delivery type, and payment method.</div>
+          <div class="hto-step-title">Copy your order</div>
+          <div class="hto-step-desc">Tap <strong>Copy Order Message</strong> — your full order is copied!</div>
         </div>
       </div>
       <div class="hto-step">
         <div class="hto-num">4</div>
         <div>
-          <div class="hto-step-title">Copy your order</div>
-          <div class="hto-step-desc">Tap "Copy Order Message" — your full order is now copied!</div>
-        </div>
-      </div>
-      <div class="hto-step">
-        <div class="hto-num">5</div>
-        <div>
           <div class="hto-step-title">Send via Messenger</div>
-          <div class="hto-step-desc">Tap "Open Messenger" → paste your order → hit send. That's it! 🎉</div>
+          <div class="hto-step-desc">Tap <strong>Open Messenger</strong> → paste → hit send. Done! 🎉</div>
         </div>
       </div>
     </div>
     <div class="hto-footer">
-      <button class="hto-got-it" onclick="dismissHto()">Got it, let's order!</button>
+      <button class="hto-btn" onclick="dismissHto()">Got it, let's order!</button>
     </div>
   </div>
 </div>
 
-<!-- HOW TO ORDER BANNER -->
-<div class="hto-banner" id="htoBanner">
-  <div class="hto-banner-bar" onclick="toggleHtoBanner()">
-    <div class="hto-banner-label">
-      <span class="hto-banner-dot">?</span>
-      How to Order
-    </div>
-    <span class="hto-banner-arrow">▼</span>
+<!-- FAQ OVERLAY -->
+<div class="faq-overlay" onclick="closeFaq()"></div>
+
+<!-- FAQ SHEET -->
+<div class="faq-sheet" id="faqSheet">
+  <div class="faq-sheet-header">
+    <div class="faq-sheet-title">Frequently Asked Questions</div>
+    <button class="faq-close" onclick="closeFaq()">✕</button>
   </div>
-  <div class="hto-banner-content">
-    <div class="hto-banner-step"><div class="hto-banner-num">1</div><div class="hto-banner-text">Browse the menu using the tabs below</div></div>
-    <div class="hto-banner-step"><div class="hto-banner-num">2</div><div class="hto-banner-text">Tap <strong>+</strong> on any item to add it to your cart</div></div>
-    <div class="hto-banner-step"><div class="hto-banner-num">3</div><div class="hto-banner-text">Fill in your <strong>name, contact & address</strong> in the order form</div></div>
-    <div class="hto-banner-step"><div class="hto-banner-num">4</div><div class="hto-banner-text">Tap <strong>Copy Order Message</strong> to copy your order</div></div>
-    <div class="hto-banner-step"><div class="hto-banner-num">5</div><div class="hto-banner-text">Tap <strong>Open Messenger</strong> → paste → send! 🎉</div></div>
+  <div class="faq-list">
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>How do I place an order?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Browse the menu and tap <strong>+</strong> on any item to add it to your cart. For sized drinks tap <strong>R+</strong> or <strong>L+</strong>. Fill in your details, tap <strong>Copy Order Message</strong>, then tap <strong>Open Messenger</strong> — paste and send! That's it. 🎉
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where do you deliver?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We have our own rider covering <strong>Brgy. Santiago</strong> and <strong>Brgy. San Francisco</strong> in General Trias, Cavite. For areas outside our vicinity, we use <strong>Lalamove</strong> — just select it as your delivery type and the fee is shouldered by the customer.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What payment methods do you accept?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We accept <strong>Cash on Delivery (COD)</strong>, <strong>GCash / Maya</strong>, and <strong>Bank Transfer</strong>. For electronic payments, full payment is required before your order is processed. Payment details will be sent via Messenger.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What are your operating hours?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We operate from <strong>morning until midnight</strong>. Hours may vary — follow our Facebook page <strong>@curvsideph</strong> for daily availability updates.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where is your matcha from?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We use <strong>First Flush Ceremonial Grade Matcha</strong> sourced directly from a farmer in Kirishima, Kagoshima Prefecture, Japan. It's a blend of Yabukita, Tsuyu Hikari, Okumidori, and Saemidori cultivars — low bitterness, nutty, creamy, and slightly floral. 🍃
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Do you have allergen information?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Our products may contain allergens including wheat, eggs, dairy, nuts, and seafood. Please message us via Messenger before ordering if you have any allergies or dietary restrictions and we'll be happy to help.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>How long does delivery take?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Delivery time depends on your location and order queue. Our own rider covers nearby barangays quickly. For Lalamove orders, estimated time will be shown in the app. We'll keep you updated via Messenger. 🚗
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Can I request less ice or no sugar?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Absolutely! Use the <strong>Special Requests</strong> field in the order form. Note that less ice or no ice for matcha drinks will result in a non-full cup to maintain taste balance.
+      </div>
+    </div>
+
   </div>
 </div>
+
+<!-- FAQ BUTTON -->
+<button class="faq-btn" onclick="toggleFaq()" id="faqBtn">?</button>
 
 <!-- HEADER -->
 <header>
@@ -1841,6 +2267,47 @@
 
 </main>
 
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-logo-line"></div>
+  <div class="footer-divider"></div>
+  <div class="footer-info">
+    <div class="footer-info-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>4017 Blk 44 Lot 23 Napoli St C2, Bella Vista, Brgy. Santiago, General Trias, Cavite</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Morning until Midnight · Hours may vary</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8l4 2v5h-4"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <span><strong>Dine-in</strong> (Currently Unavailable) · <strong>Delivery</strong> & <strong>In-Store Pick-up</strong> available</span>
+    </div>
+  </div>
+
+  <div class="footer-socials">
+    <!-- Facebook -->
+    <a class="footer-social-btn" href="https://www.facebook.com/cafecurv" target="_blank" aria-label="Facebook">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      <span>cafecurv</span>
+    </a>
+    <!-- Instagram -->
+    <a class="footer-social-btn" href="https://www.instagram.com/cafecurv" target="_blank" aria-label="Instagram">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <span>cafecurv</span>
+    </a>
+    <!-- TikTok -->
+    <a class="footer-social-btn" href="https://www.tiktok.com/@cafecurv" target="_blank" aria-label="TikTok">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+      <span>cafecurv</span>
+    </a>
+  </div>
+
+  <div class="footer-copy">© 2025 Curv · General Trias, Cavite · All rights reserved</div>
+</footer>
+
 <!-- ORDER BAR -->
 <div class="order-bar" id="orderBar">
   <button class="order-btn" onclick="toggleForm()">
@@ -1921,26 +2388,41 @@
 </div>
 
 <script>
-  // ── HOW TO ORDER ──
+  // ── HOW TO ORDER POPUP ──
   function dismissHto() {
-    document.getElementById('htoOverlay').classList.add('hidden');
+    document.getElementById('htoOverlay').classList.remove('show');
     try { localStorage.setItem('curv-hto-seen', '1'); } catch(e) {}
   }
 
-  function toggleHtoBanner() {
-    document.getElementById('htoBanner').classList.toggle('open');
-  }
-
-  // Show popup if not seen before
   window.addEventListener('DOMContentLoaded', () => {
     let seen = false;
     try { seen = localStorage.getItem('curv-hto-seen'); } catch(e) {}
     if (!seen) {
       setTimeout(() => {
-        document.getElementById('htoOverlay').classList.remove('hidden');
-      }, 800);
+        document.getElementById('htoOverlay').classList.add('show');
+      }, 600);
     }
   });
+
+  // ── FAQ ──
+  function toggleFaq() {
+    document.getElementById('faqSheet').classList.toggle('open');
+    document.body.classList.toggle('faq-open');
+  }
+
+  function closeFaq() {
+    document.getElementById('faqSheet').classList.remove('open');
+    document.body.classList.remove('faq-open');
+  }
+
+  function toggleFaqItem(el) {
+    const item = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ── CART ──
   let cart = [];
 
   function addItem(name, variant, price, btn) {
@@ -2136,9 +2618,9 @@
   function copyOrder() {
     const msg = buildMessage();
     if (!msg) return;
+    const btn = document.getElementById('copyBtn');
 
-    const docopy = () => {
-      const btn = document.getElementById('copyBtn');
+    const onCopied = () => {
       btn.textContent = '✓ Copied! Now open Messenger';
       btn.style.background = '#4a7c59';
       setTimeout(() => {
@@ -2147,22 +2629,15 @@
       }, 3000);
     };
 
-    navigator.clipboard.writeText(msg).then(doopy).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = msg;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      doopy();
-    });
-
-    function doopy() { doopy = doopy || doopy; doopy = () => {}; doopy(); }
-
-    // simpler approach
-    try {
-      navigator.clipboard.writeText(msg).then(() => doopy()).catch(() => { fallbackCopy(msg); doopy(); });
-    } catch(e) { fallbackCopy(msg); doopy(); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(msg).then(onCopied).catch(() => {
+        fallbackCopy(msg);
+        onCopied();
+      });
+    } else {
+      fallbackCopy(msg);
+      onCopied();
+    }
   }
 
   function fallbackCopy(text) {
@@ -2177,27 +2652,26 @@
     document.body.removeChild(ta);
   }
 
-  function copyOrder() {
-    const msg = buildMessage();
-    if (!msg) return;
-    const btn = document.getElementById('copyBtn');
-
-    try {
-      navigator.clipboard.writeText(msg).then(() => {
-        btn.textContent = '✓ Copied! Now open Messenger';
-        btn.style.background = '#4a7c59';
-        setTimeout(() => { btn.textContent = 'Copy Order Message'; btn.style.background = ''; }, 3000);
-      });
-    } catch(e) {
-      fallbackCopy(msg);
-      btn.textContent = '✓ Copied! Now open Messenger';
-      btn.style.background = '#4a7c59';
-      setTimeout(() => { btn.textContent = 'Copy Order Message'; btn.style.background = ''; }, 3000);
-    }
-  }
-
   function openMessenger() {
     window.open("https://m.me/curvsideph", "_blank");
+  }
+
+  // ── FAQ ──
+  function toggleFaq() {
+    document.getElementById('faqSheet').classList.toggle('open');
+    document.body.classList.toggle('faq-open');
+  }
+
+  function closeFaq() {
+    document.getElementById('faqSheet').classList.remove('open');
+    document.body.classList.remove('faq-open');
+  }
+
+  function toggleFaqItem(el) {
+    const item = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
   }
 </script>
 </body>
