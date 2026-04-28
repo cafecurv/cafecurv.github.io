@@ -814,7 +814,7 @@
     <h1 class="hero-title">AT THE<br>CURV</h1>
     <div class="hero-accent-line"></div>
     <p class="hero-tagline">"Where uncertainty meets possibility"</p>
-    <p class="hero-mood" id="heroMood">Matcha · Coffee · Bites · Salads — General Trias, Cavite</p>
+    <p class="hero-mood" id="heroMood">Matcha · Coffee · Bites · Salads</p>
     <div class="hero-ctas">
       <a href="menu.html" class="btn-primary">View Menu</a>
       <a href="menu.html" class="btn-secondary">Order Now</a>
@@ -977,8 +977,8 @@
     body.setAttribute('data-mode', isNight ? 'morning' : 'night');
     heroEyebrow.textContent = isNight ? 'Good morning ☀️' : 'Good evening 🌙';
     heroMood.textContent = isNight
-      ? 'Matcha · Coffee · Bites · Salads — General Trias, Cavite'
-      : 'Bites · Frappes · Refreshers · Salads — General Trias, Cavite';
+      ? 'Matcha · Coffee · Bites · Salads'
+      : 'Bites · Frappes · Refreshers · Salads';
     try { localStorage.setItem('curv-mode', isNight ? 'morning' : 'night'); } catch(e) {}
   }
 
@@ -989,7 +989,7 @@
     if (saved === 'night') {
       body.setAttribute('data-mode', 'night');
       heroEyebrow.textContent = 'Good evening 🌙';
-      heroMood.textContent = 'Bites · Frappes · Refreshers · Salads — General Trias, Cavite';
+      heroMood.textContent = 'Bites · Frappes · Refreshers · Salads';
     }
   });
 
