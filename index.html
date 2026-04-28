@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curv — Where Uncertainty Meets Possibility</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<style>
+
+  /* ── TOKENS ── */
+  :root {
+    /* Morning */
+    --bg:         #F7F5F0;
+    --bg2:        #EEECEA;
+    --bg3:        #E5E2DC;
+    --text:       #212842;
+    --text2:      #3E3E3E;
+    --text3:      #6B6760;
+    --accent:     #C8B89A;
+    --accent2:    #A89880;
+    --hero-grad:  linear-gradient(160deg, #F7F5F0 0%, #EDE9E1 100%);
+    --card-bg:    #EEECEA;
+    --card-bdr:   #E5E2DC;
+    --nav-bg:     rgba(247,245,240,0.92);
+    --pill-bg:    #212842;
+    --pill-color: #F7F5F0;
+  }
+
+  [data-mode="night"] {
+    --bg:         #141824;
+    --bg2:        #1C2235;
+    --bg3:        #242C42;
+    --text:       #F0EDE6;
+    --text2:      #C8C0B4;
+    --text3:      #8A8680;
+    --accent:     #C8B89A;
+    --accent2:    #A89880;
+    --hero-grad:  linear-gradient(160deg, #141824 0%, #1A2138 100%);
+    --card-bg:    #1C2235;
+    --card-bdr:   #2A3350;
+    --nav-bg:     rgba(20,24,36,0.92);
+    --pill-bg:    #F0EDE6;
+    --pill-color: #141824;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text2);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.6s ease, color 0.6s ease;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--bg3);
+    transition: background 0.6s ease, border-color 0.6s ease;
+  }
+
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.6s;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover { color: var(--text); }
+
+  .nav-order-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.6s, color 0.6s;
+  }
+
+  /* ── TOGGLE ── */
+  .mode-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg3);
+    background: var(--bg2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.6s, border-color 0.6s;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .mode-toggle:hover { border-color: var(--accent); }
+
+  .toggle-icon {
+    position: absolute;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+  }
+
+  .icon-sun  { transform: rotate(0deg) scale(1); opacity: 1; }
+  .icon-moon { transform: rotate(90deg) scale(0.5); opacity: 0; }
+
+  [data-mode="night"] .icon-sun  { transform: rotate(-90deg) scale(0.5); opacity: 0; }
+  [data-mode="night"] .icon-moon { transform: rotate(0deg) scale(1); opacity: 1; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    background: var(--hero-grad);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7rem 1.5rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.6s ease;
+  }
+
+  .hero-bg-text {
+    position: absolute;
+    font-family: 'Cinzel', serif;
+    font-size: clamp(6rem, 20vw, 16rem);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    opacity: 0.03;
+    user-select: none;
+    pointer-events: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    transition: color 0.6s;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+    font-weight: 500;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.8rem, 8vw, 5.5rem);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 1.2rem;
+    transition: color 0.6s;
+  }
+
+  .hero-accent-line {
+    width: 50px;
+    height: 2px;
+    background: var(--accent);
+    margin: 0 auto 1.4rem;
+    border-radius: 2px;
+  }
+
+  .hero-tagline {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: var(--text3);
+    letter-spacing: 1px;
+    margin-bottom: 2.5rem;
+    line-height: 1.6;
+    transition: color 0.6s;
+  }
+
+  .hero-mood {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2.5rem;
+    font-weight: 400;
+    opacity: 0.8;
+    transition: opacity 0.4s;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.95rem 2rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.6s, color 0.6s, transform 0.15s;
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); }
+
+  .btn-secondary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--bg3);
+    border-radius: 8px;
+    padding: 0.95rem 2rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: border-color 0.2s, color 0.6s, transform 0.15s;
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.4;
+    animation: scrollBounce 2s infinite;
+  }
+
+  .hero-scroll span {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.52rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  @keyframes scrollBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%       { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ── SECTION SHARED ── */
+  .section {
+    padding: 5rem 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+  }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    transition: color 0.6s;
+  }
+
+  .section-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: var(--text3);
+    line-height: 1.8;
+    max-width: 500px;
+    transition: color 0.6s;
+  }
+
+  .section-header { margin-bottom: 3rem; }
+
+  /* ── FEATURED ── */
+  .featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .featured-card {
+    background: var(--card-bg);
+    border: 0.5px solid var(--card-bdr);
+    border-radius: 12px;
+    padding: 1.6rem;
+    transition: background 0.6s, border-color 0.6s, transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .featured-card:hover { transform: translateY(-4px); }
+
+  .featured-card-badge {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.5rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--bg3);
+    border: 0.5px solid var(--accent);
+    border-radius: 10px;
+    padding: 3px 8px;
+    display: inline-block;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    transition: background 0.6s, border-color 0.6s;
+  }
+
+  .featured-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+    transition: color 0.6s;
+  }
+
+  .featured-card-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: var(--text3);
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+    transition: color 0.6s;
+  }
+
+  .featured-card-price {
+    font-family: 'Jost', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    transition: color 0.6s;
+  }
+
+  .featured-card-accent {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: var(--accent);
+    opacity: 0.06;
+    border-radius: 50%;
+    transform: translate(20px, 20px);
+    transition: opacity 0.6s;
+  }
+
+  /* ── PILLARS ── */
+  .pillars-wrap {
+    background: var(--bg2);
+    border-top: 0.5px solid var(--bg3);
+    border-bottom: 0.5px solid var(--bg3);
+    transition: background 0.6s, border-color 0.6s;
+  }
+
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .pillar {
+    padding: 3rem 2rem;
+    border-right: 0.5px solid var(--bg3);
+    text-align: center;
+    transition: border-color 0.6s;
+  }
+
+  .pillar:last-child { border-right: none; }
+
+  .pillar-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.1rem;
+    background: var(--bg);
+    transition: background 0.6s;
+  }
+
+  .pillar-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text);
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+    transition: color 0.6s;
+  }
+
+  .pillar-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: var(--text3);
+    line-height: 1.7;
+    transition: color 0.6s;
+  }
+
+  /* ── STORY ── */
+  .story-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .story-visual {
+    background: var(--card-bg);
+    border: 0.5px solid var(--card-bdr);
+    border-radius: 16px;
+    aspect-ratio: 4/5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.6s, border-color 0.6s;
+  }
+
+  .story-visual-text {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 700;
+    color: var(--text);
+    opacity: 0.06;
+    letter-spacing: 0.1em;
+    user-select: none;
+    transition: color 0.6s;
+  }
+
+  .story-visual-quote {
+    position: absolute;
+    bottom: 2rem;
+    left: 1.5rem;
+    right: 1.5rem;
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    transition: background 0.6s;
+  }
+
+  .story-quote-text {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: var(--text3);
+    line-height: 1.7;
+    transition: color 0.6s;
+  }
+
+  .story-content { }
+
+  .story-body {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 300;
+    color: var(--text2);
+    line-height: 2;
+    margin-bottom: 1.5rem;
+    transition: color 0.6s;
+  }
+
+  .story-body + .story-body { margin-top: -0.5rem; }
+
+  /* ── MENU PREVIEW ── */
+  .menu-preview-wrap {
+    background: var(--text);
+    padding: 5rem 1.5rem;
+    text-align: center;
+    transition: background 0.6s;
+  }
+
+  .menu-preview-inner { max-width: 700px; margin: 0 auto; }
+
+  .menu-preview-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+    font-weight: 500;
+  }
+
+  .menu-preview-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--bg);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    transition: color 0.6s;
+  }
+
+  .menu-preview-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.78rem;
+    color: #C8C0B4;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+  }
+
+  .menu-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .menu-tag {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 0.5px solid rgba(200,184,154,0.3);
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+    font-weight: 400;
+  }
+
+  .menu-preview-btn {
+    display: inline-block;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--bg);
+    color: var(--text);
+    border: none;
+    border-radius: 8px;
+    padding: 1rem 2.5rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+
+  .menu-preview-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--text);
+    color: var(--bg);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+    transition: background 0.6s;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    margin-bottom: 12px;
+    display: inline-block;
+    transition: color 0.6s;
+  }
+
+  .footer-divider {
+    width: 80px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.35);
+    margin: 0 auto 1.4rem;
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .footer-info-row {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 300;
+    color: #C8C0B4;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1.6;
+  }
+
+  .footer-info-row strong { color: var(--bg); font-weight: 500; }
+
+  .footer-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .footer-social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(247,245,240,0.06);
+    border: 0.5px solid rgba(200,184,154,0.25);
+    color: var(--accent);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 1.5px;
+    font-weight: 400;
+    padding: 0.5rem 0.9rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .footer-social-btn:hover { background: rgba(200,184,154,0.12); border-color: var(--accent); }
+
+
+  .footer-legal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .footer-legal-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    color: #C8B89A;
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-legal-link:hover { color: #F7F5F0; }
+
+  .footer-legal-dot {
+    font-size: 0.58rem;
+    color: #8A8680;
+  }
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: #8A8680;
+    letter-spacing: 1px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 680px) {
+    .nav-link { display: none; }
+    .story-wrap { grid-template-columns: 1fr; gap: 2rem; }
+    .story-visual { aspect-ratio: 3/2; }
+    .pillar { border-right: none; border-bottom: 0.5px solid var(--bg3); }
+    .pillar:last-child { border-bottom: none; }
+    .section { padding: 3.5rem 1.2rem; }
+  }
+
+  /* ── ANIMATIONS ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+</style>
+</head>
+<body data-mode="morning">
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">CURV</a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="menu.html" class="nav-link">Menu</a>
+      <a href="#story" class="nav-link">Our Story</a>
+      <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
+        <!-- Sun -->
+        <svg class="toggle-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <!-- Moon -->
+        <svg class="toggle-icon icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <a href="menu.html" class="nav-order-btn">Order Now</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg-text">CURV</div>
+  <div class="hero-content">
+    <div class="hero-eyebrow" id="heroEyebrow">Good morning ☀️</div>
+    <h1 class="hero-title">AT THE<br>CURV</h1>
+    <div class="hero-accent-line"></div>
+    <p class="hero-tagline">"Where uncertainty meets possibility"</p>
+    <p class="hero-mood" id="heroMood">Matcha · Coffee · Bites · Salads — General Trias, Cavite</p>
+    <div class="hero-ctas">
+      <a href="menu.html" class="btn-primary">View Menu</a>
+      <a href="menu.html" class="btn-secondary">Order Now</a>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+  </div>
+</section>
+
+<!-- FEATURED -->
+<div class="section fade-in">
+  <div class="section-header">
+    <div class="section-eyebrow">Now Serving</div>
+    <div class="section-title">Seasonal Mood</div>
+    <p class="section-desc">Limited drops that change with the season — here while they last.</p>
+  </div>
+  <div class="featured-grid">
+    <div class="featured-card">
+      <span class="featured-card-badge">Seasonal</span>
+      <div class="featured-card-name">Matcha Ube Latte</div>
+      <div class="featured-card-desc">ceremonial matcha · ube sauce · condensed milk</div>
+      <div class="featured-card-price">₱220</div>
+      <div class="featured-card-accent"></div>
+    </div>
+    <div class="featured-card">
+      <span class="featured-card-badge">Seasonal</span>
+      <div class="featured-card-name">Double Matcha Cloud</div>
+      <div class="featured-card-desc">ceremonial matcha cold whisk · matcha cold foam · agave</div>
+      <div class="featured-card-price">₱220</div>
+      <div class="featured-card-accent"></div>
+    </div>
+    <div class="featured-card">
+      <span class="featured-card-badge">Seasonal</span>
+      <div class="featured-card-name">Pink Hojicha Latte</div>
+      <div class="featured-card-desc">strawberry cold foam · dark roast hojicha · milk · strawberry purée</div>
+      <div class="featured-card-price">₱205</div>
+      <div class="featured-card-accent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PILLARS -->
+<div class="pillars-wrap fade-in">
+  <div class="pillars-grid">
+    <div class="pillar">
+      <div class="pillar-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      </div>
+      <div class="pillar-title">Ceremonial Matcha</div>
+      <p class="pillar-desc">First Flush, Farmer Direct from Kirishima, Kagoshima. No shortcuts, no compromise.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div class="pillar-title">Bib Gourmand Heart</div>
+      <p class="pillar-desc">Small cafe prices. Every plate styled with intention. Because food deserves to look as good as it tastes.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="pillar-title">Delivery First</div>
+      <p class="pillar-desc">Built for General Trias. Your order, your door. Fresh, fast, and packaged with care.</p>
+    </div>
+  </div>
+</div>
+
+<!-- STORY -->
+<div class="section fade-in" id="story">
+  <div class="story-wrap">
+    <div class="story-visual">
+      <div class="story-visual-text">CURV</div>
+      <div class="story-visual-quote">
+        <p class="story-quote-text">"Life was never meant to be a straight line. The curve is where you find flavor, texture, surprise — it's where the good stuff lives."</p>
+      </div>
+    </div>
+    <div class="story-content">
+      <div class="section-eyebrow">Our Story</div>
+      <div class="section-title">The Curv</div>
+      <p class="section-desc" style="margin-bottom:1.5rem;">Where the name came from.</p>
+      <p class="story-body">Curv wasn't born in a boardroom. It started in a garage in General Trias, driven with a Japanese culture and French Creativity, with zero safety nets — just a leap of faith. Left a stable job to chase something he couldn't yet explain.</p>
+      <p class="story-body">The name comes from the tagline — "where uncertainty meets possibility." Like a curve on a road, life never goes in a straight line. Success doesn't either. But somewhere along those unexpected turns, you find the things that matter most.</p>
+      <p class="story-body">At The Curv, every cup is intentional. Every plate is styled. Every order is handled like it's the only one. Because this isn't just a cafe — it's proof that the curved path is worth taking.</p>
+      <div style="margin-top:2rem;">
+        <a href="menu.html" class="btn-primary">Explore the Menu</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU PREVIEW -->
+<div class="menu-preview-wrap fade-in">
+  <div class="menu-preview-inner">
+    <div class="menu-preview-eyebrow">Full Menu</div>
+    <div class="menu-preview-title">What We Serve</div>
+    <p class="menu-preview-desc">From ceremonial matcha to fire-torched takoyaki — everything crafted with the same obsessive care.</p>
+    <div class="menu-tags">
+      <span class="menu-tag">Matcha & Hojicha</span>
+      <span class="menu-tag">Espresso</span>
+      <span class="menu-tag">Curvccino</span>
+      <span class="menu-tag">Refreshers</span>
+      <span class="menu-tag">Takoyaki</span>
+      <span class="menu-tag">Salad Bar</span>
+    </div>
+    <a href="menu.html" class="menu-preview-btn">View Full Menu & Order</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-divider"></div>
+  <div class="footer-info">
+    <div class="footer-info-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#C8B89A;flex-shrink:0;margin-top:3px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>4017 Blk 44 Lot 23 Napoli St C2, Bella Vista, Brgy. Santiago, General Trias, Cavite</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#C8B89A;flex-shrink:0;margin-top:2px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      <span><strong>Dine-in</strong> (Currently Unavailable)</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#C8B89A;flex-shrink:0"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
+      <span><strong>Delivery</strong> & <strong>In-Store Pick-up</strong> available</span>
+    </div>
+  </div>
+  <div class="footer-socials">
+    <a class="footer-social-btn" href="https://www.facebook.com/cafecurv" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      cafecurv
+    </a>
+    <a class="footer-social-btn" href="https://www.instagram.com/cafecurv" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      cafecurv
+    </a>
+    <a class="footer-social-btn" href="https://www.tiktok.com/@cafecurv" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+      cafecurv
+    </a>
+  </div>
+  <div class="footer-legal">
+    <a href="terms.html" class="footer-legal-link">Terms of Service</a>
+    <span class="footer-legal-dot">·</span>
+    <a href="privacy.html" class="footer-legal-link">Privacy Policy</a>
+  </div>
+  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
+</footer>
+
+<script>
+  // ── MODE TOGGLE ──
+  const body = document.body;
+  const heroEyebrow = document.getElementById('heroEyebrow');
+  const heroMood = document.getElementById('heroMood');
+
+  function toggleMode() {
+    const isNight = body.getAttribute('data-mode') === 'night';
+    body.setAttribute('data-mode', isNight ? 'morning' : 'night');
+    heroEyebrow.textContent = isNight ? 'Good morning ☀️' : 'Good evening 🌙';
+    heroMood.textContent = isNight
+      ? 'Matcha · Coffee · Bites · Salads — General Trias, Cavite'
+      : 'Bites · Frappes · Refreshers · Salads — General Trias, Cavite';
+    try { localStorage.setItem('curv-mode', isNight ? 'morning' : 'night'); } catch(e) {}
+  }
+
+  // Restore saved mode
+  window.addEventListener('DOMContentLoaded', () => {
+    let saved;
+    try { saved = localStorage.getItem('curv-mode'); } catch(e) {}
+    if (saved === 'night') {
+      body.setAttribute('data-mode', 'night');
+      heroEyebrow.textContent = 'Good evening 🌙';
+      heroMood.textContent = 'Bites · Frappes · Refreshers · Salads — General Trias, Cavite';
+    }
+  });
+
+  // ── SCROLL FADE IN ──
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
