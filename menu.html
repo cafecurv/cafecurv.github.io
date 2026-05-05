@@ -998,621 +998,49 @@
     display: flex;
     align-items: center;
     gap: 0.7rem;
-  }
-
-  .hto-banner-num {
-    background: var(--navy);
-    color: var(--bg);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.52rem;
-    font-weight: 700;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .hto-banner-text {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    color: var(--gray-dark);
-  }
-
-  .hto-banner-text strong { color: var(--navy); font-weight: 600; }
-
-  /* ── ICED / HOT TOGGLE ── */
-  .temp-toggle-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: var(--bg3);
-    border-radius: 20px;
-    padding: 3px;
-  }
-
-  .temp-tab {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    font-weight: 500;
-    padding: 5px 14px;
-    border-radius: 16px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    background: transparent;
-    color: var(--gray-light);
-  }
-
-  .temp-tab.active {
-    background: var(--navy);
-    color: var(--bg);
-  }
-
-  .esp-r-btn { display: contents; }
-  .esp-r-divider { display: inline; }
-
-  .esp-hot .esp-r-btn { display: none !important; }
-  .esp-hot .esp-r-divider { display: none !important; }
-  .hto-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(33,40,66,0.6);
-    z-index: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    backdrop-filter: blur(3px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-  }
-
-  .hto-overlay.show { opacity: 1; pointer-events: all; }
-
-  .hto-card {
-    background: var(--bg);
-    border-radius: 16px;
-    max-width: 360px;
-    width: 100%;
-    overflow: hidden;
-    box-shadow: 0 24px 64px rgba(33,40,66,0.25);
-    transform: translateY(20px);
-    transition: transform 0.3s ease;
-  }
-
-  .hto-overlay.show .hto-card { transform: translateY(0); }
-
-  .hto-top {
-    background: var(--navy);
-    padding: 1.4rem 1.4rem 1.1rem;
-    text-align: center;
-  }
-
-  .hto-icon {
-    width: 36px;
-    height: 36px;
-    background: rgba(200,184,154,0.15);
-    border: 1px solid rgba(200,184,154,0.3);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 10px;
-  }
-
-  .hto-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--bg);
-  }
-
-  .hto-subtitle {
     font-family: 'Raleway', sans-serif;
     font-style: italic;
     font-weight: 600;
-    font-size: 0.66rem;
-    color: var(--accent);
-    margin-top: 4px;
-  }
-
-  .hto-steps {
-    padding: 1.1rem 1.3rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-  }
-
-  .hto-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.8rem;
-  }
-
-  .hto-num {
-    background: var(--navy);
-    color: var(--bg);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.58rem;
-    font-weight: 700;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  .hto-step-title {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--navy);
-  }
-
-  .hto-step-desc {
-    font-family: 'Raleway', sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 0.64rem;
+    font-size: 0.68rem;
     color: var(--gray-mid);
-    margin-top: 2px;
-    line-height: 1.5;
   }
 
-  .hto-footer { padding: 0 1.3rem 1.3rem; }
-
-  .hto-btn {
-    width: 100%;
-    padding: 0.85rem;
+  .hto-banner-step-num {
     background: var(--navy);
     color: var(--bg);
-    border: none;
-    border-radius: 8px;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.63rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .hto-btn:hover { background: #2e3a5c; }
-
-  /* ── FAQ ── */
-  .faq-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(33,40,66,0.4);
-    z-index: 300;
-    backdrop-filter: blur(2px);
-  }
-
-  body.faq-open .faq-overlay { display: block; }
-
-  .faq-sheet {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--bg);
-    border-radius: 16px 16px 0 0;
-    z-index: 301;
-    max-height: 80vh;
-    overflow-y: auto;
-    transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
-    max-width: 680px;
-    margin: 0 auto;
-  }
-
-  .faq-sheet.open { transform: translateY(0); }
-
-  .faq-sheet-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1.1rem 1.3rem;
-    border-bottom: 0.5px solid var(--bg3);
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-  }
-
-  .faq-sheet-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-    color: var(--navy);
-  }
-
-  .faq-close {
-    background: var(--bg3);
-    border: none;
-    width: 28px;
-    height: 28px;
     border-radius: 50%;
-    font-size: 0.7rem;
-    color: var(--navy);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-  }
-
-  .faq-close:hover { background: var(--accent); }
-
-  .faq-list { padding: 0.5rem 0 2rem; }
-
-  .faq-item { border-bottom: 0.5px solid var(--bg3); }
-  .faq-item:last-child { border-bottom: none; }
-
-  .faq-question {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.3rem;
-    cursor: pointer;
-    gap: 1rem;
-    user-select: none;
-  }
-
-  .faq-question span:first-child {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: var(--navy);
-    line-height: 1.4;
-  }
-
-  .faq-arrow {
-    font-size: 0.6rem;
-    color: var(--gray-light);
-    flex-shrink: 0;
-    transition: transform 0.25s;
-  }
-
-  .faq-item.open .faq-arrow { transform: rotate(180deg); }
-
-  .faq-answer {
-    font-family: 'Raleway', sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 0.72rem;
-    color: var(--gray-mid);
-    line-height: 1.8;
-    padding: 0 1.3rem 1rem;
-    display: none;
-  }
-
-  .faq-answer strong { color: var(--navy); font-style: normal; }
-  .faq-item.open .faq-answer { display: block; }
-
-  .faq-btn {
-    position: fixed;
-    bottom: 90px;
-    right: 1.2rem;
-    height: 38px;
-    padding: 0 1rem;
-    background: var(--navy);
-    color: var(--bg);
-    border: none;
-    border-radius: 20px;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.62rem;
-    font-weight: 500;
-    letter-spacing: 1.5px;
-    cursor: pointer;
-    z-index: 198;
-    box-shadow: 0 4px 16px rgba(33,40,66,0.2);
-    transition: background 0.2s, transform 0.15s;
-    white-space: nowrap;
-  }
-
-  .faq-btn:hover { background: #2e3a5c; transform: scale(1.04); }
-
-  /* ── FOOTER ── */
-  .site-footer {
-    background: var(--navy);
-    color: var(--bg);
-    padding: 2rem 1.5rem 2.5rem;
-    text-align: center;
-  }
-
-  .footer-logo {
-    font-family: 'Cinzel', serif;
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: 8px;
-    color: var(--bg);
-    margin-bottom: 12px;
-    display: inline-block;
-  }
-
-  .footer-divider {
-    width: 80px;
-    height: 0.5px;
-    background: rgba(200,184,154,0.35);
-    margin: 0 auto 1.2rem;
-  }
-
-  .footer-divider {
-    width: 40px;
-    height: 0.5px;
-    background: rgba(200,184,154,0.3);
-    margin: 1rem auto;
-  }
-
-  .footer-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1.4rem;
-    max-width: 480px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .footer-info-row {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 300;
-    color: #C8C0B4;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 7px;
-    line-height: 1.6;
-  }
-
-  .footer-info-row strong { color: var(--bg); font-weight: 500; }
-
-  .footer-socials {
-    display: flex;
-    justify-content: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.4rem;
-  }
-
-  .footer-social-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(247,245,240,0.06);
-    border: 0.5px solid rgba(200,184,154,0.25);
-    color: var(--accent);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.63rem;
-    letter-spacing: 1.5px;
-    font-weight: 400;
-    padding: 0.5rem 0.9rem;
-    border-radius: 20px;
-    text-decoration: none;
-    transition: background 0.2s, border-color 0.2s;
-  }
-
-  .footer-social-btn:hover {
-    background: rgba(200,184,154,0.12);
-    border-color: var(--accent);
-  }
-
-
-  .footer-legal {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    margin-bottom: 0.6rem;
-  }
-
-  .footer-legal-link {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.58rem;
-    color: rgba(247,245,240,0.35);
-    letter-spacing: 1px;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-
-  .footer-legal-link:hover { color: var(--accent); }
-
-  .footer-legal-dot {
-    font-size: 0.58rem;
-    color: rgba(247,245,240,0.2);
-  }
-  .footer-copy {
-    font-family: 'Jost', sans-serif;
+    width: 18px;
+    height: 18px;
     font-size: 0.55rem;
-    color: rgba(247,245,240,0.25);
-    letter-spacing: 1px;
+    font-weight: 700;
+    font-family: 'Jost', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  @keyframes pop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.35); }
-    100% { transform: scale(1); }
+  @media (max-width: 500px) {
+    main { padding: 0 0.8rem 7rem; }
+    header { padding: 2rem 1rem 1rem; }
+    .logo { font-size: 1.5rem; }
+    .subheader-label { font-size: 0.9rem; }
   }
 
-  .pop { animation: pop 0.2s ease; }
-
-  @media (max-width: 480px) {
-    .logo { font-size: 1.5rem; letter-spacing: 4px; }
-    .subheader-label { font-size: 0.9rem; letter-spacing: 6px; }
-    .nav-tab { font-size: 0.58rem; padding: 0.4rem 0.75rem; }
-    .section-title { font-size: 1.3rem; }
-    .form-float { bottom: 64px; }
-  }
 </style>
 </head>
 <body>
 
-<!-- HOW TO ORDER POPUP -->
-<div class="hto-overlay" id="htoOverlay">
-  <div class="hto-card">
-    <div class="hto-top">
-      <div class="hto-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      </div>
-      <div class="hto-title">How to Order</div>
-      <div class="hto-subtitle">Simple steps, fresh sips 🍵</div>
-    </div>
-    <div class="hto-steps">
-      <div class="hto-step">
-        <div class="hto-num">1</div>
-        <div>
-          <div class="hto-step-title">Browse & add items</div>
-          <div class="hto-step-desc">Tap <strong>+</strong> on any item. For sized drinks, choose <strong>R</strong> or <strong>L</strong>.</div>
-        </div>
-      </div>
-      <div class="hto-step">
-        <div class="hto-num">2</div>
-        <div>
-          <div class="hto-step-title">Fill in your details</div>
-          <div class="hto-step-desc">Name, contact number, address, delivery type, and payment.</div>
-        </div>
-      </div>
-      <div class="hto-step">
-        <div class="hto-num">3</div>
-        <div>
-          <div class="hto-step-title">Copy your order</div>
-          <div class="hto-step-desc">Tap <strong>Copy Order Message</strong> — your full order is copied!</div>
-        </div>
-      </div>
-      <div class="hto-step">
-        <div class="hto-num">4</div>
-        <div>
-          <div class="hto-step-title">Send via Messenger</div>
-          <div class="hto-step-desc">Tap <strong>Open Messenger</strong> → paste → hit send. Done! 🎉</div>
-        </div>
-      </div>
-    </div>
-    <div class="hto-footer">
-      <button class="hto-btn" onclick="dismissHto()">Got it, let's order!</button>
-    </div>
-  </div>
-</div>
-
-<!-- FAQ OVERLAY -->
-<div class="faq-overlay" onclick="closeFaq()"></div>
-
-<!-- FAQ SHEET -->
-<div class="faq-sheet" id="faqSheet">
-  <div class="faq-sheet-header">
-    <div class="faq-sheet-title">Frequently Asked Questions</div>
-    <button class="faq-close" onclick="closeFaq()">✕</button>
-  </div>
-  <div class="faq-list">
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>How do I place an order?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        Browse the menu and tap <strong>+</strong> on any item to add it to your cart. For sized drinks tap <strong>R+</strong> or <strong>L+</strong>. Fill in your details, tap <strong>Copy Order Message</strong>, then tap <strong>Open Messenger</strong> — paste and send! That's it. 🎉
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>Where do you deliver?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        We have our own rider covering <strong>Brgy. Santiago</strong> and <strong>Brgy. San Francisco</strong> in General Trias, Cavite. For areas outside our vicinity, we use <strong>Lalamove</strong> — just select it as your delivery type and the fee is shouldered by the customer.
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>What payment methods do you accept?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        We accept <strong>Cash on Delivery (COD)</strong>, <strong>GCash / Maya</strong>, and <strong>Bank Transfer</strong>. For electronic payments, full payment is required before your order is processed. Payment details will be sent via Messenger.
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>What are your operating hours?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        We operate from <strong>morning until midnight</strong>. Hours may vary — follow our Facebook page <strong>@curvsideph</strong> for daily availability updates.
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>Where is your matcha from?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        We use <strong>First Flush Ceremonial Grade Matcha</strong> sourced directly from a farmer in Kirishima, Kagoshima Prefecture, Japan. It's a blend of Yabukita, Tsuyu Hikari, Okumidori, and Saemidori cultivars — low bitterness, nutty, creamy, and slightly floral. 🍃
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>Do you have allergen information?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        Our products may contain allergens including wheat, eggs, dairy, nuts, and seafood. Please message us via Messenger before ordering if you have any allergies or dietary restrictions and we'll be happy to help.
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>How long does delivery take?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        Delivery time depends on your location and order queue. Our own rider covers nearby barangays quickly. For Lalamove orders, estimated time will be shown in the app. We'll keep you updated via Messenger. 🚗
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaqItem(this)">
-        <span>Can I request less ice or no sugar?</span><span class="faq-arrow">▼</span>
-      </div>
-      <div class="faq-answer">
-        Absolutely! Use the <strong>Special Requests</strong> field in the order form. Note that less ice or no ice for matcha drinks will result in a non-full cup to maintain taste balance.
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- FAQ BUTTON -->
-<button class="faq-btn" onclick="toggleFaq()" id="faqBtn">Got questions?</button>
-
-<!-- SITE NAV -->
-<nav id="siteNav" style="background:var(--bg);border-bottom:0.5px solid var(--bg3);position:relative;z-index:150;padding:0 1.5rem;">
-  <div style="max-width:680px;margin:0 auto;height:48px;display:flex;align-items:center;">
-    <a href="index.html" style="font-family:'Jost',sans-serif;font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray-mid);text-decoration:none;font-weight:400;display:flex;align-items:center;gap:5px;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Home
-    </a>
-  </div>
-</nav>
-
 <!-- HEADER -->
 <header>
-  <div class="logo">AT THE CURV</div>
+  <div class="logo">CURV</div>
   <div class="logo-line"></div>
-  <div class="header-tagline">"Where uncertainty meets possibility"</div>
+  <p class="header-tagline">Where Uncertainty Meets Possibility</p>
 </header>
 
 <!-- SUBHEADER -->
@@ -1621,848 +1049,49 @@
   <div class="subheader-line"></div>
 </div>
 
-<!-- NAV -->
-<div class="nav-wrap">
-  <div class="nav-inner">
-    <div class="nav-menu-label" id="navMenuLabel">MENU</div>
-    <button class="nav-arrow" id="arrowLeft" onclick="scrollNav(-120)">&#8249;</button>
-    <div class="nav-tabs" id="navTabs">
-      <button class="nav-tab active" onclick="showSection('seasonal')">Seasonal Mood</button>
-      <button class="nav-tab" onclick="showSection('matcha')">Matcha & Hojicha</button>
-      <button class="nav-tab" onclick="showSection('espresso')">Espresso</button>
-      <button class="nav-tab" onclick="showSection('blended')">Curvccino</button>
-      <button class="nav-tab" onclick="showSection('refreshers')">Refreshers</button>
-      <button class="nav-tab" onclick="showSection('bites')">Bites</button>
-      <button class="nav-tab" onclick="showSection('salads')">Salads</button>
+<!-- BANNER -->
+<div class="hto-banner" id="htoBanner">
+  <div class="hto-banner-bar" onclick="toggleHTOBanner()">
+    <span class="hto-banner-label">
+      <span class="hto-banner-dot">?</span>
+      How to Order
+    </span>
+    <span class="hto-banner-arrow">›</span>
+  </div>
+  <div class="hto-banner-content">
+    <div class="hto-banner-step">
+      <div class="hto-banner-step-num">1</div>
+      <span>Browse items below and add to cart</span>
     </div>
-    <button class="nav-arrow" id="arrowRight" onclick="scrollNav(120)">&#8250;</button>
+    <div class="hto-banner-step">
+      <div class="hto-banner-step-num">2</div>
+      <span>Fill out your details at checkout</span>
+    </div>
+    <div class="hto-banner-step">
+      <div class="hto-banner-step-num">3</div>
+      <span>We'll send an order confirmation via Messenger</span>
+    </div>
   </div>
 </div>
 
-<main>
-
-  <!-- SEASONAL MOOD -->
-  <section class="section active" id="seasonal">
-    <div class="section-header">
-      <div class="section-title">Seasonal Mood</div>
-      <div class="section-desc">New drops and limited offerings — changes with the season.</div>
-    </div>
-
-    <div class="category">
-      <span class="category-label seasonal">Matcha</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Ube Latte <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · ube sauce · condensed milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Ube Latte', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Double Matcha Cloud <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha cold whisk · matcha cold foam · agave</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Double Matcha Cloud', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Sunrise <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · coconut milk · mango and strawberry purée</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Sunrise', '', 220, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label seasonal">Cloud Series</span>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Ube Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Berry Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label seasonal">Espresso</span>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- MATCHA & HOJICHA -->
-  <section class="section" id="matcha">
-    <div class="section-header">
-      <div class="section-title">Matcha & Hojicha</div>
-      <div class="section-desc">Regular size only · First Flush Ceremonial grade Matcha</div>
-    </div>
-
-    <div class="note-box">
-      <div class="note-label">About Our Matcha</div>
-      <p>Our matcha uses first-harvest Kagoshima matcha with a standard gram serving.</p>
-      <br>
-      <div class="note-row"><span>Origin</span><span>Kirishima, Kagoshima Prefecture, Japan (Farmer Direct)</span></div>
-      <div class="note-row"><span>Harvest</span><span>First Flush</span></div>
-      <div class="note-row"><span>Cultivar</span><span>Blend/Mixed (Yabukita, Tsuyu Hikari, Okumidori, Saemidori)</span></div>
-      <div class="note-row"><span>Color</span><span>SUPER DUPER Green 🍃</span></div>
-      <div class="note-row"><span>Flavor</span><span>Low bitterness · Nutty · Creamy · Pistachio · Slightly floral</span></div>
-      <br>
-      <p>An extra gram of matcha is available for an additional charge. Less ice or no ice will result in a non-full cup.</p>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Signature</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Einspanner Matcha</div>
-          <div class="item-desc">thick sweet cream · ceremonial matcha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Einspanner Matcha', '', 205, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Kagoshima Matcha Cream</div>
-          <div class="item-desc">ceremonial matcha ice cream · ceremonial matcha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Kagoshima Matcha Cream', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Banana Fudge Matcha Latte</div>
-          <div class="item-desc">banana fudge pudding · ceremonial matcha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Banana Fudge Matcha Latte', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cookie Crumb Matcha Latte</div>
-          <div class="item-desc">matcha cookie · ceremonial matcha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Cookie Crumb Matcha Latte', '', 220, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Popular</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Sea Salt Cream Matcha Latte</div>
-          <div class="item-desc">sea salt cream · ceremonial matcha · milk · agave syrup</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Sea Salt Cream Matcha Latte', '', 205, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">CS Matcha Oat Latte</div>
-          <div class="item-desc">ceremonial matcha · oat milk · agave syrup</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱195</span><button class="add-btn" onclick="addItem('CS Matcha Oat Latte', '', 195, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Strawberry Matcha Latte</div>
-          <div class="item-desc">strawberry purée · ceremonial matcha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Strawberry Matcha Latte', '', 205, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Pure Usucha</div>
-          <div class="item-desc">ceremonial matcha · water · that's all.</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱170</span><button class="add-btn" onclick="addItem('Pure Usucha', '', 170, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label seasonal">Seasonal</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Ube Latte <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · ube sauce · condensed milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Ube Latte', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Double Matcha Cloud <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha cold whisk · matcha cold foam · agave</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Double Matcha Cloud', '', 220, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Sunrise <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · coconut milk · mango and strawberry purée</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Sunrise', '', 220, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Hojicha</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Hojicha Latte</div>
-          <div class="item-desc">dark roast hojicha · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱175</span><button class="add-btn" onclick="addItem('Hojicha Latte', '', 175, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Sea Salt Cream Hojicha</div>
-          <div class="item-desc">dark roast hojicha · salted cream · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱195</span><button class="add-btn" onclick="addItem('Sea Salt Cream Hojicha', '', 195, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Pink Hojicha Latte</div>
-          <div class="item-desc">strawberry cold foam · dark roast hojicha · milk · strawberry purée</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Pink Hojicha Latte', '', 205, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ESPRESSO -->
-  <section class="section" id="espresso">
-    <div class="section-header">
-      <div class="section-title">Espresso</div>
-      <div class="section-desc">Heart racing? Totally normal.</div>
-    </div>
-
-    <div class="note-box">
-      <div class="note-label">About Our Beans</div>
-      <p>All espresso drinks are made using our signature premium Napoli Beans (100% Arabica) for smooth, caramel-forward notes.</p>
-      <p>Requesting less ice will result in reduced volume to preserve the drink's balanced taste.</p>
-      <p>Available in iced and hot. Hot drinks are single size only (14oz).</p>
-    </div>
-
-    <div class="category">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-        <span class="category-label" style="margin-bottom:0;">Espresso</span>
-        <div class="temp-toggle-wrap" id="tempToggleWrap" style="margin-bottom:0;">
-          <button class="temp-tab active" id="tabIced" onclick="setTemp('iced')">Iced</button>
-          <button class="temp-tab" id="tabHot" onclick="setTemp('hot')">Hot</button>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Curv Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱129</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Regular', 129, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱145</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Large', 145, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Einspanner Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Spanish Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Caramel Doppio</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Large', 165, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Vanilla Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Large', 150, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Chocolate Mocha</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Caffè Mocha</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Americano</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱119</strong></span><button class="add-btn" onclick="addItem('Americano', 'Regular', 119, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱125</strong></span><button class="add-btn" onclick="addItem('Americano', 'Large', 125, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Non-Espresso</span>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Curv Chocolate</div></div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱149</span><button class="add-btn" onclick="addItem('Curv Chocolate', '', 149, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Ube Cloud Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Berry Cloud Latte</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Add-ons</span>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Espresso Shot</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱45</span><button class="add-btn" onclick="addItem('Espresso Shot (Add-on)', '', 45, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cold Foam</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Foam (Add-on)', '', 25, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cold Brew Jelly</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Brew Jelly (Add-on)', '', 25, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Sub Milk</div>
-          <div class="item-desc">oat · almond · non-fat</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱50</span><button class="add-btn" onclick="addItem('Sub Milk (Add-on)', '', 50, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Sauces</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Sauces (Add-on)', '', 25, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Syrups</div>
-        </div>
-        <div class="item-right">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Syrups (Add-on)', '', 25, this)">+</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CURVCCINO -->
-  <section class="section" id="blended">
-    <div class="section-header">
-      <div class="section-title">Curvccino</div>
-      <div class="section-desc">Ice blended beverages.</div>
-    </div>
-    <div class="category">
-      <span class="category-label">Frappe</span>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Double Chocolate Chip Cream</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Large', 175, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Javachip Brownie Curvccino</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Javachip Jelly Curvccino</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Large', 175, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Strawberries & Cream</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Caramel Curvccino</div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Large', 175, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- REFRESHERS -->
-  <section class="section" id="refreshers">
-    <div class="section-header">
-      <div class="section-title">Refreshers</div>
-      <div class="section-desc">Nature called. We answered with a drink.</div>
-    </div>
-    <div class="category">
-      <span class="category-label">Cold & Fresh</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Dragon Dreams</div>
-          <div class="item-desc">dragon fruit · sweet cream · milk</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Tropic Kiss</div>
-          <div class="item-desc">strawberry lemonade · mango juice · mango bits</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Tokyo Sunrise</div>
-          <div class="item-desc">mango purée · coconut milk · soft cream</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Large', 170, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Hibiscus Cream Tea</div>
-          <div class="item-desc">hibiscus tea · soft sweet cream on top</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Lime Cucumber</div>
-          <div class="item-desc">fresh cucumber · sparkling lemon lime fizz</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- BITES -->
-  <section class="section" id="bites">
-    <div class="section-header">
-      <div class="section-title">Bites</div>
-      <div class="section-desc">Takoyaki and savory appetizers.</div>
-    </div>
-
-    <div class="note-box">
-      <div class="note-label">Allergen Info</div>
-      <p>Please be advised that our products may contain allergens. Kindly check with us before placing your order.</p>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Takoyaki</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">OG Takoyaki</div>
-          <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi</div>
-          <div class="item-variant"><p>Swap octo with: Crab · Shrimp</p></div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '4 pcs', 90, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '8 pcs', 149, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '12 pcs', 219, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Aburi Salmon</div>
-          <div class="item-desc">flamed salmon · veggies · melted cheese · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱105</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '4 pcs', 105, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱200</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '8 pcs', 200, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱300</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '12 pcs', 300, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Oozie Cheese</div>
-          <div class="item-desc">cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '4 pcs', 90, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '8 pcs', 149, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '12 pcs', 219, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Lava Melt</div>
-          <div class="item-desc">cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱95</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '4 pcs', 95, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱165</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '8 pcs', 165, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱230</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '12 pcs', 230, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Classic Veggie</div>
-          <div class="item-desc">veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱139</strong></span><button class="add-btn-pill" onclick="addItem('Classic Veggie', '8 pcs', 139, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱199</strong></span><button class="add-btn-pill" onclick="addItem('Classic Veggie', '12 pcs', 199, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Salted Egg</div>
-          <div class="item-desc">salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱165</strong></span><button class="add-btn-pill" onclick="addItem('Salted Egg', '8 pcs', 165, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱230</strong></span><button class="add-btn-pill" onclick="addItem('Salted Egg', '12 pcs', 230, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Savory</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Shrimp Tempura</div>
-          <div class="item-desc">shrimp tempura · side w/ chips or veggies · tempura sauce</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱179</span><button class="add-btn-pill" onclick="addItem('Shrimp Tempura', '', 179, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Chicken Karaage</div>
-          <div class="item-desc">chicken karaage · side w/ chips or veggies · sauce</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 169, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cream Dory Fillet</div>
-          <div class="item-desc">cream dory · side w/ chips or veggies · sauce</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Cream Dory Fillet', '', 169, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SALADS -->
-  <section class="section" id="salads">
-    <div class="section-header">
-      <div class="section-title">Salad Bar</div>
-      <div class="section-desc">Fresh and light.</div>
-    </div>
-
-    <div class="note-box">
-      <div class="note-label">Allergen Info</div>
-      <p>Please be advised that our products may contain allergens. Kindly check with us before placing your order.</p>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Salads</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Curv Salad</div>
-          <div class="item-desc">croutons · lettuce · cucumber · carrots · tomatoes · mangoes · parmesan cheese · salad dressing</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱159</span><button class="add-btn" onclick="addItem('Curv Salad', '', 159, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Chicken Salad</div>
-          <div class="item-desc">chicken breast · lettuce · cucumber · tomatoes · croutons · parmesan cheese · dressing</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱209</span><button class="add-btn" onclick="addItem('Chicken Salad', '', 209, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Coastal Salad</div>
-          <div class="item-desc">crab mix · chuka wakame · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱179</span><button class="add-btn" onclick="addItem('Coastal Salad', '', 179, this)">+</button></div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Chukawakame Salad</div>
-          <div class="item-desc">100g serving</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱110</span><button class="add-btn" onclick="addItem('Chukawakame Salad', '', 110, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Spring Rolls</span>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Spring Rolls</div>
-          <div class="item-desc">crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱150</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '4 pcs', 150, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Toast & Croiswhich</span>
-      <div class="menu-item unavailable">
-        <div class="item-info">
-          <div class="item-name">Avo Toast on Sourdough <span class="coming-soon-badge">Coming Soon</span></div>
-          <div class="item-desc">avocado smash · cherry tomatoes · egg · microgreens · side w/ chips and dressing</div>
-        </div>
-      </div>
-      <div class="menu-item unavailable">
-        <div class="item-info">
-          <div class="item-name">Omelette Croiswhich <span class="coming-soon-badge">Coming Soon</span></div>
-          <div class="item-desc">eggs · cheese · veggies on Curv croissant · side w/ chips</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- FOOTER -->
-<footer class="site-footer">
-  <div class="footer-logo">CURV</div>
-  <div class="footer-divider"></div>
-  <div class="footer-info">
-    <div class="footer-info-row">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span>4017 Blk 44 Lot 23 Napoli St C2, Bella Vista, Brgy. Santiago, General Trias, Cavite</span>
-    </div>
-    <div class="footer-info-row">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
-      <span><strong>Dine-in</strong> (Currently Unavailable)</span>
-    </div>
-    <div class="footer-info-row">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
-      <span><strong>Delivery</strong> & <strong>In-Store Pick-up</strong> available</span>
-    </div>
+<!-- NAV -->
+<nav class="nav-wrap" id="siteNav">
+  <div class="nav-inner">
+    <span class="nav-menu-label" id="navMenuLabel">MENU</span>
+    <button class="nav-arrow" id="navLeft" onclick="scrollNav(-1)">‹</button>
+    <div class="nav-tabs" id="navTabs"></div>
+    <button class="nav-arrow" id="navRight" onclick="scrollNav(1)">›</button>
   </div>
+</nav>
 
-  <div class="footer-socials">
-    <a class="footer-social-btn" href="https://www.facebook.com/cafecurv" target="_blank" aria-label="Facebook">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-      <span>cafecurv</span>
-    </a>
-    <a class="footer-social-btn" href="https://www.instagram.com/cafecurv" target="_blank" aria-label="Instagram">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      <span>cafecurv</span>
-    </a>
-    <a class="footer-social-btn" href="https://www.tiktok.com/@cafecurv" target="_blank" aria-label="TikTok">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
-      <span>cafecurv</span>
-    </a>
-  </div>
-
-  <div class="footer-legal">
-    <a href="terms.html" class="footer-legal-link">Terms of Service</a>
-    <span class="footer-legal-dot">·</span>
-    <a href="privacy.html" class="footer-legal-link">Privacy Policy</a>
-  </div>
-  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
-</footer>
+<!-- MAIN CONTENT -->
+<main id="main"></main>
 
 <!-- ORDER BAR -->
-<div class="order-bar" id="orderBar">
-  <button class="order-btn" onclick="toggleForm()">
-    Place an Order
-    <span class="cart-badge" id="cartBadge">0</span>
+<div class="order-bar">
+  <button class="order-btn" onclick="openForm()">
+    <span>View Order</span>
+    <div class="cart-badge" id="cartBadge">0</div>
   </button>
 </div>
 
@@ -2472,382 +1101,305 @@
     <div class="form-top-bar">
       <span class="form-top-title">Order Form</span>
       <div class="form-top-actions">
-        <button class="form-minimize-btn" id="minimizeBtn" onclick="toggleMinimize()">Minimize</button>
-        <button class="form-close-btn" onclick="closeForm()">✕ Close</button>
+        <button class="form-minimize-btn" onclick="minimizeForm()">MINIMIZE</button>
+        <button class="form-close-btn" onclick="closeForm()">×</button>
       </div>
     </div>
     <div class="form-minimized-bar" id="minimizedBar">
-      <span class="form-minimized-label">Your order is saved — tap to continue.</span>
-      <button class="form-expand-btn" onclick="toggleMinimize()">Expand ↑</button>
+      <span class="form-minimized-label" id="minimizedLabel"></span>
+      <button class="form-expand-btn" onclick="expandForm()">EXPAND</button>
     </div>
     <div class="form-body" id="formBody">
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input class="form-input" type="text" id="f-name" placeholder="Your full name">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Contact Number</label>
-        <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Complete Address</label>
-        <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Delivery Type</label>
-        <select class="form-select" id="f-delivery">
-          <option value="">Select delivery type</option>
-          <option value="own-santiago">Own Rider — Brgy. Santiago</option>
-          <option value="own-sanfrancisco">Own Rider — Brgy. San Francisco</option>
-          <option value="lalamove">Lalamove (Outside Vicinity)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Payment Method</label>
-        <select class="form-select" id="f-payment">
-          <option value="">Select payment method</option>
-          <option value="cod">Cash on Delivery</option>
-          <option value="gcash">GCash / Maya (Pay before order)</option>
-          <option value="bank">Bank Transfer (Pay before order)</option>
-        </select>
-        <div class="payment-note" id="payment-note"></div>
-      </div>
-
-      <!-- CART -->
-      <div class="form-group">
-        <label class="form-label">Your Order</label>
-        <div class="cart-box" id="cartBox">
-          <div class="cart-empty" id="cartEmpty">No items yet — tap + on any item to add</div>
-          <div id="cartItems"></div>
-          <div class="cart-total" id="cartTotal" style="display:none;">
-            <span class="cart-total-label">Estimated Total</span>
-            <span class="cart-total-amount" id="cartTotalAmount">₱0</span>
-          </div>
+      <!-- Cart -->
+      <div class="cart-box">
+        <div class="cart-empty" id="cartEmpty">Your cart is empty</div>
+        <div id="cartItems"></div>
+        <div class="cart-total" id="cartTotal" style="display:none;">
+          <span class="cart-total-label">Total</span>
+          <span class="cart-total-amount" id="cartAmount">₱0</span>
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Special Requests</label>
-        <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
-      </div>
+      <!-- Form Fields -->
+      <form id="orderForm" onsubmit="submitOrder(event)">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" name="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" name="phone" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delivery Address</label>
+          <textarea class="form-textarea" name="address" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Special Requests</label>
+          <textarea class="form-textarea" name="notes" placeholder="e.g., no ice, extra shot, etc."></textarea>
+        </div>
+        <button type="submit" class="submit-btn">Confirm Order on Messenger</button>
+        <p class="payment-note">💬 You'll be directed to Messenger to confirm payment & delivery details.</p>
+      </form>
+    </div>
+  </div>
+</div>
 
-      <button class="submit-btn" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
-      <button class="submit-btn messenger" onclick="openMessenger()">Open Messenger →</button>
+<!-- HOW TO ORDER POPUP -->
+<div class="hto-overlay hidden" id="htoOverlay">
+  <div class="hto-card">
+    <div class="hto-card-top">
+      <span class="hto-emoji">📋</span>
+      <div class="hto-card-title">How to Order</div>
+      <div class="hto-card-subtitle">3 Easy Steps</div>
+    </div>
+    <div class="hto-steps">
+      <div class="hto-step">
+        <div class="hto-num">1</div>
+        <div>
+          <div class="hto-step-title">Add Items</div>
+          <div class="hto-step-desc">Browse the menu below and tap "Add" to add items to your cart.</div>
+        </div>
+      </div>
+      <div class="hto-step">
+        <div class="hto-num">2</div>
+        <div>
+          <div class="hto-step-title">Fill Details</div>
+          <div class="hto-step-desc">Enter your name, phone, and delivery address in the form.</div>
+        </div>
+      </div>
+      <div class="hto-step">
+        <div class="hto-num">3</div>
+        <div>
+          <div class="hto-step-title">Confirm on Messenger</div>
+          <div class="hto-step-desc">You'll be directed to Messenger to finalize and confirm your order.</div>
+        </div>
+      </div>
+    </div>
+    <div class="hto-footer">
+      <button class="hto-got-it" onclick="closeHTO()">Got It!</button>
     </div>
   </div>
 </div>
 
 <script>
-  // ── ICED / HOT TOGGLE ──
-  function setTemp(mode) {
-    const isHot = mode === 'hot';
-    document.getElementById('espresso').classList.toggle('esp-hot', isHot);
-    document.getElementById('tabIced').classList.toggle('active', !isHot);
-    document.getElementById('tabHot').classList.toggle('active', isHot);
-  }
-
-  // ── MERGE NAV ON SCROLL ──
-  const siteNav = document.getElementById('siteNav');
-  const navWrap = document.querySelector('.nav-wrap');
-  const siteNavHeight = () => siteNav ? siteNav.offsetHeight : 0;
-
-  window.addEventListener('scroll', () => {
-    const scrolled = window.scrollY;
-    // Show MENU label in tab nav after subheader
-    const label = document.getElementById('navMenuLabel');
-    if (subheader) {
-      if (scrolled > subheader.offsetTop + subheader.offsetHeight) {
-        label.classList.add('visible');
-      } else {
-        label.classList.remove('visible');
-      }
+  // Menu Data
+  const menuData = {
+    "Matcha & Hojicha": {
+      desc: "Ceremonial matcha & specialty tea drinks",
+      items: [
+        { name: "Matcha Ube Latte", desc: "ceremonial matcha · ube sauce · condensed milk", prices: { s: 220, m: 240 }, seasonal: true },
+        { name: "Double Matcha Cloud", desc: "ceremonial matcha cold whisk · matcha cold foam · agave", prices: { s: 220 }, seasonal: true },
+        { name: "Pink Hojicha Latte", desc: "strawberry cold foam · dark roast hojicha · milk · strawberry purée", prices: { s: 205, m: 225 }, seasonal: true },
+        { name: "Classic Matcha Latte", desc: "ceremonial matcha · milk of choice · steamed to perfection", prices: { s: 180, m: 200 } },
+        { name: "Matcha Cold Brew", desc: "ceremonial matcha · cold water · agave · ice", prices: { s: 160 } },
+      ]
+    },
+    "Espresso": {
+      desc: "Single-origin & seasonal espresso drinks",
+      items: [
+        { name: "Americano", desc: "double shot · hot water", prices: { s: 120 } },
+        { name: "Cappuccino", desc: "double shot · steamed milk · microfoam", prices: { s: 150, m: 170 } },
+        { name: "Flat White", desc: "double shot · velvety steamed milk", prices: { s: 150, m: 170 } },
+        { name: "Cortado", desc: "espresso · equal parts steamed milk", prices: { s: 140 } },
+      ]
+    },
+    "Curvccino": {
+      desc: "Our signature creations",
+      items: [
+        { name: "The Original Curv", desc: "single-origin espresso · maple syrup · vanilla oat milk · cold foam", prices: { s: 200, m: 220 } },
+        { name: "Chocolate Curv", desc: "espresso · dark chocolate · cold foam · cinnamon", prices: { s: 210, m: 230 } },
+      ]
+    },
+    "Refreshers": {
+      desc: "Cold drinks & juices",
+      items: [
+        { name: "Iced Lemon Tea", desc: "brewed tea · fresh lemon · agave · ice", prices: { s: 140 } },
+        { name: "Strawberry Refresher", desc: "strawberry purée · sparkling water · lime · ice", prices: { s: 160, m: 180 } },
+      ]
+    },
+    "Takoyaki": {
+      desc: "Japanese ball-shaped snacks",
+      items: [
+        { name: "Classic Takoyaki (6pcs)", desc: "octopus · takoyaki sauce · mayo · bonito flakes · seaweed", prices: { regular: 150 } },
+        { name: "Cheese Takoyaki (6pcs)", desc: "octopus · cheese · sauce · mayo · seaweed", prices: { regular: 180 }, seasonal: true },
+      ]
+    },
+    "Salad Bar": {
+      desc: "Fresh, balanced meals",
+      items: [
+        { name: "Garden Greens Bowl", desc: "mixed greens · cherry tomato · cucumber · lemon vinaigrette", prices: { regular: 220 } },
+        { name: "Protein Powerhouse", desc: "quinoa · grilled chicken · avocado · tahini dressing", prices: { regular: 280 } },
+      ]
     }
-    // Merge the two navbars visually
-    if (scrolled > 10) {
-      siteNav && siteNav.classList.add('merged');
-      navWrap && navWrap.classList.add('merged');
-    } else {
-      siteNav && siteNav.classList.remove('merged');
-      navWrap && navWrap.classList.remove('merged');
-    }
-  });
+  };
 
-  // ── HOW TO ORDER POPUP ──
-  function dismissHto() {
-    document.getElementById('htoOverlay').classList.remove('show');
-    try { localStorage.setItem('curv-hto-seen', '1'); } catch(e) {}
-  }
-
-  window.addEventListener('DOMContentLoaded', () => {
-    let seen = false;
-    try { seen = localStorage.getItem('curv-hto-seen'); } catch(e) {}
-    if (!seen) {
-      setTimeout(() => {
-        document.getElementById('htoOverlay').classList.add('show');
-      }, 600);
-    }
-  });
-
-  // ── FAQ ──
-  function toggleFaq() {
-    document.getElementById('faqSheet').classList.toggle('open');
-    document.body.classList.toggle('faq-open');
-  }
-
-  function closeFaq() {
-    document.getElementById('faqSheet').classList.remove('open');
-    document.body.classList.remove('faq-open');
-  }
-
-  function toggleFaqItem(el) {
-    const item = el.closest('.faq-item');
-    const isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-    if (!isOpen) item.classList.add('open');
-  }
-
-  // ── CART ──
   let cart = [];
 
-  function addItem(name, variant, price, btn) {
-    const key = name + '|' + variant;
-    const existing = cart.find(i => i.key === key);
-    if (existing) {
-      existing.qty++;
-    } else {
-      cart.push({ key, name, variant, price, qty: 1 });
-    }
-    renderCart();
-    updateBadge();
+  // Initialize menu
+  function initMenu() {
+    const categories = Object.keys(menuData);
+    const main = document.getElementById('main');
+    const navTabs = document.getElementById('navTabs');
 
-    // open form if closed
-    const f = document.getElementById('formFloat');
-    if (!f.classList.contains('open')) {
-      f.classList.add('open');
-      document.getElementById('formBody').classList.remove('minimized');
-      document.getElementById('minimizedBar').classList.remove('show');
-      document.getElementById('minimizeBtn').textContent = 'Minimize';
-      minimized = false;
-    }
+    categories.forEach((cat, idx) => {
+      const section = document.createElement('div');
+      section.className = 'section' + (idx === 0 ? ' active' : '');
+      section.id = 'section-' + idx;
 
-    // pop animation on button
-    btn.classList.remove('pop');
-    void btn.offsetWidth;
-    btn.classList.add('pop');
-  }
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      header.innerHTML = `<div class="section-title">${cat}</div><div class="section-desc">${menuData[cat].desc}</div>`;
+      section.appendChild(header);
 
-  function removeItem(key) {
-    cart = cart.filter(i => i.key !== key);
-    renderCart();
-    updateBadge();
-  }
+      const categoryDiv = document.createElement('div');
+      categoryDiv.className = 'category';
 
-  function renderCart() {
-    const itemsEl = document.getElementById('cartItems');
-    const emptyEl = document.getElementById('cartEmpty');
-    const totalEl = document.getElementById('cartTotal');
-    const totalAmtEl = document.getElementById('cartTotalAmount');
+      menuData[cat].items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'menu-item';
 
-    if (cart.length === 0) {
-      emptyEl.style.display = 'block';
-      itemsEl.innerHTML = '';
-      totalEl.style.display = 'none';
-      return;
-    }
+        const priceObj = item.prices;
+        let priceHTML = '';
+        if (priceObj.s && priceObj.m) {
+          priceHTML = `<span class="price-rl"><strong>₱${priceObj.s}</strong> / <strong>₱${priceObj.m}</strong></span>`;
+        } else if (priceObj.s) {
+          priceHTML = `<span class="price-single">₱${priceObj.s}</span>`;
+        } else if (priceObj.regular) {
+          priceHTML = `<span class="price-single">₱${priceObj.regular}</span>`;
+        }
 
-    emptyEl.style.display = 'none';
-    totalEl.style.display = 'flex';
-
-    let total = 0;
-    itemsEl.innerHTML = cart.map(item => {
-      total += item.price * item.qty;
-      const label = item.variant ? `${item.name} · ${item.variant}` : item.name;
-      return `
-        <div class="cart-item">
-          <div class="cart-item-left">
-            <span class="cart-item-qty">${item.qty}×</span>
-            <span class="cart-item-name">${label}</span>
+        itemDiv.innerHTML = `
+          <div class="item-info">
+            <div class="item-name">${item.name}${item.seasonal ? '<span class="seasonal-badge">Seasonal</span>' : ''}</div>
+            <div class="item-desc">${item.desc}</div>
           </div>
-          <div class="cart-item-right">
-            <span class="cart-item-price">₱${(item.price * item.qty).toLocaleString()}</span>
-            <button class="cart-remove" onclick="removeItem('${item.key.replace(/'/g, "\\'")}')">×</button>
+          <div class="item-right">
+            ${priceHTML}
+            <button class="add-btn" onclick="addToCart('${item.name}', ${item.prices.s || item.prices.regular}, '${cat}')">+</button>
           </div>
-        </div>`;
-    }).join('');
+        `;
+        categoryDiv.appendChild(itemDiv);
+      });
 
-    totalAmtEl.textContent = '₱' + total.toLocaleString();
+      section.appendChild(categoryDiv);
+      main.appendChild(section);
+
+      // Create nav tab
+      const tab = document.createElement('button');
+      tab.className = 'nav-tab' + (idx === 0 ? ' active' : '');
+      tab.textContent = cat;
+      tab.onclick = () => switchSection(idx);
+      navTabs.appendChild(tab);
+    });
   }
 
-  function updateBadge() {
-    const total = cart.reduce((sum, i) => sum + i.qty, 0);
-    const badge = document.getElementById('cartBadge');
-    badge.textContent = total;
-    badge.classList.toggle('show', total > 0);
-  }
-
-  // ── NAV ──
-  const subheader = document.querySelector('.subheader');
-  const navTabs = document.getElementById('navTabs');
-  const arrowLeft = document.getElementById('arrowLeft');
-  const arrowRight = document.getElementById('arrowRight');
-
-  function updateArrows() {
-    const atStart = navTabs.scrollLeft <= 4;
-    const atEnd = navTabs.scrollLeft + navTabs.clientWidth >= navTabs.scrollWidth - 4;
-    arrowLeft.classList.toggle('show', !atStart);
-    arrowRight.classList.toggle('show', !atEnd);
-  }
-
-  function scrollNav(amount) {
-    navTabs.scrollBy({ left: amount, behavior: 'smooth' });
-  }
-
-  navTabs.addEventListener('scroll', updateArrows);
-  window.addEventListener('resize', updateArrows);
-  setTimeout(updateArrows, 300);
-
-  function showSection(id) {
+  function switchSection(idx) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    event.target.classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('section-' + idx).classList.add('active');
+    document.querySelectorAll('.nav-tab')[idx].classList.add('active');
   }
 
-  // ── FORM ──
-  function toggleForm() {
-    const f = document.getElementById('formFloat');
-    if (f.classList.contains('open')) {
-      closeForm();
+  function addToCart(name, price, category) {
+    cart.push({ name, price, category, id: Date.now() });
+    updateCart();
+  }
+
+  function updateCart() {
+    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    document.getElementById('cartBadge').textContent = cart.length;
+    document.getElementById('cartBadge').classList.toggle('show', cart.length > 0);
+    document.getElementById('minimizedLabel').textContent = `${cart.length} item${cart.length !== 1 ? 's' : ''} · ₱${total}`;
+
+    const cartItemsDiv = document.getElementById('cartItems');
+    cartItemsDiv.innerHTML = '';
+
+    const grouped = {};
+    cart.forEach(item => {
+      if (!grouped[item.name]) grouped[item.name] = { count: 0, price: item.price, total: 0 };
+      grouped[item.name].count++;
+      grouped[item.name].total += item.price;
+    });
+
+    Object.keys(grouped).forEach(name => {
+      const g = grouped[name];
+      const cartItem = document.createElement('div');
+      cartItem.className = 'cart-item';
+      cartItem.innerHTML = `
+        <div class="cart-item-left">
+          <span class="cart-item-qty">${g.count}×</span>
+          <span class="cart-item-name">${name}</span>
+        </div>
+        <div class="cart-item-right">
+          <span class="cart-item-price">₱${g.total}</span>
+          <button class="cart-remove" onclick="removeFromCart('${name}')">−</button>
+        </div>
+      `;
+      cartItemsDiv.appendChild(cartItem);
+    });
+
+    const cartTotal = document.getElementById('cartTotal');
+    if (cart.length > 0) {
+      cartTotal.style.display = 'flex';
+      document.getElementById('cartAmount').textContent = '₱' + total;
+      document.getElementById('cartEmpty').style.display = 'none';
     } else {
-      f.classList.add('open');
-      document.getElementById('formBody').classList.remove('minimized');
-      document.getElementById('minimizedBar').classList.remove('show');
-      document.getElementById('minimizeBtn').textContent = 'Minimize';
-      document.getElementById('orderBar').style.display = 'none';
-      minimized = false;
+      cartTotal.style.display = 'none';
+      document.getElementById('cartEmpty').style.display = 'block';
     }
+  }
+
+  function removeFromCart(name) {
+    const idx = cart.findIndex(item => item.name === name);
+    if (idx !== -1) cart.splice(idx, 1);
+    updateCart();
+  }
+
+  function openForm() {
+    document.getElementById('formFloat').classList.add('open');
   }
 
   function closeForm() {
     document.getElementById('formFloat').classList.remove('open');
-    document.getElementById('orderBar').style.display = 'block';
   }
 
-  let minimized = false;
-  function toggleMinimize() {
-    minimized = !minimized;
-    document.getElementById('formBody').classList.toggle('minimized', minimized);
-    document.getElementById('minimizedBar').classList.toggle('show', minimized);
-    document.getElementById('minimizeBtn').textContent = minimized ? 'Expand ↑' : 'Minimize';
-    document.getElementById('orderBar').style.display = minimized ? 'block' : 'none';
+  function minimizeForm() {
+    document.getElementById('formBody').classList.add('minimized');
+    document.getElementById('minimizedBar').classList.add('show');
   }
 
-  document.getElementById('f-payment').addEventListener('change', function() {
-    const note = document.getElementById('payment-note');
-    note.textContent = (this.value === 'gcash' || this.value === 'bank')
-      ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
-      : '';
-  });
-
-  // ── ORDER ──
-  function buildMessage() {
-    const name     = document.getElementById('f-name').value.trim();
-    const contact  = document.getElementById('f-contact').value.trim();
-    const address  = document.getElementById('f-address').value.trim();
-    const dSel     = document.getElementById('f-delivery');
-    const pSel     = document.getElementById('f-payment');
-    const delivery = dSel.options[dSel.selectedIndex].text;
-    const payment  = pSel.options[pSel.selectedIndex].text;
-    const notes    = document.getElementById('f-notes').value.trim();
-
-    if (!name || !contact || !address) {
-      alert('Please fill in your name, contact number, and address first.');
-      return null;
-    }
-    if (cart.length === 0) {
-      alert('Please add at least one item to your order.');
-      return null;
-    }
-
-    const orderLines = cart.map(i => {
-      const label = i.variant ? `${i.name} (${i.variant})` : i.name;
-      return `  ${i.qty}x ${label} — ₱${(i.price * i.qty).toLocaleString()}`;
-    }).join('\n');
-
-    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-
-    let msg = `Hi Curv! I'd like to place an order 🍵\n\n`;
-    msg += `👤 Name: ${name}\n`;
-    msg += `📞 Contact: ${contact}\n`;
-    msg += `📍 Address: ${address}\n`;
-    msg += `🚗 Delivery: ${delivery}\n`;
-    msg += `💳 Payment: ${payment}\n\n`;
-    msg += `🛒 Order:\n${orderLines}\n\n`;
-    msg += `💰 Estimated Total: ₱${total.toLocaleString()}`;
-    if (notes) msg += `\n\n📝 Notes: ${notes}`;
-
-    return msg;
+  function expandForm() {
+    document.getElementById('formBody').classList.remove('minimized');
+    document.getElementById('minimizedBar').classList.remove('show');
   }
 
-  function copyOrder() {
-    const msg = buildMessage();
-    if (!msg) return;
-    const btn = document.getElementById('copyBtn');
-
-    const onCopied = () => {
-      btn.textContent = '✓ Copied! Now open Messenger';
-      btn.style.background = '#4a7c59';
-      setTimeout(() => {
-        btn.textContent = 'Copy Order Message';
-        btn.style.background = '';
-      }, 3000);
-    };
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(msg).then(onCopied).catch(() => {
-        fallbackCopy(msg);
-        onCopied();
-      });
-    } else {
-      fallbackCopy(msg);
-      onCopied();
-    }
+  function toggleHTOBanner() {
+    document.getElementById('htoBanner').classList.toggle('open');
   }
 
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+  function closeHTO() {
+    document.getElementById('htoOverlay').classList.add('hidden');
   }
 
-  function openMessenger() {
-    window.open("https://m.me/curvsideph", "_blank");
+  function scrollNav(dir) {
+    const navTabs = document.getElementById('navTabs');
+    navTabs.scrollBy({ left: dir * 150, behavior: 'smooth' });
   }
 
-  // ── FAQ ──
-  function toggleFaq() {
-    document.getElementById('faqSheet').classList.toggle('open');
-    document.body.classList.toggle('faq-open');
+  function submitOrder(e) {
+    e.preventDefault();
+    const form = document.getElementById('orderForm');
+    const formData = new FormData(form);
+    const message = encodeURIComponent(
+      `📋 New Order from At The Curv\n\nName: ${formData.get('name')}\nPhone: ${formData.get('phone')}\nAddress: ${formData.get('address')}\n\nItems:\n${cart.map(item => `${item.name} - ₱${item.price}`).join('\n')}\n\nTotal: ₱${cart.reduce((sum, item) => sum + item.price, 0)}\n\nSpecial Requests: ${formData.get('notes') || 'None'}`
+    );
+    window.open(`https://m.me/cafecurv?text=${message}`, '_blank');
   }
 
-  function closeFaq() {
-    document.getElementById('faqSheet').classList.remove('open');
-    document.body.classList.remove('faq-open');
-  }
-
-  function toggleFaqItem(el) {
-    const item = el.closest('.faq-item');
-    const isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-    if (!isOpen) item.classList.add('open');
-  }
+  // Initialize
+  initMenu();
 </script>
+
 </body>
 </html>
