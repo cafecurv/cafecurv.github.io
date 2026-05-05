@@ -674,6 +674,50 @@
     line-height: 1.5;
   }
 
+  /* ── CUSTOMER TYPE TOGGLE ── */
+  .customer-type-toggle {
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .customer-type-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .customer-type-hint {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.63rem;
+    color: var(--gray-mid);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* ── DELIVERY TIME ROW ── */
+  .delivery-time-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .delivery-time-row .temp-toggle-wrap {
+    flex-shrink: 0;
+  }
+
+  .delivery-time-row .form-input {
+    flex: 1;
+  }
+
   /* ── CART ── */
   .cart-box {
     background: var(--bg2);
@@ -814,250 +858,6 @@
   .submit-btn.messenger:hover { background: #1565d8; }
 
   /* ── HOW TO ORDER POPUP ── */
-  .hto-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(33,40,66,0.55);
-    z-index: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    backdrop-filter: blur(2px);
-  }
-
-  .hto-overlay.hidden { display: none; }
-
-  .hto-card {
-    background: var(--bg);
-    border-radius: 16px;
-    max-width: 360px;
-    width: 100%;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(33,40,66,0.2);
-    animation: fadeUp 0.3s ease;
-  }
-
-  .hto-card-top {
-    background: var(--navy);
-    padding: 1.4rem 1.4rem 1rem;
-    text-align: center;
-  }
-
-  .hto-emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
-
-  .hto-card-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--bg);
-  }
-
-  .hto-card-subtitle {
-    font-family: 'Raleway', sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 0.68rem;
-    color: var(--accent);
-    margin-top: 4px;
-  }
-
-  .hto-steps {
-    padding: 1.2rem 1.4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.9rem;
-  }
-
-  .hto-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-  }
-
-  .hto-num {
-    background: var(--navy);
-    color: var(--bg);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    font-weight: 700;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .hto-step-title {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--navy);
-  }
-
-  .hto-step-desc {
-    font-family: 'Raleway', sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 0.65rem;
-    color: var(--gray-mid);
-    margin-top: 2px;
-    line-height: 1.5;
-  }
-
-  .hto-footer { padding: 0 1.4rem 1.4rem; }
-
-  .hto-got-it {
-    width: 100%;
-    padding: 0.85rem;
-    background: var(--navy);
-    color: var(--bg);
-    border: none;
-    border-radius: 8px;
-    font-family: 'Jost', sans-serif;
-    font-size: 0.65rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .hto-got-it:hover { background: #2e3a5c; }
-
-  /* ── HOW TO ORDER BANNER ── */
-  .hto-banner {
-    background: var(--bg2);
-    border-bottom: 0.5px solid var(--bg3);
-    overflow: hidden;
-    max-height: 38px;
-    transition: max-height 0.35s ease;
-  }
-
-  .hto-banner.open { max-height: 280px; }
-
-  .hto-banner-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.6rem 1.2rem;
-    cursor: pointer;
-    max-width: 680px;
-    margin: 0 auto;
-    user-select: none;
-  }
-
-  .hto-banner-label {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--navy);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-
-  .hto-banner-dot {
-    background: var(--accent);
-    color: var(--navy);
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .hto-banner-arrow {
-    font-size: 0.65rem;
-    color: var(--gray-light);
-    transition: transform 0.3s;
-    display: inline-block;
-  }
-
-  .hto-banner.open .hto-banner-arrow { transform: rotate(180deg); }
-
-  .hto-banner-content {
-    padding: 0 1.2rem 1rem;
-    max-width: 680px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-
-  .hto-banner-step {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-  }
-
-  .hto-banner-num {
-    background: var(--navy);
-    color: var(--bg);
-    font-family: 'Jost', sans-serif;
-    font-size: 0.52rem;
-    font-weight: 700;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .hto-banner-text {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.7rem;
-    color: var(--gray-dark);
-  }
-
-  .hto-banner-text strong { color: var(--navy); font-weight: 600; }
-
-  /* ── ICED / HOT TOGGLE ── */
-  .temp-toggle-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: var(--bg3);
-    border-radius: 20px;
-    padding: 3px;
-  }
-
-  .temp-tab {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    font-weight: 500;
-    padding: 5px 14px;
-    border-radius: 16px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    background: transparent;
-    color: var(--gray-light);
-  }
-
-  .temp-tab.active {
-    background: var(--navy);
-    color: var(--bg);
-  }
-
-  .esp-r-btn { display: contents; }
-  .esp-r-divider { display: inline; }
-
-  .esp-hot .esp-r-btn { display: none !important; }
-  .esp-hot .esp-r-divider { display: none !important; }
   .hto-overlay {
     position: fixed;
     inset: 0;
@@ -1341,13 +1141,6 @@
   }
 
   .footer-divider {
-    width: 80px;
-    height: 0.5px;
-    background: rgba(200,184,154,0.35);
-    margin: 0 auto 1.2rem;
-  }
-
-  .footer-divider {
     width: 40px;
     height: 0.5px;
     background: rgba(200,184,154,0.3);
@@ -1408,7 +1201,6 @@
     border-color: var(--accent);
   }
 
-
   .footer-legal {
     display: flex;
     align-items: center;
@@ -1432,12 +1224,49 @@
     font-size: 0.58rem;
     color: rgba(247,245,240,0.2);
   }
+
   .footer-copy {
     font-family: 'Jost', sans-serif;
     font-size: 0.55rem;
     color: rgba(247,245,240,0.25);
     letter-spacing: 1px;
   }
+
+  /* ── ICED / HOT TOGGLE ── */
+  .temp-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg3);
+    border-radius: 20px;
+    padding: 3px;
+  }
+
+  .temp-tab {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    background: transparent;
+    color: var(--gray-light);
+  }
+
+  .temp-tab.active {
+    background: var(--navy);
+    color: var(--bg);
+  }
+
+  .esp-r-btn { display: contents; }
+  .esp-r-divider { display: inline; }
+
+  .esp-hot .esp-r-btn { display: none !important; }
+  .esp-hot .esp-r-divider { display: none !important; }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(6px); }
@@ -1485,7 +1314,7 @@
         <div class="hto-num">2</div>
         <div>
           <div class="hto-step-title">Fill in your details</div>
-          <div class="hto-step-desc">Name, contact number, address, delivery type, and payment.</div>
+          <div class="hto-step-desc">Select <strong>Returning</strong> or <strong>New Customer</strong>. Returning customers only need their name, delivery time, and payment.</div>
         </div>
       </div>
       <div class="hto-step">
@@ -2034,9 +1863,7 @@
     <div class="category">
       <span class="category-label">Add-ons</span>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Espresso Shot</div>
-        </div>
+        <div class="item-info"><div class="item-name">Espresso Shot</div></div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱45</span><button class="add-btn" onclick="addItem('Espresso Shot (Add-on)', '', 45, this)">+</button></div>
@@ -2044,9 +1871,7 @@
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cold Foam</div>
-        </div>
+        <div class="item-info"><div class="item-name">Cold Foam</div></div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Foam (Add-on)', '', 25, this)">+</button></div>
@@ -2054,9 +1879,7 @@
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cold Brew Jelly</div>
-        </div>
+        <div class="item-info"><div class="item-name">Cold Brew Jelly</div></div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Brew Jelly (Add-on)', '', 25, this)">+</button></div>
@@ -2075,9 +1898,7 @@
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Sauces</div>
-        </div>
+        <div class="item-info"><div class="item-name">Sauces</div></div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Sauces (Add-on)', '', 25, this)">+</button></div>
@@ -2085,9 +1906,7 @@
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Syrups</div>
-        </div>
+        <div class="item-info"><div class="item-name">Syrups</div></div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Syrups (Add-on)', '', 25, this)">+</button></div>
@@ -2481,27 +2300,56 @@
       <button class="form-expand-btn" onclick="toggleMinimize()">Expand ↑</button>
     </div>
     <div class="form-body" id="formBody">
+
+      <!-- CUSTOMER TYPE TOGGLE -->
+      <div class="customer-type-toggle">
+        <span class="customer-type-label">Customer Type</span>
+        <div class="temp-toggle-wrap" style="width:100%;justify-content:stretch;">
+          <button class="temp-tab active" id="tabNew" onclick="setCustomerType('new')" style="flex:1;">New Customer</button>
+          <button class="temp-tab" id="tabReturning" onclick="setCustomerType('returning')" style="flex:1;">Returning Customer</button>
+        </div>
+        <div class="customer-type-hint" id="customerTypeHint">Please fill in all required details below.</div>
+      </div>
+
+      <!-- ALWAYS VISIBLE: Name -->
       <div class="form-group">
         <label class="form-label">Full Name</label>
         <input class="form-input" type="text" id="f-name" placeholder="Your full name">
       </div>
-      <div class="form-group">
-        <label class="form-label">Contact Number</label>
-        <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
+
+      <!-- NEW CUSTOMER ONLY FIELDS -->
+      <div id="new-customer-fields">
+        <div class="form-group">
+          <label class="form-label">Contact Number</label>
+          <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Complete Address</label>
+          <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delivery Type</label>
+          <select class="form-select" id="f-delivery">
+            <option value="">Select delivery type</option>
+            <option value="own-rider">Brgy. Santiago / Brgy. San Francisco (Own Rider)</option>
+            <option value="lalamove">Lalamove (Outside Vicinity)</option>
+          </select>
+        </div>
       </div>
+
+      <!-- ALWAYS VISIBLE: Delivery Time -->
       <div class="form-group">
-        <label class="form-label">Complete Address</label>
-        <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
+        <label class="form-label">Time of Delivery</label>
+        <div class="delivery-time-row">
+          <div class="temp-toggle-wrap">
+            <button class="temp-tab active" id="tabAsap" onclick="setDeliveryTime('asap')">ASAP</button>
+            <button class="temp-tab" id="tabSpecific" onclick="setDeliveryTime('specific')">Specific Time</button>
+          </div>
+          <input class="form-input" type="time" id="f-delivery-time" style="display:none;flex:1;">
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Delivery Type</label>
-        <select class="form-select" id="f-delivery">
-          <option value="">Select delivery type</option>
-          <option value="own-santiago">Own Rider — Brgy. Santiago</option>
-          <option value="own-sanfrancisco">Own Rider — Brgy. San Francisco</option>
-          <option value="lalamove">Lalamove (Outside Vicinity)</option>
-        </select>
-      </div>
+
+      <!-- ALWAYS VISIBLE: Payment -->
       <div class="form-group">
         <label class="form-label">Payment Method</label>
         <select class="form-select" id="f-payment">
@@ -2513,7 +2361,7 @@
         <div class="payment-note" id="payment-note"></div>
       </div>
 
-      <!-- CART -->
+      <!-- ALWAYS VISIBLE: Cart -->
       <div class="form-group">
         <label class="form-label">Your Order</label>
         <div class="cart-box" id="cartBox">
@@ -2526,7 +2374,8 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <!-- NEW CUSTOMER ONLY: Special Requests -->
+      <div class="form-group" id="special-requests-field">
         <label class="form-label">Special Requests</label>
         <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
       </div>
@@ -2546,14 +2395,40 @@
     document.getElementById('tabHot').classList.toggle('active', isHot);
   }
 
+  // ── CUSTOMER TYPE ──
+  let customerType = 'new';
+
+  function setCustomerType(type) {
+    customerType = type;
+    const isNew = type === 'new';
+    document.getElementById('tabNew').classList.toggle('active', isNew);
+    document.getElementById('tabReturning').classList.toggle('active', !isNew);
+    document.getElementById('new-customer-fields').style.display = isNew ? 'block' : 'none';
+    document.getElementById('special-requests-field').style.display = isNew ? 'block' : 'none';
+    document.getElementById('customerTypeHint').textContent = isNew
+      ? 'Please fill in all required details below.'
+      : 'Welcome back! Just your name, delivery time, payment, and order.';
+  }
+
+  // ── DELIVERY TIME ──
+  let deliveryTimeMode = 'asap';
+
+  function setDeliveryTime(mode) {
+    deliveryTimeMode = mode;
+    document.getElementById('tabAsap').classList.toggle('active', mode === 'asap');
+    document.getElementById('tabSpecific').classList.toggle('active', mode === 'specific');
+    const timeInput = document.getElementById('f-delivery-time');
+    timeInput.style.display = mode === 'specific' ? 'block' : 'none';
+    if (mode === 'specific') timeInput.focus();
+  }
+
   // ── MERGE NAV ON SCROLL ──
   const siteNav = document.getElementById('siteNav');
   const navWrap = document.querySelector('.nav-wrap');
-  const siteNavHeight = () => siteNav ? siteNav.offsetHeight : 0;
+  const subheader = document.querySelector('.subheader');
 
   window.addEventListener('scroll', () => {
     const scrolled = window.scrollY;
-    // Show MENU label in tab nav after subheader
     const label = document.getElementById('navMenuLabel');
     if (subheader) {
       if (scrolled > subheader.offsetTop + subheader.offsetHeight) {
@@ -2562,7 +2437,6 @@
         label.classList.remove('visible');
       }
     }
-    // Merge the two navbars visually
     if (scrolled > 10) {
       siteNav && siteNav.classList.add('merged');
       navWrap && navWrap.classList.add('merged');
@@ -2620,7 +2494,6 @@
     renderCart();
     updateBadge();
 
-    // open form if closed
     const f = document.getElementById('formFloat');
     if (!f.classList.contains('open')) {
       f.classList.add('open');
@@ -2630,7 +2503,6 @@
       minimized = false;
     }
 
-    // pop animation on button
     btn.classList.remove('pop');
     void btn.offsetWidth;
     btn.classList.add('pop');
@@ -2686,7 +2558,6 @@
   }
 
   // ── NAV ──
-  const subheader = document.querySelector('.subheader');
   const navTabs = document.getElementById('navTabs');
   const arrowLeft = document.getElementById('arrowLeft');
   const arrowRight = document.getElementById('arrowRight');
@@ -2752,17 +2623,32 @@
 
   // ── ORDER ──
   function buildMessage() {
+    const isNew    = customerType === 'new';
     const name     = document.getElementById('f-name').value.trim();
-    const contact  = document.getElementById('f-contact').value.trim();
-    const address  = document.getElementById('f-address').value.trim();
+    const contact  = isNew ? document.getElementById('f-contact').value.trim() : '';
+    const address  = isNew ? document.getElementById('f-address').value.trim() : '';
     const dSel     = document.getElementById('f-delivery');
     const pSel     = document.getElementById('f-payment');
-    const delivery = dSel.options[dSel.selectedIndex].text;
+    const delivery = isNew ? dSel.options[dSel.selectedIndex].text : '';
     const payment  = pSel.options[pSel.selectedIndex].text;
-    const notes    = document.getElementById('f-notes').value.trim();
+    const notes    = isNew ? document.getElementById('f-notes').value.trim() : '';
 
-    if (!name || !contact || !address) {
-      alert('Please fill in your name, contact number, and address first.');
+    // Delivery time
+    const specificTime = document.getElementById('f-delivery-time').value;
+    const deliveryTime = deliveryTimeMode === 'asap'
+      ? 'ASAP'
+      : (specificTime ? formatTime12h(specificTime) : 'Not specified');
+
+    if (!name) {
+      alert('Please fill in your name.');
+      return null;
+    }
+    if (isNew && (!contact || !address)) {
+      alert('Please fill in your contact number and address.');
+      return null;
+    }
+    if (deliveryTimeMode === 'specific' && !specificTime) {
+      alert('Please specify your preferred delivery time.');
       return null;
     }
     if (cart.length === 0) {
@@ -2777,17 +2663,29 @@
 
     const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
-    let msg = `Hi Curv! I'd like to place an order 🍵\n\n`;
+    let msg = `Hi Curv! I'd like to place an order 🍵\n`;
+    msg += isNew ? `` : `[Returning Customer]\n`;
+    msg += `\n`;
     msg += `👤 Name: ${name}\n`;
-    msg += `📞 Contact: ${contact}\n`;
-    msg += `📍 Address: ${address}\n`;
-    msg += `🚗 Delivery: ${delivery}\n`;
+    if (isNew) {
+      msg += `📞 Contact: ${contact}\n`;
+      msg += `📍 Address: ${address}\n`;
+      msg += `🚗 Delivery: ${delivery}\n`;
+    }
+    msg += `⏰ Time of Delivery: ${deliveryTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
     msg += `💰 Estimated Total: ₱${total.toLocaleString()}`;
     if (notes) msg += `\n\n📝 Notes: ${notes}`;
 
     return msg;
+  }
+
+  function formatTime12h(time24) {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
   }
 
   function copyOrder() {
@@ -2829,24 +2727,6 @@
 
   function openMessenger() {
     window.open("https://m.me/curvsideph", "_blank");
-  }
-
-  // ── FAQ ──
-  function toggleFaq() {
-    document.getElementById('faqSheet').classList.toggle('open');
-    document.body.classList.toggle('faq-open');
-  }
-
-  function closeFaq() {
-    document.getElementById('faqSheet').classList.remove('open');
-    document.body.classList.remove('faq-open');
-  }
-
-  function toggleFaqItem(el) {
-    const item = el.closest('.faq-item');
-    const isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-    if (!isOpen) item.classList.add('open');
   }
 </script>
 </body>
