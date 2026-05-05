@@ -995,7 +995,7 @@
     position: fixed;
     inset: 0;
     background: rgba(33,40,66,0.4);
-    z-index: 300;
+    z-index: 210;
     backdrop-filter: blur(2px);
   }
 
@@ -1006,7 +1006,7 @@
     bottom: 0; left: 0; right: 0;
     background: var(--bg);
     border-radius: 16px 16px 0 0;
-    z-index: 301;
+    z-index: 211;
     max-height: 80vh;
     overflow-y: auto;
     transform: translateY(100%);
@@ -1267,6 +1267,61 @@
 
   .esp-hot .esp-r-btn { display: none !important; }
   .esp-hot .esp-r-divider { display: none !important; }
+  .esp-hot .esp-l-size { display: none; }
+
+  /* ── HOT MODE NOTICE ── */
+  .esp-hot-notice {
+    display: none;
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.63rem;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg2);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .esp-hot .esp-hot-notice { display: block; }
+
+  /* ── CART QTY CONTROLS ── */
+  .cart-qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .cart-qty-btn {
+    background: var(--bg3);
+    border: none;
+    color: var(--navy);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .cart-qty-btn:hover { background: var(--accent); }
+
+  .cart-qty-num {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--navy);
+    min-width: 16px;
+    text-align: center;
+  }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(6px); }
@@ -1517,21 +1572,21 @@
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Ube Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Berry Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -1542,14 +1597,14 @@
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -1755,80 +1810,82 @@
         </div>
       </div>
 
+      <p class="esp-hot-notice">Hot drinks are served in a single size cup (12oz).</p>
+
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Curv Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱129</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Regular', 129, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱145</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Large', 145, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱129</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Regular', 129, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱145</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Large', 145, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Einspanner Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Spanish Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Caramel Doppio</div></div>
+        <div class="item-info"><div class="item-name">Caramel Macchiato</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Large', 165, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱165</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Large', 165, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Vanilla Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Large', 150, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱150</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Large', 150, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">White Chocolate Mocha</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Caffè Mocha</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Americano</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱119</strong></span><button class="add-btn" onclick="addItem('Americano', 'Regular', 119, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱125</strong></span><button class="add-btn" onclick="addItem('Americano', 'Large', 125, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱119</strong></span><button class="add-btn" onclick="addItem('Americano', 'Regular', 119, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱125</strong></span><button class="add-btn" onclick="addItem('Americano', 'Large', 125, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -1848,14 +1905,14 @@
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Ube Cloud Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Berry Cloud Latte</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -1928,35 +1985,35 @@
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Double Chocolate Chip Cream</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Large', 175, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱175</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Large', 175, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Javachip Brownie Curvccino</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Javachip Jelly Curvccino</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Large', 175, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Large', 175, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">Strawberries & Cream</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
         <div class="item-info"><div class="item-name">White Caramel Curvccino</div></div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Large', 175, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱175</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Large', 175, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -1977,7 +2034,7 @@
           <div class="item-desc">dragon fruit · sweet cream · milk</div>
         </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
@@ -1987,7 +2044,7 @@
           <div class="item-desc">strawberry lemonade · mango juice · mango bits</div>
         </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div>
         </div>
       </div>
 
@@ -1997,7 +2054,7 @@
           <div class="item-desc">mango purée · coconut milk · soft cream</div>
         </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Large', 170, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
@@ -2007,7 +2064,7 @@
           <div class="item-desc">hibiscus tea · soft sweet cream on top</div>
         </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
@@ -2017,7 +2074,7 @@
           <div class="item-desc">fresh cucumber · sparkling lemon lime fizz</div>
         </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Large', 160, this)">+</button></div>
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Large', 160, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -2464,13 +2521,15 @@
 
   // ── FAQ ──
   function toggleFaq() {
-    document.getElementById('faqSheet').classList.toggle('open');
-    document.body.classList.toggle('faq-open');
+    const isOpen = document.getElementById('faqSheet').classList.toggle('open');
+    document.body.classList.toggle('faq-open', isOpen);
+    document.getElementById('faqBtn').style.display = isOpen ? 'none' : '';
   }
 
   function closeFaq() {
     document.getElementById('faqSheet').classList.remove('open');
     document.body.classList.remove('faq-open');
+    document.getElementById('faqBtn').style.display = '';
   }
 
   function toggleFaqItem(el) {
@@ -2501,6 +2560,7 @@
       document.getElementById('minimizedBar').classList.remove('show');
       document.getElementById('minimizeBtn').textContent = 'Minimize';
       minimized = false;
+      setOrderBar(false);
     }
 
     btn.classList.remove('pop');
@@ -2510,6 +2570,17 @@
 
   function removeItem(key) {
     cart = cart.filter(i => i.key !== key);
+    renderCart();
+    updateBadge();
+  }
+
+  function updateQty(key, delta) {
+    const item = cart.find(i => i.key === key);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+      cart = cart.filter(i => i.key !== key);
+    }
     renderCart();
     updateBadge();
   }
@@ -2534,15 +2605,20 @@
     itemsEl.innerHTML = cart.map(item => {
       total += item.price * item.qty;
       const label = item.variant ? `${item.name} · ${item.variant}` : item.name;
+      const safeKey = item.key.replace(/'/g, "\\'");
       return `
         <div class="cart-item">
           <div class="cart-item-left">
-            <span class="cart-item-qty">${item.qty}×</span>
             <span class="cart-item-name">${label}</span>
           </div>
           <div class="cart-item-right">
+            <div class="cart-qty-controls">
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', -1)">−</button>
+              <span class="cart-qty-num">${item.qty}</span>
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', 1)">+</button>
+            </div>
             <span class="cart-item-price">₱${(item.price * item.qty).toLocaleString()}</span>
-            <button class="cart-remove" onclick="removeItem('${item.key.replace(/'/g, "\\'")}')">×</button>
+            <button class="cart-remove" onclick="removeItem('${safeKey}')">×</button>
           </div>
         </div>`;
     }).join('');
@@ -2586,6 +2662,10 @@
   }
 
   // ── FORM ──
+  function setOrderBar(visible) {
+    document.getElementById('orderBar').style.display = visible ? 'block' : 'none';
+  }
+
   function toggleForm() {
     const f = document.getElementById('formFloat');
     if (f.classList.contains('open')) {
@@ -2595,14 +2675,15 @@
       document.getElementById('formBody').classList.remove('minimized');
       document.getElementById('minimizedBar').classList.remove('show');
       document.getElementById('minimizeBtn').textContent = 'Minimize';
-      document.getElementById('orderBar').style.display = 'none';
       minimized = false;
+      setOrderBar(false);
     }
   }
 
   function closeForm() {
     document.getElementById('formFloat').classList.remove('open');
-    document.getElementById('orderBar').style.display = 'block';
+    minimized = false;
+    setOrderBar(true);
   }
 
   let minimized = false;
@@ -2611,7 +2692,7 @@
     document.getElementById('formBody').classList.toggle('minimized', minimized);
     document.getElementById('minimizedBar').classList.toggle('show', minimized);
     document.getElementById('minimizeBtn').textContent = minimized ? 'Expand ↑' : 'Minimize';
-    document.getElementById('orderBar').style.display = minimized ? 'block' : 'none';
+    setOrderBar(minimized);
   }
 
   document.getElementById('f-payment').addEventListener('change', function() {
