@@ -1518,6 +1518,7 @@
       <button class="nav-tab" onclick="showSection('refreshers')">Refreshers</button>
       <button class="nav-tab" onclick="showSection('bites')">Bites</button>
       <button class="nav-tab" onclick="showSection('salads')">Salads</button>
+      <button class="nav-tab" onclick="showSection('pastries')">Pastries & Desserts</button>
     </div>
     <button class="nav-arrow" id="arrowRight" onclick="scrollNav(120)">&#8250;</button>
   </div>
@@ -1796,7 +1797,7 @@
 
     <div class="note-box">
       <div class="note-label">About Our Beans</div>
-      <p>All espresso drinks are made using our signature premium Napoli Beans (100% Arabica) for smooth, caramel-forward notes.</p>
+      <p>All espresso drinks are made using our signature premium Varese Beans (100% Arabica) for smooth, caramel-forward notes.</p>
       <p>Requesting less ice will result in reduced volume to preserve the drink's balanced taste.</p>
       <p>Available in iced and hot. Hot drinks are single size only (14oz).</p>
     </div>
@@ -1810,80 +1811,113 @@
         </div>
       </div>
 
-      <p class="esp-hot-notice">Hot drinks are served in a single size cup (12oz).</p>
+      <p class="esp-hot-notice">Hot drinks are served in a single size (14oz) — R size unavailable.</p>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Curv Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Curv Latte</div>
+          <div class="item-desc">double espresso · whole milk · a whisper of sweetness. the one that started it all.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱129</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Regular', 129, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱145</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Large', 145, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Einspanner Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Einspanner Latte</div>
+          <div class="item-desc">double espresso · milk · crowned with thick sweet cream. rich, indulgent, slightly dramatic.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Einspanner Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Spanish Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Spanish Latte</div>
+          <div class="item-desc">double espresso · vanilla bean syrup · condensed milk · whole milk. sweet, creamy, dangerously easy to finish.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Caramel Macchiato</div></div>
+        <div class="item-info">
+          <div class="item-name">Caramel Doppio</div>
+          <div class="item-desc">double espresso · caramel syrup · milk · drizzled in caramel sauce. for when you need a little sweetness to get through the day.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱165</strong></span><button class="add-btn" onclick="addItem('Caramel Doppio', 'Large', 165, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Vanilla Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Vanilla Latte</div>
+          <div class="item-desc">double espresso · vanilla bean syrup · whole milk. smooth, familiar, and never boring.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱139</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Regular', 139, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱150</strong></span><button class="add-btn" onclick="addItem('Vanilla Latte', 'Large', 150, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Chocolate Mocha</div></div>
+        <div class="item-info">
+          <div class="item-name">White Chocolate Mocha</div>
+          <div class="item-desc">double espresso · white chocolate · white chocolate sauce · milk · whipped cream on top. sweet enough to feel like a treat, strong enough to mean business.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Caffè Mocha</div></div>
+        <div class="item-info">
+          <div class="item-name">Caffè Mocha</div>
+          <div class="item-desc">double espresso · 60% dark chocolate · dark chocolate sauce · milk · whipped cream on top. deep, bold, and unapologetically chocolatey.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Caffè Mocha', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Americano</div></div>
+        <div class="item-info">
+          <div class="item-name">Americano</div>
+          <div class="item-desc">double espresso · water · nothing more, nothing less. brewed with Varese beans — 100% arabica, clean and sharp.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱119</strong></span><button class="add-btn" onclick="addItem('Americano', 'Regular', 119, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱125</strong></span><button class="add-btn" onclick="addItem('Americano', 'Large', 125, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
+        <div class="item-info">
+          <div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div>
+          <div class="item-desc">double espresso · condensed milk · oat milk · salted cold foam on top. creamy, slightly salty, very much a vibe.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
+        <div class="item-info">
+          <div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div>
+          <div class="item-desc">triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
+        <div class="item-info">
+          <div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div>
+          <div class="item-desc">double espresso · white chocolate · ube · whole milk. floral, creamy, and honestly stunning to look at too.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
         </div>
@@ -1894,7 +1928,10 @@
       <span class="category-label">Non-Espresso</span>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Curv Chocolate</div></div>
+        <div class="item-info">
+          <div class="item-name">Curv Chocolate</div>
+          <div class="item-desc">60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.</div>
+        </div>
         <div class="item-right">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="price-btn-row"><span class="price-single">₱149</span><button class="add-btn" onclick="addItem('Curv Chocolate', '', 149, this)">+</button></div>
@@ -1903,14 +1940,20 @@
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Ube Cloud Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Ube Cloud Latte</div>
+          <div class="item-desc">ube cold foam · whole milk · dusted in ube powder. purple, pillowy, and a little extra — in the best way.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
       </div>
 
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Berry Cloud Latte</div></div>
+        <div class="item-info">
+          <div class="item-name">Berry Cloud Latte</div>
+          <div class="item-desc">strawberry cold foam · strawberry purée · whole milk · dried strawberries on top. sweet, tart, and way too pretty to rush.</div>
+        </div>
         <div class="item-right">
           <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
@@ -2111,7 +2154,7 @@
       <div class="menu-item">
         <div class="item-info">
           <div class="item-name">Aburi Salmon</div>
-          <div class="item-desc">flamed salmon · veggies · japanese may · spicy mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi</div>
+          <div class="item-desc">flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi</div>
         </div>
         <div class="item-right">
           <div class="price-row"><span class="price-pieces">4 pcs <strong>₱105</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '4 pcs', 105, this)">+</button></div>
@@ -2240,7 +2283,7 @@
       <div class="menu-item">
         <div class="item-info">
           <div class="item-name">Coastal Salad</div>
-          <div class="item-desc">crab mix · chuka wakame (not available) · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing</div>
+          <div class="item-desc">crab mix · chuka wakame · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing</div>
         </div>
         <div class="item-right">
           <div class="price-btn-row"><span class="price-single">₱179</span><button class="add-btn" onclick="addItem('Coastal Salad', '', 179, this)">+</button></div>
@@ -2253,7 +2296,7 @@
           <div class="item-desc">100g serving</div>
         </div>
         <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">110</span><button class="add-btn" onclick="addItem('Chukawakame Salad', '', 110, this)">+</button></div>
+          <div class="price-btn-row"><span class="price-single">₱110</span><button class="add-btn" onclick="addItem('Chukawakame Salad', '', 110, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -2288,6 +2331,113 @@
         </div>
       </div>
     </div>
+  </section>
+  <!-- PASTRIES & DESSERTS -->
+  <section class="section" id="pastries">
+    <div class="section-header">
+      <div class="section-title">Pastries & Desserts</div>
+      <div class="section-desc">Baked with intention. Sweet things worth waiting for.</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">Coming Soon</div>
+      <p>Our pastry and dessert menu is currently in development. Each item is being perfected before it earns a spot on the menu — stay tuned.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Viennoiserie</span>
+
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Croissant <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">classic butter croissant · shatteringly flaky on the outside · pillowy soft within.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Pain au Chocolat <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">buttery croissant dough · dark chocolate center. a French classic done right.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Danish <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">laminated pastry dough · seasonal fruit or cream filling. delicate, light, and a little fancy.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Choux Pastry</span>
+
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Choux au Craquelin <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">choux pastry · crispy craquelin topping · filled with flavored cream. small but mighty.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Curv Cookies</span>
+
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Classic Chocolate Chip <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">brown butter · dark chocolate chips · crispy edges · gooey center. the one you already know and love.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">White Matcha <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">ceremonial matcha · white chocolate chunks · earthy, sweet, and very Curv.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Red Velvet <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">deep red cocoa cookie · cream cheese chips · soft, rich, and a little dramatic.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Biscoff <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">biscoff butter · caramelized cookie crumble · warm spice in every bite.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Sourdough</span>
+      <div class="note-box" style="margin-top:0.5rem;">
+        <div class="note-label">Dropping Soon</div>
+        <p>Something's proofing in the background. Details coming when it's ready.</p>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Cheesecakes</span>
+
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Matcha Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">ceremonial matcha · burnt basque base · creamy, slightly bitter, deeply satisfying.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Classic Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">pure cream cheese · caramelized top · custardy center. the one that started the burnt basque obsession.</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Blueberry Cheesecake <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">classic cheesecake base · blueberry compote · fresh and fruity with every forkful.</div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
 </main>
