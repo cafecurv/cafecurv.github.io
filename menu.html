@@ -1323,6 +1323,69 @@
     text-align: center;
   }
 
+  /* ── DELIVERY FEE INFO ── */
+  .delivery-fee-info {
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .delivery-fee-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .delivery-fee-header-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+  }
+
+  .delivery-fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .delivery-fee-row:last-child { border-bottom: none; }
+
+  .delivery-fee-area {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    color: var(--navy);
+    font-weight: 400;
+  }
+
+  .delivery-fee-amount {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--gray-mid);
+  }
+
+  .delivery-fee-note {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.6rem;
+    color: var(--gray-light);
+    padding: 0.5rem 0.85rem;
+    background: var(--bg2);
+    border-top: 0.5px solid var(--bg3);
+    line-height: 1.5;
+  }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -2507,6 +2570,23 @@
       <button class="form-expand-btn" onclick="toggleMinimize()">Expand ↑</button>
     </div>
     <div class="form-body" id="formBody">
+
+      <!-- DELIVERY FEE INFO -->
+      <div class="delivery-fee-info">
+        <div class="delivery-fee-header">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
+          <span class="delivery-fee-header-label">Delivery Coverage & Estimated Fee</span>
+        </div>
+        <div class="delivery-fee-row">
+          <span class="delivery-fee-area">Brgy. Santiago</span>
+          <span class="delivery-fee-amount">est. ₱10 – ₱20</span>
+        </div>
+        <div class="delivery-fee-row">
+          <span class="delivery-fee-area">Brgy. San Francisco</span>
+          <span class="delivery-fee-amount">est. ₱20 – ₱30</span>
+        </div>
+        <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
+      </div>
 
       <!-- CUSTOMER TYPE TOGGLE -->
       <div class="customer-type-toggle">
