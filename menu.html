@@ -2675,7 +2675,10 @@
 
 <script>
   // ── ICED / HOT TOGGLE ──
+  let currentTemp = 'iced';
+
   function setTemp(mode) {
+    currentTemp = mode;
     const isHot = mode === 'hot';
     document.getElementById('espresso').classList.toggle('esp-hot', isHot);
     document.getElementById('tabIced').classList.toggle('active', !isHot);
@@ -2691,7 +2694,6 @@
     document.getElementById('tabNew').classList.toggle('active', isNew);
     document.getElementById('tabReturning').classList.toggle('active', !isNew);
     document.getElementById('new-customer-fields').style.display = isNew ? 'block' : 'none';
-    document.getElementById('special-requests-field').style.display = isNew ? 'block' : 'none';
     document.getElementById('customerTypeHint').textContent = isNew
       ? 'Please fill in all required details below.'
       : 'Welcome back! Just your name, delivery time, payment, and order.';
@@ -2773,12 +2775,14 @@
   let cart = [];
 
   function addItem(name, variant, price, btn) {
-    const key = name + '|' + variant;
+    const isEspresso = btn.closest('#espresso') !== null;
+    const temp = isEspresso ? currentTemp.toUpperCase() : null;
+    const key = name + '|' + variant + (temp ? '|' + temp : '');
     const existing = cart.find(i => i.key === key);
     if (existing) {
       existing.qty++;
     } else {
-      cart.push({ key, name, variant, price, qty: 1 });
+      cart.push({ key, name, variant, price, qty: 1, temp });
     }
     renderCart();
     updateBadge();
@@ -2834,7 +2838,7 @@
     let total = 0;
     itemsEl.innerHTML = cart.map(item => {
       total += item.price * item.qty;
-      const label = item.variant ? `${item.name} · ${item.variant}` : item.name;
+      const label = [item.name, item.variant, item.temp].filter(Boolean).join(' · ');
       const safeKey = item.key.replace(/'/g, "\\'");
       return `
         <div class="cart-item">
@@ -2942,7 +2946,7 @@
     const pSel     = document.getElementById('f-payment');
     const delivery = isNew ? dSel.options[dSel.selectedIndex].text : '';
     const payment  = pSel.options[pSel.selectedIndex].text;
-    const notes    = isNew ? document.getElementById('f-notes').value.trim() : '';
+    const notes    = document.getElementById('f-notes').value.trim();
 
     // Delivery time
     const specificTime = document.getElementById('f-delivery-time').value;
@@ -2968,7 +2972,7 @@
     }
 
     const orderLines = cart.map(i => {
-      const label = i.variant ? `${i.name} (${i.variant})` : i.name;
+      const label = [i.name, i.variant, i.temp].filter(Boolean).join(' · ');
       return `  ${i.qty}x ${label} — ₱${(i.price * i.qty).toLocaleString()}`;
     }).join('\n');
 
