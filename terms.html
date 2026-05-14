@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — CURV</title>
+<link rel="icon" type="image/png" href="favicon1.png">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F7F5F0;
+    --bg2:       #EEECEA;
+    --bg3:       #E5E2DC;
+    --navy:      #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid:  #6B6760;
+    --gray-light:#8A8680;
+    --accent:    #C8B89A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  .site-nav {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--bg3);
+    padding: 0 1.5rem;
+  }
+
+  .site-nav-inner {
+    max-width: 680px;
+    margin: 0 auto;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-back {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    text-decoration: none;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+  }
+
+  .nav-back:hover { color: var(--navy); }
+
+  .nav-links-right {
+    display: flex;
+    gap: 1.2rem;
+  }
+
+  .nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover { color: var(--navy); }
+
+  /* ── HEADER ── */
+  .page-header {
+    padding: 3.5rem 1.5rem 2rem;
+    text-align: center;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .page-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--navy);
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--navy);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-subtitle {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--gray-mid);
+  }
+
+  /* ── PLACEHOLDER NOTICE ── */
+  .placeholder-notice {
+    max-width: 680px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+  }
+
+  .notice-box {
+    background: var(--bg2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 0.9rem 1.1rem;
+  }
+
+  .notice-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 5px;
+  }
+
+  .notice-box p {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--gray-mid);
+    line-height: 1.7;
+  }
+
+  /* ── CONTENT ── */
+  .page-content {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem 5rem;
+  }
+
+  .content-section {
+    margin-bottom: 2.5rem;
+  }
+
+  .content-section-title {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .content-section p {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 300;
+    color: var(--gray-dark);
+    line-height: 1.9;
+    margin-bottom: 0.75rem;
+  }
+
+  .content-section p:last-child { margin-bottom: 0; }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--navy);
+    color: var(--bg);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    display: inline-block;
+    margin-bottom: 0.8rem;
+  }
+
+  .footer-divider {
+    width: 40px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.3);
+    margin: 0.8rem auto;
+  }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .footer-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-link:hover { opacity: 0.7; }
+
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(247,245,240,0.25);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="site-nav">
+  <div class="site-nav-inner">
+    <a href="index.html" class="nav-back">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Home
+    </a>
+    <div class="nav-links-right">
+      <a href="menu.html" class="nav-link">Menu</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HEADER -->
+<div class="page-header">
+  <a href="index.html" class="page-logo">CURV</a>
+  <div class="page-title">Terms of Service</div>
+  <div class="page-subtitle">Last reviewed — 2026</div>
+</div>
+
+<!-- PLACEHOLDER NOTICE -->
+<div class="placeholder-notice">
+  <div class="notice-box">
+    <div class="notice-label">Placeholder</div>
+    <p>This page is currently a placeholder and is being prepared. Full terms will be published here soon. For any concerns, please reach out to us directly via Messenger at <strong>@cafecurv</strong>.</p>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="page-content">
+
+  <div class="content-section">
+    <div class="content-section-title">1. Acceptance of Terms</div>
+    <p>By accessing or using the CURV website and placing an order, you agree to be bound by these terms. If you do not agree, please refrain from using our services.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">2. Orders & Payments</div>
+    <p>All orders are placed through our Messenger-based ordering system. Orders are confirmed only upon acknowledgment from our team. We reserve the right to decline or cancel any order at our discretion.</p>
+    <p>For electronic payments (GCash, Maya, Bank Transfer), full payment is required before your order is processed. Cash on Delivery is available within our service area.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">3. Delivery</div>
+    <p>We currently deliver within Brgy. Santiago and Brgy. San Francisco, General Trias, Cavite via our own rider. Deliveries outside our coverage area are facilitated through Lalamove, with fees shouldered by the customer.</p>
+    <p>Delivery times are estimates and may vary depending on order volume and conditions.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">4. Refunds & Cancellations</div>
+    <p>Cancellations must be made before your order is prepared. Once preparation has begun, cancellations may not be accommodated. For concerns about your order upon delivery, please message us immediately via Messenger.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">5. Allergens</div>
+    <p>Our products may contain allergens including dairy, eggs, wheat, nuts, and seafood. Please inform us of any allergies before placing your order. We cannot guarantee a fully allergen-free environment.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">6. Changes to These Terms</div>
+    <p>CURV reserves the right to update these terms at any time. Continued use of our services following any changes constitutes your acceptance of the revised terms.</p>
+  </div>
+
+  <div class="content-section">
+    <div class="content-section-title">7. Contact</div>
+    <p>For questions or concerns regarding these terms, please reach out via Messenger at <strong>@cafecurv</strong> or through our social channels.</p>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-divider"></div>
+  <div class="footer-links">
+    <a href="index.html" class="footer-link">Home</a>
+    <a href="menu.html" class="footer-link">Menu</a>
+    <a href="privacy.html" class="footer-link">Privacy Policy</a>
+  </div>
+  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
+</footer>
+
+</body>
+</html>
