@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — CURV</title>
+<link rel="icon" type="image/png" href="favicon1.png">
+<meta name="description" content="The story behind CURV — a Japanese-French inspired café born from uncertainty, curiosity, and years of quietly learning.">
+<meta property="og:title" content="About — CURV">
+<meta property="og:description" content="The story behind CURV — a café born from uncertainty, curiosity, and years of quietly learning.">
+<meta property="og:image" content="https://cafecurv.github.io/preview.png">
+<meta property="og:url" content="https://cafecurv.github.io/about.html">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F7F5F0;
+    --bg2:       #EEECEA;
+    --bg3:       #E5E2DC;
+    --navy:      #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid:  #6B6760;
+    --gray-light:#8A8680;
+    --accent:    #C8B89A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  .site-nav {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--bg3);
+    padding: 0 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .site-nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--navy);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover { color: var(--navy); }
+
+  .nav-link.active { color: var(--navy); }
+
+  .nav-order {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border-radius: 20px;
+    padding: 0.5rem 1.1rem;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .nav-order:hover { opacity: 0.85; }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 6rem 1.5rem 5rem;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.2rem, 7vw, 3.8rem);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--navy);
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-line {
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+    margin: 0 auto 1.5rem;
+  }
+
+  .hero-quote {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: clamp(0.8rem, 2vw, 0.95rem);
+    color: var(--gray-mid);
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    width: 100%;
+    height: 0.5px;
+    background: var(--bg3);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* ── STORY SECTION ── */
+  .story {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+  }
+
+  .story-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 2.5rem;
+  }
+
+  .story-body {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 300;
+    color: var(--gray-dark);
+    line-height: 2.1;
+    margin-bottom: 1.8rem;
+  }
+
+  .story-body:last-child { margin-bottom: 0; }
+
+  .story-pull {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--navy);
+    line-height: 1.7;
+    border-left: 2px solid var(--accent);
+    padding-left: 1.2rem;
+    margin: 2.5rem 0;
+  }
+
+  /* ── FRAGMENTS ── */
+  .fragments {
+    background: var(--navy);
+    padding: 5rem 1.5rem;
+    text-align: center;
+  }
+
+  .fragments-inner {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .fragments-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .fragments-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--bg);
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+
+  .fragments-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .fragment-tag {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 0.5px solid rgba(200,184,154,0.3);
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+    font-weight: 400;
+  }
+
+  .fragments-note {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: rgba(240,237,230,0.5);
+    line-height: 1.8;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* ── PHILOSOPHY ── */
+  .philosophy {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+  }
+
+  .philosophy-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 2.5rem;
+  }
+
+  .philosophy-item {
+    margin-bottom: 2.8rem;
+    padding-bottom: 2.8rem;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .philosophy-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .philosophy-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--navy);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .philosophy-text {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 300;
+    color: var(--gray-mid);
+    line-height: 2;
+  }
+
+  /* ── CLOSING ── */
+  .closing {
+    padding: 5rem 1.5rem 6rem;
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .closing-line {
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+    margin: 0 auto 2.5rem;
+  }
+
+  .closing-text {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--gray-mid);
+    line-height: 2;
+    margin-bottom: 2.5rem;
+  }
+
+  .closing-tagline {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--navy);
+    text-transform: uppercase;
+  }
+
+  /* ── CTA ── */
+  .cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    padding: 0 1.5rem 5rem;
+  }
+
+  .btn-primary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border-radius: 8px;
+    padding: 0.9rem 2rem;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .btn-primary:hover { opacity: 0.85; }
+
+  .btn-secondary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: transparent;
+    color: var(--navy);
+    border: 1px solid var(--bg3);
+    border-radius: 8px;
+    padding: 0.9rem 2rem;
+    text-decoration: none;
+    transition: border-color 0.2s;
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--navy);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    display: inline-block;
+    margin-bottom: 0.8rem;
+  }
+
+  .footer-divider {
+    width: 40px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.3);
+    margin: 0.8rem auto;
+  }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+  }
+
+  .footer-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-link:hover { opacity: 0.7; }
+
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(247,245,240,0.25);
+    letter-spacing: 1px;
+  }
+
+  /* ── FADE IN ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 480px) {
+    .hero { padding: 4rem 1.2rem 3.5rem; }
+    .story, .philosophy { padding: 3.5rem 1.2rem; }
+    .fragments { padding: 3.5rem 1.2rem; }
+    .closing { padding: 3.5rem 1.2rem 4rem; }
+    .nav-link:not(.nav-order) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="site-nav">
+  <div class="site-nav-inner">
+    <a href="index.html" class="nav-logo">CURV</a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="about.html" class="nav-link active">About</a>
+      <a href="menu.html" class="nav-link">Menu</a>
+      <a href="menu.html" class="nav-order">Order Now</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero fade-in">
+  <div class="hero-eyebrow">Our Story</div>
+  <h1 class="hero-title">At The<br>Curv</h1>
+  <div class="hero-line"></div>
+  <p class="hero-quote">"Where uncertainty meets possibility."</p>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- STORY -->
+<section class="story fade-in">
+  <div class="story-eyebrow">How It Started</div>
+
+  <p class="story-body">
+    It didn't start with a business plan. It started with takoyaki — made at home, sold to neighbors, figured out as it went.
+  </p>
+
+  <p class="story-body">
+    Before the matcha, before the espresso, there were years of doing things that didn't seem to connect. Studying computer science. Making sushi. Working deliveries. Learning customer service from the ground up. Exploring Japanese food philosophy out of curiosity, not curriculum.
+  </p>
+
+  <div class="story-pull">
+    The things that once felt scattered slowly began to make sense — not all at once, but in the way that quiet patterns reveal themselves over time.
+  </div>
+
+  <p class="story-body">
+    CURV is what happened when those fragments stopped feeling like detours and started feeling like direction. A home-based café that grew from survival into something intentional. Japanese simplicity. French creativity. Built in General Trias, one order at a time.
+  </p>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- FRAGMENTS -->
+<section class="fragments fade-in">
+  <div class="fragments-inner">
+    <div class="fragments-eyebrow">Built From</div>
+    <div class="fragments-title">The Long Way Around</div>
+    <div class="fragments-grid">
+      <span class="fragment-tag">Computer Science</span>
+      <span class="fragment-tag">Sushi Making</span>
+      <span class="fragment-tag">Coffee Culture</span>
+      <span class="fragment-tag">Delivery Work</span>
+      <span class="fragment-tag">Customer Service</span>
+      <span class="fragment-tag">Japanese Food Philosophy</span>
+      <span class="fragment-tag">French Pastry</span>
+      <span class="fragment-tag">Working Student Life</span>
+      <span class="fragment-tag">Tech Workflow</span>
+      <span class="fragment-tag">Ceremonial Matcha</span>
+      <span class="fragment-tag">Family</span>
+      <span class="fragment-tag">Creative Exploration</span>
+    </div>
+    <p class="fragments-note">None of it was wasted. It just took time to see how it fit together.</p>
+  </div>
+</section>
+
+<!-- PHILOSOPHY -->
+<section class="philosophy fade-in">
+  <div class="philosophy-eyebrow">What We Believe</div>
+
+  <div class="philosophy-item">
+    <div class="philosophy-label">Craft Over Convenience</div>
+    <p class="philosophy-text">Every item on the menu exists because it was tested, refined, and chosen with care. We don't rush things onto the menu — we wait until they're ready.</p>
+  </div>
+
+  <div class="philosophy-item">
+    <div class="philosophy-label">Ingredients Matter</div>
+    <p class="philosophy-text">Our matcha is first flush ceremonial grade, sourced directly from a farmer in Kirishima, Kagoshima. Our espresso beans are selected for their character, not their price point. The details aren't marketing — they're the point.</p>
+  </div>
+
+  <div class="philosophy-item">
+    <div class="philosophy-label">Small Is Enough</div>
+    <p class="philosophy-text">CURV started small and it's still growing slowly. We believe a small operation done well is better than a large one done carelessly. Quality doesn't scale without intention.</p>
+  </div>
+
+  <div class="philosophy-item">
+    <div class="philosophy-label">The Curve Is the Point</div>
+    <p class="philosophy-text">Life doesn't go in a straight line. Neither does building something meaningful. The unexpected turns, the uncertain seasons — that's where the interesting things happen. CURV exists in that space.</p>
+  </div>
+
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CLOSING -->
+<div class="closing fade-in">
+  <div class="closing-line"></div>
+  <p class="closing-text">
+    This is still a work in progress.<br>
+    Most things worth building are.
+  </p>
+  <div class="closing-tagline">Where Uncertainty Meets Possibility</div>
+</div>
+
+<!-- CTA -->
+<div class="cta-row fade-in">
+  <a href="menu.html" class="btn-primary">View the Menu</a>
+  <a href="index.html" class="btn-secondary">Back to Home</a>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-divider"></div>
+  <div class="footer-links">
+    <a href="index.html" class="footer-link">Home</a>
+    <a href="menu.html" class="footer-link">Menu</a>
+    <a href="terms.html" class="footer-link">Terms</a>
+    <a href="privacy.html" class="footer-link">Privacy</a>
+  </div>
+  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
