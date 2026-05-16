@@ -9,13 +9,13 @@
 <meta name="description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity. A café in General Trias, Cavite.">
 <meta property="og:title" content="CURV — Where Uncertainty Meets Possibility">
 <meta property="og:description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity.">
-<meta property="og:image" content="https://cafecurv.github.io/preview.png">
+<meta property="og:image" content="https://cafecurv.github.io/preview1.png">
 <meta property="og:url" content="https://cafecurv.github.io/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="CURV — Where Uncertainty Meets Possibility">
 <meta name="twitter:description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity.">
-<meta name="twitter:image" content="https://cafecurv.github.io/preview.png">
+<meta name="twitter:image" content="https://cafecurv.github.io/preview1.png">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
 <style>
 
@@ -134,6 +134,119 @@
     text-decoration: none;
     transition: background 0.6s, color 0.6s;
   }
+
+  /* ── HAMBURGER ── */
+  .nav-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  .nav-hamburger:hover { background: var(--bg2); }
+
+  .nav-hamburger span {
+    display: block;
+    width: 20px;
+    height: 1.5px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.6s;
+  }
+
+  .nav-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+  .nav-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  /* ── MOBILE DRAWER ── */
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0; right: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--bg3);
+    z-index: 99;
+    padding: 1.5rem;
+    transform: translateY(-8px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .mobile-nav.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .mobile-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 1.2rem;
+  }
+
+  .mobile-nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-decoration: none;
+    font-weight: 400;
+    padding: 0.9rem 0;
+    border-bottom: 0.5px solid var(--bg3);
+    transition: color 0.2s;
+  }
+
+  .mobile-nav-link:last-child { border-bottom: none; }
+  .mobile-nav-link:hover { color: var(--text); }
+
+  .mobile-nav-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1.2rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .mobile-nav-toggle-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    font-weight: 400;
+  }
+
+  .mobile-nav-order {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .mobile-nav-order:hover { opacity: 0.85; }
 
 
   /* ── LOGO ── */
@@ -809,7 +922,9 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width: 680px) {
-    .nav-link { display: none; }
+    .nav-links { display: none; }
+    .nav-hamburger { display: flex; }
+    .mobile-nav { display: block; }
     .story-wrap { grid-template-columns: 1fr; gap: 2rem; }
     .story-visual { aspect-ratio: 3/2; }
     .pillar { border-right: none; border-bottom: 0.5px solid var(--bg3); }
@@ -817,7 +932,145 @@
     .section { padding: 3.5rem 1.2rem; }
   }
 
+  @media (max-width: 400px) {
+    .nav-links { display: none; }
+    .nav-hamburger { display: flex; }
+  }
+
   /* ── ANIMATIONS ── */
+  /* ── FAQ ── */
+  .faq-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(33,40,66,0.4);
+    z-index: 210;
+    backdrop-filter: blur(2px);
+  }
+
+  body.faq-open .faq-overlay { display: block; }
+
+  .faq-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-radius: 16px 16px 0 0;
+    z-index: 211;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .faq-sheet.open { transform: translateY(0); }
+
+  .faq-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.3rem;
+    border-bottom: 0.5px solid var(--bg3);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+  }
+
+  .faq-sheet-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+
+  .faq-close {
+    background: var(--bg3);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .faq-close:hover { background: var(--accent); }
+
+  .faq-list { padding: 0.5rem 0 2rem; }
+
+  .faq-item { border-bottom: 0.5px solid var(--bg3); }
+  .faq-item:last-child { border-bottom: none; }
+
+  .faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.3rem;
+    cursor: pointer;
+    gap: 1rem;
+    user-select: none;
+  }
+
+  .faq-question span:first-child {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .faq-arrow {
+    font-size: 0.6rem;
+    color: var(--text3);
+    flex-shrink: 0;
+    transition: transform 0.25s;
+  }
+
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+  .faq-answer {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: var(--text3);
+    line-height: 1.8;
+    padding: 0 1.3rem 1rem;
+    display: none;
+  }
+
+  .faq-answer strong { color: var(--text); font-style: normal; }
+  .faq-item.open .faq-answer { display: block; }
+
+  .faq-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.2rem;
+    height: 38px;
+    padding: 0 1rem;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    z-index: 198;
+    box-shadow: 0 4px 16px rgba(33,40,66,0.2);
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .faq-btn:hover { transform: scale(1.04); }
+
   .fade-in {
     opacity: 0;
     transform: translateY(24px);
@@ -838,10 +1091,9 @@
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">CURV</a>
     <div class="nav-links">
-      <a href="index.html" class="nav-link">Home</a>
       <a href="menu.html" class="nav-link">Menu</a>
-      <a href="about.html" class="nav-link">About</a>
-      <a href="#story" class="nav-link">Our Story</a>
+      <a href="products.html" class="nav-link">Products</a>
+      <a href="about.html" class="nav-link">The Curv</a>
       <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
         <!-- Sun -->
         <svg class="toggle-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -862,8 +1114,41 @@
       </button>
       <a href="menu.html" class="nav-order-btn">Order Now</a>
     </div>
+    <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </nav>
+
+<!-- MOBILE NAV DRAWER -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-links">
+    <a href="menu.html" class="mobile-nav-link">Menu</a>
+    <a href="products.html" class="mobile-nav-link">Products</a>
+    <a href="about.html" class="mobile-nav-link">The Curv</a>
+  </div>
+  <div class="mobile-nav-footer">
+    <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
+      <svg class="toggle-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="toggle-icon icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <a href="menu.html" class="mobile-nav-order">Order Now</a>
+  </div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -1026,6 +1311,44 @@
 </footer>
 
 <script>
+  // ── MOBILE NAV ──
+  function toggleMobileNav() {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('navHamburger');
+    const isOpen = nav.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+  }
+
+  // Close mobile nav on outside click
+  document.addEventListener('click', (e) => {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('navHamburger');
+    if (nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
+      nav.classList.remove('open');
+      btn.classList.remove('open');
+    }
+  });
+
+  // ── FAQ ──
+  function toggleFaq() {
+    const isOpen = document.getElementById('faqSheet').classList.toggle('open');
+    document.body.classList.toggle('faq-open', isOpen);
+    document.getElementById('faqBtn').style.display = isOpen ? 'none' : '';
+  }
+
+  function closeFaq() {
+    document.getElementById('faqSheet').classList.remove('open');
+    document.body.classList.remove('faq-open');
+    document.getElementById('faqBtn').style.display = '';
+  }
+
+  function toggleFaqItem(el) {
+    const item = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
   function toggleMode() {
     const body = document.body;
     const currentMode = body.getAttribute('data-mode');
@@ -1056,6 +1379,77 @@
 
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 </script>
+
+<!-- FAQ OVERLAY -->
+<div class="faq-overlay" onclick="closeFaq()"></div>
+
+<!-- FAQ SHEET -->
+<div class="faq-sheet" id="faqSheet">
+  <div class="faq-sheet-header">
+    <div class="faq-sheet-title">Frequently Asked Questions</div>
+    <button class="faq-close" onclick="closeFaq()">✕</button>
+  </div>
+  <div class="faq-list">
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>How do I place an order?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Browse the menu and tap <strong>+</strong> on any item to add it to your cart. Fill in your details, tap <strong>Copy Order Message</strong>, then tap <strong>Open Messenger</strong> — paste and send! That's it. 🎉
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where do you deliver?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We have our own rider covering <strong>Brgy. Santiago</strong> and <strong>Brgy. San Francisco</strong> in General Trias, Cavite. For areas outside our vicinity, we use <strong>Lalamove</strong> — fee is shouldered by the customer.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What payment methods do you accept?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We accept <strong>Cash on Delivery (COD)</strong>, <strong>GCash / Maya</strong>, and <strong>Bank Transfer</strong>. Electronic payments must be completed before your order is processed.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What are your operating hours?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We operate from <strong>morning until midnight</strong>. Hours may vary — follow <strong>@cafecurv</strong> on Facebook for daily availability updates.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where is your matcha from?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We use <strong>First Flush Ceremonial Grade Matcha</strong> sourced directly from a farmer in Kirishima, Kagoshima Prefecture, Japan. Low bitterness, nutty, creamy, and slightly floral. 🍃
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Do you have allergen information?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Our products may contain allergens including wheat, eggs, dairy, nuts, and seafood. Please message us via Messenger before ordering if you have any allergies.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FAQ BUTTON -->
+<button class="faq-btn" onclick="toggleFaq()" id="faqBtn">Got questions?</button>
 
 </body>
 </html>
