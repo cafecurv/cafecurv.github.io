@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — CURV</title>
+<link rel="icon" type="image/png" href="favicon1.png">
+<meta name="description" content="Something is slowly taking shape. CURV Products — curated with the same care as everything we make.">
+<meta property="og:title" content="Products — CURV">
+<meta property="og:description" content="Something is slowly taking shape. Curated with the same care as everything we make.">
+<meta property="og:image" content="https://cafecurv.github.io/preview1.png">
+<meta property="og:url" content="https://cafecurv.github.io/products.html">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F7F5F0;
+    --bg2:       #EEECEA;
+    --bg3:       #E5E2DC;
+    --navy:      #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid:  #6B6760;
+    --gray-light:#8A8680;
+    --accent:    #C8B89A;
+    --nav-bg:    rgba(247,245,240,0.92);
+  }
+
+  [data-mode="night"] {
+    --bg:        #141824;
+    --bg2:       #1C2235;
+    --bg3:       #242C42;
+    --navy:      #F0EDE6;
+    --gray-dark: #C8C0B4;
+    --gray-mid:  #8A8680;
+    --gray-light:#6B6760;
+    --accent:    #C8B89A;
+    --nav-bg:    rgba(20,24,36,0.92);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.6s ease, color 0.6s ease;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--bg3);
+    transition: background 0.6s ease, border-color 0.6s ease;
+  }
+
+  .nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--navy);
+    text-decoration: none;
+    transition: color 0.6s;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  .nav-link:hover { color: var(--navy); }
+  .nav-link.active { color: var(--navy); font-weight: 500; }
+
+  .nav-order-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.6s, color 0.6s;
+  }
+
+  .mode-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg3);
+    background: var(--bg2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.6s, border-color 0.6s;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .mode-toggle:hover { border-color: var(--accent); }
+
+  .toggle-icon {
+    position: absolute;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+  }
+
+  .icon-sun  { transform: rotate(0deg) scale(1); opacity: 1; }
+  .icon-moon { transform: rotate(90deg) scale(0.5); opacity: 0; }
+
+  [data-mode="night"] .icon-sun  { transform: rotate(-90deg) scale(0.5); opacity: 0; }
+  [data-mode="night"] .icon-moon { transform: rotate(0deg) scale(1); opacity: 1; }
+
+  /* ── HAMBURGER ── */
+  .nav-hamburger {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .nav-hamburger span {
+    display: block;
+    width: 20px;
+    height: 1.5px;
+    background: var(--navy);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .nav-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+  .nav-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  /* ── MOBILE DRAWER ── */
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0; right: 0;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--bg3);
+    z-index: 99;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .mobile-nav.open { opacity: 1; transform: translateY(0); pointer-events: all; }
+
+  .mobile-nav-links { display: flex; flex-direction: column; gap: 0; margin-bottom: 1.2rem; }
+
+  .mobile-nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    text-decoration: none;
+    font-weight: 400;
+    padding: 0.9rem 0;
+    border-bottom: 0.5px solid var(--bg3);
+    transition: color 0.2s;
+  }
+
+  .mobile-nav-link:last-child { border-bottom: none; }
+  .mobile-nav-link:hover { color: var(--navy); }
+
+  .mobile-nav-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1.2rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .mobile-nav-order {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.6rem 1.2rem;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .mobile-nav-order:hover { background: #2e3a5c; }
+
+  @media (max-width: 680px) {
+    .nav-links { display: none; }
+    .nav-hamburger { display: flex; }
+    .mobile-nav { display: block; }
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8rem 1.5rem 5rem;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .hero-bg-text {
+    position: absolute;
+    font-family: 'Cinzel', serif;
+    font-size: clamp(5rem, 22vw, 18rem);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--navy);
+    opacity: 0.03;
+    user-select: none;
+    pointer-events: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    transition: color 0.6s;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 560px;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 2rem;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.4rem, 8vw, 4.5rem);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--navy);
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    transition: color 0.6s;
+  }
+
+  .hero-line {
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+    margin: 0 auto 2rem;
+  }
+
+  .hero-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: clamp(0.78rem, 2vw, 0.92rem);
+    color: var(--gray-mid);
+    line-height: 2;
+    margin-bottom: 3rem;
+    transition: color 0.6s;
+  }
+
+  /* ── STATUS PILL ── */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    border: 0.5px solid var(--bg3);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-weight: 400;
+    transition: border-color 0.6s;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.7;
+    animation: pulse 2.5s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%       { opacity: 1; transform: scale(1.3); }
+  }
+
+  /* ── QUIET SECTION ── */
+  .quiet-section {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 5rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .quiet-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 2rem;
+  }
+
+  .quiet-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .quiet-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .quiet-item:last-child { border-bottom: none; }
+
+  .quiet-item-name {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--navy);
+    transition: color 0.6s;
+  }
+
+  .quiet-item-status {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.62rem;
+    color: var(--gray-light);
+  }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--navy);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: background 0.6s;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    transition: color 0.6s;
+  }
+
+  .footer-divider {
+    width: 40px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.3);
+    margin: 0.8rem auto;
+  }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+  }
+
+  .footer-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-link:hover { opacity: 0.7; }
+
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(247,245,240,0.25);
+    letter-spacing: 1px;
+  }
+
+  /* ── FADE ── */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body data-mode="morning">
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">CURV</a>
+    <div class="nav-links">
+      <a href="menu.html" class="nav-link">Menu</a>
+      <a href="products.html" class="nav-link active">Products</a>
+      <a href="about.html" class="nav-link">The Curv</a>
+      <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
+        <svg class="toggle-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="toggle-icon icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <a href="menu.html" class="nav-order-btn">Order Now</a>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-links">
+    <a href="menu.html" class="mobile-nav-link" onclick="closeMobileNav()">Menu</a>
+    <a href="products.html" class="mobile-nav-link" onclick="closeMobileNav()">Products</a>
+    <a href="about.html" class="mobile-nav-link" onclick="closeMobileNav()">The Curv</a>
+  </div>
+  <div class="mobile-nav-footer">
+    <button class="mode-toggle" onclick="toggleMode()" aria-label="Toggle day/night mode">
+      <svg class="toggle-icon icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="toggle-icon icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <a href="menu.html" class="mobile-nav-order">Order Now</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg-text">CURV</div>
+  <div class="hero-content fade-in">
+    <div class="hero-eyebrow">Products</div>
+    <h1 class="hero-title">STILL<br>TAKING<br>SHAPE</h1>
+    <div class="hero-line"></div>
+    <p class="hero-desc">
+      Some things can't be rushed.<br>
+      This section is one of them.
+    </p>
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      Quietly in progress
+    </div>
+  </div>
+</section>
+
+<!-- QUIET SECTION -->
+<div class="quiet-section fade-in">
+  <div class="quiet-label">What's Being Considered</div>
+  <div class="quiet-grid">
+    <div class="quiet-item">
+      <span class="quiet-item-name">Retail Matcha</span>
+      <span class="quiet-item-status">being sourced</span>
+    </div>
+    <div class="quiet-item">
+      <span class="quiet-item-name">Merchandise</span>
+      <span class="quiet-item-status">early concept</span>
+    </div>
+    <div class="quiet-item">
+      <span class="quiet-item-name">Pastry Boxes</span>
+      <span class="quiet-item-status">once the kitchen is ready</span>
+    </div>
+    <div class="quiet-item">
+      <span class="quiet-item-name">Gift Sets</span>
+      <span class="quiet-item-status">someday</span>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-divider"></div>
+  <div class="footer-links">
+    <a href="index.html" class="footer-link">Home</a>
+    <a href="menu.html" class="footer-link">Menu</a>
+    <a href="about.html" class="footer-link">The Curv</a>
+    <a href="terms.html" class="footer-link">Terms</a>
+    <a href="privacy.html" class="footer-link">Privacy</a>
+  </div>
+  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
+</footer>
+
+<script>
+  function toggleMode() {
+    const body = document.body;
+    const newMode = body.getAttribute('data-mode') === 'morning' ? 'night' : 'morning';
+    body.setAttribute('data-mode', newMode);
+    try { localStorage.setItem('mode', newMode); } catch(e) {}
+  }
+
+  window.addEventListener('load', () => {
+    try {
+      const saved = localStorage.getItem('mode') || 'morning';
+      document.body.setAttribute('data-mode', saved);
+    } catch(e) {}
+  });
+
+  function toggleMobileNav() {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('navHamburger');
+    const isOpen = nav.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+  }
+
+  function closeMobileNav() {
+    document.getElementById('mobileNav').classList.remove('open');
+    document.getElementById('navHamburger').classList.remove('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('navHamburger');
+    if (nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
+      closeMobileNav();
+    }
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
