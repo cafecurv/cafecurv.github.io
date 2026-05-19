@@ -1356,12 +1356,12 @@
     const currentMode = body.getAttribute('data-mode');
     const newMode = currentMode === 'morning' ? 'night' : 'morning';
     body.setAttribute('data-mode', newMode);
-    localStorage.setItem('mode', newMode);
+    localStorage.setItem('curv-mode', newMode);
   }
 
   // Load saved mode on page load
   window.addEventListener('load', () => {
-    const savedMode = localStorage.getItem('mode') || 'morning';
+    const savedMode = localStorage.getItem('curv-mode') || 'morning';
     document.body.setAttribute('data-mode', savedMode);
   });
 
