@@ -2956,7 +2956,7 @@
   // ── SITE NAV ──
   function toggleSiteMode() {
     document.body.classList.toggle('night-mode');
-    try { localStorage.setItem('curv-menu-mode', document.body.classList.contains('night-mode') ? 'night' : 'day'); } catch(e) {}
+    try { localStorage.setItem('curv-mode', document.body.classList.contains('night-mode') ? 'night' : 'day'); } catch(e) {}
   }
 
   function toggleSiteMobileNav() {
@@ -2981,7 +2981,7 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     try {
-      if (localStorage.getItem('curv-menu-mode') === 'night') document.body.classList.add('night-mode');
+      if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
   });
 
