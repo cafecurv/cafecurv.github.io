@@ -1623,6 +1623,224 @@
     .site-mobile-nav { display: block; }
   }
 
+  /* ── EXPANSION PANEL ── */
+  .menu-item-wrap {
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .menu-item-wrap:last-child { border-bottom: none; }
+
+  .menu-item-wrap .menu-item {
+    border-bottom: none;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .menu-item-wrap .menu-item:hover .item-name {
+    color: var(--navy);
+    opacity: 0.75;
+  }
+
+  .expand-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.9rem 0;
+  }
+
+  .expand-arrow {
+    font-size: 0.55rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .menu-item-wrap.open .expand-arrow { transform: rotate(180deg); }
+
+  .expansion-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .menu-item-wrap.open .expansion-panel { max-height: 800px; }
+
+  .panel-inner {
+    padding: 0 0 1.2rem;
+  }
+
+  /* Image placeholder */
+  .panel-img {
+    width: 100%;
+    aspect-ratio: 16/7;
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.1rem;
+    overflow: hidden;
+  }
+
+  .panel-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  /* Option groups */
+  .panel-options { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.1rem; }
+
+  .option-group-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .option-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .option-chip {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--gray-mid);
+    border: 0.5px solid var(--bg3);
+    border-radius: 20px;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    background: var(--bg2);
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .option-chip:hover { border-color: var(--accent); color: var(--navy); }
+
+  .option-chip.selected {
+    background: var(--navy);
+    color: var(--bg);
+    border-color: var(--navy);
+  }
+
+  .option-chip .chip-price {
+    font-size: 0.58rem;
+    opacity: 0.7;
+    margin-left: 4px;
+  }
+
+  .option-chip.selected .chip-price { opacity: 0.8; }
+
+  /* Per-item note */
+  .panel-note-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    height: 52px;
+  }
+
+  .panel-note-input:focus { border-color: var(--accent); background: var(--bg); }
+  .panel-note-input::placeholder { color: var(--gray-light); }
+
+  /* Panel footer: qty + price + add */
+  .panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .panel-qty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .panel-qty-btn {
+    background: var(--bg3);
+    border: none;
+    color: var(--navy);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .panel-qty-btn:hover { background: var(--accent); }
+
+  .panel-qty-num {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--navy);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .panel-price {
+    font-family: 'Jost', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    flex: 1;
+    text-align: center;
+  }
+
+  .panel-add-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.2rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .panel-add-btn:hover { background: #2e3a5c; }
+  .panel-add-btn:active { transform: scale(0.97); }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -2155,13 +2373,65 @@
 
       <p class="esp-hot-notice">Hot drinks are served in a single size (14oz) — R size unavailable.</p>
 
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Curv Latte</div>
-          <div class="item-desc">double espresso · whole milk · a whisper of sweetness. the one that started it all.</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="esp-r-btn" style="display:contents"><span class="add-btn-rl-label">R <strong>₱129</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Regular', 129, this)">+</button></span><span class="add-btn-rl-divider esp-r-divider">|</span><span class="add-btn-rl-label"><span class="esp-l-size">L </span><strong>₱145</strong></span><button class="add-btn" onclick="addItem('Curv Latte', 'Large', 145, this)">+</button></div>
+      <div class="menu-item-wrap" id="panel-wrap-curv-latte">
+        <button class="expand-trigger" onclick="togglePanel('curv-latte')">
+          <div class="item-info">
+            <div class="item-name">Curv Latte</div>
+            <div class="item-desc">double espresso · full cream milk · a whisper of sweetness. the one that started it all.</div>
+          </div>
+          <span class="expand-arrow">▼</span>
+        </button>
+        <div class="expansion-panel" id="panel-curv-latte">
+          <div class="panel-inner">
+
+            <div class="panel-img">
+              <img src="images/menu/sample-caffelatte.png" alt="Curv Latte">
+            </div>
+
+            <div class="panel-options">
+              <div>
+                <div class="option-group-label">Temperature</div>
+                <div class="option-chips" data-panel="curv-latte" data-group="temperature" data-type="single">
+                  <span class="option-chip selected" data-value="iced" data-price="0">Iced</span>
+                  <span class="option-chip" data-value="hot" data-price="0">Hot</span>
+                </div>
+              </div>
+              <div>
+                <div class="option-group-label">Size</div>
+                <div class="option-chips" data-panel="curv-latte" data-group="size" data-type="single">
+                  <span class="option-chip selected" data-value="regular" data-price="129">Regular <span class="chip-price">₱129</span></span>
+                  <span class="option-chip" data-value="large" data-price="145">Large <span class="chip-price">₱145</span></span>
+                </div>
+              </div>
+              <div>
+                <div class="option-group-label">Milk</div>
+                <div class="option-chips" data-panel="curv-latte" data-group="milk" data-type="single">
+                  <span class="option-chip selected" data-value="full-cream" data-price="0">Full Cream</span>
+                  <span class="option-chip" data-value="non-fat" data-price="0">Non-fat</span>
+                  <span class="option-chip" data-value="oat" data-price="50">Oat Milk <span class="chip-price">+₱50</span></span>
+                  <span class="option-chip" data-value="almond" data-price="50">Almond <span class="chip-price">+₱50</span></span>
+                  <span class="option-chip" data-value="breve" data-price="50">Breve <span class="chip-price">+₱50</span></span>
+                  <span class="option-chip" data-value="coconut" data-price="30">Coconut <span class="chip-price">+₱30</span></span>
+                  <span class="option-chip" data-value="soy" data-price="30">Soy <span class="chip-price">+₱30</span></span>
+                </div>
+              </div>
+              <div>
+                <div class="option-group-label">Any notes for this item?</div>
+                <textarea class="panel-note-input" id="note-curv-latte" placeholder="e.g. less ice, sauce on the side"></textarea>
+              </div>
+            </div>
+
+            <div class="panel-footer">
+              <div class="panel-qty">
+                <button class="panel-qty-btn" onclick="panelQty('curv-latte', -1)">−</button>
+                <span class="panel-qty-num" id="qty-curv-latte">1</span>
+                <button class="panel-qty-btn" onclick="panelQty('curv-latte', 1)">+</button>
+              </div>
+              <span class="panel-price" id="price-curv-latte">₱129</span>
+              <button class="panel-add-btn" onclick="panelAddToCart('curv-latte', 'Curv Latte')">Add to Cart</button>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -2480,16 +2750,55 @@
     <div class="category">
       <span class="category-label">Takoyaki</span>
 
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">OG Takoyaki</div>
-          <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi</div>
-          <div class="item-variant"><p>Swap octo with: Crab · Shrimp</p></div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '4 pcs', 90, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '8 pcs', 149, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '12 pcs', 219, this)">+</button></div>
+      <div class="menu-item-wrap" id="panel-wrap-og-takoyaki">
+        <button class="expand-trigger" onclick="togglePanel('og-takoyaki')">
+          <div class="item-info">
+            <div class="item-name">OG Takoyaki</div>
+            <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi</div>
+            <div class="item-variant"><p>Swap octo with: Crab · Shrimp</p></div>
+          </div>
+          <span class="expand-arrow">▼</span>
+        </button>
+        <div class="expansion-panel" id="panel-og-takoyaki">
+          <div class="panel-inner">
+
+            <div class="panel-img">
+              <img src="images/menu/sample-takoyaki.png" alt="OG Takoyaki">
+            </div>
+
+            <div class="panel-options">
+              <div>
+                <div class="option-group-label">Pieces</div>
+                <div class="option-chips" data-panel="og-takoyaki" data-group="pieces" data-type="single">
+                  <span class="option-chip selected" data-value="4pcs" data-price="90">4 pcs <span class="chip-price">₱90</span></span>
+                  <span class="option-chip" data-value="8pcs" data-price="149">8 pcs <span class="chip-price">₱149</span></span>
+                  <span class="option-chip" data-value="12pcs" data-price="219">12 pcs <span class="chip-price">₱219</span></span>
+                </div>
+              </div>
+              <div>
+                <div class="option-group-label">Spice Level</div>
+                <div class="option-chips" data-panel="og-takoyaki" data-group="spicy" data-type="single">
+                  <span class="option-chip selected" data-value="no" data-price="0">Not Spicy</span>
+                  <span class="option-chip" data-value="yes" data-price="0">Spicy</span>
+                </div>
+              </div>
+              <div>
+                <div class="option-group-label">Any notes for this item?</div>
+                <textarea class="panel-note-input" id="note-og-takoyaki" placeholder="e.g. extra sauce, swap octo with crab"></textarea>
+              </div>
+            </div>
+
+            <div class="panel-footer">
+              <div class="panel-qty">
+                <button class="panel-qty-btn" onclick="panelQty('og-takoyaki', -1)">−</button>
+                <span class="panel-qty-num" id="qty-og-takoyaki">1</span>
+                <button class="panel-qty-btn" onclick="panelQty('og-takoyaki', 1)">+</button>
+              </div>
+              <span class="panel-price" id="price-og-takoyaki">₱90</span>
+              <button class="panel-add-btn" onclick="panelAddToCart('og-takoyaki', 'OG Takoyaki')">Add to Cart</button>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -2879,8 +3188,8 @@
 
       <!-- ALWAYS VISIBLE: Name -->
       <div class="form-group">
-        <label class="form-label">Name/What should we call you?</label>
-        <input class="form-input" type="text" id="f-name" placeholder="E.g. Mrs. Handsome/Pretty">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="f-name" placeholder="Your full name">
       </div>
 
       <!-- NEW CUSTOMER ONLY FIELDS -->
@@ -2985,6 +3294,179 @@
     } catch(e) {}
   });
 
+  // ── EXPANSION PANEL SYSTEM ──
+  let activePanel = null;
+
+  // Panel state store: panelId → { qty, options }
+  const panelState = {};
+
+  function initPanel(id, defaults) {
+    if (!panelState[id]) {
+      panelState[id] = { qty: 1, options: { ...defaults } };
+    }
+  }
+
+  function togglePanel(id) {
+    const wrap = document.getElementById('panel-wrap-' + id);
+    if (!wrap) return;
+
+    if (activePanel && activePanel !== id) {
+      // Close previously open panel
+      const prevWrap = document.getElementById('panel-wrap-' + activePanel);
+      if (prevWrap) prevWrap.classList.remove('open');
+    }
+
+    const isOpen = wrap.classList.toggle('open');
+    activePanel = isOpen ? id : null;
+
+    if (isOpen) {
+      // Soft scroll so item + panel are visible
+      setTimeout(() => {
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
+  }
+
+  function panelQty(id, delta) {
+    if (!panelState[id]) return;
+    panelState[id].qty = Math.max(1, panelState[id].qty + delta);
+    document.getElementById('qty-' + id).textContent = panelState[id].qty;
+    updatePanelPrice(id);
+  }
+
+  function getPanelBasePrice(id) {
+    // Read the currently selected chip with a price that sets base
+    const sizeGroup = document.querySelector(`[data-panel="${id}"][data-group="size"]`);
+    const piecesGroup = document.querySelector(`[data-panel="${id}"][data-group="pieces"]`);
+    const group = sizeGroup || piecesGroup;
+    if (group) {
+      const sel = group.querySelector('.option-chip.selected');
+      if (sel) return parseInt(sel.dataset.price) || 0;
+    }
+    return 0;
+  }
+
+  function getPanelAddOnsPrice(id) {
+    let extra = 0;
+    // All groups except size/pieces contribute addons price
+    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+      const gname = group.dataset.group;
+      if (gname === 'size' || gname === 'pieces' || gname === 'temperature') return;
+      group.querySelectorAll('.option-chip.selected').forEach(chip => {
+        extra += parseInt(chip.dataset.price) || 0;
+      });
+    });
+    return extra;
+  }
+
+  function updatePanelPrice(id) {
+    if (!panelState[id]) return;
+    const base = getPanelBasePrice(id);
+    const addons = getPanelAddOnsPrice(id);
+    const total = (base + addons) * panelState[id].qty;
+    const el = document.getElementById('price-' + id);
+    if (el) el.textContent = '₱' + total.toLocaleString();
+  }
+
+  function handleChipClick(chip) {
+    const group = chip.closest('[data-group]');
+    if (!group) return;
+    const type = group.dataset.type;
+    const panelId = group.dataset.panel;
+
+    if (type === 'single') {
+      group.querySelectorAll('.option-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    } else if (type === 'multi') {
+      chip.classList.toggle('selected');
+    }
+
+    updatePanelPrice(panelId);
+  }
+
+  // Delegate chip clicks
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.option-chip');
+    if (chip) handleChipClick(chip);
+  });
+
+  function getPanelOptions(id) {
+    const opts = {};
+    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+      const gname = group.dataset.group;
+      const type = group.dataset.type;
+      if (type === 'single') {
+        const sel = group.querySelector('.option-chip.selected');
+        if (sel) opts[gname] = sel.dataset.value;
+      } else if (type === 'multi') {
+        const selected = [...group.querySelectorAll('.option-chip.selected')].map(c => c.dataset.value);
+        if (selected.length) opts[gname] = selected.join(',');
+      }
+    });
+    return opts;
+  }
+
+  function panelAddToCart(id, name) {
+    if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
+    const qty = panelState[id].qty;
+    const options = getPanelOptions(id);
+    const base = getPanelBasePrice(id);
+    const addons = getPanelAddOnsPrice(id);
+    const unitPrice = base + addons;
+    const note = (document.getElementById('note-' + id) || {}).value || '';
+
+    // Derive variant from size/pieces selection
+    const variant = options.size
+      ? (options.size === 'large' ? 'Large' : 'Regular')
+      : (options.pieces ? options.pieces : '');
+
+    // Derive temp from temperature option
+    const temp = options.temperature ? options.temperature.toUpperCase() : null;
+
+    // Remove size/pieces/temperature from options passed to cart key
+    // (they're captured in variant/temp already)
+    const cleanOptions = { ...options };
+    delete cleanOptions.size;
+    delete cleanOptions.pieces;
+    delete cleanOptions.temperature;
+    if (note) cleanOptions.note = note;
+
+    const key = buildCartKey(name, variant, temp, cleanOptions);
+    const existing = cart.find(i => i.key === key);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions });
+    }
+
+    renderCart();
+    updateBadge();
+
+    // Open order form if closed
+    const f = document.getElementById('formFloat');
+    if (!f.classList.contains('open')) {
+      f.classList.add('open');
+      document.getElementById('formBody').classList.remove('minimized');
+      document.getElementById('minimizedBar').classList.remove('show');
+      document.getElementById('minimizeBtn').textContent = 'Minimize';
+      minimized = false;
+      setOrderBar(false);
+    }
+
+    // Reset panel qty and close
+    panelState[id].qty = 1;
+    document.getElementById('qty-' + id).textContent = '1';
+    updatePanelPrice(id);
+
+    const wrap = document.getElementById('panel-wrap-' + id);
+    if (wrap) wrap.classList.remove('open');
+    activePanel = null;
+  }
+
+  // Init panel states
+  initPanel('curv-latte', { temperature: 'iced', size: 'regular', milk: 'full-cream' });
+  initPanel('og-takoyaki', { pieces: '4pcs', spicy: 'no' });
+
   // ── ICED / HOT TOGGLE ──
   let currentTemp = 'iced';
 
@@ -3085,15 +3567,27 @@
   // ── CART ──
   let cart = [];
 
-  function addItem(name, variant, price, btn) {
+  // ── CART KEY UTILITY ──
+  // Generates a stable, unique key from item identity + options.
+  // options = plain object of customizations (e.g. { milk: 'oat', sweetness: 'less' })
+  // Items with no options produce the same short key as before.
+  function buildCartKey(name, variant, temp, options) {
+    const base = [name, variant || '', temp || ''].join('|');
+    if (!options || Object.keys(options).length === 0) return base;
+    // Sort keys for stability — same options in different order = same key
+    const hash = Object.keys(options).sort().map(k => `${k}:${options[k]}`).join(',');
+    return base + '|' + hash;
+  }
+
+  function addItem(name, variant, price, btn, options = {}) {
     const isEspresso = btn.closest('#espresso') !== null;
     const temp = isEspresso ? currentTemp.toUpperCase() : null;
-    const key = name + '|' + variant + (temp ? '|' + temp : '');
+    const key = buildCartKey(name, variant, temp, options);
     const existing = cart.find(i => i.key === key);
     if (existing) {
       existing.qty++;
     } else {
-      cart.push({ key, name, variant, price, qty: 1, temp });
+      cart.push({ key, name, variant, price, qty: 1, temp, options });
     }
     renderCart();
     updateBadge();
@@ -3149,7 +3643,10 @@
     let total = 0;
     itemsEl.innerHTML = cart.map(item => {
       total += item.price * item.qty;
-      const label = [item.name, item.variant, item.temp].filter(Boolean).join(' · ');
+      const optionsLabel = item.options && Object.keys(item.options).length > 0
+        ? ' · ' + Object.keys(item.options).sort().map(k => item.options[k]).join(' · ')
+        : '';
+      const label = [item.name, item.variant, item.temp].filter(Boolean).join(' · ') + optionsLabel;
       const safeKey = item.key.replace(/'/g, "\\'");
       return `
         <div class="cart-item">
@@ -3283,7 +3780,10 @@
     }
 
     const orderLines = cart.map(i => {
-      const label = [i.name, i.variant, i.temp].filter(Boolean).join(' · ');
+      const optionsLabel = i.options && Object.keys(i.options).length > 0
+        ? ' · ' + Object.keys(i.options).sort().map(k => i.options[k]).join(' · ')
+        : '';
+      const label = [i.name, i.variant, i.temp].filter(Boolean).join(' · ') + optionsLabel;
       return `  ${i.qty}x ${label} — ₱${(i.price * i.qty).toLocaleString()}`;
     }).join('\n');
 
