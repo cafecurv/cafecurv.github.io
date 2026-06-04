@@ -1800,6 +1800,89 @@
 
   .pop { animation: pop 0.2s ease; }
 
+  /* ── PHASE 5A: ACCORDION OPTION GROUPS ── */
+  /* Inert until wrapAccordionGroups() applies them in Phase 5A Step 3+. */
+
+  /* Wrapper for one collapsible option group */
+  .accordion-group {
+    border-bottom: 0.5px solid var(--bg3);
+    padding-bottom: 0;
+  }
+
+  .accordion-group:last-of-type {
+    border-bottom: none;
+  }
+
+  /* Collapsed header row: label + summary + chevron */
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    user-select: none;
+    min-height: 36px;
+  }
+
+  .accordion-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .accordion-summary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--gray-mid);
+    flex: 1;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .accordion-summary.is-placeholder {
+    color: var(--gray-light);
+    font-style: italic;
+  }
+
+  .accordion-chevron {
+    font-size: 0.5rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    font-family: 'Jost', sans-serif;
+    transition: transform 0.25s ease;
+  }
+
+  .accordion-group.open .accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Collapsible body — contains chips or textarea */
+  .accordion-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .accordion-group.open .accordion-body {
+    max-height: 320px;
+    padding-top: 0.55rem;
+    padding-bottom: 0.75rem;
+  }
+
+  /* Bump outer panel ceiling for multiple open accordion groups */
+  .menu-item-wrap.open .expansion-panel {
+    max-height: 1600px;
+  }
+
   @media (max-width: 480px) {
     .logo { font-size: 1.5rem; letter-spacing: 4px; }
     .subheader-label { font-size: 0.9rem; letter-spacing: 6px; }
@@ -2231,26 +2314,7 @@
     </div>
     <div class="category">
       <span class="category-label">Frappe</span>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Double Chocolate Chip Cream</div></div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Double Chocolate Chip Cream', 'Large', 175, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Javachip Brownie Curvccino</div></div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Javachip Jelly Curvccino</div></div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Jelly Curvccino', 'Large', 175, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Strawberries & Cream</div></div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries & Cream', 'Large', 170, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Caramel Curvccino</div></div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('White Caramel Curvccino', 'Large', 175, this)">+</button></div></div>
-      </div>
+      <div id="frappe-mount"></div>
     </div>
   </section>
 
@@ -2262,41 +2326,7 @@
     </div>
     <div class="category">
       <span class="category-label">Cold & Fresh</span>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Dragon Dreams</div>
-          <div class="item-desc">dragon fruit · sweet cream · milk</div>
-        </div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Tropic Kiss</div>
-          <div class="item-desc">strawberry lemonade · mango juice · mango bits</div>
-        </div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Tokyo Sunrise</div>
-          <div class="item-desc">mango purée · coconut milk · soft cream</div>
-        </div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Tokyo Sunrise', 'Large', 170, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Hibiscus Cream Tea</div>
-          <div class="item-desc">hibiscus tea · soft sweet cream on top</div>
-        </div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Lime Cucumber</div>
-          <div class="item-desc">fresh cucumber · sparkling lemon lime fizz</div>
-        </div>
-        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Lime Cucumber', 'Large', 160, this)">+</button></div></div>
-      </div>
+      <div id="refresher-mount"></div>
     </div>
   </section>
 
@@ -2315,133 +2345,12 @@
     <div class="category">
       <span class="category-label">Takoyaki</span>
 
-      <!-- OG TAKOYAKI — Phase 4A hardcoded panel (preserved) -->
-      <div class="menu-item-wrap" id="panel-wrap-og-takoyaki">
-        <button class="expand-trigger" onclick="togglePanel('og-takoyaki')">
-          <div class="item-info">
-            <div class="item-name">OG Takoyaki</div>
-            <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi</div>
-            <div class="item-variant"><p>Swap octo with: Crab · Shrimp</p></div>
-          </div>
-          <span class="expand-arrow">▼</span>
-        </button>
-        <div class="expansion-panel" id="panel-og-takoyaki">
-          <div class="panel-inner">
-            <div class="panel-img">
-              <img src="images/menu/sample-takoyaki.png" alt="OG Takoyaki" loading="lazy">
-            </div>
-            <div class="panel-options">
-              <div>
-                <div class="option-group-label">Pieces</div>
-                <div class="option-chips" data-panel="og-takoyaki" data-group="pieces" data-type="single">
-                  <span class="option-chip selected" data-value="4pcs" data-price="90">4 pcs <span class="chip-price">₱90</span></span>
-                  <span class="option-chip" data-value="8pcs" data-price="149">8 pcs <span class="chip-price">₱149</span></span>
-                  <span class="option-chip" data-value="12pcs" data-price="219">12 pcs <span class="chip-price">₱219</span></span>
-                </div>
-              </div>
-              <div>
-                <div class="option-group-label">Spice Level</div>
-                <div class="option-chips" data-panel="og-takoyaki" data-group="spicy" data-type="single">
-                  <span class="option-chip selected" data-value="no" data-price="0">Not Spicy</span>
-                  <span class="option-chip" data-value="yes" data-price="0">Spicy</span>
-                </div>
-              </div>
-              <div>
-                <div class="option-group-label">Any notes for this item?</div>
-                <textarea class="panel-note-input" id="note-og-takoyaki" placeholder="e.g. extra sauce, swap octo with crab"></textarea>
-              </div>
-            </div>
-            <div class="panel-footer">
-              <div class="panel-qty">
-                <button class="panel-qty-btn" onclick="panelQty('og-takoyaki', -1)">−</button>
-                <span class="panel-qty-num" id="qty-og-takoyaki">1</span>
-                <button class="panel-qty-btn" onclick="panelQty('og-takoyaki', 1)">+</button>
-              </div>
-              <span class="panel-price" id="price-og-takoyaki">₱90</span>
-              <button class="panel-add-btn" onclick="panelAddToCart('og-takoyaki', 'OG Takoyaki')">Add to Cart</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Aburi Salmon</div>
-          <div class="item-desc">flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱105</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '4 pcs', 105, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱200</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '8 pcs', 200, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱300</strong></span><button class="add-btn-pill" onclick="addItem('Aburi Salmon', '12 pcs', 300, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Oozie Cheese</div>
-          <div class="item-desc">cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '4 pcs', 90, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '8 pcs', 149, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '12 pcs', 219, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Lava Melt</div>
-          <div class="item-desc">cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱95</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '4 pcs', 95, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱165</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '8 pcs', 165, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱230</strong></span><button class="add-btn-pill" onclick="addItem('Lava Melt', '12 pcs', 230, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Classic Veggie</div>
-          <div class="item-desc">veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱139</strong></span><button class="add-btn-pill" onclick="addItem('Classic Veggie', '8 pcs', 139, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱199</strong></span><button class="add-btn-pill" onclick="addItem('Classic Veggie', '12 pcs', 199, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Salted Egg</div>
-          <div class="item-desc">salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi</div>
-        </div>
-        <div class="item-right">
-          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱165</strong></span><button class="add-btn-pill" onclick="addItem('Salted Egg', '8 pcs', 165, this)">+</button></div>
-          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱230</strong></span><button class="add-btn-pill" onclick="addItem('Salted Egg', '12 pcs', 230, this)">+</button></div>
-        </div>
-      </div>
+      <div id="takoyaki-mount"></div>
     </div>
 
     <div class="category">
       <span class="category-label">Savory</span>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Shrimp Tempura</div>
-          <div class="item-desc">shrimp tempura · side w/ chips or veggies · tempura sauce</div>
-        </div>
-        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱179</span><button class="add-btn-pill" onclick="addItem('Shrimp Tempura', '', 179, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Chicken Karaage</div>
-          <div class="item-desc">chicken karaage · side w/ chips or veggies · sauce</div>
-        </div>
-        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 169, this)">+</button></div></div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Cream Dory Fillet</div>
-          <div class="item-desc">cream dory · side w/ chips or veggies · sauce</div>
-        </div>
-        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Cream Dory Fillet', '', 169, this)">+</button></div></div>
-      </div>
+      <div id="savory-mount"></div>
     </div>
   </section>
 
@@ -2811,12 +2720,14 @@
       id: 'cloud-spanish-oat', name: 'Cloud Spanish Oat Latte', badge: 'Seasonal',
       desc: 'double espresso · condensed milk · oat milk · salted cold foam on top.',
       reg: 160, lrg: 170, img: null,
+      default_milk: 'Oat Milk',  // oat milk is in the base recipe — free
       has_milk: true, has_syrup: true, has_sauce: true
     },
     {
       id: 'cocoa-caramel', name: 'Cocoa Caramel Latte', badge: 'Seasonal',
       desc: 'triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.',
       reg: 160, lrg: 170, img: null,
+      default_milk: 'Breve',     // breve is in the base recipe — free
       has_milk: true, has_syrup: true, has_sauce: true
     },
     {
@@ -2842,22 +2753,37 @@
            <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
          </div>`;
 
-    const milkHtml = has_milk ? `
-      <div>
+    // Relative milk pricing: Full Cream + Non-fat always free;
+    // item's default_milk also free (included in base recipe).
+    const default_milk = item.default_milk || 'Full Cream';
+    const milkHtml = has_milk ? (() => {
+      const milks = [
+        { value: 'Full Cream',   base_price: 0,  label: 'Full Cream' },
+        { value: 'Non-fat',      base_price: 0,  label: 'Non-fat' },
+        { value: 'Oat Milk',     base_price: 50, label: 'Oat Milk' },
+        { value: 'Almond Milk',  base_price: 50, label: 'Almond' },
+        { value: 'Coconut Milk', base_price: 30, label: 'Coconut' },
+        { value: 'Soy Milk',     base_price: 30, label: 'Soy' },
+        { value: 'Breve',        base_price: 50, label: 'Breve' },
+      ];
+      const chips = milks.map(m => {
+        const isSelected = m.value === default_milk;
+        const isFree     = m.base_price === 0 || m.value === default_milk;
+        const price      = isFree ? 0 : m.base_price;
+        const suffix     = price > 0 ? ` <span class="chip-price">+₱${price}</span>` : '';
+        return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
+      }).join('\n          ');
+      return `
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
         <div class="option-group-label">Milk</div>
         <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
-          <span class="option-chip selected" data-value="Full Cream" data-price="0">Full Cream</span>
-          <span class="option-chip" data-value="Non-fat" data-price="0">Non-fat</span>
-          <span class="option-chip" data-value="Oat Milk" data-price="50">Oat Milk <span class="chip-price">+₱50</span></span>
-          <span class="option-chip" data-value="Almond Milk" data-price="50">Almond <span class="chip-price">+₱50</span></span>
-          <span class="option-chip" data-value="Coconut Milk" data-price="30">Coconut <span class="chip-price">+₱30</span></span>
-          <span class="option-chip" data-value="Soy Milk" data-price="30">Soy <span class="chip-price">+₱30</span></span>
-          <span class="option-chip" data-value="Breve" data-price="50">Breve <span class="chip-price">+₱50</span></span>
+          ${chips}
         </div>
-      </div>` : '';
+      </div>`;
+    })() : '';
 
     const syrupHtml = has_syrup ? `
-      <div>
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
         <div class="option-group-label">Syrup +₱25</div>
         <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
           <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -2870,7 +2796,7 @@
       </div>` : '';
 
     const sauceHtml = has_sauce ? `
-      <div>
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
         <div class="option-group-label">Sauce +₱30</div>
         <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
           <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -2914,7 +2840,7 @@
               </div>
             </div>
             ${milkHtml}
-            <div>
+            <div data-collapsible="true" data-group-name="extrashot" data-group-label="Additional Espresso">
               <div class="option-group-label">Additional Espresso</div>
               <div class="option-chips" data-panel="${id}" data-group="extrashot" data-type="single">
                 <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -2923,7 +2849,7 @@
             </div>
             ${syrupHtml}
             ${sauceHtml}
-            <div>
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
               <div class="option-group-label">Any notes for this item?</div>
               <textarea class="panel-note-input" id="note-${id}" placeholder="${notePh}"></textarea>
             </div>
@@ -2952,6 +2878,9 @@
       if (item.has_syrup) defaults.syrup = 'none';
       if (item.has_sauce) defaults.sauce = 'none';
       initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Espresso panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
     });
   }
 
@@ -3224,7 +3153,7 @@
         return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
       }).join('\n          ');
       return `
-      <div>
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
         <div class="option-group-label">Milk</div>
         <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
           ${chips}
@@ -3246,7 +3175,7 @@
         return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${s.value}" data-price="${s.price}">${s.label}${priceSpan}</span>`;
       }).join('\n          ');
       return `
-      <div>
+      <div data-collapsible="true" data-group-name="sweetener" data-group-label="Sweetener">
         <div class="option-group-label">Sweetener</div>
         <div class="option-chips" data-panel="${id}" data-group="sweetener" data-type="single">
           ${chips}
@@ -3272,7 +3201,7 @@
             ${extraPowderHtml}
             ${milkHtml}
             ${sweetenerHtml}
-            <div>
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
               <div class="option-group-label">Any notes for this item?</div>
               <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, less sweet"></textarea>
             </div>
@@ -3313,6 +3242,9 @@
       if (item.has_milk)         defaults.milk        = item.default_milk;
       if (item.has_sweetener)    defaults.sweetener   = item.default_sweetener;
       initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Matcha/Hojicha panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
     });
   }
 
@@ -3432,7 +3364,7 @@
         return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
       }).join('\n          ');
       return `
-      <div>
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
         <div class="option-group-label">Milk</div>
         <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
           ${chips}
@@ -3441,7 +3373,7 @@
     })() : '';
 
     const syrupHtml = has_syrup ? `
-      <div>
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
         <div class="option-group-label">Syrup +₱25</div>
         <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
           <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -3454,7 +3386,7 @@
       </div>` : '';
 
     const sauceHtml = has_sauce ? `
-      <div>
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
         <div class="option-group-label">Sauce +₱30</div>
         <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
           <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -3466,7 +3398,7 @@
       </div>` : '';
 
     const inclusionsHtml = has_inclusions ? `
-      <div>
+      <div data-collapsible="true" data-group-name="inclusions" data-group-label="Inclusions">
         <div class="option-group-label">Inclusions +₱40</div>
         <div class="option-chips" data-panel="${id}" data-group="inclusions" data-type="single">
           <span class="option-chip selected" data-value="none" data-price="0">None</span>
@@ -3502,7 +3434,7 @@
             ${syrupHtml}
             ${sauceHtml}
             ${inclusionsHtml}
-            <div>
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
               <div class="option-group-label">Any notes for this item?</div>
               <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, extra sauce"></textarea>
             </div>
@@ -3530,6 +3462,515 @@
       const defaults = { size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none' };
       if (item.has_milk) defaults.milk = item.default_milk;
       initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Frappe panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+  // ── REFRESHER ITEMS CONFIG (Phase 4E) ──
+  // No milk options — Refreshers are fruit-based, fixed-recipe drinks.
+  // Sauce options are Refresher-specific (Strawberry Sauce, Mango Sauce),
+  // not the espresso/frappe sauce set.
+  // Regular prices rounded up from ₱149/₱159 per established rule.
+  const REFRESHER_ITEMS = [
+    {
+      id: 'dragon-dreams',
+      name: 'Dragon Dreams',
+      desc: 'dragon fruit · sweet cream · milk',
+      reg: 160,
+      lrg: 170,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'tropic-kiss',
+      name: 'Tropic Kiss',
+      desc: 'strawberry lemonade · mango juice · mango bits',
+      reg: 150,
+      lrg: 165,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'tokyo-sunrise',
+      name: 'Tokyo Sunrise',
+      desc: 'mango purée · coconut milk · soft cream',
+      reg: 160,
+      lrg: 170,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'hibiscus-cream-tea',
+      name: 'Hibiscus Cream Tea',
+      desc: 'hibiscus tea · soft sweet cream on top',
+      reg: 150,
+      lrg: 160,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'lime-cucumber',
+      name: 'Lime Cucumber',
+      desc: 'fresh cucumber · sparkling lemon lime fizz',
+      reg: 150,
+      lrg: 160,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    }
+  ];
+
+
+  // ── REFRESHER PANEL RENDERER (Phase 4E) ──
+
+  function renderRefresherPanel(item) {
+    const { id, name, desc, reg, lrg, img, has_syrup, has_sauce } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M8 2h8l1 7H7L8 2z"/><path d="M7 9c0 8 2 11 5 11s5-3 5-11"/>
+             <path d="M9 2c0 0-1 2-1 4M15 2c0 0 1 2 1 4"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    const descHtml = desc
+      ? `<div class="item-desc">${desc}</div>`
+      : '';
+
+    // Syrup group — same syrup set as Espresso/Frappe
+    const syrupHtml = has_syrup ? `
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
+        <div class="option-group-label">Syrup +₱25</div>
+        <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Syrup" data-price="25">Caramel</span>
+          <span class="option-chip" data-value="Vanilla Syrup" data-price="25">Vanilla</span>
+          <span class="option-chip" data-value="Hazelnut Syrup" data-price="25">Hazelnut</span>
+          <span class="option-chip" data-value="Strawberry Syrup" data-price="25">Strawberry</span>
+          <span class="option-chip" data-value="Blueberry Syrup" data-price="25">Blueberry</span>
+        </div>
+      </div>` : '';
+
+    // Sauce group — Refresher-specific sauces only
+    const sauceHtml = has_sauce ? `
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
+        <div class="option-group-label">Sauce +₱30</div>
+        <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Strawberry Sauce" data-price="30">Strawberry Sauce <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Mango Sauce" data-price="30">Mango Sauce <span class="chip-price">+₱30</span></span>
+        </div>
+      </div>` : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          ${descHtml}
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Size</div>
+              <div class="option-chips" data-panel="${id}" data-group="size" data-type="single">
+                <span class="option-chip selected" data-value="regular" data-price="${reg}">Regular <span class="chip-price">₱${reg}</span></span>
+                <span class="option-chip" data-value="large" data-price="${lrg}">Large <span class="chip-price">₱${lrg}</span></span>
+              </div>
+            </div>
+            ${syrupHtml}
+            ${sauceHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, less sweet"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${reg}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllRefresherPanels() {
+    const mount = document.getElementById('refresher-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    REFRESHER_ITEMS.forEach(item => {
+      mount.appendChild(renderRefresherPanel(item));
+      const defaults = { size: 'regular', syrup: 'none', sauce: 'none' };
+      initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Refresher panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+
+  // ── TAKOYAKI ITEMS CONFIG (Phase 4F) ──
+  // No Platter / 20pcs in this phase.
+  // Pieces array drives chip rendering per item — Classic Veggie and Salted Egg
+  // have no 4pcs and no cheese; the renderer reads has_cheese to gate that group.
+  // Add-ons (multi-select): Signature Sauce, Japanese Mayo, Aonori, Katsuobushi,
+  // Tenkasu, Meat Floss, Salmon Skin — all +₱30 each.
+  // OG Takoyaki will migrate from hardcoded Phase 4A panel in Step 4.
+  const TAKOYAKI_ITEMS = [
+
+    // ── OG TAKOYAKI ─────────────────────────────────────────────────────────
+    {
+      id: 'og-takoyaki',
+      name: 'OG Takoyaki',
+      desc: 'octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi',
+      variant_note: 'Swap octo with: Crab · Shrimp',
+      img: 'images/menu/sample-takoyaki.png',
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 90  },
+        { value: '8pcs',  label: '8 pcs',  price: 149 },
+        { value: '12pcs', label: '12 pcs', price: 219 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── ABURI SALMON ─────────────────────────────────────────────────────────
+    {
+      id: 'aburi-salmon',
+      name: 'Aburi Salmon',
+      desc: 'flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 105 },
+        { value: '8pcs',  label: '8 pcs',  price: 200 },
+        { value: '12pcs', label: '12 pcs', price: 300 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── OOZIE CHEESE ─────────────────────────────────────────────────────────
+    {
+      id: 'oozie-cheese',
+      name: 'Oozie Cheese',
+      desc: 'cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 90  },
+        { value: '8pcs',  label: '8 pcs',  price: 149 },
+        { value: '12pcs', label: '12 pcs', price: 219 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── LAVA MELT ────────────────────────────────────────────────────────────
+    {
+      id: 'lava-melt',
+      name: 'Lava Melt',
+      desc: 'cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 95  },
+        { value: '8pcs',  label: '8 pcs',  price: 165 },
+        { value: '12pcs', label: '12 pcs', price: 230 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── CLASSIC VEGGIE ───────────────────────────────────────────────────────
+    // No 4pcs. No cheese option.
+    {
+      id: 'classic-veggie',
+      name: 'Classic Veggie',
+      desc: 'veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '8pcs',  label: '8 pcs',  price: 139 },
+        { value: '12pcs', label: '12 pcs', price: 199 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── SALTED EGG ───────────────────────────────────────────────────────────
+    // No 4pcs. No cheese for now.
+    {
+      id: 'salted-egg',
+      name: 'Salted Egg',
+      desc: 'salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '8pcs',  label: '8 pcs',  price: 165 },
+        { value: '12pcs', label: '12 pcs', price: 230 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    }
+
+  ];
+
+
+  // ── TAKOYAKI PANEL RENDERER (Phase 4F) ──
+
+  // Cheese price per pieces count (no Platter in this phase).
+  const CHEESE_PRICE = { '4pcs': 30, '8pcs': 60, '12pcs': 90 };
+
+  function renderTakoyakiPanel(item) {
+    const { id, name, desc, variant_note, img, pieces,
+            has_spicy, has_addons, has_cheese } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+             <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>
+             <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/>
+             <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/>
+             <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    // Optional variant note (e.g. OG Takoyaki swap options)
+    const variantHtml = variant_note
+      ? `<div class="item-variant"><p>${variant_note}</p></div>`
+      : '';
+
+    // Pieces group — built from item.pieces array (only available sizes)
+    const firstPieces = pieces[0];
+    const pieceChips = pieces.map((p, i) =>
+      `<span class="option-chip${i === 0 ? ' selected' : ''}" data-value="${p.value}" data-price="${p.price}">${p.label} <span class="chip-price">₱${p.price}</span></span>`
+    ).join('\n          ');
+
+    // Spicy group
+    const spicyHtml = has_spicy ? `
+      <div data-collapsible="true" data-group-name="spicy" data-group-label="Spicy">
+        <div class="option-group-label">Spice Level</div>
+        <div class="option-chips" data-panel="${id}" data-group="spicy" data-type="single">
+          <span class="option-chip selected" data-value="no" data-price="0">Not Spicy</span>
+          <span class="option-chip" data-value="yes" data-price="0">Spicy</span>
+        </div>
+      </div>` : '';
+
+    // Add-ons group (multi-select)
+    const addonsHtml = has_addons ? `
+      <div data-collapsible="true" data-group-name="addons" data-group-label="Add-ons">
+        <div class="option-group-label">Add-ons +₱30 each</div>
+        <div class="option-chips" data-panel="${id}" data-group="addons" data-type="multi">
+          <span class="option-chip" data-value="Signature Sauce" data-price="30">Signature Sauce <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Japanese Mayo" data-price="30">Japanese Mayo <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Aonori" data-price="30">Aonori <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Katsuobushi" data-price="30">Katsuobushi <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Tenkasu" data-price="30">Tenkasu <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Meat Floss" data-price="30">Meat Floss <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Salmon Skin" data-price="30">Salmon Skin <span class="chip-price">+₱30</span></span>
+        </div>
+      </div>` : '';
+
+    // Add Cheese group (single-select, only when has_cheese is true).
+    // Initial 'Yes' chip price matches the first piece option via CHEESE_PRICE.
+    // The Step 1 hook in handleChipClick updates this price when pieces changes.
+    const initCheesePrice = CHEESE_PRICE[firstPieces.value] || 30;
+    const cheeseHtml = has_cheese ? `
+      <div data-collapsible="true" data-group-name="cheese" data-group-label="Add Cheese">
+        <div class="option-group-label">Add Cheese</div>
+        <div class="option-chips" data-panel="${id}" data-group="cheese" data-type="single">
+          <span class="option-chip selected" data-value="no" data-price="0">No</span>
+          <span class="option-chip" data-value="yes" data-price="${initCheesePrice}">Yes <span class="chip-price">+₱${initCheesePrice}</span></span>
+        </div>
+      </div>` : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          <div class="item-desc">${desc}</div>
+          ${variantHtml}
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Pieces</div>
+              <div class="option-chips" data-panel="${id}" data-group="pieces" data-type="single">
+                ${pieceChips}
+              </div>
+            </div>
+            ${spicyHtml}
+            ${addonsHtml}
+            ${cheeseHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. extra sauce, swap octo with crab"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${firstPieces.price}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllTakoyakiPanels() {
+    const mount = document.getElementById('takoyaki-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    TAKOYAKI_ITEMS.forEach(item => {
+      mount.appendChild(renderTakoyakiPanel(item));
+      const defaults = {
+        pieces: item.pieces[0].value,  // first available piece option
+        spicy: 'no',
+      };
+      // addons is multi — no default selection (starts empty)
+      if (item.has_cheese) defaults.cheese = 'no';
+      initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Takoyaki panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+
+  // ── SAVORY BITES ITEMS CONFIG (Phase 4G) ──
+  // Single fixed price per item. No size, no temperature, no milk.
+  // Sauce Preference (Sriracha Mayo / Garlic Aioli) is free — added in renderer.
+  const SAVORY_ITEMS = [
+    {
+      id: 'shrimp-tempura',
+      name: 'Shrimp Tempura',
+      desc: 'shrimp tempura · side w/ chips or veggies · tempura sauce',
+      price: 179,
+      img: null
+    },
+    {
+      id: 'chicken-karaage',
+      name: 'Chicken Karaage',
+      desc: 'chicken karaage · side w/ chips or veggies · sauce',
+      price: 169,
+      img: null
+    },
+    {
+      id: 'cream-dory-fillet',
+      name: 'Cream Dory Fillet',
+      desc: 'cream dory · side w/ chips or veggies · sauce',
+      price: 169,
+      img: null
+    }
+  ];
+
+
+  // ── SAVORY BITES PANEL RENDERER (Phase 4G) ──
+
+  function renderSavoryPanel(item) {
+    const { id, name, desc, price, img } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          <div class="item-desc">${desc}</div>
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}" data-base-price="${price}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Sauce Preference</div>
+              <div class="option-chips" data-panel="${id}" data-group="sauce_pref" data-type="single">
+                <span class="option-chip selected" data-value="Sriracha Mayo" data-price="0">Sriracha Mayo</span>
+                <span class="option-chip" data-value="Garlic Aioli" data-price="0">Garlic Aioli</span>
+              </div>
+            </div>
+            <div>
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. extra sauce on the side"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${price}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllSavoryPanels() {
+    const mount = document.getElementById('savory-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    SAVORY_ITEMS.forEach(item => {
+      mount.appendChild(renderSavoryPanel(item));
+      initPanel(item.id, { sauce_pref: 'Sriracha Mayo' });
     });
   }
 
@@ -3634,7 +4075,26 @@
       }
     }
 
+    // Pieces chip → update cheese 'Yes' chip price dynamically.
+    // Cheese is priced per 4 pieces: 4pcs=+₱30, 8pcs=+₱60, 12pcs=+₱90.
+    if (groupName === 'pieces') {
+      const cheeseMap = { '4pcs': 30, '8pcs': 60, '12pcs': 90 };
+      const newCheesePrice = cheeseMap[chip.dataset.value];
+      if (newCheesePrice !== undefined) {
+        const panel = document.getElementById('panel-' + panelId);
+        const cheeseGroup = panel && panel.querySelector('[data-group="cheese"]');
+        const yesChip = cheeseGroup && cheeseGroup.querySelector('[data-value="yes"]');
+        if (yesChip) {
+          yesChip.dataset.price = newCheesePrice;
+          const priceLabel = yesChip.querySelector('.chip-price');
+          if (priceLabel) priceLabel.textContent = `+₱${newCheesePrice}`;
+        }
+      }
+    }
+
     updatePanelPrice(panelId);
+    // Phase 5A: keep accordion summary in sync with chip selection
+    updateGroupSummary(panelId, groupName);
   }
 
   // Delegate chip clicks
@@ -3642,9 +4102,6 @@
     const chip = e.target.closest('.option-chip');
     if (chip) handleChipClick(chip);
   });
-
-  // Init OG Takoyaki (Phase 4A hardcoded panel)
-  initPanel('og-takoyaki', { pieces: '4pcs', spicy: 'no' });
 
   function getPanelOptions(id) {
     const opts = {};
@@ -3655,7 +4112,9 @@
         const sel = group.querySelector('.option-chip.selected');
         if (sel) opts[gname] = sel.dataset.value;
       } else if (type === 'multi') {
-        const selected = [...group.querySelectorAll('.option-chip.selected')].map(c => c.dataset.value);
+        // Sort selected values so tap order doesn't affect the cart key.
+        const selected = [...group.querySelectorAll('.option-chip.selected')]
+          .map(c => c.dataset.value).sort();
         if (selected.length) opts[gname] = selected.join(',');
       }
     });
@@ -3697,8 +4156,10 @@
       if (k === 'note') return;
       const grp = document.querySelector(`[data-panel="${id}"][data-group="${k}"]`);
       if (grp) {
-        const sel = grp.querySelector('.option-chip.selected');
-        const p = parseInt((sel && sel.dataset.price) || '0');
+        // Sum all selected chips to handle multi-select groups (e.g. add-ons).
+        // For single-select groups (0 or 1 selected) the result is identical.
+        const p = [...grp.querySelectorAll('.option-chip.selected')]
+          .reduce((sum, c) => sum + (parseInt(c.dataset.price) || 0), 0);
         if (p > 0) cleanPrices[k] = p;
       }
     });
@@ -3857,6 +4318,151 @@
     updateBadge();
   }
 
+  // ── PHASE 5A: ACCORDION JS SCAFFOLDING ──
+  // These functions are inert until Phase 5A Step 3+ adds data-collapsible
+  // attributes to renderers and calls wrapAccordionGroups() per panel.
+
+  // Build the human-readable summary string for one option group.
+  // Reads the live DOM chip selections and returns a display string.
+  function buildSummaryText(panelId, groupName) {
+    // Special case: note textarea
+    if (groupName === 'note') {
+      const ta = document.getElementById('note-' + panelId);
+      const val = ta ? ta.value.trim() : '';
+      return val ? (val.length > 24 ? val.slice(0, 24) + '…' : val) : null; // null = placeholder
+    }
+
+    const group = document.querySelector(`[data-panel="${panelId}"][data-group="${groupName}"]`);
+    if (!group) return '—';
+
+    const type = group.dataset.type;
+    const selected = [...group.querySelectorAll('.option-chip.selected')];
+
+    if (type === 'multi') {
+      if (selected.length === 0)  return 'None';
+      if (selected.length <= 2)   return selected.map(c => c.dataset.value).join(' · ');
+      return `${selected.length} selected`;
+    }
+
+    // Single-select
+    if (selected.length === 0) return '—';
+    const raw = selected[0].dataset.value;
+    // Use friendly label map where applicable (cheese:yes → 'Add Cheese', etc.)
+    // Summary-specific overrides — separate from getOptionDisplayLabel so
+    // cart/order message display is completely unaffected.
+    const SUMMARY_OVERRIDE = { 'cheese:yes': 'Added' };
+    const overrideKey = `${groupName}:${raw}`;
+    if (overrideKey in SUMMARY_OVERRIDE) return SUMMARY_OVERRIDE[overrideKey];
+
+    const mapped = getOptionDisplayLabel(groupName, raw);
+    // getOptionDisplayLabel returns null to suppress 'no' variants;
+    // in a summary context, still show a label rather than hiding.
+    if (mapped === null) {
+      // Show the chip's visible text (strip price span) as fallback
+      return selected[0].childNodes[0].textContent.trim();
+    }
+    return mapped;
+  }
+
+  // Rewrite the summary span in the accordion header for one group.
+  // Called from handleChipClick and note input listeners.
+  function updateGroupSummary(panelId, groupName) {
+    const header = document.querySelector(
+      `#panel-${panelId} [data-accordion-group="${groupName}"] .accordion-summary`
+    );
+    if (!header) return; // group not yet wrapped — no-op
+
+    const text = buildSummaryText(panelId, groupName);
+    if (text === null) {
+      header.textContent = '(tap to add)';
+      header.classList.add('is-placeholder');
+    } else {
+      header.textContent = text;
+      header.classList.remove('is-placeholder');
+    }
+  }
+
+  // Toggle one accordion group open/closed.
+  // headerEl is the .accordion-header element that was clicked.
+  function toggleAccordionGroup(headerEl) {
+    const group = headerEl.closest('.accordion-group');
+    if (!group) return;
+    group.classList.toggle('open');
+  }
+
+  // Post-process a rendered panel element: find divs with data-collapsible='true'
+  // and wrap them in accordion shells (header + collapsible body).
+  // Called once per panel after it is appended to the DOM.
+  function wrapAccordionGroups(panelEl) {
+    if (!panelEl) return;
+    const collapsible = panelEl.querySelectorAll('[data-collapsible="true"]');
+    collapsible.forEach(groupDiv => {
+      const groupName  = groupDiv.dataset.groupName || 'unknown';
+      const groupLabel = groupDiv.dataset.groupLabel || groupName;
+      const panelId    = panelEl.id.replace('panel-', '');
+
+      // Build initial summary text
+      const summaryText = buildSummaryText(panelId, groupName);
+      const isPlaceholder = summaryText === null;
+      const displayText   = isPlaceholder ? '(tap to add)' : summaryText;
+
+      // Create accordion wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'accordion-group';
+      wrapper.dataset.accordionGroup = groupName;
+
+      // Create header
+      const header = document.createElement('div');
+      header.className = 'accordion-header';
+      header.innerHTML = `
+        <span class="accordion-label">${groupLabel}</span>
+        <span class="accordion-summary${isPlaceholder ? ' is-placeholder' : ''}">${displayText}</span>
+        <span class="accordion-chevron">▼</span>`;
+      header.addEventListener('click', () => toggleAccordionGroup(header));
+
+      // Create body — move existing group content inside
+      const body = document.createElement('div');
+      body.className = 'accordion-body';
+
+      // Move the inner content of groupDiv into the body
+      while (groupDiv.firstChild) {
+        body.appendChild(groupDiv.firstChild);
+      }
+
+      // Remove the inner option-group-label — accordion header already serves as label.
+      const innerLabel = body.querySelector('.option-group-label');
+      if (innerLabel) innerLabel.remove();
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(body);
+
+      // Wire note textarea input event if this is the note group
+      if (groupName === 'note') {
+        const ta = body.querySelector('.panel-note-input');
+        if (ta) {
+          ta.addEventListener('input', () => updateGroupSummary(panelId, 'note'));
+        }
+      }
+
+      // Replace original groupDiv with the accordion wrapper
+      groupDiv.parentNode.replaceChild(wrapper, groupDiv);
+    });
+  }
+
+  // Display label map for boolean-style option values.
+  // Returns null to suppress display (hides 'no' variants cleanly).
+  // Used by both renderCart and buildMessage so display is consistent.
+  function getOptionDisplayLabel(k, val) {
+    const MAP = {
+      'cheese:no':  null,          // hide — customer kept default
+      'cheese:yes': 'Add Cheese',  // friendly label
+      'spicy:no':   null,          // hide — customer kept default
+      'spicy:yes':  'Spicy',       // friendly label
+    };
+    const lookup = `${k}:${val}`;
+    return (lookup in MAP) ? MAP[lookup] : val;
+  }
+
   function renderCart() {
     const itemsEl   = document.getElementById('cartItems');
     const emptyEl   = document.getElementById('cartEmpty');
@@ -3886,9 +4492,13 @@
       const pricesObj = item.optionPrices || {};
       const optKeys   = Object.keys(optsObj).sort().filter(k => k !== 'note');
       const optParts  = optKeys.map(k => {
-        const val = optsObj[k];
-        const p   = pricesObj[k];
-        return (p > 0) ? `${val} +₱${p.toLocaleString()}` : val;
+        const raw   = optsObj[k];
+        const p     = pricesObj[k];
+        const label = getOptionDisplayLabel(k, raw);
+        if (label === null) return null; // hide 'no' variants
+        // Multi-select values are comma-joined; split for readable display.
+        const display = label.includes(',') ? label.split(',').join(' · ') : label;
+        return (p > 0) ? `${display} +₱${p.toLocaleString()}` : display;
       }).filter(Boolean);
       if (optsObj.note) optParts.push('Note: ' + optsObj.note);
       const optsHtml = optParts.length
@@ -4018,9 +4628,13 @@
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
 
     const orderLines = cart.map(i => {
-      const optionsLabel = i.options && Object.keys(i.options).length > 0
-        ? ' · ' + Object.keys(i.options).sort().map(k => i.options[k]).join(' · ')
-        : '';
+      const optsObj = i.options || {};
+      const msgParts = Object.keys(optsObj).sort()
+        .filter(k => k !== 'note')
+        .map(k => getOptionDisplayLabel(k, optsObj[k]))
+        .filter(Boolean);
+      if (optsObj.note) msgParts.push('Notes: ' + optsObj.note);
+      const optionsLabel = msgParts.length ? ' · ' + msgParts.join(' · ') : '';
       const label = [i.name, i.variant, i.temp].filter(Boolean).join(' · ') + optionsLabel;
       return `  ${i.qty}x ${label} — ₱${(i.price * i.qty).toLocaleString()}`;
     }).join('\n');
@@ -4088,6 +4702,10 @@
   window.addEventListener('DOMContentLoaded', () => {
     renderAllEspressoPanels();
     renderAllMatchaPanels();
+    renderAllFrappePanels();
+    renderAllRefresherPanels();
+    renderAllTakoyakiPanels();
+    renderAllSavoryPanels();
     try {
       if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
