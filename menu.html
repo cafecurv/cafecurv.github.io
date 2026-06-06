@@ -2091,7 +2091,7 @@
     <div class="nav-menu-label" id="navMenuLabel">MENU</div>
     <button class="nav-arrow" id="arrowLeft" onclick="scrollNav(-120)">&#8249;</button>
     <div class="nav-tabs" id="navTabs">
-      <button class="nav-tab active" onclick="showSection('seasonal')">Seasonal Mood</button>
+      <button class="nav-tab active" onclick="showSection('seasonal')">CURV Picks</button>
       <button class="nav-tab" onclick="showSection('matcha')">Matcha & Hojicha</button>
       <button class="nav-tab" onclick="showSection('espresso')">Espresso</button>
       <button class="nav-tab" onclick="showSection('blended')">Curvccino</button>
@@ -2109,75 +2109,150 @@
   <!-- ── SEASONAL MOOD ── -->
   <section class="section active" id="seasonal">
     <div class="section-header">
-      <div class="section-title">Seasonal Mood</div>
-      <div class="section-desc">New drops and limited offerings — changes with the season.</div>
+      <div class="section-title">CURV Picks</div>
+      <div class="section-desc">Not sure where to start? These are the ones we’d order for you.</div>
     </div>
 
     <div class="category">
-      <span class="category-label seasonal">Matcha</span>
+      <span class="category-label">Matcha &amp; Hojicha</span>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Ube Latte <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · ube sauce · condensed milk</div>
+        <div class="item-info" onclick="jumpToPanel('matcha', 'kagoshima-matcha-cream')" style="cursor:pointer">
+          <div class="item-name">Kagoshima Matcha Cream</div>
+          <div class="item-desc">ceremonial matcha ice cream · ceremonial matcha · milk</div>
         </div>
         <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Ube Latte', '', 220, this)">+</button></div>
+          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Kagoshima Matcha Cream', '', 220, this)">+</button></div>
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Double Matcha Cloud <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha cold whisk · matcha cold foam · agave</div>
+        <div class="item-info" onclick="jumpToPanel('matcha', 'strawberry-matcha')" style="cursor:pointer">
+          <div class="item-name">Strawberry Matcha Latte</div>
+          <div class="item-desc">strawberry purée · ceremonial matcha · milk</div>
         </div>
         <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Double Matcha Cloud', '', 220, this)">+</button></div>
+          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Strawberry Matcha Latte', '', 205, this)">+</button></div>
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Matcha Sunrise <span class="seasonal-badge">Seasonal</span></div>
-          <div class="item-desc">ceremonial matcha · coconut milk · mango and strawberry purée</div>
+        <div class="item-info" onclick="jumpToPanel('matcha', 'sea-salt-cream-hojicha')" style="cursor:pointer">
+          <div class="item-name">Sea Salt Cream Hojicha</div>
+          <div class="item-desc">dark roast hojicha · salted cream · milk</div>
         </div>
         <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Matcha Sunrise', '', 220, this)">+</button></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label seasonal">Cloud Series</span>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Ube Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Berry Cloud Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
-        </div>
-      </div>
-      <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cloud Spanish Oat Latte <span class="seasonal-badge">Seasonal</span></div></div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div>
+          <div class="price-btn-row"><span class="price-single">₱195</span><button class="add-btn" onclick="addItem('Sea Salt Cream Hojicha', '', 195, this)">+</button></div>
         </div>
       </div>
     </div>
 
     <div class="category">
-      <span class="category-label seasonal">Espresso</span>
+      <span class="category-label">Coffee</span>
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">Cocoa Caramel Latte <span class="seasonal-badge">Seasonal</span></div></div>
+        <div class="item-info" onclick="jumpToPanel('espresso', 'spanish-latte')" style="cursor:pointer">
+          <div class="item-name">Spanish Latte</div>
+          <div class="item-desc">double espresso · vanilla bean syrup · condensed milk · whole milk</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱140</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 140, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('espresso', 'cloud-spanish-oat')" style="cursor:pointer">
+          <div class="item-name">Cloud Spanish Oat Latte</div>
+          <div class="item-desc">double espresso · condensed milk · oat milk · salted cold foam on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 160, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('espresso', 'wc-mocha')" style="cursor:pointer">
+          <div class="item-name">White Chocolate Mocha</div>
+          <div class="item-desc">double espresso · white chocolate · white chocolate sauce · milk · whipped cream on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Blended</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('blended', 'javachip-brownie-curvccino')" style="cursor:pointer">
+          <div class="item-name">Javachip Brownie Curvccino</div>
+          <div class="item-desc">espresso-blended cream · deep chocolate base · CURV brownies</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 160, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('blended', 'strawberries-and-cream')" style="cursor:pointer">
+          <div class="item-name">Strawberries &amp; Cream</div>
+          <div class="item-desc">sweet creamy blend · strawberry purée · made with lots of love</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries &amp; Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries &amp; Cream', 'Large', 170, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Refreshers</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'tropic-kiss')" style="cursor:pointer">
+          <div class="item-name">Tropic Kiss</div>
+          <div class="item-desc">strawberry lemonade · mango juice · mango bits</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'hibiscus-cream-tea')" style="cursor:pointer">
+          <div class="item-name">Hibiscus Cream Tea</div>
+          <div class="item-desc">hibiscus tea · soft sweet cream on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'dragon-dreams')" style="cursor:pointer">
+          <div class="item-name">Dragon Dreams</div>
+          <div class="item-desc">dragon fruit · sweet cream · milk</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 160, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Bites &amp; Light Meals</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('bites', 'og-takoyaki')" style="cursor:pointer">
+          <div class="item-name">OG Takoyaki</div>
+          <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce</div>
+        </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cocoa Caramel Latte', 'Large', 170, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '4pcs', 90, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '8pcs', 149, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '12pcs', 219, this)">+</button></div>
         </div>
       </div>
       <div class="menu-item">
-        <div class="item-info"><div class="item-name">White Ube Latte <span class="seasonal-badge">Seasonal</span></div></div>
+        <div class="item-info" onclick="jumpToPanel('bites', 'oozie-cheese')" style="cursor:pointer">
+          <div class="item-name">Oozie Cheese</div>
+          <div class="item-desc">cheese filling · veggies · melted cheese · Japanese mayo · signature sauce</div>
+        </div>
         <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱159</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Regular', 159, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('White Ube Latte', 'Large', 170, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '4pcs', 90, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '8pcs', 149, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '12pcs', 219, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('bites', 'chicken-karaage')" style="cursor:pointer">
+          <div class="item-name">Chicken Karaage</div>
+          <div class="item-desc">chicken karaage · side w/ chips or veggies · sauce</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 169, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Spring Rolls</div>
+          <div class="item-desc">crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo</div>
+        </div>
+        <div class="item-right">
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱150</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '4 pcs', 150, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
         </div>
       </div>
     </div>
@@ -2868,16 +2943,22 @@
     return wrap;
   }
 
+  // Returns the initPanel defaults for one Espresso item.
+  // Extracted so renderAllSeasonalPanels() can reuse the same logic.
+  function buildEspressoDefaults(item) {
+    const defaults = { temperature: 'iced', size: 'regular', extrashot: 'none' };
+    if (item.has_milk)  defaults.milk  = item.default_milk || 'Full Cream';
+    if (item.has_syrup) defaults.syrup = 'none';
+    if (item.has_sauce) defaults.sauce = 'none';
+    return defaults;
+  }
+
   function renderAllEspressoPanels() {
     const mount = document.getElementById('espresso-panels-mount');
     if (!mount) return;
     ESPRESSO_ITEMS.forEach(item => {
       mount.appendChild(renderEspressoPanel(item));
-      const defaults = { temperature: 'iced', size: 'regular', extrashot: 'none' };
-      if (item.has_milk)  defaults.milk  = 'Full Cream';
-      if (item.has_syrup) defaults.syrup = 'none';
-      if (item.has_sauce) defaults.sauce = 'none';
-      initPanel(item.id, defaults);
+      initPanel(item.id, buildEspressoDefaults(item));
       // Phase 5A: wrap collapsible groups for this Espresso panel
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
@@ -3228,6 +3309,16 @@
     hojicha:   'matcha-mount-hojicha',
   };
 
+  // Returns the initPanel defaults for one Matcha/Hojicha item.
+  // Extracted so renderAllSeasonalPanels() can reuse the same logic.
+  function buildMatchaDefaults(item) {
+    const defaults = {};
+    if (item.has_extra_powder) defaults.extrapower = 'none';
+    if (item.has_milk)         defaults.milk        = item.default_milk;
+    if (item.has_sweetener)    defaults.sweetener   = item.default_sweetener;
+    return defaults;
+  }
+
   function renderAllMatchaPanels() {
     MATCHA_ITEMS.forEach(item => {
       const mountId = MATCHA_MOUNTS[item.category];
@@ -3235,13 +3326,7 @@
       if (!mount) return; // mount divs not in HTML yet — skip silently
 
       mount.appendChild(renderMatchaPanel(item));
-
-      // Build initPanel defaults from config flags
-      const defaults = {};
-      if (item.has_extra_powder) defaults.extrapower = 'none';
-      if (item.has_milk)         defaults.milk        = item.default_milk;
-      if (item.has_sweetener)    defaults.sweetener   = item.default_sweetener;
-      initPanel(item.id, defaults);
+      initPanel(item.id, buildMatchaDefaults(item));
       // Phase 5A: wrap collapsible groups for this Matcha/Hojicha panel
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
@@ -4562,6 +4647,31 @@
     document.getElementById(id).classList.add('active');
     event.target.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Phase 5B.2: programmatic section switch + panel open.
+  // Used by CURV Picks item-info taps to jump to a full customization panel
+  // without relying on event.target like showSection() does.
+  function jumpToPanel(sectionId, panelId) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) targetSection.classList.add('active');
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      const onclick = tab.getAttribute('onclick') || '';
+      tab.classList.toggle('active', onclick.includes("'" + sectionId + "'"));
+    });
+
+    if (!panelId) return;
+
+    setTimeout(() => {
+      const wrap = document.getElementById('panel-wrap-' + panelId);
+      if (wrap && !wrap.classList.contains('open')) {
+        togglePanel(panelId);
+      } else if (wrap) {
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 50);
   }
 
   // ── FORM ──
