@@ -2106,7 +2106,7 @@
 
 <main>
 
-  <!-- ── SEASONAL MOOD ── -->
+  <!-- ── CURV PICKS ── -->
   <section class="section active" id="seasonal">
     <div class="section-header">
       <div class="section-title">CURV Picks</div>
@@ -2644,8 +2644,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input class="form-input" type="text" id="f-name" placeholder="Your full name">
+        <label class="form-label">Name</label>
+        <input class="form-input" type="text" id="f-name" placeholder="Wachu want to be called?">
       </div>
 
       <div id="new-customer-fields">
@@ -2657,14 +2657,17 @@
           <label class="form-label">Complete Address</label>
           <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
         </div>
-        <div class="form-group">
-          <label class="form-label">Delivery Type</label>
-          <select class="form-select" id="f-delivery">
-            <option value="">Select delivery type</option>
-            <option value="own-rider">Brgy. Santiago / Brgy. San Francisco (Own Rider)</option>
-            <option value="lalamove">Lalamove (Outside Vicinity)</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Order Method</label>
+        <select class="form-select" id="f-delivery">
+          <option value="">Select order method</option>
+          <option value="dine-in" disabled>Dine-in — Currently Unavailable</option>
+          <option value="pickup">In-Store Pick-up</option>
+          <option value="own-rider">Delivery — Brgy. Santiago / Brgy. San Francisco (Own Rider)</option>
+          <option value="lalamove">Delivery — Lalamove (Outside Vicinity)</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -2764,7 +2767,7 @@
     {
       id: 'caramel-macchiato', name: 'Caramel Macchiato', badge: null,
       desc: 'double espresso · caramel syrup · milk · drizzled in caramel sauce.',
-      reg: 160, lrg: 165, img: null,
+      reg: 160, lrg: 175, img: null,
       has_milk: true, has_syrup: true, has_sauce: true
     },
     {
@@ -4721,9 +4724,12 @@
     const name     = document.getElementById('f-name').value.trim();
     const contact  = isNew ? document.getElementById('f-contact').value.trim() : '';
     const address  = isNew ? document.getElementById('f-address').value.trim() : '';
-    const dSel     = document.getElementById('f-delivery');
-    const pSel     = document.getElementById('f-payment');
-    const delivery = isNew ? dSel.options[dSel.selectedIndex].text : '';
+    const dSel        = document.getElementById('f-delivery');
+    const pSel        = document.getElementById('f-payment');
+    const orderMethod = dSel.options[dSel.selectedIndex].text;
+    const isPickup    = dSel.value === 'pickup';
+    const isDelivery  = dSel.value === 'own-rider' || dSel.value === 'lalamove';
+    const delivery    = isNew ? orderMethod : '';
     const payment  = pSel.options[pSel.selectedIndex].text;
     const notes    = document.getElementById('f-notes').value.trim();
 
@@ -4733,7 +4739,8 @@
       : (specificTime ? formatTime12h(specificTime) : 'Not specified');
 
     if (!name) { alert('Please fill in your name.'); return null; }
-    if (isNew && (!contact || !address)) { alert('Please fill in your contact number and address.'); return null; }
+    if (isNew && !contact) { alert('Please fill in your contact number.'); return null; }
+    if (isNew && isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
     if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
 
@@ -4757,8 +4764,8 @@
     msg += `👤 Name: ${name}\n`;
     if (isNew) {
       msg += `📞 Contact: ${contact}\n`;
-      msg += `📍 Address: ${address}\n`;
-      msg += `🚗 Delivery: ${delivery}\n`;
+      if (isDelivery) msg += `📍 Address: ${address}\n`;
+      msg += `🚗 Order Method: ${orderMethod}\n`;
     }
     msg += `⏰ Time of Delivery: ${deliveryTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
