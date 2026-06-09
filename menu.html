@@ -1,31 +1,4845 @@
-Edit menu.html only.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon1.png">
+<link rel="apple-touch-icon" href="favicon1.png">
+<title>At The Curv — Menu</title>
+<meta name="description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity. Browse the full CURV menu and order for delivery in General Trias, Cavite.">
+<meta property="og:title" content="At The Curv — Menu">
+<meta property="og:description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity. Order for delivery in General Trias, Cavite.">
+<meta property="og:image" content="https://cafecurv.github.io/preview1.png">
+<meta property="og:url" content="https://cafecurv.github.io/menu.html">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="At The Curv — Menu">
+<meta name="twitter:description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity. Order for delivery in General Trias, Cavite.">
+<meta name="twitter:image" content="https://cafecurv.github.io/preview1.png">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F7F5F0;
+    --bg2:       #EEECEA;
+    --bg3:       #E5E2DC;
+    --navy:      #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid:  #6B6760;
+    --gray-light:#8A8680;
+    --accent:    #C8B89A;
+    --price:     #212842;
+  }
 
-FINAL PRICE CLEANUP ONLY.
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
 
-Target:
-ESPRESSO_ITEMS only.
+  body {
+    background: var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-Task:
-Update Curv Latte Regular price from 129 to 130.
+  /* ── HEADER ── */
+  header {
+    padding: 2.8rem 1.5rem 1.4rem;
+    text-align: center;
+    border-bottom: 0.5px solid var(--bg3);
+  }
 
-Change:
-reg: 129
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--navy);
+    line-height: 1;
+  }
 
-to:
-reg: 130
+  .logo-line {
+    width: 60px;
+    height: 1px;
+    background: var(--accent);
+    margin: 10px auto 10px;
+  }
 
-Only for:
-id: 'curv-latte'
+  .header-tagline {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--gray-mid);
+    letter-spacing: 0.5px;
+  }
 
-Do not edit:
-- Curv Latte Large price
-- any other espresso item price
-- CURV Picks
-- cart logic
-- order form
-- CSS
-- JS functions
-- descriptions
-- image paths
+  /* ── SUBHEADER ── */
+  .subheader {
+    text-align: center;
+    padding: 1rem 1.5rem 0.8rem;
+    background: var(--bg);
+  }
 
-Report changed line + test only.
+  .subheader-label {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--navy);
+  }
+
+  .subheader-line {
+    width: 100%;
+    max-width: 680px;
+    height: 0.5px;
+    background: var(--bg3);
+    margin: 0.8rem auto 0;
+  }
+
+  /* ── NAV ── */
+  .nav-wrap {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--bg3);
+    padding: 0 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: box-shadow 0.2s;
+  }
+
+  .nav-wrap.merged {
+    box-shadow: none;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  #siteNav {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--bg3);
+    position: sticky;
+    top: 0;
+    z-index: 150;
+    padding: 0 1.5rem;
+    transition: background 0.6s, border-color 0.6s;
+  }
+
+  #siteNav.merged { border-bottom: none; }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .nav-menu-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--navy);
+    padding: 0.75rem 0.8rem 0.75rem 0;
+    border-right: 0.5px solid var(--bg3);
+    margin-right: 0.6rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    display: none;
+  }
+
+  .nav-menu-label.visible { display: block; }
+
+  .nav-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 0.6rem 0;
+    flex: 1;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar { display: none; }
+
+  .nav-arrow {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--gray-light);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.3rem;
+    cursor: pointer;
+    transition: color 0.2s, opacity 0.2s;
+    opacity: 0;
+    pointer-events: none;
+    line-height: 1;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .nav-arrow.show { opacity: 1; pointer-events: all; }
+  .nav-arrow:hover { color: var(--navy); }
+
+  .nav-tab {
+    flex-shrink: 0;
+    padding: 0.45rem 1rem;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    cursor: pointer;
+    border-radius: 20px;
+    border: 0.5px solid transparent;
+    background: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-weight: 400;
+  }
+
+  .nav-tab:hover { color: var(--navy); background: var(--bg2); }
+
+  .nav-tab.active {
+    color: var(--bg);
+    background: var(--navy);
+    border-color: var(--navy);
+    font-weight: 500;
+  }
+
+  /* ── MAIN ── */
+  main { padding: 0 1.2rem 7rem; max-width: 680px; margin: 0 auto; }
+
+  /* ── SECTION ── */
+  .section { display: none; padding-top: 2rem; }
+  .section.active { display: block; }
+
+  .section-header { margin-bottom: 1.5rem; }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--navy);
+    text-transform: uppercase;
+  }
+
+  .section-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+    margin-top: 5px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── CATEGORY ── */
+  .category { margin-bottom: 2rem; }
+
+  .category-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--navy);
+    padding: 0.35rem 0.8rem;
+    border: 0.5px solid var(--bg3);
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 1rem;
+    background: var(--bg2);
+  }
+
+  .category-label.seasonal {
+    color: var(--navy);
+    border-color: var(--accent);
+    background: var(--bg3);
+  }
+
+  /* ── MENU ITEM ── */
+  .menu-item {
+    padding: 0.9rem 0;
+    border-bottom: 0.5px solid var(--bg3);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    animation: fadeUp 0.25s ease both;
+  }
+
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item.unavailable { opacity: 0.45; pointer-events: none; }
+
+  .item-info { flex: 1; min-width: 0; }
+
+  .item-name {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--navy);
+    line-height: 1.3;
+  }
+
+  .item-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: var(--gray-mid);
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  .item-variant {
+    border-left: 2px solid var(--accent);
+    padding-left: 8px;
+    margin-top: 7px;
+  }
+
+  .item-variant p {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    color: var(--gray-mid);
+    font-style: italic;
+  }
+
+  .coming-soon-badge {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.52rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 0.5px solid var(--accent);
+    border-radius: 10px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* ── ITEM RIGHT ── */
+  .item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .add-btn-pill {
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .add-btn-pill:active { transform: scale(0.92); background: #2e3a5c; }
+
+  .price-btn-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── PRICES ── */
+  .price-single {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--price);
+  }
+
+  .price-rl {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.75rem;
+    color: var(--gray-mid);
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .price-rl strong { font-weight: 600; color: var(--price); }
+
+  .price-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .price-pieces {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+  }
+
+  .price-pieces strong { font-weight: 600; color: var(--price); }
+
+  /* ── ADD BUTTONS ── */
+  .add-btn {
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .add-btn:active { transform: scale(0.9); background: #2e3a5c; }
+
+  .add-btn-rl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+    white-space: nowrap;
+  }
+
+  .add-btn-rl-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+    white-space: nowrap;
+  }
+
+  .add-btn-rl-label strong { font-weight: 600; color: var(--price); }
+
+  .add-btn-rl-divider {
+    color: var(--bg3);
+    font-size: 0.7rem;
+    font-family: 'Jost', sans-serif;
+  }
+
+  /* ── NOTE BOX ── */
+  .note-box {
+    background: var(--bg2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 0.9rem 1rem;
+    margin: 0 0 1.5rem;
+  }
+
+  .note-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .note-box p {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--gray-mid);
+    line-height: 1.7;
+  }
+
+  .note-box p + p { margin-top: 6px; }
+
+  .note-row {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--gray-mid);
+    line-height: 1.8;
+    display: flex;
+    gap: 6px;
+  }
+
+  .note-row span:first-child {
+    color: var(--navy);
+    font-weight: 600;
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+
+  /* ── SEASONAL BADGE ── */
+  .seasonal-badge {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.52rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    border: 0.5px solid var(--accent);
+    border-radius: 10px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    vertical-align: middle;
+    background: var(--bg3);
+  }
+
+  /* ── ORDER BAR ── */
+  .order-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.8rem 1.2rem 1.2rem;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    z-index: 200;
+  }
+
+  .order-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0.95rem;
+    background: var(--navy);
+    color: var(--bg);
+    text-align: center;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .order-btn:hover { background: #2e3a5c; }
+
+  .cart-badge {
+    background: var(--accent);
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cart-badge.show { display: flex; }
+
+  /* ── FLOATING FORM ── */
+  .form-float {
+    position: fixed;
+    bottom: 70px;
+    left: 0; right: 0;
+    z-index: 199;
+    padding: 0 1.2rem;
+    max-width: 680px;
+    margin: 0 auto;
+    display: none;
+  }
+
+  .form-float.open { display: block; }
+
+  .form-card {
+    background: var(--bg);
+    border: 0.5px solid var(--bg3);
+    border-radius: 12px;
+    box-shadow: 0 -4px 30px rgba(33,40,66,0.08);
+    overflow: hidden;
+  }
+
+  .form-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 1.1rem;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .form-top-title {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    font-weight: 500;
+  }
+
+  .form-top-actions { display: flex; gap: 8px; align-items: center; }
+
+  .form-minimize-btn, .form-close-btn {
+    background: none;
+    border: 0.5px solid var(--bg3);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 20px;
+    transition: background 0.15s;
+    color: var(--gray-mid);
+  }
+
+  .form-minimize-btn:hover { background: var(--bg3); }
+
+  .form-close-btn {
+    color: var(--navy);
+    background: var(--bg3);
+    border-color: var(--bg3);
+  }
+
+  .form-close-btn:hover { background: var(--accent); color: var(--bg); }
+
+  .form-body {
+    padding: 1rem 1.1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .form-body.minimized { display: none; }
+
+  .form-minimized-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.1rem;
+  }
+
+  .form-minimized-bar.show { display: flex; }
+
+  .form-minimized-label {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: var(--gray-mid);
+  }
+
+  .form-expand-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--navy);
+    border: none;
+    border-radius: 20px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .form-group { margin-bottom: 0.85rem; }
+
+  .form-label {
+    display: block;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    margin-bottom: 5px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    background: var(--bg);
+  }
+
+  .form-select option { background: var(--bg2); }
+  .form-textarea { resize: vertical; min-height: 60px; }
+
+  .payment-note {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--gray-mid);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+
+  /* ── CUSTOMER TYPE TOGGLE ── */
+  .customer-type-toggle {
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .customer-type-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .customer-type-hint {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.63rem;
+    color: var(--gray-mid);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* ── DELIVERY TIME ROW ── */
+  .delivery-time-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .delivery-time-row .temp-toggle-wrap { flex-shrink: 0; }
+  .delivery-time-row .form-input { flex: 1; }
+
+  /* ── CART ── */
+  .cart-box {
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0.85rem;
+  }
+
+  .cart-empty {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--gray-light);
+    padding: 0.85rem;
+    text-align: center;
+  }
+
+  .cart-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 0.5px solid var(--bg3);
+    gap: 0.5rem;
+  }
+
+  .cart-item:last-child { border-bottom: none; }
+
+  .cart-item-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cart-item-qty {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--bg3);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+  }
+
+  .cart-item-name {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    color: var(--navy);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .cart-item-opts {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.63rem;
+    color: var(--gray-mid);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  .cart-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .cart-item-price {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--price);
+  }
+
+  .cart-remove {
+    background: none;
+    border: 0.5px solid var(--bg3);
+    color: var(--gray-light);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .cart-remove:hover { background: #fce4e4; color: #c0392b; border-color: #c0392b; }
+
+  .cart-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    background: var(--bg3);
+    border-top: 0.5px solid var(--accent);
+  }
+
+  .cart-total-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    font-weight: 500;
+  }
+
+  .cart-total-amount {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* ── SUBMIT BUTTONS ── */
+  .submit-btn {
+    width: 100%;
+    padding: 0.9rem;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.4rem;
+    transition: background 0.2s;
+  }
+
+  .submit-btn:hover { background: #2e3a5c; }
+  .submit-btn.messenger { background: #1877F2; margin-top: 0.5rem; }
+  .submit-btn.messenger:hover { background: #1565d8; }
+
+  /* ── HOW TO ORDER POPUP ── */
+  .hto-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(33,40,66,0.6);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .hto-overlay.show { opacity: 1; pointer-events: all; }
+
+  .hto-card {
+    background: var(--bg);
+    border-radius: 16px;
+    max-width: 360px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(33,40,66,0.25);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+  }
+
+  .hto-overlay.show .hto-card { transform: translateY(0); }
+
+  .hto-top {
+    background: var(--navy);
+    padding: 1.4rem 1.4rem 1.1rem;
+    text-align: center;
+  }
+
+  .hto-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(200,184,154,0.15);
+    border: 1px solid rgba(200,184,154,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+  }
+
+  .hto-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--bg);
+  }
+
+  .hto-subtitle {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.66rem;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+
+  .hto-steps {
+    padding: 1.1rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .hto-step { display: flex; align-items: flex-start; gap: 0.8rem; }
+
+  .hto-num {
+    background: var(--navy);
+    color: var(--bg);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .hto-step-title {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--navy);
+  }
+
+  .hto-step-desc {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.64rem;
+    color: var(--gray-mid);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+
+  .hto-footer { padding: 0 1.3rem 1.3rem; }
+
+  .hto-btn {
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .hto-btn:hover { background: #2e3a5c; }
+
+  /* ── FAQ ── */
+  .faq-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(33,40,66,0.4);
+    z-index: 210;
+    backdrop-filter: blur(2px);
+  }
+
+  body.faq-open .faq-overlay { display: block; }
+
+  .faq-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-radius: 16px 16px 0 0;
+    z-index: 211;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .faq-sheet.open { transform: translateY(0); }
+
+  .faq-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.3rem;
+    border-bottom: 0.5px solid var(--bg3);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+  }
+
+  .faq-sheet-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--navy);
+  }
+
+  .faq-close {
+    background: var(--bg3);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    color: var(--navy);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .faq-close:hover { background: var(--accent); }
+
+  .faq-list { padding: 0.5rem 0 2rem; }
+
+  .faq-item { border-bottom: 0.5px solid var(--bg3); }
+  .faq-item:last-child { border-bottom: none; }
+
+  .faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.3rem;
+    cursor: pointer;
+    gap: 1rem;
+    user-select: none;
+  }
+
+  .faq-question span:first-child {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--navy);
+    line-height: 1.4;
+  }
+
+  .faq-arrow {
+    font-size: 0.6rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    transition: transform 0.25s;
+  }
+
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+  .faq-answer {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+    line-height: 1.8;
+    padding: 0 1.3rem 1rem;
+    display: none;
+  }
+
+  .faq-answer strong { color: var(--navy); font-style: normal; }
+  .faq-item.open .faq-answer { display: block; }
+
+  .faq-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 1.2rem;
+    height: 38px;
+    padding: 0 1rem;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    z-index: 198;
+    box-shadow: 0 4px 16px rgba(33,40,66,0.2);
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .faq-btn:hover { background: #2e3a5c; transform: scale(1.04); }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    background: var(--navy);
+    color: var(--bg);
+    padding: 2rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--bg);
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .footer-divider {
+    width: 40px;
+    height: 0.5px;
+    background: rgba(200,184,154,0.3);
+    margin: 1rem auto;
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.4rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .footer-info-row {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 300;
+    color: var(--gray-mid);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1.6;
+  }
+
+  .footer-info-row strong { color: var(--bg); font-weight: 500; }
+
+  .footer-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.4rem;
+  }
+
+  .footer-social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(247,245,240,0.06);
+    border: 0.5px solid rgba(200,184,154,0.25);
+    color: var(--accent);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.63rem;
+    letter-spacing: 1.5px;
+    font-weight: 400;
+    padding: 0.5rem 0.9rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .footer-social-btn:hover {
+    background: rgba(200,184,154,0.12);
+    border-color: var(--accent);
+  }
+
+  .footer-legal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .footer-legal-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    color: rgba(247,245,240,0.35);
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-legal-link:hover { color: var(--accent); }
+
+  .footer-legal-dot {
+    font-size: 0.58rem;
+    color: rgba(247,245,240,0.2);
+  }
+
+  .footer-copy {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    color: rgba(247,245,240,0.25);
+    letter-spacing: 1px;
+  }
+
+  /* ── TEMP TOGGLE (form delivery time) ── */
+  .temp-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg3);
+    border-radius: 20px;
+    padding: 3px;
+  }
+
+  .temp-tab {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 5px 14px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    background: transparent;
+    color: var(--gray-light);
+  }
+
+  .temp-tab.active {
+    background: var(--navy);
+    color: var(--bg);
+  }
+
+  /* ── CART QTY CONTROLS ── */
+  .cart-qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .cart-qty-btn {
+    background: var(--bg3);
+    border: none;
+    color: var(--navy);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .cart-qty-btn:hover { background: var(--accent); }
+
+  .cart-qty-num {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--navy);
+    min-width: 16px;
+    text-align: center;
+  }
+
+  /* ── DELIVERY FEE INFO ── */
+  .delivery-fee-info {
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .delivery-fee-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .delivery-fee-header-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+  }
+
+  .delivery-fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .delivery-fee-row:last-child { border-bottom: none; }
+
+  .delivery-fee-area {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    color: var(--navy);
+    font-weight: 400;
+  }
+
+  .delivery-fee-amount {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--gray-mid);
+  }
+
+  .delivery-fee-note {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.6rem;
+    color: var(--gray-light);
+    padding: 0.5rem 0.85rem;
+    background: var(--bg2);
+    border-top: 0.5px solid var(--bg3);
+    line-height: 1.5;
+  }
+
+  /* ── SITE NAV ── */
+  .site-nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .site-nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--navy);
+    text-decoration: none;
+  }
+
+  .site-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .site-nav-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    text-decoration: none;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  .site-nav-link:hover { color: var(--navy); }
+  .site-nav-link.active { color: var(--navy); font-weight: 500; }
+
+  .site-nav-order {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .site-nav-order:hover { background: #2e3a5c; }
+
+  /* ── MODE TOGGLE ── */
+  .site-mode-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg3);
+    background: var(--bg2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .site-mode-toggle:hover { border-color: var(--accent); }
+
+  .site-toggle-icon {
+    position: absolute;
+    transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+  }
+
+  .site-icon-sun  { transform: rotate(0deg) scale(1); opacity: 1; }
+  .site-icon-moon { transform: rotate(90deg) scale(0.5); opacity: 0; }
+
+  body.night-mode .site-icon-sun  { transform: rotate(-90deg) scale(0.5); opacity: 0; }
+  body.night-mode .site-icon-moon { transform: rotate(0deg) scale(1); opacity: 1; }
+
+  /* ── NIGHT MODE ── */
+  body.night-mode {
+    background: #141824;
+    color: #C8C0B4;
+    --bg:        #141824;
+    --bg2:       #1C2235;
+    --bg3:       #242C42;
+    --navy:      #F0EDE6;
+    --gray-dark: #C8C0B4;
+    --gray-mid:  #8A8680;
+    --gray-light:#6B6760;
+    --accent:    #C8B89A;
+    --price:     #F0EDE6;
+  }
+
+  /* ── HAMBURGER ── */
+  .site-hamburger {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 6px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .site-hamburger:hover { background: var(--bg2); }
+
+  .site-hamburger span {
+    display: block;
+    width: 20px;
+    height: 1.5px;
+    background: var(--navy);
+    border-radius: 2px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .site-hamburger.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .site-hamburger.open span:nth-child(2) { opacity: 0; }
+  .site-hamburger.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  /* ── MOBILE DRAWER ── */
+  .site-mobile-nav {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0; right: 0;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--bg3);
+    z-index: 149;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .site-mobile-nav.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .site-mobile-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 1.2rem;
+  }
+
+  .site-mobile-link {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    text-decoration: none;
+    font-weight: 400;
+    padding: 0.9rem 0;
+    border-bottom: 0.5px solid var(--bg3);
+    transition: color 0.2s;
+  }
+
+  .site-mobile-link:last-child { border-bottom: none; }
+  .site-mobile-link:hover { color: var(--navy); }
+
+  .site-mobile-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1.2rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .site-mobile-order {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 20px;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .site-mobile-order:hover { background: #2e3a5c; }
+
+  @media (max-width: 680px) {
+    .site-nav-links { display: none; }
+    .site-hamburger { display: flex; }
+    .site-mobile-nav { display: block; }
+  }
+
+  /* ── EXPANSION PANEL ── */
+  .menu-item-wrap {
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .menu-item-wrap:last-child { border-bottom: none; }
+
+  .expand-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.9rem 0;
+  }
+
+  .expand-arrow {
+    font-size: 0.55rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .menu-item-wrap.open .expand-arrow { transform: rotate(180deg); }
+
+  .expansion-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .menu-item-wrap.open .expansion-panel { max-height: 900px; }
+
+  .panel-inner { padding: 0 0 1.2rem; }
+
+  .panel-img {
+    width: 100%;
+    aspect-ratio: 16/7;
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.1rem;
+    overflow: hidden;
+  }
+
+  .panel-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .panel-options { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.1rem; }
+
+  .option-group-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .option-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .option-chip {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--gray-mid);
+    border: 0.5px solid var(--bg3);
+    border-radius: 20px;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    background: var(--bg2);
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .option-chip:hover { border-color: var(--accent); color: var(--navy); }
+
+  .option-chip.selected {
+    background: var(--navy);
+    color: var(--bg);
+    border-color: var(--navy);
+  }
+
+  .option-chip .chip-price {
+    font-size: 0.58rem;
+    opacity: 0.7;
+    margin-left: 4px;
+  }
+
+  .option-chip.selected .chip-price { opacity: 0.8; }
+
+  .panel-note-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 0.5px solid var(--bg3);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    height: 52px;
+  }
+
+  .panel-note-input:focus { border-color: var(--accent); background: var(--bg); }
+  .panel-note-input::placeholder { color: var(--gray-light); }
+
+  .panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--bg3);
+  }
+
+  .panel-qty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .panel-qty-btn {
+    background: var(--bg3);
+    border: none;
+    color: var(--navy);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    font-family: 'Jost', sans-serif;
+  }
+
+  .panel-qty-btn:hover { background: var(--accent); }
+
+  .panel-qty-num {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--navy);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .panel-price {
+    font-family: 'Jost', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    flex: 1;
+    text-align: center;
+  }
+
+  .panel-add-btn {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--navy);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.2rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .panel-add-btn:hover { background: #2e3a5c; }
+  .panel-add-btn:active { transform: scale(0.97); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  .pop { animation: pop 0.2s ease; }
+
+  /* ── PHASE 5A: ACCORDION OPTION GROUPS ── */
+  /* Inert until wrapAccordionGroups() applies them in Phase 5A Step 3+. */
+
+  /* Wrapper for one collapsible option group */
+  .accordion-group {
+    border-bottom: 0.5px solid var(--bg3);
+    padding-bottom: 0;
+  }
+
+  .accordion-group:last-of-type {
+    border-bottom: none;
+  }
+
+  /* Collapsed header row: label + summary + chevron */
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    user-select: none;
+    min-height: 36px;
+  }
+
+  .accordion-label {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.55rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .accordion-summary {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--gray-mid);
+    flex: 1;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .accordion-summary.is-placeholder {
+    color: var(--gray-light);
+    font-style: italic;
+  }
+
+  .accordion-chevron {
+    font-size: 0.5rem;
+    color: var(--gray-light);
+    flex-shrink: 0;
+    font-family: 'Jost', sans-serif;
+    transition: transform 0.25s ease;
+  }
+
+  .accordion-group.open .accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* Collapsible body — contains chips or textarea */
+  .accordion-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .accordion-group.open .accordion-body {
+    max-height: 320px;
+    padding-top: 0.55rem;
+    padding-bottom: 0.75rem;
+  }
+
+  /* Bump outer panel ceiling for multiple open accordion groups */
+  .menu-item-wrap.open .expansion-panel {
+    max-height: 1600px;
+  }
+
+  @media (max-width: 480px) {
+    .logo { font-size: 1.5rem; letter-spacing: 4px; }
+    .subheader-label { font-size: 0.9rem; letter-spacing: 6px; }
+    .nav-tab { font-size: 0.58rem; padding: 0.4rem 0.75rem; }
+    .section-title { font-size: 1.3rem; }
+    .form-float { bottom: 64px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HOW TO ORDER POPUP -->
+<div class="hto-overlay" id="htoOverlay">
+  <div class="hto-card">
+    <div class="hto-top">
+      <div class="hto-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <div class="hto-title">How to Order</div>
+      <div class="hto-subtitle">Simple steps, fresh sips 🍵</div>
+    </div>
+    <div class="hto-steps">
+      <div class="hto-step">
+        <div class="hto-num">1</div>
+        <div>
+          <div class="hto-step-title">Browse & add items</div>
+          <div class="hto-step-desc">Tap any item to expand it. Choose your options, then tap <strong>Add to Cart</strong>.</div>
+        </div>
+      </div>
+      <div class="hto-step">
+        <div class="hto-num">2</div>
+        <div>
+          <div class="hto-step-title">Fill in your details</div>
+          <div class="hto-step-desc">Select <strong>Returning</strong> or <strong>New Customer</strong>. Returning customers only need their name, delivery time, and payment.</div>
+        </div>
+      </div>
+      <div class="hto-step">
+        <div class="hto-num">3</div>
+        <div>
+          <div class="hto-step-title">Copy your order</div>
+          <div class="hto-step-desc">Tap <strong>Copy Order Message</strong> — your full order is copied!</div>
+        </div>
+      </div>
+      <div class="hto-step">
+        <div class="hto-num">4</div>
+        <div>
+          <div class="hto-step-title">Send via Messenger</div>
+          <div class="hto-step-desc">Tap <strong>Open Messenger</strong> → paste → hit send. Done! 🎉</div>
+        </div>
+      </div>
+    </div>
+    <div class="hto-footer">
+      <button class="hto-btn" onclick="dismissHto()">Got it, let's order!</button>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ OVERLAY -->
+<div class="faq-overlay" onclick="closeFaq()"></div>
+
+<!-- FAQ SHEET -->
+<div class="faq-sheet" id="faqSheet">
+  <div class="faq-sheet-header">
+    <div class="faq-sheet-title">Frequently Asked Questions</div>
+    <button class="faq-close" onclick="closeFaq()">✕</button>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>How do I place an order?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Browse the menu and tap any item to expand it. Choose your options and tap <strong>Add to Cart</strong>. Fill in your details, tap <strong>Copy Order Message</strong>, then tap <strong>Open Messenger</strong> — paste and send! That's it. 🎉
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where do you deliver?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We have our own rider covering <strong>Brgy. Santiago</strong> and <strong>Brgy. San Francisco</strong> in General Trias, Cavite. For areas outside our vicinity, we use <strong>Lalamove</strong> — just select it as your delivery type and the fee is shouldered by the customer.
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What payment methods do you accept?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We accept <strong>Cash on Delivery (COD)</strong>, <strong>GCash / Maya</strong>, and <strong>Bank Transfer</strong>. For electronic payments, full payment is required before your order is processed. Payment details will be sent via Messenger.
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>What are your operating hours?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We operate from <strong>morning until midnight</strong>. Hours may vary — follow our Facebook page <strong>@curvsideph</strong> for daily availability updates.
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Where is your matcha from?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        We use <strong>First Flush Ceremonial Grade Matcha</strong> sourced directly from a farmer in Kirishima, Kagoshima Prefecture, Japan. It's a blend of Yabukita, Tsuyu Hikari, Okumidori, and Saemidori cultivars — low bitterness, nutty, creamy, and slightly floral. 🍃
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Do you have allergen information?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Our products may contain allergens including wheat, eggs, dairy, nuts, and seafood. Please message us via Messenger before ordering if you have any allergies or dietary restrictions and we'll be happy to help.
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>How long does delivery take?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Delivery time depends on your location and order queue. Our own rider covers nearby barangays quickly. For Lalamove orders, estimated time will be shown in the app. We'll keep you updated via Messenger. 🚗
+      </div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaqItem(this)">
+        <span>Can I request less ice or no sugar?</span><span class="faq-arrow">▼</span>
+      </div>
+      <div class="faq-answer">
+        Absolutely! Use the <strong>Special Requests</strong> field in the order form. Note that less ice or no ice for matcha drinks will result in a non-full cup to maintain taste balance.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ BUTTON -->
+<button class="faq-btn" onclick="toggleFaq()" id="faqBtn">Got questions?</button>
+
+<!-- SITE NAV -->
+<nav id="siteNav">
+  <div class="site-nav-inner">
+    <a href="index.html" class="site-nav-logo">CURV</a>
+    <div class="site-nav-links">
+      <a href="menu.html" class="site-nav-link active">Menu</a>
+      <a href="products.html" class="site-nav-link">Products</a>
+      <a href="about.html" class="site-nav-link">The Curv</a>
+      <button class="site-mode-toggle" onclick="toggleSiteMode()" aria-label="Toggle day/night mode">
+        <svg class="site-toggle-icon site-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="site-toggle-icon site-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <a href="menu.html" class="site-nav-order">Order Now</a>
+    </div>
+    <button class="site-hamburger" id="siteHamburger" onclick="toggleSiteMobileNav()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- MOBILE NAV DRAWER -->
+<div class="site-mobile-nav" id="siteMobileNav">
+  <div class="site-mobile-links">
+    <a href="menu.html" class="site-mobile-link" onclick="closeSiteMobileNav()">Menu</a>
+    <a href="products.html" class="site-mobile-link" onclick="closeSiteMobileNav()">Products</a>
+    <a href="about.html" class="site-mobile-link" onclick="closeSiteMobileNav()">The Curv</a>
+  </div>
+  <div class="site-mobile-footer">
+    <button class="site-mode-toggle" onclick="toggleSiteMode()" aria-label="Toggle day/night mode">
+      <svg class="site-toggle-icon site-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg class="site-toggle-icon site-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8B89A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <a href="menu.html" class="site-mobile-order">Order Now</a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">AT THE CURV</div>
+  <div class="logo-line"></div>
+  <div class="header-tagline">"Where uncertainty meets possibility"</div>
+</header>
+
+<!-- SUBHEADER -->
+<div class="subheader">
+  <div class="subheader-label">MENU</div>
+  <div class="subheader-line"></div>
+</div>
+
+<!-- NAV -->
+<div class="nav-wrap">
+  <div class="nav-inner">
+    <div class="nav-menu-label" id="navMenuLabel">MENU</div>
+    <button class="nav-arrow" id="arrowLeft" onclick="scrollNav(-120)">&#8249;</button>
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" onclick="showSection('seasonal')">CURV Picks</button>
+      <button class="nav-tab" onclick="showSection('matcha')">Matcha & Hojicha</button>
+      <button class="nav-tab" onclick="showSection('espresso')">Espresso</button>
+      <button class="nav-tab" onclick="showSection('blended')">Curvccino</button>
+      <button class="nav-tab" onclick="showSection('refreshers')">Refreshers</button>
+      <button class="nav-tab" onclick="showSection('bites')">Bites</button>
+      <button class="nav-tab" onclick="showSection('salads')">Salads</button>
+      <button class="nav-tab" onclick="showSection('pastries')">Pastries & Desserts</button>
+    </div>
+    <button class="nav-arrow" id="arrowRight" onclick="scrollNav(120)">&#8250;</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ── CURV PICKS ── -->
+  <section class="section active" id="seasonal">
+    <div class="section-header">
+      <div class="section-title">CURV Picks</div>
+      <div class="section-desc">Not sure where to start? These are the ones we’d order for you.</div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Matcha &amp; Hojicha</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('matcha', 'kagoshima-matcha-cream')" style="cursor:pointer">
+          <div class="item-name">Kagoshima Matcha Cream</div>
+          <div class="item-desc">ceremonial matcha ice cream · ceremonial matcha · milk</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱220</span><button class="add-btn" onclick="addItem('Kagoshima Matcha Cream', '', 220, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('matcha', 'strawberry-matcha')" style="cursor:pointer">
+          <div class="item-name">Strawberry Matcha Latte</div>
+          <div class="item-desc">strawberry purée · ceremonial matcha · milk</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱205</span><button class="add-btn" onclick="addItem('Strawberry Matcha Latte', '', 205, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('matcha', 'sea-salt-cream-hojicha')" style="cursor:pointer">
+          <div class="item-name">Sea Salt Cream Hojicha</div>
+          <div class="item-desc">dark roast hojicha · salted cream · milk</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱195</span><button class="add-btn" onclick="addItem('Sea Salt Cream Hojicha', '', 195, this)">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Coffee</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('espresso', 'spanish-latte')" style="cursor:pointer">
+          <div class="item-name">Spanish Latte</div>
+          <div class="item-desc">double espresso · vanilla bean syrup · condensed milk · full cream milk</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱140</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Regular', 140, this, { milk: 'Full Cream' })">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Spanish Latte', 'Large', 150, this, { milk: 'Full Cream' })">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('espresso', 'cloud-spanish-oat')" style="cursor:pointer">
+          <div class="item-name">Cloud Spanish Oat Latte</div>
+          <div class="item-desc">double espresso · condensed milk · oat milk · salted cold foam on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Regular', 160, this, { milk: 'Oat Milk' })">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Cloud Spanish Oat Latte', 'Large', 170, this, { milk: 'Oat Milk' })">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('espresso', 'wc-mocha')" style="cursor:pointer">
+          <div class="item-name">White Chocolate Mocha</div>
+          <div class="item-desc">double espresso · white chocolate · white chocolate sauce · full cream milk · whipped cream on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('White Chocolate Mocha', 'Large', 160, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Blended</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('blended', 'javachip-brownie-curvccino')" style="cursor:pointer">
+          <div class="item-name">Javachip Brownie Curvccino</div>
+          <div class="item-desc">espresso-blended cream · deep chocolate base · CURV brownies</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Regular', 160, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱175</strong></span><button class="add-btn" onclick="addItem('Javachip Brownie Curvccino', 'Large', 175, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('blended', 'strawberries-and-cream')" style="cursor:pointer">
+          <div class="item-name">Strawberries &amp; Cream</div>
+          <div class="item-desc">sweet creamy blend · strawberry purée · made with lots of love</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱155</strong></span><button class="add-btn" onclick="addItem('Strawberries &amp; Cream', 'Regular', 155, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Strawberries &amp; Cream', 'Large', 170, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Refreshers</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'tropic-kiss')" style="cursor:pointer">
+          <div class="item-name">Tropic Kiss</div>
+          <div class="item-desc">strawberry lemonade · mango juice · mango bits</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱165</strong></span><button class="add-btn" onclick="addItem('Tropic Kiss', 'Large', 165, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'hibiscus-cream-tea')" style="cursor:pointer">
+          <div class="item-name">Hibiscus Cream Tea</div>
+          <div class="item-desc">hibiscus tea · soft sweet cream on top</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Hibiscus Cream Tea', 'Large', 160, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('refreshers', 'dragon-dreams')" style="cursor:pointer">
+          <div class="item-name">Dragon Dreams</div>
+          <div class="item-desc">dragon fruit · sweet cream · milk</div>
+        </div>
+        <div class="item-right"><div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Regular', 160, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱170</strong></span><button class="add-btn" onclick="addItem('Dragon Dreams', 'Large', 170, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Bites &amp; Light Meals</span>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('bites', 'og-takoyaki')" style="cursor:pointer">
+          <div class="item-name">OG Takoyaki</div>
+          <div class="item-desc">octobits · veggies · Japanese mayo · signature sauce</div>
+        </div>
+        <div class="item-right">
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '4pcs', 90, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '8pcs', 149, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('OG Takoyaki', '12pcs', 219, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('bites', 'oozie-cheese')" style="cursor:pointer">
+          <div class="item-name">Oozie Cheese</div>
+          <div class="item-desc">cheese filling · veggies · melted cheese · Japanese mayo · signature sauce</div>
+        </div>
+        <div class="item-right">
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱90</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '4pcs', 90, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱149</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '8pcs', 149, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">12 pcs <strong>₱219</strong></span><button class="add-btn-pill" onclick="addItem('Oozie Cheese', '12pcs', 219, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('bites', 'chicken-karaage')" style="cursor:pointer">
+          <div class="item-name">Chicken Karaage</div>
+          <div class="item-desc">chicken karaage · side w/ chips or veggies · sweet chili sauce</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱169</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 169, this, { sauce_pref: 'Sweet Chili Sauce' })">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Spring Rolls</div>
+          <div class="item-desc">crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo</div>
+        </div>
+        <div class="item-right">
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱150</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '4 pcs', 150, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MATCHA & HOJICHA ── -->
+  <section class="section" id="matcha">
+    <div class="section-header">
+      <div class="section-title">Matcha & Hojicha</div>
+      <div class="section-desc">Regular size only · First Flush Ceremonial grade Matcha</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">About Our Matcha</div>
+      <p>Our matcha uses first-harvest Kagoshima matcha with a standard gram serving.</p>
+      <br>
+      <div class="note-row"><span>Origin</span><span>Kirishima, Kagoshima Prefecture, Japan (Farmer Direct)</span></div>
+      <div class="note-row"><span>Harvest</span><span>First Flush</span></div>
+      <div class="note-row"><span>Cultivar</span><span>Blend/Mixed (Yabukita, Tsuyu Hikari, Okumidori, Saemidori)</span></div>
+      <div class="note-row"><span>Color</span><span>SUPER DUPER Green 🍃</span></div>
+      <div class="note-row"><span>Flavor</span><span>Low bitterness · Nutty · Creamy · Pistachio · Slightly floral</span></div>
+      <br>
+      <p>An extra gram of matcha is available for an additional charge. Less ice or no ice will result in a non-full cup.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Signature</span>
+      <div id="matcha-mount-signature"></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Popular</span>
+      <div id="matcha-mount-popular"></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label seasonal">Seasonal</span>
+      <div id="matcha-mount-seasonal"></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Hojicha</span>
+      <div id="matcha-mount-hojicha"></div>
+    </div>
+  </section>
+
+  <!-- ── ESPRESSO ── -->
+  <section class="section" id="espresso">
+    <div class="section-header">
+      <div class="section-title">Espresso</div>
+      <div class="section-desc">Heart racing? Totally normal.</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">About Our Beans</div>
+      <p>All espresso drinks are made using our signature premium Varese Beans (100% Arabica) for smooth, caramel-forward notes.</p>
+      <p>Requesting less ice will result in reduced volume to preserve the drink's balanced taste.</p>
+      <p>Available iced or hot. Hot drinks are served in a single 12oz size.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Espresso</span>
+      <div id="espresso-panels-mount"></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Non-Espresso</span>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Curv Chocolate</div>
+          <div class="item-desc">60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.</div>
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱149</span><button class="add-btn" onclick="addItem('Curv Chocolate', '', 149, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Ube Cloud Latte</div>
+          <div class="item-desc">ube cold foam · whole milk · dusted in ube powder.</div>
+        </div>
+        <div class="item-right">
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Berry Cloud Latte</div>
+          <div class="item-desc">strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.</div>
+        </div>
+        <div class="item-right">
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱149</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 149, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Add-ons</span>
+      <div class="menu-item">
+        <div class="item-info"><div class="item-name">Espresso Shot</div></div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱45</span><button class="add-btn" onclick="addItem('Espresso Shot (Add-on)', '', 45, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info"><div class="item-name">Cold Foam</div></div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Foam (Add-on)', '', 25, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info"><div class="item-name">Cold Brew Jelly</div></div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Cold Brew Jelly (Add-on)', '', 25, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Sub Milk</div>
+          <div class="item-desc">oat · almond · non-fat</div>
+        </div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱50</span><button class="add-btn" onclick="addItem('Sub Milk (Add-on)', '', 50, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info"><div class="item-name">Sauces</div></div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Sauces (Add-on)', '', 25, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info"><div class="item-name">Syrups</div></div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱25</span><button class="add-btn" onclick="addItem('Syrups (Add-on)', '', 25, this)">+</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CURVCCINO ── -->
+  <section class="section" id="blended">
+    <div class="section-header">
+      <div class="section-title">Curvccino</div>
+      <div class="section-desc">Ice blended beverages.</div>
+    </div>
+    <div class="category">
+      <span class="category-label">Frappe</span>
+      <div id="frappe-mount"></div>
+    </div>
+  </section>
+
+  <!-- ── REFRESHERS ── -->
+  <section class="section" id="refreshers">
+    <div class="section-header">
+      <div class="section-title">Refreshers</div>
+      <div class="section-desc">Nature called. We answered with a drink.</div>
+    </div>
+    <div class="category">
+      <span class="category-label">Cold & Fresh</span>
+      <div id="refresher-mount"></div>
+    </div>
+  </section>
+
+  <!-- ── BITES ── -->
+  <section class="section" id="bites">
+    <div class="section-header">
+      <div class="section-title">Bites</div>
+      <div class="section-desc">Takoyaki and savory appetizers.</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">Allergen Info</div>
+      <p>Please be advised that our products may contain allergens. Kindly check with us before placing your order.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Takoyaki</span>
+
+      <div id="takoyaki-mount"></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Savory</span>
+      <div id="savory-mount"></div>
+    </div>
+  </section>
+
+  <!-- ── SALADS ── -->
+  <section class="section" id="salads">
+    <div class="section-header">
+      <div class="section-title">Salad Bar</div>
+      <div class="section-desc">Fresh and light.</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">Allergen Info</div>
+      <p>Please be advised that our products may contain allergens. Kindly check with us before placing your order.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Salads</span>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Curv Salad</div>
+          <div class="item-desc">croutons · lettuce · cucumber · carrots · tomatoes · mangoes · parmesan cheese · salad dressing</div>
+        </div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱159</span><button class="add-btn" onclick="addItem('Curv Salad', '', 159, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Chicken Salad</div>
+          <div class="item-desc">chicken breast · lettuce · cucumber · tomatoes · croutons · parmesan cheese · dressing</div>
+        </div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱209</span><button class="add-btn" onclick="addItem('Chicken Salad', '', 209, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Coastal Salad</div>
+          <div class="item-desc">crab mix · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing <em style="color:var(--accent);font-style:italic;font-size:0.62rem;">· chuka wakame currently unavailable</em></div>
+        </div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱179</span><button class="add-btn" onclick="addItem('Coastal Salad', '', 179, this)">+</button></div></div>
+      </div>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Chukawakame Salad</div>
+          <div class="item-desc">100g serving</div>
+        </div>
+        <div class="item-right"><div class="price-btn-row"><span class="price-single">₱110</span><button class="add-btn" onclick="addItem('Chukawakame Salad', '', 110, this)">+</button></div></div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Spring Rolls</span>
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">Spring Rolls</div>
+          <div class="item-desc">crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo</div>
+        </div>
+        <div class="item-right">
+          <div class="price-row"><span class="price-pieces">4 pcs <strong>₱150</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '4 pcs', 150, this)">+</button></div>
+          <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Toast & Croiswhich</span>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Avo Toast on Sourdough <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">avocado smash · cherry tomatoes · egg · microgreens · side w/ chips and dressing</div>
+        </div>
+      </div>
+      <div class="menu-item unavailable">
+        <div class="item-info">
+          <div class="item-name">Omelette Croiswhich <span class="coming-soon-badge">Coming Soon</span></div>
+          <div class="item-desc">eggs · cheese · veggies on Curv croissant · side w/ chips</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PASTRIES & DESSERTS ── -->
+  <section class="section" id="pastries">
+    <div class="section-header">
+      <div class="section-title">Pastries & Desserts</div>
+      <div class="section-desc">Baked with intention. Sweet things worth waiting for.</div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-label">Coming Soon</div>
+      <p>Our pastry and dessert menu is currently in development. Each item is being perfected before it earns a spot on the menu — stay tuned.</p>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Viennoiserie</span>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Croissant <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">classic butter croissant · shatteringly flaky on the outside · pillowy soft within.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Pain au Chocolat <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">buttery croissant dough · dark chocolate center. a French classic done right.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Danish <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">laminated pastry dough · seasonal fruit or cream filling. delicate, light, and a little fancy.</div></div></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Choux Pastry</span>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Choux au Craquelin <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">choux pastry · crispy craquelin topping · filled with flavored cream. small but mighty.</div></div></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Curv Cookies</span>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Classic Chocolate Chip <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">brown butter · dark chocolate chips · crispy edges · gooey center. the one you already know and love.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">White Matcha <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">ceremonial matcha · white chocolate chunks · earthy, sweet, and very Curv.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Red Velvet <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">deep red cocoa cookie · cream cheese chips · soft, rich, and a little dramatic.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Biscoff <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">biscoff butter · caramelized cookie crumble · warm spice in every bite.</div></div></div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Sourdough</span>
+      <div class="note-box" style="margin-top:0.5rem;">
+        <div class="note-label">Dropping Soon</div>
+        <p>Something's proofing in the background. Details coming when it's ready.</p>
+      </div>
+    </div>
+
+    <div class="category">
+      <span class="category-label">Cheesecakes</span>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Matcha Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">ceremonial matcha · burnt basque base · creamy, slightly bitter, deeply satisfying.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Classic Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">pure cream cheese · caramelized top · custardy center. the one that started the burnt basque obsession.</div></div></div>
+      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Blueberry Cheesecake <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">classic cheesecake base · blueberry compote · fresh and fruity with every forkful.</div></div></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-logo">CURV</div>
+  <div class="footer-divider"></div>
+  <div class="footer-info">
+    <div class="footer-info-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>4017 Blk 44 Lot 23 Napoli St C2, Bella Vista, Brgy. Santiago, General Trias, Cavite</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      <span><strong>Dine-in</strong> (Currently Unavailable)</span>
+    </div>
+    <div class="footer-info-row">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
+      <span><strong>Delivery</strong> & <strong>In-Store Pick-up</strong> available</span>
+    </div>
+  </div>
+  <div class="footer-socials">
+    <a class="footer-social-btn" href="https://www.facebook.com/cafecurv" target="_blank" aria-label="Facebook">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+      <span>cafecurv</span>
+    </a>
+    <a class="footer-social-btn" href="https://www.instagram.com/cafecurv" target="_blank" aria-label="Instagram">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <span>cafecurv</span>
+    </a>
+    <a class="footer-social-btn" href="https://www.tiktok.com/@cafecurv" target="_blank" aria-label="TikTok">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.17 8.17 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>
+      <span>cafecurv</span>
+    </a>
+  </div>
+  <div class="footer-legal">
+    <a href="terms.html" class="footer-legal-link">Terms of Service</a>
+    <span class="footer-legal-dot">·</span>
+    <a href="privacy.html" class="footer-legal-link">Privacy Policy</a>
+  </div>
+  <div class="footer-copy">© 2026 Cafe Curv · All rights reserved · DTI Reg. No. 8070648</div>
+</footer>
+
+<!-- ORDER BAR -->
+<div class="order-bar" id="orderBar">
+  <button class="order-btn" onclick="toggleForm()">
+    Place an Order
+    <span class="cart-badge" id="cartBadge">0</span>
+  </button>
+</div>
+
+<!-- FLOATING FORM -->
+<div class="form-float" id="formFloat">
+  <div class="form-card">
+    <div class="form-top-bar">
+      <span class="form-top-title">Order Form</span>
+      <div class="form-top-actions">
+        <button class="form-minimize-btn" id="minimizeBtn" onclick="toggleMinimize()">Minimize</button>
+        <button class="form-close-btn" onclick="closeForm()">✕ Close</button>
+      </div>
+    </div>
+    <div class="form-minimized-bar" id="minimizedBar">
+      <span class="form-minimized-label">Your order is saved — tap to continue.</span>
+      <button class="form-expand-btn" onclick="toggleMinimize()">Expand ↑</button>
+    </div>
+    <div class="form-body" id="formBody">
+
+      <div class="delivery-fee-info">
+        <div class="delivery-fee-header">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
+          <span class="delivery-fee-header-label">Delivery Coverage & Estimated Fee</span>
+        </div>
+        <div class="delivery-fee-row">
+          <span class="delivery-fee-area">Brgy. Santiago</span>
+          <span class="delivery-fee-amount">est. ₱10 – ₱20</span>
+        </div>
+        <div class="delivery-fee-row">
+          <span class="delivery-fee-area">Brgy. San Francisco</span>
+          <span class="delivery-fee-amount">est. ₱20 – ₱30</span>
+        </div>
+        <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
+      </div>
+
+      <div class="customer-type-toggle">
+        <span class="customer-type-label">Customer Type</span>
+        <div class="temp-toggle-wrap" style="width:100%;justify-content:stretch;">
+          <button class="temp-tab active" id="tabNew" onclick="setCustomerType('new')" style="flex:1;">New Customer</button>
+          <button class="temp-tab" id="tabReturning" onclick="setCustomerType('returning')" style="flex:1;">Returning Customer</button>
+        </div>
+        <div class="customer-type-hint" id="customerTypeHint">Please fill in all required details below.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-input" type="text" id="f-name" placeholder="Wachu want to be called?">
+      </div>
+
+      <div id="new-customer-fields">
+        <div class="form-group">
+          <label class="form-label">Contact Number</label>
+          <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Complete Address</label>
+          <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Order Method</label>
+        <select class="form-select" id="f-delivery">
+          <option value="">Select order method</option>
+          <option value="dine-in" disabled>Dine-in — Currently Unavailable</option>
+          <option value="pickup">In-Store Pick-up</option>
+          <option value="own-rider">Delivery — Brgy. Santiago / Brgy. San Francisco (Own Rider)</option>
+          <option value="lalamove">Delivery — Lalamove (Outside Vicinity)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Time of Delivery</label>
+        <div class="delivery-time-row">
+          <div class="temp-toggle-wrap">
+            <button class="temp-tab active" id="tabAsap" onclick="setDeliveryTime('asap')">ASAP</button>
+            <button class="temp-tab" id="tabSpecific" onclick="setDeliveryTime('specific')">Specific Time</button>
+          </div>
+          <input class="form-input" type="time" id="f-delivery-time" style="display:none;flex:1;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Payment Method</label>
+        <select class="form-select" id="f-payment">
+          <option value="">Select payment method</option>
+          <option value="cod">Cash on Delivery</option>
+          <option value="gcash">GCash / Maya (Pay before order)</option>
+          <option value="bank">Bank Transfer (Pay before order)</option>
+        </select>
+        <div class="payment-note" id="payment-note"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Your Order</label>
+        <div class="cart-box" id="cartBox">
+          <div class="cart-empty" id="cartEmpty">No items yet — tap any item to add</div>
+          <div id="cartItems"></div>
+          <div class="cart-total" id="cartTotal" style="display:none;">
+            <span class="cart-total-label">Estimated Total</span>
+            <span class="cart-total-amount" id="cartTotalAmount">₱0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" id="special-requests-field">
+        <label class="form-label">Special Requests</label>
+        <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
+      </div>
+
+      <button class="submit-btn" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
+      <button class="submit-btn messenger" onclick="openMessenger()">Open Messenger →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── SITE NAV ──
+  function toggleSiteMode() {
+    document.body.classList.toggle('night-mode');
+    try { localStorage.setItem('curv-mode', document.body.classList.contains('night-mode') ? 'night' : 'day'); } catch(e) {}
+  }
+
+  function toggleSiteMobileNav() {
+    const nav = document.getElementById('siteMobileNav');
+    const btn = document.getElementById('siteHamburger');
+    const isOpen = nav.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+  }
+
+  function closeSiteMobileNav() {
+    document.getElementById('siteMobileNav').classList.remove('open');
+    document.getElementById('siteHamburger').classList.remove('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    const nav = document.getElementById('siteMobileNav');
+    const btn = document.getElementById('siteHamburger');
+    if (nav && nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
+      closeSiteMobileNav();
+    }
+  });
+
+  // ── ESPRESSO ITEMS CONFIG (Phase 4B) ──
+  // reg = iced regular price; lrg = iced large price = hot 12oz price
+  const ESPRESSO_ITEMS = [
+    {
+      id: 'curv-latte', name: 'Curv Latte', badge: null,
+      desc: 'double espresso · full cream milk · a whisper of sweetness. the one that started it all.',
+      reg: 130, lrg: 145,
+      img: 'images/menu/sample-caffelatte.png',
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'einspanner-latte', name: 'Einspanner Latte', badge: null,
+      desc: 'double espresso · full cream milk · crowned with thick sweet cream.',
+      reg: 150, lrg: 160, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'spanish-latte', name: 'Spanish Latte', badge: null,
+      desc: 'double espresso · vanilla bean syrup · condensed milk · full cream milk.',
+      reg: 140, lrg: 150, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'caramel-macchiato', name: 'Caramel Macchiato', badge: null,
+      desc: 'double espresso · caramel syrup · full cream milk · drizzled in caramel sauce.',
+      reg: 160, lrg: 175, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'vanilla-latte', name: 'Vanilla Latte', badge: null,
+      desc: 'double espresso · vanilla bean syrup · full cream milk.',
+      reg: 140, lrg: 150, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'wc-mocha', name: 'White Chocolate Mocha', badge: null,
+      desc: 'double espresso · white chocolate · white chocolate sauce · full cream milk · whipped cream on top.',
+      reg: 150, lrg: 160, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'caffe-mocha', name: 'Caffè Mocha', badge: null,
+      desc: 'double espresso · 60% dark chocolate · dark chocolate sauce · full cream milk · whipped cream on top.',
+      reg: 150, lrg: 160, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'americano', name: 'Americano', badge: null,
+      desc: 'double espresso · water · nothing more, nothing less. brewed with Varese beans — 100% arabica, clean and sharp.',
+      reg: 120, lrg: 125, img: null,
+      has_milk: false, has_syrup: false, has_sauce: false
+    },
+    {
+      id: 'cloud-spanish-oat', name: 'Cloud Spanish Oat Latte', badge: 'Seasonal',
+      desc: 'double espresso · condensed milk · oat milk · salted cold foam on top.',
+      reg: 160, lrg: 170, img: null,
+      default_milk: 'Oat Milk',  // oat milk is in the base recipe — free
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'cocoa-caramel', name: 'Cocoa Caramel Latte', badge: 'Seasonal',
+      desc: 'triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.',
+      reg: 160, lrg: 170, img: null,
+      default_milk: 'Breve',     // breve is in the base recipe — free
+      has_milk: true, has_syrup: true, has_sauce: true
+    },
+    {
+      id: 'white-ube', name: 'White Ube Latte', badge: 'Seasonal',
+      desc: 'double espresso · white chocolate · ube · full cream milk.',
+      reg: 160, lrg: 170, img: null,
+      has_milk: true, has_syrup: true, has_sauce: true
+    }
+  ];
+
+  // ── ESPRESSO PANEL RENDERER ──
+  function renderEspressoPanel(item) {
+    const { id, name, badge, desc, reg, lrg, img, has_milk, has_syrup, has_sauce } = item;
+    const badgeHtml = badge ? ` <span class="seasonal-badge">${badge}</span>` : '';
+
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+             <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    // Relative milk pricing: Full Cream + Non-fat always free;
+    // item's default_milk also free (included in base recipe).
+    const default_milk = item.default_milk || 'Full Cream';
+    const milkHtml = has_milk ? (() => {
+      const milks = [
+        { value: 'Full Cream',   base_price: 0,  label: 'Full Cream' },
+        { value: 'Non-fat',      base_price: 0,  label: 'Non-fat' },
+        { value: 'Oat Milk',     base_price: 50, label: 'Oat Milk' },
+        { value: 'Almond Milk',  base_price: 50, label: 'Almond' },
+        { value: 'Coconut Milk', base_price: 30, label: 'Coconut' },
+        { value: 'Soy Milk',     base_price: 30, label: 'Soy' },
+        { value: 'Breve',        base_price: 50, label: 'Breve' },
+      ];
+      const chips = milks.map(m => {
+        const isSelected = m.value === default_milk;
+        const isFree     = m.base_price === 0 || m.value === default_milk;
+        const price      = isFree ? 0 : m.base_price;
+        const suffix     = price > 0 ? ` <span class="chip-price">+₱${price}</span>` : '';
+        return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
+      }).join('\n          ');
+      return `
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
+        <div class="option-group-label">Milk</div>
+        <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
+          ${chips}
+        </div>
+      </div>`;
+    })() : '';
+
+    const syrupHtml = has_syrup ? `
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
+        <div class="option-group-label">Syrup +₱25</div>
+        <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Syrup" data-price="25">Caramel</span>
+          <span class="option-chip" data-value="Vanilla Syrup" data-price="25">Vanilla</span>
+          <span class="option-chip" data-value="Hazelnut Syrup" data-price="25">Hazelnut</span>
+          <span class="option-chip" data-value="Strawberry Syrup" data-price="25">Strawberry</span>
+          <span class="option-chip" data-value="Blueberry Syrup" data-price="25">Blueberry</span>
+        </div>
+      </div>` : '';
+
+    const sauceHtml = has_sauce ? `
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
+        <div class="option-group-label">Sauce +₱30</div>
+        <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Sauce" data-price="30">Caramel</span>
+          <span class="option-chip" data-value="Salted Caramel Sauce" data-price="30">Salted Caramel</span>
+          <span class="option-chip" data-value="White Choc Sauce" data-price="30">White Chocolate</span>
+          <span class="option-chip" data-value="Chocolate Sauce" data-price="30">Chocolate</span>
+        </div>
+      </div>` : '';
+
+    const notePh = has_milk ? 'e.g. less ice, less sweet' : 'e.g. less ice';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}${badgeHtml}</div>
+          <div class="item-desc">${desc}</div>
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Temperature</div>
+              <div class="option-chips" data-panel="${id}" data-group="temperature" data-type="single">
+                <span class="option-chip selected" data-value="iced" data-price="0">Iced</span>
+                <span class="option-chip" data-value="hot" data-price="0">Hot</span>
+              </div>
+            </div>
+            <div>
+              <div class="option-group-label">Size</div>
+              <div class="option-chips" data-panel="${id}" data-group="size" data-type="single">
+                <span class="option-chip selected" data-value="regular" data-price="${reg}" data-show-when="iced">Regular <span class="chip-price">₱${reg}</span></span>
+                <span class="option-chip" data-value="large" data-price="${lrg}" data-show-when="iced">Large <span class="chip-price">₱${lrg}</span></span>
+                <span class="option-chip" data-value="12oz" data-price="${lrg}" data-show-when="hot" style="display:none">12oz <span class="chip-price">₱${lrg}</span></span>
+              </div>
+            </div>
+            ${milkHtml}
+            <div data-collapsible="true" data-group-name="extrashot" data-group-label="Additional Espresso">
+              <div class="option-group-label">Additional Espresso</div>
+              <div class="option-chips" data-panel="${id}" data-group="extrashot" data-type="single">
+                <span class="option-chip selected" data-value="none" data-price="0">None</span>
+                <span class="option-chip" data-value="+2 Shots" data-price="80">+2 Shots <span class="chip-price">+₱80</span></span>
+              </div>
+            </div>
+            ${syrupHtml}
+            ${sauceHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="${notePh}"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${reg}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  // Returns the initPanel defaults for one Espresso item.
+  // Extracted so renderAllSeasonalPanels() can reuse the same logic.
+  function buildEspressoDefaults(item) {
+    const defaults = { temperature: 'iced', size: 'regular', extrashot: 'none' };
+    if (item.has_milk)  defaults.milk  = item.default_milk || 'Full Cream';
+    if (item.has_syrup) defaults.syrup = 'none';
+    if (item.has_sauce) defaults.sauce = 'none';
+    return defaults;
+  }
+
+  function renderAllEspressoPanels() {
+    const mount = document.getElementById('espresso-panels-mount');
+    if (!mount) return;
+    ESPRESSO_ITEMS.forEach(item => {
+      mount.appendChild(renderEspressoPanel(item));
+      initPanel(item.id, buildEspressoDefaults(item));
+      // Phase 5A: wrap collapsible groups for this Espresso panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+  // ── MATCHA / HOJICHA ITEMS CONFIG (Phase 4C) ──
+  // Single fixed price. No temperature, no size options.
+  // Renderer will set data-base-price on the panel element so getPanelBasePrice() can read it.
+  // default_milk / default_sweetener pre-select the correct chip per item.
+  // has_* flags control which option groups appear in the rendered panel.
+  const MATCHA_ITEMS = [
+
+    // ── SIGNATURE ────────────────────────────────────────────────────────────
+    {
+      id: 'einspanner-matcha',
+      name: 'Einspanner Matcha',
+      category: 'signature',
+      badge: null,
+      desc: 'thick sweet cream · ceremonial matcha · milk',
+      price: 205,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'kagoshima-matcha-cream',
+      name: 'Kagoshima Matcha Cream',
+      category: 'signature',
+      badge: null,
+      desc: 'ceremonial matcha ice cream · ceremonial matcha · milk',
+      price: 220,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'banana-fudge-matcha',
+      name: 'Banana Fudge Matcha Latte',
+      category: 'signature',
+      badge: null,
+      desc: 'banana fudge pudding · ceremonial matcha · milk',
+      price: 220,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'cookie-crumb-matcha',
+      name: 'Cookie Crumb Matcha Latte',
+      category: 'signature',
+      badge: null,
+      desc: 'matcha cookie · ceremonial matcha · milk',
+      price: 220,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+
+    // ── POPULAR ──────────────────────────────────────────────────────────────
+    {
+      id: 'sea-salt-cream-matcha',
+      name: 'Sea Salt Cream Matcha Latte',
+      category: 'popular',
+      badge: null,
+      desc: 'sea salt cream · ceremonial matcha · milk · agave syrup',
+      price: 205,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'cs-matcha-oat',
+      name: 'CS Matcha Oat Latte',
+      category: 'popular',
+      badge: null,
+      desc: 'ceremonial matcha · oat milk · agave syrup',
+      price: 195,
+      img: null,
+      default_milk: 'Oat Milk',       // pre-selects Oat Milk (base recipe uses oat milk)
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'strawberry-matcha',
+      name: 'Strawberry Matcha Latte',
+      category: 'popular',
+      badge: null,
+      desc: 'strawberry purée · ceremonial matcha · milk',
+      price: 205,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'pure-usucha',
+      name: 'Pure Usucha',
+      category: 'popular',
+      badge: null,
+      desc: 'ceremonial matcha · water · that\'s all.',
+      price: 170,
+      img: null,
+      default_milk: null,             // no milk — pure matcha + water
+      default_sweetener: null,        // no sweetener — served pure
+      has_milk: false,
+      has_sweetener: false,
+      has_extra_powder: true
+    },
+
+    // ── SEASONAL ─────────────────────────────────────────────────────────────
+    {
+      id: 'matcha-ube-latte',
+      name: 'Matcha Ube Latte',
+      category: 'seasonal',
+      badge: 'Seasonal',
+      desc: 'ube cold foam · ceremonial matcha · milk',
+      price: 220,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'double-matcha-cloud',
+      name: 'Double Matcha Cloud',
+      category: 'seasonal',
+      badge: 'Seasonal',
+      desc: 'ceremonial matcha cold whisk · matcha cold foam · agave',
+      price: 220,
+      img: null,
+      default_milk: null,             // no regular milk component — cold whisk + cold foam
+      default_sweetener: 'no-sweetener',
+      has_milk: false,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'matcha-sunrise',
+      name: 'Matcha Sunrise',
+      category: 'seasonal',
+      badge: 'Seasonal',
+      desc: 'ceremonial matcha · coconut milk · mango and strawberry purée',
+      price: 220,
+      img: null,
+      default_milk: 'Coconut Milk',   // pre-selects Coconut Milk (base recipe uses coconut milk)
+      default_sweetener: null,        // fruit purées provide sweetness — no sweetener option
+      has_milk: true,
+      has_sweetener: false,
+      has_extra_powder: true
+    },
+
+    // ── HOJICHA ──────────────────────────────────────────────────────────────
+    {
+      id: 'hojicha-latte',
+      name: 'Hojicha Latte',
+      category: 'hojicha',
+      badge: null,
+      desc: 'dark roast hojicha · milk',
+      price: 175,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true          // extra hojicha powder
+    },
+    {
+      id: 'sea-salt-cream-hojicha',
+      name: 'Sea Salt Cream Hojicha',
+      category: 'hojicha',
+      badge: null,
+      desc: 'dark roast hojicha · salted cream · milk',
+      price: 195,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    },
+    {
+      id: 'pink-hojicha-latte',
+      name: 'Pink Hojicha Latte',
+      category: 'hojicha',
+      badge: null,
+      desc: 'strawberry cold foam · dark roast hojicha · milk · strawberry purée',
+      price: 205,
+      img: null,
+      default_milk: 'Full Cream',
+      default_sweetener: 'no-sweetener',
+      has_milk: true,
+      has_sweetener: true,
+      has_extra_powder: true
+    }
+
+  ];
+
+  // ── MATCHA / HOJICHA PANEL RENDERER (Phase 4C) ──
+
+  function renderMatchaPanel(item) {
+    const {
+      id, name, badge, desc, price, img,
+      default_milk, default_sweetener,
+      has_milk, has_sweetener, has_extra_powder
+    } = item;
+
+    const badgeHtml = badge
+      ? ` <span class="seasonal-badge">${badge}</span>`
+      : '';
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+             <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    // Extra Powder group (optional)
+    const extraPowderHtml = has_extra_powder ? `
+      <div>
+        <div class="option-group-label">Extra Powder</div>
+        <div class="option-chips" data-panel="${id}" data-group="extrapower" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="+1g Extra Powder" data-price="45">+1g Extra Powder <span class="chip-price">+₱45</span></span>
+        </div>
+      </div>` : '';
+
+    // Milk group (optional) — pre-selects default_milk chip
+    const milkHtml = has_milk ? (() => {
+      // base_price = standard add-on. Full Cream and Non-fat are always free.
+      // default_milk is also free — already included in the item's base recipe.
+      // All other premium/sub milks keep their base_price.
+      const milks = [
+        { value: 'Full Cream',   base_price: 0,  label: 'Full Cream' },
+        { value: 'Non-fat',      base_price: 0,  label: 'Non-fat' },
+        { value: 'Oat Milk',     base_price: 50, label: 'Oat Milk' },
+        { value: 'Almond Milk',  base_price: 50, label: 'Almond' },
+        { value: 'Coconut Milk', base_price: 30, label: 'Coconut' },
+        { value: 'Soy Milk',     base_price: 30, label: 'Soy' },
+        { value: 'Breve',        base_price: 50, label: 'Breve' },
+      ];
+      const chips = milks.map(m => {
+        const isSelected = m.value === default_milk;
+        const isFree     = m.base_price === 0 || m.value === default_milk;
+        const price      = isFree ? 0 : m.base_price;
+        const suffix     = price > 0 ? ` <span class="chip-price">+₱${price}</span>` : '';
+        return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
+      }).join('\n          ');
+      return `
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
+        <div class="option-group-label">Milk</div>
+        <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
+          ${chips}
+        </div>
+      </div>`;
+    })() : '';
+
+    // Sweetener group (optional) — pre-selects default_sweetener chip
+    const sweetenerHtml = has_sweetener ? (() => {
+      const sweeteners = [
+        { value: 'no-sweetener',  price: 0,  label: 'No Sweetener' },
+        { value: 'Simple Syrup',  price: 0,  label: 'Simple Syrup' },
+        { value: 'Agave Syrup',   price: 30, label: 'Agave Syrup',  extra: '+₱30' },
+        { value: 'Honey',         price: 30, label: 'Honey',        extra: '+₱30' },
+      ];
+      const chips = sweeteners.map(s => {
+        const isSelected = s.value === default_sweetener;
+        const priceSpan  = s.extra ? ` <span class="chip-price">${s.extra}</span>` : '';
+        return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${s.value}" data-price="${s.price}">${s.label}${priceSpan}</span>`;
+      }).join('\n          ');
+      return `
+      <div data-collapsible="true" data-group-name="sweetener" data-group-label="Sweetener">
+        <div class="option-group-label">Sweetener</div>
+        <div class="option-chips" data-panel="${id}" data-group="sweetener" data-type="single">
+          ${chips}
+        </div>
+      </div>`;
+    })() : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}${badgeHtml}</div>
+          <div class="item-desc">${desc}</div>
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}" data-base-price="${price}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            ${extraPowderHtml}
+            ${milkHtml}
+            ${sweetenerHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, less sweet"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${price}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  // Category → mount div ID mapping
+  const MATCHA_MOUNTS = {
+    signature: 'matcha-mount-signature',
+    popular:   'matcha-mount-popular',
+    seasonal:  'matcha-mount-seasonal',
+    hojicha:   'matcha-mount-hojicha',
+  };
+
+  // Returns the initPanel defaults for one Matcha/Hojicha item.
+  // Extracted so renderAllSeasonalPanels() can reuse the same logic.
+  function buildMatchaDefaults(item) {
+    const defaults = {};
+    if (item.has_extra_powder) defaults.extrapower = 'none';
+    if (item.has_milk)         defaults.milk        = item.default_milk;
+    if (item.has_sweetener)    defaults.sweetener   = item.default_sweetener;
+    return defaults;
+  }
+
+  function renderAllMatchaPanels() {
+    MATCHA_ITEMS.forEach(item => {
+      const mountId = MATCHA_MOUNTS[item.category];
+      const mount   = document.getElementById(mountId);
+      if (!mount) return; // mount divs not in HTML yet — skip silently
+
+      mount.appendChild(renderMatchaPanel(item));
+      initPanel(item.id, buildMatchaDefaults(item));
+      // Phase 5A: wrap collapsible groups for this Matcha/Hojicha panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+  // ── FRAPPE / CURVCCINO ITEMS CONFIG (Phase 4D) ──
+  // Regular prices ending in 9 rounded up by ₱1 (same rule as Espresso).
+  // Single-select Inclusions: None / Coffee Jelly / Chocolate Chips / Brownies (+₱40 each).
+  // All items default to Full Cream milk — no relative pricing complexity.
+  // desc and img are null for now; renderer handles both gracefully.
+  const FRAPPE_ITEMS = [
+    {
+      id: 'double-choc-chip-cream',
+      name: 'Double Chocolate Chip Cream',
+      desc: null,
+      reg: 160,
+      lrg: 175,
+      img: null,
+      default_milk: 'Full Cream',
+      has_milk: true,
+      has_syrup: true,
+      has_sauce: true,
+      has_inclusions: true
+    },
+    {
+      id: 'javachip-brownie-curvccino',
+      name: 'Javachip Brownie Curvccino',
+      desc: null,
+      reg: 160,
+      lrg: 175,
+      img: null,
+      default_milk: 'Full Cream',
+      has_milk: true,
+      has_syrup: true,
+      has_sauce: true,
+      has_inclusions: true
+    },
+    {
+      id: 'javachip-jelly-curvccino',
+      name: 'Javachip Jelly Curvccino',
+      desc: null,
+      reg: 160,
+      lrg: 175,
+      img: null,
+      default_milk: 'Full Cream',
+      has_milk: true,
+      has_syrup: true,
+      has_sauce: true,
+      has_inclusions: true
+    },
+    {
+      id: 'strawberries-and-cream',
+      name: 'Strawberries & Cream',
+      desc: null,
+      reg: 155,
+      lrg: 170,
+      img: null,
+      default_milk: 'Full Cream',
+      has_milk: true,
+      has_syrup: true,
+      has_sauce: true,
+      has_inclusions: true
+    },
+    {
+      id: 'white-caramel-curvccino',
+      name: 'White Caramel Curvccino',
+      desc: null,
+      reg: 160,
+      lrg: 175,
+      img: null,
+      default_milk: 'Full Cream',
+      has_milk: true,
+      has_syrup: true,
+      has_sauce: true,
+      has_inclusions: true
+    }
+  ];
+
+
+  // ── FRAPPE / CURVCCINO PANEL RENDERER (Phase 4D) ──
+
+  function renderFrappePanel(item) {
+    const { id, name, desc, reg, lrg, img, default_milk,
+            has_milk, has_syrup, has_sauce, has_inclusions } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M3 6h18M3 10h18M5 10v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/>
+             <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    const descHtml = desc
+      ? `<div class="item-desc">${desc}</div>`
+      : '';
+
+    // Milk group — Full Cream and Non-fat always free;
+    // all other milks at standard add-on price regardless of default_milk
+    // (all frappe items default to Full Cream, so no relative pricing needed)
+    const milkHtml = has_milk ? (() => {
+      const milks = [
+        { value: 'Full Cream',   base_price: 0,  label: 'Full Cream' },
+        { value: 'Non-fat',      base_price: 0,  label: 'Non-fat' },
+        { value: 'Oat Milk',     base_price: 50, label: 'Oat Milk' },
+        { value: 'Almond Milk',  base_price: 50, label: 'Almond' },
+        { value: 'Coconut Milk', base_price: 30, label: 'Coconut' },
+        { value: 'Soy Milk',     base_price: 30, label: 'Soy' },
+        { value: 'Breve',        base_price: 50, label: 'Breve' },
+      ];
+      const chips = milks.map(m => {
+        const isSelected = m.value === default_milk;
+        const isFree     = m.base_price === 0 || m.value === default_milk;
+        const price      = isFree ? 0 : m.base_price;
+        const suffix     = price > 0 ? ` <span class="chip-price">+₱${price}</span>` : '';
+        return `<span class="option-chip${isSelected ? ' selected' : ''}" data-value="${m.value}" data-price="${price}">${m.label}${suffix}</span>`;
+      }).join('\n          ');
+      return `
+      <div data-collapsible="true" data-group-name="milk" data-group-label="Milk">
+        <div class="option-group-label">Milk</div>
+        <div class="option-chips" data-panel="${id}" data-group="milk" data-type="single">
+          ${chips}
+        </div>
+      </div>`;
+    })() : '';
+
+    const syrupHtml = has_syrup ? `
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
+        <div class="option-group-label">Syrup +₱25</div>
+        <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Syrup" data-price="25">Caramel</span>
+          <span class="option-chip" data-value="Vanilla Syrup" data-price="25">Vanilla</span>
+          <span class="option-chip" data-value="Hazelnut Syrup" data-price="25">Hazelnut</span>
+          <span class="option-chip" data-value="Strawberry Syrup" data-price="25">Strawberry</span>
+          <span class="option-chip" data-value="Blueberry Syrup" data-price="25">Blueberry</span>
+        </div>
+      </div>` : '';
+
+    const sauceHtml = has_sauce ? `
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
+        <div class="option-group-label">Sauce +₱30</div>
+        <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Sauce" data-price="30">Caramel</span>
+          <span class="option-chip" data-value="Salted Caramel Sauce" data-price="30">Salted Caramel</span>
+          <span class="option-chip" data-value="White Choc Sauce" data-price="30">White Chocolate</span>
+          <span class="option-chip" data-value="Chocolate Sauce" data-price="30">Chocolate</span>
+        </div>
+      </div>` : '';
+
+    const inclusionsHtml = has_inclusions ? `
+      <div data-collapsible="true" data-group-name="inclusions" data-group-label="Inclusions">
+        <div class="option-group-label">Inclusions +₱40</div>
+        <div class="option-chips" data-panel="${id}" data-group="inclusions" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Coffee Jelly" data-price="40">Coffee Jelly <span class="chip-price">+₱40</span></span>
+          <span class="option-chip" data-value="Chocolate Chips" data-price="40">Chocolate Chips <span class="chip-price">+₱40</span></span>
+          <span class="option-chip" data-value="Brownies" data-price="40">Brownies <span class="chip-price">+₱40</span></span>
+        </div>
+      </div>` : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          ${descHtml}
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Size</div>
+              <div class="option-chips" data-panel="${id}" data-group="size" data-type="single">
+                <span class="option-chip selected" data-value="regular" data-price="${reg}">Regular <span class="chip-price">₱${reg}</span></span>
+                <span class="option-chip" data-value="large" data-price="${lrg}">Large <span class="chip-price">₱${lrg}</span></span>
+              </div>
+            </div>
+            ${milkHtml}
+            ${syrupHtml}
+            ${sauceHtml}
+            ${inclusionsHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, extra sauce"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${reg}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllFrappePanels() {
+    const mount = document.getElementById('frappe-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    FRAPPE_ITEMS.forEach(item => {
+      mount.appendChild(renderFrappePanel(item));
+      const defaults = { size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none' };
+      if (item.has_milk) defaults.milk = item.default_milk;
+      initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Frappe panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+  // ── REFRESHER ITEMS CONFIG (Phase 4E) ──
+  // No milk options — Refreshers are fruit-based, fixed-recipe drinks.
+  // Sauce options are Refresher-specific (Strawberry Sauce, Mango Sauce),
+  // not the espresso/frappe sauce set.
+  // Regular prices rounded up from ₱149/₱159 per established rule.
+  const REFRESHER_ITEMS = [
+    {
+      id: 'dragon-dreams',
+      name: 'Dragon Dreams',
+      desc: 'dragon fruit · sweet cream · milk',
+      reg: 160,
+      lrg: 170,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'tropic-kiss',
+      name: 'Tropic Kiss',
+      desc: 'strawberry lemonade · mango juice · mango bits',
+      reg: 150,
+      lrg: 165,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'tokyo-sunrise',
+      name: 'Tokyo Sunrise',
+      desc: 'mango purée · coconut milk · soft cream',
+      reg: 160,
+      lrg: 170,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'hibiscus-cream-tea',
+      name: 'Hibiscus Cream Tea',
+      desc: 'hibiscus tea · soft sweet cream on top',
+      reg: 150,
+      lrg: 160,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    },
+    {
+      id: 'lime-cucumber',
+      name: 'Lime Cucumber',
+      desc: 'fresh cucumber · sparkling lemon lime fizz',
+      reg: 150,
+      lrg: 160,
+      img: null,
+      has_syrup: true,
+      has_sauce: true
+    }
+  ];
+
+
+  // ── REFRESHER PANEL RENDERER (Phase 4E) ──
+
+  function renderRefresherPanel(item) {
+    const { id, name, desc, reg, lrg, img, has_syrup, has_sauce } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M8 2h8l1 7H7L8 2z"/><path d="M7 9c0 8 2 11 5 11s5-3 5-11"/>
+             <path d="M9 2c0 0-1 2-1 4M15 2c0 0 1 2 1 4"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    const descHtml = desc
+      ? `<div class="item-desc">${desc}</div>`
+      : '';
+
+    // Syrup group — same syrup set as Espresso/Frappe
+    const syrupHtml = has_syrup ? `
+      <div data-collapsible="true" data-group-name="syrup" data-group-label="Syrup">
+        <div class="option-group-label">Syrup +₱25</div>
+        <div class="option-chips" data-panel="${id}" data-group="syrup" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Caramel Syrup" data-price="25">Caramel</span>
+          <span class="option-chip" data-value="Vanilla Syrup" data-price="25">Vanilla</span>
+          <span class="option-chip" data-value="Hazelnut Syrup" data-price="25">Hazelnut</span>
+          <span class="option-chip" data-value="Strawberry Syrup" data-price="25">Strawberry</span>
+          <span class="option-chip" data-value="Blueberry Syrup" data-price="25">Blueberry</span>
+        </div>
+      </div>` : '';
+
+    // Sauce group — Refresher-specific sauces only
+    const sauceHtml = has_sauce ? `
+      <div data-collapsible="true" data-group-name="sauce" data-group-label="Sauce">
+        <div class="option-group-label">Sauce +₱30</div>
+        <div class="option-chips" data-panel="${id}" data-group="sauce" data-type="single">
+          <span class="option-chip selected" data-value="none" data-price="0">None</span>
+          <span class="option-chip" data-value="Strawberry Sauce" data-price="30">Strawberry Sauce <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Mango Sauce" data-price="30">Mango Sauce <span class="chip-price">+₱30</span></span>
+        </div>
+      </div>` : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          ${descHtml}
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Size</div>
+              <div class="option-chips" data-panel="${id}" data-group="size" data-type="single">
+                <span class="option-chip selected" data-value="regular" data-price="${reg}">Regular <span class="chip-price">₱${reg}</span></span>
+                <span class="option-chip" data-value="large" data-price="${lrg}">Large <span class="chip-price">₱${lrg}</span></span>
+              </div>
+            </div>
+            ${syrupHtml}
+            ${sauceHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. less ice, less sweet"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${reg}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllRefresherPanels() {
+    const mount = document.getElementById('refresher-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    REFRESHER_ITEMS.forEach(item => {
+      mount.appendChild(renderRefresherPanel(item));
+      const defaults = { size: 'regular', syrup: 'none', sauce: 'none' };
+      initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Refresher panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+
+  // ── TAKOYAKI ITEMS CONFIG (Phase 4F) ──
+  // No Platter / 20pcs in this phase.
+  // Pieces array drives chip rendering per item — Classic Veggie and Salted Egg
+  // have no 4pcs and no cheese; the renderer reads has_cheese to gate that group.
+  // Add-ons (multi-select): Signature Sauce, Japanese Mayo, Aonori, Katsuobushi,
+  // Tenkasu, Meat Floss, Salmon Skin — all +₱30 each.
+  // OG Takoyaki will migrate from hardcoded Phase 4A panel in Step 4.
+  const TAKOYAKI_ITEMS = [
+
+    // ── OG TAKOYAKI ─────────────────────────────────────────────────────────
+    {
+      id: 'og-takoyaki',
+      name: 'OG Takoyaki',
+      desc: 'octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi',
+      variant_note: 'Swap octo with: Crab · Shrimp',
+      img: 'images/menu/sample-takoyaki.png',
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 90  },
+        { value: '8pcs',  label: '8 pcs',  price: 149 },
+        { value: '12pcs', label: '12 pcs', price: 219 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── ABURI SALMON ─────────────────────────────────────────────────────────
+    {
+      id: 'aburi-salmon',
+      name: 'Aburi Salmon',
+      desc: 'flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 105 },
+        { value: '8pcs',  label: '8 pcs',  price: 200 },
+        { value: '12pcs', label: '12 pcs', price: 300 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── OOZIE CHEESE ─────────────────────────────────────────────────────────
+    {
+      id: 'oozie-cheese',
+      name: 'Oozie Cheese',
+      desc: 'cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 90  },
+        { value: '8pcs',  label: '8 pcs',  price: 149 },
+        { value: '12pcs', label: '12 pcs', price: 219 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── LAVA MELT ────────────────────────────────────────────────────────────
+    {
+      id: 'lava-melt',
+      name: 'Lava Melt',
+      desc: 'cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '4pcs',  label: '4 pcs',  price: 95  },
+        { value: '8pcs',  label: '8 pcs',  price: 165 },
+        { value: '12pcs', label: '12 pcs', price: 230 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── CLASSIC VEGGIE ───────────────────────────────────────────────────────
+    // No 4pcs. No cheese option.
+    {
+      id: 'classic-veggie',
+      name: 'Classic Veggie',
+      desc: 'veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '8pcs',  label: '8 pcs',  price: 139 },
+        { value: '12pcs', label: '12 pcs', price: 199 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    },
+
+    // ── SALTED EGG ───────────────────────────────────────────────────────────
+    // No 4pcs. No cheese for now.
+    {
+      id: 'salted-egg',
+      name: 'Salted Egg',
+      desc: 'salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi',
+      variant_note: null,
+      img: null,
+      pieces: [
+        { value: '8pcs',  label: '8 pcs',  price: 165 },
+        { value: '12pcs', label: '12 pcs', price: 230 },
+      ],
+      has_spicy:   true,
+      has_addons:  true,
+      has_cheese:  true
+    }
+
+  ];
+
+
+  // ── TAKOYAKI PANEL RENDERER (Phase 4F) ──
+
+  // Cheese price per pieces count (no Platter in this phase).
+  const CHEESE_PRICE = { '4pcs': 30, '8pcs': 60, '12pcs': 90 };
+
+  function renderTakoyakiPanel(item) {
+    const { id, name, desc, variant_note, img, pieces,
+            has_spicy, has_addons, has_cheese } = item;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+             <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>
+             <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/>
+             <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/>
+             <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    // Optional variant note (e.g. OG Takoyaki swap options)
+    const variantHtml = variant_note
+      ? `<div class="item-variant"><p>${variant_note}</p></div>`
+      : '';
+
+    // Pieces group — built from item.pieces array (only available sizes)
+    const firstPieces = pieces[0];
+    const pieceChips = pieces.map((p, i) =>
+      `<span class="option-chip${i === 0 ? ' selected' : ''}" data-value="${p.value}" data-price="${p.price}">${p.label} <span class="chip-price">₱${p.price}</span></span>`
+    ).join('\n          ');
+
+    // Spicy group
+    const spicyHtml = has_spicy ? `
+      <div data-collapsible="true" data-group-name="spicy" data-group-label="Spicy">
+        <div class="option-group-label">Spice Level</div>
+        <div class="option-chips" data-panel="${id}" data-group="spicy" data-type="single">
+          <span class="option-chip selected" data-value="no" data-price="0">Not Spicy</span>
+          <span class="option-chip" data-value="yes" data-price="0">Spicy</span>
+        </div>
+      </div>` : '';
+
+    // Add-ons group (multi-select)
+    const addonsHtml = has_addons ? `
+      <div data-collapsible="true" data-group-name="addons" data-group-label="Add-ons">
+        <div class="option-group-label">Add-ons +₱30 each</div>
+        <div class="option-chips" data-panel="${id}" data-group="addons" data-type="multi">
+          <span class="option-chip" data-value="Signature Sauce" data-price="30">Signature Sauce <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Japanese Mayo" data-price="30">Japanese Mayo <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Aonori" data-price="30">Aonori <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Katsuobushi" data-price="30">Katsuobushi <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Tenkasu" data-price="30">Tenkasu <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Meat Floss" data-price="30">Meat Floss <span class="chip-price">+₱30</span></span>
+          <span class="option-chip" data-value="Salmon Skin" data-price="30">Salmon Skin <span class="chip-price">+₱30</span></span>
+        </div>
+      </div>` : '';
+
+    // Add Cheese group (single-select, only when has_cheese is true).
+    // Initial 'Yes' chip price matches the first piece option via CHEESE_PRICE.
+    // The Step 1 hook in handleChipClick updates this price when pieces changes.
+    const initCheesePrice = CHEESE_PRICE[firstPieces.value] || 30;
+    const cheeseHtml = has_cheese ? `
+      <div data-collapsible="true" data-group-name="cheese" data-group-label="Add Cheese">
+        <div class="option-group-label">Add Cheese</div>
+        <div class="option-chips" data-panel="${id}" data-group="cheese" data-type="single">
+          <span class="option-chip selected" data-value="no" data-price="0">No</span>
+          <span class="option-chip" data-value="yes" data-price="${initCheesePrice}">Yes <span class="chip-price">+₱${initCheesePrice}</span></span>
+        </div>
+      </div>` : '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          <div class="item-desc">${desc}</div>
+          ${variantHtml}
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Pieces</div>
+              <div class="option-chips" data-panel="${id}" data-group="pieces" data-type="single">
+                ${pieceChips}
+              </div>
+            </div>
+            ${spicyHtml}
+            ${addonsHtml}
+            ${cheeseHtml}
+            <div data-collapsible="true" data-group-name="note" data-group-label="Note">
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. extra sauce, swap octo with crab"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${firstPieces.price}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllTakoyakiPanels() {
+    const mount = document.getElementById('takoyaki-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    TAKOYAKI_ITEMS.forEach(item => {
+      mount.appendChild(renderTakoyakiPanel(item));
+      const defaults = {
+        pieces: item.pieces[0].value,  // first available piece option
+        spicy: 'no',
+      };
+      // addons is multi — no default selection (starts empty)
+      if (item.has_cheese) defaults.cheese = 'no';
+      initPanel(item.id, defaults);
+      // Phase 5A: wrap collapsible groups for this Takoyaki panel
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    });
+  }
+
+
+  // ── SAVORY BITES ITEMS CONFIG (Phase 4G) ──
+  // Single fixed price per item. No size, no temperature, no milk.
+  // Sauce Preference (Sriracha Mayo / Garlic Aioli) is free — added in renderer.
+  const SAVORY_ITEMS = [
+    {
+      id: 'shrimp-tempura',
+      name: 'Shrimp Tempura',
+      desc: 'shrimp tempura · side w/ chips or veggies · tempura sauce',
+      price: 179,
+      default_sauce: 'Tempura Sauce',
+      img: null
+    },
+    {
+      id: 'chicken-karaage',
+      name: 'Chicken Karaage',
+      desc: 'chicken karaage · side w/ chips or veggies · sweet chili sauce',
+      price: 169,
+      default_sauce: 'Sweet Chili Sauce',
+      img: null
+    },
+    {
+      id: 'cream-dory-fillet',
+      name: 'Cream Dory Fillet',
+      desc: 'cream dory · side w/ chips or veggies · garlic aioli',
+      price: 169,
+      default_sauce: 'Garlic Aioli',
+      img: null
+    }
+  ];
+
+
+  // ── SAVORY BITES PANEL RENDERER (Phase 4G) ──
+
+  function renderSavoryPanel(item) {
+    const { id, name, desc, price, img, default_sauce } = item;
+    const sauceHtml = `<span class="option-chip selected" data-value="${default_sauce}" data-price="0">${default_sauce}</span>`;
+
+    // Image or placeholder
+    const imgHtml = img
+      ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
+      : `<div class="panel-img" style="flex-direction:column;gap:6px;">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--bg3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>
+           </svg>
+           <span style="font-family:'Jost',sans-serif;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--bg3);">Photo Soon</span>
+         </div>`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'menu-item-wrap';
+    wrap.id = `panel-wrap-${id}`;
+    wrap.innerHTML = `
+      <button class="expand-trigger" onclick="togglePanel('${id}')">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          <div class="item-desc">${desc}</div>
+        </div>
+        <span class="expand-arrow">▼</span>
+      </button>
+      <div class="expansion-panel" id="panel-${id}" data-base-price="${price}">
+        <div class="panel-inner">
+          ${imgHtml}
+          <div class="panel-options">
+            <div>
+              <div class="option-group-label">Sauce Preference</div>
+              <div class="option-chips" data-panel="${id}" data-group="sauce_pref" data-type="single">
+                ${sauceHtml}
+              </div>
+            </div>
+            <div>
+              <div class="option-group-label">Any notes for this item?</div>
+              <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. extra sauce on the side"></textarea>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button class="panel-qty-btn" onclick="panelQty('${id}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${id}">1</span>
+              <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${id}">₱${price}</span>
+            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+          </div>
+        </div>
+      </div>`;
+    return wrap;
+  }
+
+  function renderAllSavoryPanels() {
+    const mount = document.getElementById('savory-mount');
+    if (!mount) return; // mount div not in HTML yet — skip silently
+
+    SAVORY_ITEMS.forEach(item => {
+      mount.appendChild(renderSavoryPanel(item));
+      initPanel(item.id, { sauce_pref: item.default_sauce });
+    });
+  }
+
+  // ── EXPANSION PANEL SYSTEM ──
+  let activePanel = null;
+  const panelState = {};
+
+  function initPanel(id, defaults) {
+    if (!panelState[id]) {
+      panelState[id] = { qty: 1, options: { ...defaults } };
+    }
+  }
+
+  function togglePanel(id) {
+    const wrap = document.getElementById('panel-wrap-' + id);
+    if (!wrap) return;
+    if (activePanel && activePanel !== id) {
+      const prevWrap = document.getElementById('panel-wrap-' + activePanel);
+      if (prevWrap) prevWrap.classList.remove('open');
+    }
+    const isOpen = wrap.classList.toggle('open');
+    activePanel = isOpen ? id : null;
+    if (isOpen) {
+      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+    }
+  }
+
+  function panelQty(id, delta) {
+    if (!panelState[id]) return;
+    panelState[id].qty = Math.max(1, panelState[id].qty + delta);
+    document.getElementById('qty-' + id).textContent = panelState[id].qty;
+    updatePanelPrice(id);
+  }
+
+  function getPanelBasePrice(id) {
+    const sizeGroup   = document.querySelector(`[data-panel="${id}"][data-group="size"]`);
+    const piecesGroup = document.querySelector(`[data-panel="${id}"][data-group="pieces"]`);
+    const group = sizeGroup || piecesGroup;
+    if (group) {
+      const sel = group.querySelector('.option-chip.selected');
+      if (sel) return parseInt(sel.dataset.price) || 0;
+    }
+    // Fallback for fixed-price panels (e.g. Matcha/Hojicha — no size or pieces group).
+    // The renderer sets data-base-price on the .expansion-panel element.
+    const panelEl = document.getElementById('panel-' + id);
+    if (panelEl && panelEl.dataset.basePrice) return parseInt(panelEl.dataset.basePrice) || 0;
+    return 0;
+  }
+
+  function getPanelAddOnsPrice(id) {
+    let extra = 0;
+    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+      const gname = group.dataset.group;
+      if (gname === 'size' || gname === 'pieces' || gname === 'temperature') return;
+      group.querySelectorAll('.option-chip.selected').forEach(chip => {
+        extra += parseInt(chip.dataset.price) || 0;
+      });
+    });
+    return extra;
+  }
+
+  function updatePanelPrice(id) {
+    if (!panelState[id]) return;
+    const base   = getPanelBasePrice(id);
+    const addons = getPanelAddOnsPrice(id);
+    const total  = (base + addons) * panelState[id].qty;
+    const el = document.getElementById('price-' + id);
+    if (el) el.textContent = '₱' + total.toLocaleString();
+  }
+
+  function handleChipClick(chip) {
+    const group = chip.closest('[data-group]');
+    if (!group) return;
+    const type      = group.dataset.type;
+    const panelId   = group.dataset.panel;
+    const groupName = group.dataset.group;
+
+    if (type === 'single') {
+      group.querySelectorAll('.option-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    } else if (type === 'multi') {
+      chip.classList.toggle('selected');
+    }
+
+    // Temperature chip → swap size chip visibility
+    if (groupName === 'temperature') {
+      const tempVal = chip.dataset.value; // 'iced' or 'hot'
+      const panel   = document.getElementById('panel-' + panelId);
+      if (panel) {
+        const sizeGroup = panel.querySelector('[data-group="size"]');
+        if (sizeGroup) {
+          const allSize = sizeGroup.querySelectorAll('.option-chip');
+          allSize.forEach(sc => {
+            const showWhen = sc.dataset.showWhen;
+            sc.style.display = (!showWhen || showWhen === tempVal) ? '' : 'none';
+          });
+          // Auto-select first visible chip in size group
+          allSize.forEach(sc => sc.classList.remove('selected'));
+          const firstVisible = [...allSize].find(sc => sc.style.display !== 'none');
+          if (firstVisible) firstVisible.classList.add('selected');
+        }
+      }
+    }
+
+    // Pieces chip → update cheese 'Yes' chip price dynamically.
+    // Cheese is priced per 4 pieces: 4pcs=+₱30, 8pcs=+₱60, 12pcs=+₱90.
+    if (groupName === 'pieces') {
+      const cheeseMap = { '4pcs': 30, '8pcs': 60, '12pcs': 90 };
+      const newCheesePrice = cheeseMap[chip.dataset.value];
+      if (newCheesePrice !== undefined) {
+        const panel = document.getElementById('panel-' + panelId);
+        const cheeseGroup = panel && panel.querySelector('[data-group="cheese"]');
+        const yesChip = cheeseGroup && cheeseGroup.querySelector('[data-value="yes"]');
+        if (yesChip) {
+          yesChip.dataset.price = newCheesePrice;
+          const priceLabel = yesChip.querySelector('.chip-price');
+          if (priceLabel) priceLabel.textContent = `+₱${newCheesePrice}`;
+        }
+      }
+    }
+
+    updatePanelPrice(panelId);
+    // Phase 5A: keep accordion summary in sync with chip selection
+    updateGroupSummary(panelId, groupName);
+  }
+
+  // Delegate chip clicks
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.option-chip');
+    if (chip) handleChipClick(chip);
+  });
+
+  function getPanelOptions(id) {
+    const opts = {};
+    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+      const gname = group.dataset.group;
+      const type  = group.dataset.type;
+      if (type === 'single') {
+        const sel = group.querySelector('.option-chip.selected');
+        if (sel) opts[gname] = sel.dataset.value;
+      } else if (type === 'multi') {
+        // Sort selected values so tap order doesn't affect the cart key.
+        const selected = [...group.querySelectorAll('.option-chip.selected')]
+          .map(c => c.dataset.value).sort();
+        if (selected.length) opts[gname] = selected.join(',');
+      }
+    });
+    return opts;
+  }
+
+  function panelAddToCart(id, name) {
+    if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
+    const qty     = panelState[id].qty;
+    const options = getPanelOptions(id);
+    const base    = getPanelBasePrice(id);
+    const addons  = getPanelAddOnsPrice(id);
+    const unitPrice = base + addons;
+    const note    = (document.getElementById('note-' + id) || {}).value || '';
+
+    // Derive variant from size/pieces
+    const sizeVal = options.size;
+    const variant = sizeVal === 'large'   ? 'Large'
+                  : sizeVal === '12oz'    ? '12oz'
+                  : sizeVal === 'regular' ? 'Regular'
+                  : (options.pieces || '');
+
+    // Derive temp
+    const temp = options.temperature ? options.temperature.toUpperCase() : null;
+
+    // Build clean options (exclude size/pieces/temperature and 'none' values)
+    const cleanOptions = {};
+    Object.keys(options).forEach(k => {
+      if (k === 'size' || k === 'pieces' || k === 'temperature') return;
+      if (options[k] === 'none') return;
+      cleanOptions[k] = options[k];
+    });
+    if (note) cleanOptions.note = note;
+
+    // Capture add-on prices for cart display (parallel to cleanOptions).
+    // Does NOT affect key, pricing, or order message — display only.
+    const cleanPrices = {};
+    Object.keys(cleanOptions).forEach(k => {
+      if (k === 'note') return;
+      const grp = document.querySelector(`[data-panel="${id}"][data-group="${k}"]`);
+      if (grp) {
+        // Sum all selected chips to handle multi-select groups (e.g. add-ons).
+        // For single-select groups (0 or 1 selected) the result is identical.
+        const p = [...grp.querySelectorAll('.option-chip.selected')]
+          .reduce((sum, c) => sum + (parseInt(c.dataset.price) || 0), 0);
+        if (p > 0) cleanPrices[k] = p;
+      }
+    });
+
+    const key = buildCartKey(name, variant, temp, cleanOptions);
+    const existing = cart.find(i => i.key === key);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions, optionPrices: cleanPrices });
+    }
+
+    renderCart();
+    updateBadge();
+
+    // Open order form if closed
+    const f = document.getElementById('formFloat');
+    if (!f.classList.contains('open')) {
+      f.classList.add('open');
+      document.getElementById('formBody').classList.remove('minimized');
+      document.getElementById('minimizedBar').classList.remove('show');
+      document.getElementById('minimizeBtn').textContent = 'Minimize';
+      minimized = false;
+      setOrderBar(false);
+    }
+
+    // Reset panel qty and close
+    panelState[id].qty = 1;
+    document.getElementById('qty-' + id).textContent = '1';
+    updatePanelPrice(id);
+    const wrap = document.getElementById('panel-wrap-' + id);
+    if (wrap) wrap.classList.remove('open');
+    activePanel = null;
+  }
+
+  // ── CUSTOMER TYPE ──
+  let customerType = 'new';
+
+  function setCustomerType(type) {
+    customerType = type;
+    const isNew = type === 'new';
+    document.getElementById('tabNew').classList.toggle('active', isNew);
+    document.getElementById('tabReturning').classList.toggle('active', !isNew);
+    document.getElementById('new-customer-fields').style.display = isNew ? 'block' : 'none';
+    document.getElementById('customerTypeHint').textContent = isNew
+      ? 'Please fill in all required details below.'
+      : 'Welcome back! Just your name, delivery time, payment, and order.';
+  }
+
+  // ── DELIVERY TIME ──
+  let deliveryTimeMode = 'asap';
+
+  function setDeliveryTime(mode) {
+    deliveryTimeMode = mode;
+    document.getElementById('tabAsap').classList.toggle('active', mode === 'asap');
+    document.getElementById('tabSpecific').classList.toggle('active', mode === 'specific');
+    const timeInput = document.getElementById('f-delivery-time');
+    timeInput.style.display = mode === 'specific' ? 'block' : 'none';
+    if (mode === 'specific') timeInput.focus();
+  }
+
+  // ── SCROLL NAV MERGE ──
+  const siteNav  = document.getElementById('siteNav');
+  const navWrap  = document.querySelector('.nav-wrap');
+  const subheader = document.querySelector('.subheader');
+
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const label = document.getElementById('navMenuLabel');
+    if (subheader) {
+      label.classList.toggle('visible', scrolled > subheader.offsetTop + subheader.offsetHeight);
+    }
+    if (scrolled > 10) {
+      siteNav && siteNav.classList.add('merged');
+      navWrap && navWrap.classList.add('merged');
+    } else {
+      siteNav && siteNav.classList.remove('merged');
+      navWrap && navWrap.classList.remove('merged');
+    }
+  });
+
+  // ── HOW TO ORDER POPUP ──
+  function dismissHto() {
+    document.getElementById('htoOverlay').classList.remove('show');
+    try { localStorage.setItem('curv-hto-seen', '1'); } catch(e) {}
+  }
+
+  // ── FAQ ──
+  function toggleFaq() {
+    const isOpen = document.getElementById('faqSheet').classList.toggle('open');
+    document.body.classList.toggle('faq-open', isOpen);
+    document.getElementById('faqBtn').style.display = isOpen ? 'none' : '';
+  }
+
+  function closeFaq() {
+    document.getElementById('faqSheet').classList.remove('open');
+    document.body.classList.remove('faq-open');
+    document.getElementById('faqBtn').style.display = '';
+  }
+
+  function toggleFaqItem(el) {
+    const item   = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ── CART ──
+  let cart = [];
+
+  function buildCartKey(name, variant, temp, options) {
+    const base = [name, variant || '', temp || ''].join('|');
+    if (!options || Object.keys(options).length === 0) return base;
+    const hash = Object.keys(options).sort().map(k => `${k}:${options[k]}`).join(',');
+    return base + '|' + hash;
+  }
+
+  function addItem(name, variant, price, btn, options = {}) {
+    const key = buildCartKey(name, variant, null, options);
+    const existing = cart.find(i => i.key === key);
+    if (existing) {
+      existing.qty++;
+    } else {
+      cart.push({ key, name, variant, price, qty: 1, temp: null, options });
+    }
+    renderCart();
+    updateBadge();
+
+    const f = document.getElementById('formFloat');
+    if (!f.classList.contains('open')) {
+      f.classList.add('open');
+      document.getElementById('formBody').classList.remove('minimized');
+      document.getElementById('minimizedBar').classList.remove('show');
+      document.getElementById('minimizeBtn').textContent = 'Minimize';
+      minimized = false;
+      setOrderBar(false);
+    }
+
+    btn.classList.remove('pop');
+    void btn.offsetWidth;
+    btn.classList.add('pop');
+  }
+
+  function removeItem(key) {
+    cart = cart.filter(i => i.key !== key);
+    renderCart();
+    updateBadge();
+  }
+
+  function updateQty(key, delta) {
+    const item = cart.find(i => i.key === key);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) cart = cart.filter(i => i.key !== key);
+    renderCart();
+    updateBadge();
+  }
+
+  // ── PHASE 5A: ACCORDION JS SCAFFOLDING ──
+  // These functions are inert until Phase 5A Step 3+ adds data-collapsible
+  // attributes to renderers and calls wrapAccordionGroups() per panel.
+
+  // Build the human-readable summary string for one option group.
+  // Reads the live DOM chip selections and returns a display string.
+  function buildSummaryText(panelId, groupName) {
+    // Special case: note textarea
+    if (groupName === 'note') {
+      const ta = document.getElementById('note-' + panelId);
+      const val = ta ? ta.value.trim() : '';
+      return val ? (val.length > 24 ? val.slice(0, 24) + '…' : val) : null; // null = placeholder
+    }
+
+    const group = document.querySelector(`[data-panel="${panelId}"][data-group="${groupName}"]`);
+    if (!group) return '—';
+
+    const type = group.dataset.type;
+    const selected = [...group.querySelectorAll('.option-chip.selected')];
+
+    if (type === 'multi') {
+      if (selected.length === 0)  return 'None';
+      if (selected.length <= 2)   return selected.map(c => c.dataset.value).join(' · ');
+      return `${selected.length} selected`;
+    }
+
+    // Single-select
+    if (selected.length === 0) return '—';
+    const raw = selected[0].dataset.value;
+    // Use friendly label map where applicable (cheese:yes → 'Add Cheese', etc.)
+    // Summary-specific overrides — separate from getOptionDisplayLabel so
+    // cart/order message display is completely unaffected.
+    const SUMMARY_OVERRIDE = { 'cheese:yes': 'Added' };
+    const overrideKey = `${groupName}:${raw}`;
+    if (overrideKey in SUMMARY_OVERRIDE) return SUMMARY_OVERRIDE[overrideKey];
+
+    const mapped = getOptionDisplayLabel(groupName, raw);
+    // getOptionDisplayLabel returns null to suppress 'no' variants;
+    // in a summary context, still show a label rather than hiding.
+    if (mapped === null) {
+      // Show the chip's visible text (strip price span) as fallback
+      return selected[0].childNodes[0].textContent.trim();
+    }
+    return mapped;
+  }
+
+  // Rewrite the summary span in the accordion header for one group.
+  // Called from handleChipClick and note input listeners.
+  function updateGroupSummary(panelId, groupName) {
+    const header = document.querySelector(
+      `#panel-${panelId} [data-accordion-group="${groupName}"] .accordion-summary`
+    );
+    if (!header) return; // group not yet wrapped — no-op
+
+    const text = buildSummaryText(panelId, groupName);
+    if (text === null) {
+      header.textContent = '(tap to add)';
+      header.classList.add('is-placeholder');
+    } else {
+      header.textContent = text;
+      header.classList.remove('is-placeholder');
+    }
+  }
+
+  // Toggle one accordion group open/closed.
+  // headerEl is the .accordion-header element that was clicked.
+  function toggleAccordionGroup(headerEl) {
+    const group = headerEl.closest('.accordion-group');
+    if (!group) return;
+    group.classList.toggle('open');
+  }
+
+  // Post-process a rendered panel element: find divs with data-collapsible='true'
+  // and wrap them in accordion shells (header + collapsible body).
+  // Called once per panel after it is appended to the DOM.
+  function wrapAccordionGroups(panelEl) {
+    if (!panelEl) return;
+    const collapsible = panelEl.querySelectorAll('[data-collapsible="true"]');
+    collapsible.forEach(groupDiv => {
+      const groupName  = groupDiv.dataset.groupName || 'unknown';
+      const groupLabel = groupDiv.dataset.groupLabel || groupName;
+      const panelId    = panelEl.id.replace('panel-', '');
+
+      // Build initial summary text
+      const summaryText = buildSummaryText(panelId, groupName);
+      const isPlaceholder = summaryText === null;
+      const displayText   = isPlaceholder ? '(tap to add)' : summaryText;
+
+      // Create accordion wrapper
+      const wrapper = document.createElement('div');
+      wrapper.className = 'accordion-group';
+      wrapper.dataset.accordionGroup = groupName;
+
+      // Create header
+      const header = document.createElement('div');
+      header.className = 'accordion-header';
+      header.innerHTML = `
+        <span class="accordion-label">${groupLabel}</span>
+        <span class="accordion-summary${isPlaceholder ? ' is-placeholder' : ''}">${displayText}</span>
+        <span class="accordion-chevron">▼</span>`;
+      header.addEventListener('click', () => toggleAccordionGroup(header));
+
+      // Create body — move existing group content inside
+      const body = document.createElement('div');
+      body.className = 'accordion-body';
+
+      // Move the inner content of groupDiv into the body
+      while (groupDiv.firstChild) {
+        body.appendChild(groupDiv.firstChild);
+      }
+
+      // Remove the inner option-group-label — accordion header already serves as label.
+      const innerLabel = body.querySelector('.option-group-label');
+      if (innerLabel) innerLabel.remove();
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(body);
+
+      // Wire note textarea input event if this is the note group
+      if (groupName === 'note') {
+        const ta = body.querySelector('.panel-note-input');
+        if (ta) {
+          ta.addEventListener('input', () => updateGroupSummary(panelId, 'note'));
+        }
+      }
+
+      // Replace original groupDiv with the accordion wrapper
+      groupDiv.parentNode.replaceChild(wrapper, groupDiv);
+    });
+  }
+
+  // Display label map for boolean-style option values.
+  // Returns null to suppress display (hides 'no' variants cleanly).
+  // Used by both renderCart and buildMessage so display is consistent.
+  function getOptionDisplayLabel(k, val) {
+    const MAP = {
+      'cheese:no':  null,          // hide — customer kept default
+      'cheese:yes': 'Add Cheese',  // friendly label
+      'spicy:no':   null,          // hide — customer kept default
+      'spicy:yes':  'Spicy',       // friendly label
+    };
+    const lookup = `${k}:${val}`;
+    return (lookup in MAP) ? MAP[lookup] : val;
+  }
+
+  function renderCart() {
+    const itemsEl   = document.getElementById('cartItems');
+    const emptyEl   = document.getElementById('cartEmpty');
+    const totalEl   = document.getElementById('cartTotal');
+    const totalAmtEl = document.getElementById('cartTotalAmount');
+
+    if (cart.length === 0) {
+      emptyEl.style.display = 'block';
+      itemsEl.innerHTML = '';
+      totalEl.style.display = 'none';
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+    totalEl.style.display = 'flex';
+
+    let total = 0;
+    itemsEl.innerHTML = cart.map(item => {
+      total += item.price * item.qty;
+
+      // Line 1: name · variant · temp
+      const primaryLabel = [item.name, item.variant, item.temp].filter(Boolean).join(' · ');
+
+      // Line 2: customization options (sorted, note last)
+      // optionPrices stores add-on prices captured at add-to-cart time (display only).
+      const optsObj   = item.options || {};
+      const pricesObj = item.optionPrices || {};
+      const optKeys   = Object.keys(optsObj).sort().filter(k => k !== 'note');
+      const optParts  = optKeys.map(k => {
+        const raw   = optsObj[k];
+        const p     = pricesObj[k];
+        const label = getOptionDisplayLabel(k, raw);
+        if (label === null) return null; // hide 'no' variants
+        // Multi-select values are comma-joined; split for readable display.
+        const display = label.includes(',') ? label.split(',').join(' · ') : label;
+        return (p > 0) ? `${display} +₱${p.toLocaleString()}` : display;
+      }).filter(Boolean);
+      if (optsObj.note) optParts.push('Note: ' + optsObj.note);
+      const optsHtml = optParts.length
+        ? `<div class="cart-item-opts">${optParts.join(' · ')}</div>`
+        : '';
+
+      const safeKey = item.key.replace(/'/g, "\\'");
+      return `
+        <div class="cart-item">
+          <div class="cart-item-left">
+            <div>
+              <div class="cart-item-name">${primaryLabel}</div>
+              ${optsHtml}
+            </div>
+          </div>
+          <div class="cart-item-right">
+            <div class="cart-qty-controls">
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', -1)">−</button>
+              <span class="cart-qty-num">${item.qty}</span>
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', 1)">+</button>
+            </div>
+            <span class="cart-item-price">₱${(item.price * item.qty).toLocaleString()}</span>
+            <button class="cart-remove" onclick="removeItem('${safeKey}')">×</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    totalAmtEl.textContent = '₱' + total.toLocaleString();
+  }
+
+  function updateBadge() {
+    const total = cart.reduce((sum, i) => sum + i.qty, 0);
+    const badge = document.getElementById('cartBadge');
+    badge.textContent = total;
+    badge.classList.toggle('show', total > 0);
+  }
+
+  // ── NAV ──
+  const navTabs   = document.getElementById('navTabs');
+  const arrowLeft = document.getElementById('arrowLeft');
+  const arrowRight = document.getElementById('arrowRight');
+
+  function updateArrows() {
+    const atStart = navTabs.scrollLeft <= 4;
+    const atEnd   = navTabs.scrollLeft + navTabs.clientWidth >= navTabs.scrollWidth - 4;
+    arrowLeft.classList.toggle('show', !atStart);
+    arrowRight.classList.toggle('show', !atEnd);
+  }
+
+  function scrollNav(amount) {
+    navTabs.scrollBy({ left: amount, behavior: 'smooth' });
+  }
+
+  navTabs.addEventListener('scroll', updateArrows);
+  window.addEventListener('resize', updateArrows);
+  setTimeout(updateArrows, 300);
+
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Phase 5B.2: programmatic section switch + panel open.
+  // Used by CURV Picks item-info taps to jump to a full customization panel
+  // without relying on event.target like showSection() does.
+  function jumpToPanel(sectionId, panelId) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) targetSection.classList.add('active');
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      const onclick = tab.getAttribute('onclick') || '';
+      tab.classList.toggle('active', onclick.includes("'" + sectionId + "'"));
+    });
+
+    if (!panelId) return;
+
+    setTimeout(() => {
+      const wrap = document.getElementById('panel-wrap-' + panelId);
+      if (wrap && !wrap.classList.contains('open')) {
+        togglePanel(panelId);
+      } else if (wrap) {
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 50);
+  }
+
+  // ── FORM ──
+  function setOrderBar(visible) {
+    document.getElementById('orderBar').style.display = visible ? 'block' : 'none';
+  }
+
+  function toggleForm() {
+    const f = document.getElementById('formFloat');
+    if (f.classList.contains('open')) {
+      closeForm();
+    } else {
+      f.classList.add('open');
+      document.getElementById('formBody').classList.remove('minimized');
+      document.getElementById('minimizedBar').classList.remove('show');
+      document.getElementById('minimizeBtn').textContent = 'Minimize';
+      minimized = false;
+      setOrderBar(false);
+    }
+  }
+
+  function closeForm() {
+    document.getElementById('formFloat').classList.remove('open');
+    minimized = false;
+    setOrderBar(true);
+  }
+
+  let minimized = false;
+  function toggleMinimize() {
+    minimized = !minimized;
+    document.getElementById('formBody').classList.toggle('minimized', minimized);
+    document.getElementById('minimizedBar').classList.toggle('show', minimized);
+    document.getElementById('minimizeBtn').textContent = minimized ? 'Expand ↑' : 'Minimize';
+    setOrderBar(minimized);
+  }
+
+  document.getElementById('f-payment').addEventListener('change', function() {
+    const note = document.getElementById('payment-note');
+    note.textContent = (this.value === 'gcash' || this.value === 'bank')
+      ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
+      : '';
+  });
+
+  // ── ORDER ──
+  function buildMessage() {
+    const isNew    = customerType === 'new';
+    const name     = document.getElementById('f-name').value.trim();
+    const contact  = isNew ? document.getElementById('f-contact').value.trim() : '';
+    const address  = isNew ? document.getElementById('f-address').value.trim() : '';
+    const dSel        = document.getElementById('f-delivery');
+    const pSel        = document.getElementById('f-payment');
+    const orderMethod = dSel.options[dSel.selectedIndex].text;
+    const isPickup    = dSel.value === 'pickup';
+    const isDelivery  = dSel.value === 'own-rider' || dSel.value === 'lalamove';
+    const delivery    = isNew ? orderMethod : '';
+    const payment  = pSel.options[pSel.selectedIndex].text;
+    const notes    = document.getElementById('f-notes').value.trim();
+
+    const specificTime = document.getElementById('f-delivery-time').value;
+    const deliveryTime = deliveryTimeMode === 'asap'
+      ? 'ASAP'
+      : (specificTime ? formatTime12h(specificTime) : 'Not specified');
+
+    if (!name) { alert('Please fill in your name.'); return null; }
+    if (isNew && !contact) { alert('Please fill in your contact number.'); return null; }
+    if (isNew && isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
+    if (!dSel.value) { alert('Please select an order method.'); return null; }
+    if (!pSel.value) { alert('Please select a payment method.'); return null; }
+    if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
+    if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
+
+    const orderLines = cart.map(i => {
+      const optsObj = i.options || {};
+      const msgParts = Object.keys(optsObj).sort()
+        .filter(k => k !== 'note')
+        .map(k => getOptionDisplayLabel(k, optsObj[k]))
+        .filter(Boolean);
+      if (optsObj.note) msgParts.push('Notes: ' + optsObj.note);
+      const optionsLabel = msgParts.length ? ' · ' + msgParts.join(' · ') : '';
+      const label = [i.name, i.variant, i.temp].filter(Boolean).join(' · ') + optionsLabel;
+      return `  ${i.qty}x ${label} — ₱${(i.price * i.qty).toLocaleString()}`;
+    }).join('\n');
+
+    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+    let msg = `Hi Curv! I'd like to place an order 🍵\n`;
+    msg += isNew ? `` : `[Returning Customer]\n`;
+    msg += `\n`;
+    msg += `👤 Name: ${name}\n`;
+    if (isNew) {
+      msg += `📞 Contact: ${contact}\n`;
+      if (isDelivery) msg += `📍 Address: ${address}\n`;
+    }
+    msg += `🚗 Order Method: ${orderMethod}\n`;
+    msg += `⏰ Time of Delivery: ${deliveryTime}\n`;
+    msg += `💳 Payment: ${payment}\n\n`;
+    msg += `🛒 Order:\n${orderLines}\n\n`;
+    msg += `💰 Estimated Total: ₱${total.toLocaleString()}`;
+    if (notes) msg += `\n\n📝 Notes: ${notes}`;
+
+    return msg;
+  }
+
+  function formatTime12h(time24) {
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12    = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+
+  function copyOrder() {
+    const msg = buildMessage();
+    if (!msg) return;
+    const btn = document.getElementById('copyBtn');
+    const onCopied = () => {
+      btn.textContent = '✓ Copied! Now open Messenger';
+      btn.style.background = '#4a7c59';
+      setTimeout(() => { btn.textContent = 'Copy Order Message'; btn.style.background = ''; }, 3000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(msg).then(onCopied).catch(() => { fallbackCopy(msg); onCopied(); });
+    } else {
+      fallbackCopy(msg);
+      onCopied();
+    }
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  function openMessenger() {
+    window.open("https://m.me/cafecurv", "_blank");
+  }
+
+  // ── DOMContentLoaded ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderAllEspressoPanels();
+    renderAllMatchaPanels();
+    renderAllFrappePanels();
+    renderAllRefresherPanels();
+    renderAllTakoyakiPanels();
+    renderAllSavoryPanels();
+    try {
+      if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
+    } catch(e) {}
+  });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    let seen = false;
+    try { seen = localStorage.getItem('curv-hto-seen'); } catch(e) {}
+    if (!seen) {
+      setTimeout(() => { document.getElementById('htoOverlay').classList.add('show'); }, 600);
+    }
+  });
+</script>
+</body>
+</html>
