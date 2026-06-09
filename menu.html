@@ -4741,6 +4741,8 @@
     if (!name) { alert('Please fill in your name.'); return null; }
     if (isNew && !contact) { alert('Please fill in your contact number.'); return null; }
     if (isNew && isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
+    if (!dSel.value) { alert('Please select an order method.'); return null; }
+    if (!pSel.value) { alert('Please select a payment method.'); return null; }
     if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
 
@@ -4765,8 +4767,8 @@
     if (isNew) {
       msg += `📞 Contact: ${contact}\n`;
       if (isDelivery) msg += `📍 Address: ${address}\n`;
-      msg += `🚗 Order Method: ${orderMethod}\n`;
     }
+    msg += `🚗 Order Method: ${orderMethod}\n`;
     msg += `⏰ Time of Delivery: ${deliveryTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
