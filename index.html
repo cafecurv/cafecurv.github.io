@@ -1084,6 +1084,110 @@
     transform: translateY(0);
   }
 
+/* ── CUSTOMER NOTES ── */
+.testimonials-wrap {
+  padding: 5rem 1.5rem;
+  background: var(--bg2);
+  border-top: 0.5px solid var(--bg3);
+}
+
+.testimonials-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.testimonials-eyebrow {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-weight: 500;
+  margin-bottom: 0.6rem;
+}
+
+.testimonials-sub {
+  font-family: 'Jost', sans-serif;
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  margin-bottom: 3rem;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.review-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-bdr);
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.review-text {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text2);
+  font-weight: 300;
+  font-style: italic;
+  margin: 0;
+}
+
+.review-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.review-name {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.review-source {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.52rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  text-align: right;
+}
+
+.review-privacy {
+  margin-top: 2rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 1px;
+  color: var(--text3);
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .testimonials-wrap {
+    padding: 4rem 1.25rem;
+  }
+}
+
 </style>
 </head>
 <body data-mode="morning">
@@ -1268,6 +1372,52 @@
       <span class="menu-tag">Salad Bar</span>
     </div>
     <a href="menu.html" class="menu-preview-btn">View Full Menu & Order</a>
+  </div>
+</div>
+
+<!-- CUSTOMER NOTES -->
+<div class="testimonials-wrap fade-in">
+  <div class="testimonials-inner">
+    <div class="testimonials-eyebrow">Customer Notes</div>
+    <div class="testimonials-sub">A few words from the CURV community</div>
+
+    <div class="testimonials-grid">
+
+      <div class="review-card">
+        <p class="review-text">“The best takoyaki! We always order the Cheesy Takoyaki and the OG—perfect for late-night cravings.”</p>
+        <div class="review-footer">
+          <span class="review-name">Rica D.</span>
+          <span class="review-source">Facebook Review</span>
+        </div>
+      </div>
+
+      <div class="review-card">
+        <p class="review-text">“Surprisingly good! Ordered the OG Takoyaki and Strawberry Frappe, and they definitely met my expectations.”</p>
+        <div class="review-footer">
+          <span class="review-name">Era B.</span>
+          <span class="review-source">Facebook Review</span>
+        </div>
+      </div>
+
+      <div class="review-card">
+        <p class="review-text">“Sobrang sarap ng kape! Malaki rin ang serving ng Veggie Takoyaki, hindi tinipid—and affordable pa.”</p>
+        <div class="review-footer">
+          <span class="review-name">Belle S.</span>
+          <span class="review-source">Facebook Review</span>
+        </div>
+      </div>
+
+      <div class="review-card">
+        <p class="review-text">“Naka-ilang beses na akong umorder, at masarap talaga.”</p>
+        <div class="review-footer">
+          <span class="review-name">Mi C.</span>
+          <span class="review-source">Facebook Review</span>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="review-privacy">Names shortened for privacy.</p>
   </div>
 </div>
 
