@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CURV Control</title>
+  <meta name="description" content="Static foundation shell for CURV Control.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="admin-shell">
+    <header class="topbar" aria-label="CURV Control header">
+      <div class="brand-lockup" aria-label="CURV Control">
+        <span class="brand-mark">CURV</span>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-section">Control</span>
+        <span class="status-badge">Foundation</span>
+      </div>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
+        <span class="nav-toggle-line" aria-hidden="true"></span>
+        <span class="nav-toggle-line" aria-hidden="true"></span>
+        <span class="nav-toggle-line" aria-hidden="true"></span>
+        <span class="sr-only">Toggle navigation</span>
+      </button>
+    </header>
+
+    <aside class="sidebar" aria-label="Admin navigation">
+      <nav class="admin-nav" id="admin-navigation">
+        <a href="#dashboard" class="admin-nav-link" data-nav-item="dashboard">Dashboard</a>
+        <a href="#pos" class="admin-nav-link" data-nav-item="pos">POS</a>
+        <a href="#inventory" class="admin-nav-link" data-nav-item="inventory">Inventory</a>
+        <a href="#recipes" class="admin-nav-link" data-nav-item="recipes">Recipes</a>
+        <a href="#sales" class="admin-nav-link" data-nav-item="sales">Sales</a>
+        <a href="#settings" class="admin-nav-link" data-nav-item="settings">Settings</a>
+      </nav>
+    </aside>
+
+    <main class="control-main" id="main-content">
+      <section class="hero-panel" id="dashboard" aria-labelledby="control-title">
+        <p class="eyebrow">Admin Shell</p>
+        <h1 id="control-title">CURV Control</h1>
+        <p class="intro-copy">The static admin foundation is ready. Backend features, authentication, and live data are not connected yet.</p>
+      </section>
+
+      <section class="metric-grid" aria-label="Placeholder dashboard cards">
+        <article class="metric-card">
+          <p class="metric-label">Today’s Sales</p>
+          <p class="metric-value">—</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">Low Stock</p>
+          <p class="metric-value">—</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">Products</p>
+          <p class="metric-value">—</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">Recent Transactions</p>
+          <p class="metric-value">—</p>
+        </article>
+      </section>
+
+      <section class="notice-panel" aria-labelledby="notice-title">
+        <div>
+          <p class="eyebrow">Connection Notice</p>
+          <h2 id="notice-title">Static foundation only</h2>
+        </div>
+        <p>Authentication, database access, inventory movement, POS workflows, and reporting tools are intentionally not connected in this phase.</p>
+      </section>
+    </main>
+
+    <footer class="admin-footer">
+      <span>CURV Control</span>
+      <span aria-hidden="true">·</span>
+      <span>&copy; <span id="current-year"></span></span>
+    </footer>
+  </div>
+</body>
+</html>
