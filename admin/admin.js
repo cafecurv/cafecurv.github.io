@@ -4,6 +4,16 @@
     yearTarget.textContent = new Date().getFullYear();
   }
 
+  const dashboardDate = document.getElementById('dashboard-date');
+  if (dashboardDate) {
+    dashboardDate.textContent = new Date().toLocaleDateString('en-PH', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
   const navToggle = document.querySelector('.nav-toggle');
   const sidebar = document.querySelector('.sidebar');
   const navLinks = document.querySelectorAll('.admin-nav-link');

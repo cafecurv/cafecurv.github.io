@@ -83,37 +83,47 @@
     </aside>
 
     <main class="control-main" id="main-content">
-      <section class="hero-panel" id="dashboard" aria-labelledby="control-title">
-        <p class="eyebrow">Admin Shell</p>
-        <h1 id="control-title">CURV Control</h1>
-        <p class="intro-copy">The static admin foundation is ready. Backend features, authentication, and live data are not connected yet.</p>
+      <section class="dashboard-header" id="dashboard" aria-labelledby="dashboard-title">
+        <div>
+          <p class="eyebrow">CURV Control</p>
+          <h1 id="dashboard-title" class="dashboard-title">Dashboard</h1>
+        </div>
+        <p class="dashboard-date" id="dashboard-date" aria-label="Today's date"></p>
       </section>
 
-      <section class="metric-grid" aria-label="Placeholder dashboard cards">
+      <section class="metric-grid" aria-label="Dashboard status overview">
         <article class="metric-card">
-          <p class="metric-label">Today’s Sales</p>
-          <p class="metric-value">—</p>
+          <p class="metric-label">Incoming Orders</p>
+          <p class="metric-value">&mdash;</p>
+          <p class="metric-subtext">Not connected</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">Today&rsquo;s Revenue</p>
+          <p class="metric-value">&mdash;</p>
+          <p class="metric-subtext">Not connected</p>
         </article>
         <article class="metric-card">
           <p class="metric-label">Low Stock</p>
-          <p class="metric-value">—</p>
+          <p class="metric-value">&mdash;</p>
+          <p class="metric-subtext">Not connected</p>
         </article>
         <article class="metric-card">
-          <p class="metric-label">Products</p>
-          <p class="metric-value">—</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Recent Transactions</p>
-          <p class="metric-value">—</p>
+          <p class="metric-label">Unavailable Products</p>
+          <p class="metric-value">&mdash;</p>
+          <p class="metric-subtext">Not connected</p>
         </article>
       </section>
 
-      <section class="notice-panel" aria-labelledby="notice-title">
-        <div>
-          <p class="eyebrow">Connection Notice</p>
-          <h2 id="notice-title">Static foundation only</h2>
-        </div>
-        <p>Authentication, database access, inventory movement, POS workflows, and reporting tools are intentionally not connected in this phase.</p>
+      <section class="recent-orders-panel" aria-labelledby="recent-orders-title">
+        <p class="eyebrow">Recent Activity</p>
+        <h2 id="recent-orders-title">Recent Orders</h2>
+        <p class="empty-message">No orders yet. Connect the backend to see recent activity.</p>
+      </section>
+
+      <section class="quick-actions" aria-label="Quick actions">
+        <button type="button" disabled>New Manual Order</button>
+        <button type="button" disabled>View All Orders</button>
+        <button type="button" disabled>Check Inventory</button>
       </section>
     </main>
 
