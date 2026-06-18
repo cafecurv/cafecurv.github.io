@@ -22,23 +22,64 @@
         <span class="brand-section">Control</span>
         <span class="status-badge">Foundation</span>
       </div>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
-        <span class="nav-toggle-line" aria-hidden="true"></span>
-        <span class="nav-toggle-line" aria-hidden="true"></span>
-        <span class="nav-toggle-line" aria-hidden="true"></span>
-        <span class="sr-only">Toggle navigation</span>
-      </button>
+      <div class="topbar-actions">
+        <button class="notification-button" type="button" aria-label="Notifications">
+          <svg class="topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <span class="notification-badge" hidden aria-hidden="true"></span>
+        </button>
+        <div class="topbar-avatar" aria-label="CURV Owner">CO</div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+      </div>
     </header>
 
     <aside class="sidebar" aria-label="Admin navigation">
       <nav class="admin-nav" id="admin-navigation">
-        <a href="#dashboard" class="admin-nav-link" data-nav-item="dashboard">Dashboard</a>
-        <a href="#pos" class="admin-nav-link" data-nav-item="pos">POS</a>
-        <a href="#inventory" class="admin-nav-link" data-nav-item="inventory">Inventory</a>
-        <a href="#recipes" class="admin-nav-link" data-nav-item="recipes">Recipes</a>
-        <a href="#sales" class="admin-nav-link" data-nav-item="sales">Sales</a>
-        <a href="#settings" class="admin-nav-link" data-nav-item="settings">Settings</a>
+        <a href="#dashboard" class="admin-nav-link is-active" data-nav-item="dashboard" aria-current="page">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="incoming-orders" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
+          <span class="nav-label">Incoming Orders</span>
+          <span class="nav-badge" hidden aria-hidden="true"></span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="pos" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
+          <span class="nav-label">POS</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="menu-manager" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
+          <span class="nav-label">Menu Manager</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="inventory" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          <span class="nav-label">Inventory</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="recipes" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg>
+          <span class="nav-label">Recipes</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="sales" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></svg>
+          <span class="nav-label">Sales</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-3v-.7a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1A1.7 1.7 0 0 0 5 15a1.7 1.7 0 0 0-1.6-1H3v-3h.4A1.7 1.7 0 0 0 5 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1A1.7 1.7 0 0 0 8.7 6a1.7 1.7 0 0 0 1-1.6V4h3v.4a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1A1.7 1.7 0 0 0 19 10c.2.6.8 1 1.6 1h.4v3h-.4c-.8 0-1.4.4-1.6 1z"/></svg>
+          <span class="nav-label">Settings</span>
+        </button>
       </nav>
+      <div class="sidebar-profile" aria-label="Current admin profile">
+        <div class="profile-avatar" aria-hidden="true">CO</div>
+        <div class="profile-copy">
+          <p class="profile-name">CURV Owner</p>
+          <p class="profile-role">Owner access</p>
+        </div>
+      </div>
     </aside>
 
     <main class="control-main" id="main-content">

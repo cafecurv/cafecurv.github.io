@@ -8,25 +8,15 @@
   const sidebar = document.querySelector('.sidebar');
   const navLinks = document.querySelectorAll('.admin-nav-link');
 
-  if (navLinks.length > 0) {
-    navLinks[0].classList.add('is-active');
-    navLinks[0].setAttribute('aria-current', 'page');
-  }
+  const closeMobileNav = () => {
+    if (!sidebar || !navToggle) return;
+    sidebar.classList.remove('is-open');
+    navToggle.setAttribute('aria-expanded', 'false');
+  };
 
   navLinks.forEach((link) => {
     link.addEventListener('click', () => {
-      navLinks.forEach((item) => {
-        item.classList.remove('is-active');
-        item.removeAttribute('aria-current');
-      });
-
-      link.classList.add('is-active');
-      link.setAttribute('aria-current', 'page');
-
-      if (sidebar && navToggle) {
-        sidebar.classList.remove('is-open');
-        navToggle.setAttribute('aria-expanded', 'false');
-      }
+      closeMobileNav();
     });
   });
 
