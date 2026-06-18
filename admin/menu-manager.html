@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CURV Control</title>
-  <meta name="description" content="Static foundation shell for CURV Control.">
+  <title>Menu Manager | CURV Control</title>
+  <meta name="description" content="Static Menu Manager shell for CURV Control.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
 
     <aside class="sidebar" aria-label="Admin navigation">
       <nav class="admin-nav" id="admin-navigation">
-        <a href="index.html" class="admin-nav-link is-active" data-nav-item="dashboard" aria-label="Dashboard" aria-current="page">
+        <a href="index.html" class="admin-nav-link" data-nav-item="dashboard" aria-label="Dashboard">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
           <span class="nav-label">Dashboard</span>
         </a>
@@ -52,7 +52,7 @@
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
           <span class="nav-label">POS</span>
         </button>
-        <a href="menu-manager.html" class="admin-nav-link" data-nav-item="menu-manager" aria-label="Menu Manager">
+        <a href="menu-manager.html" class="admin-nav-link is-active" data-nav-item="menu-manager" aria-label="Menu Manager" aria-current="page">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
           <span class="nav-label">Menu Manager</span>
         </a>
@@ -82,53 +82,73 @@
       </div>
     </aside>
 
-    <main class="control-main" id="main-content">
-      <section class="dashboard-header" id="dashboard" aria-labelledby="dashboard-title">
+    <main class="control-main menu-manager-main" id="main-content">
+      <section class="menu-manager-header" aria-labelledby="menu-manager-title">
         <div>
           <p class="eyebrow">CURV Control</p>
-          <h1 id="dashboard-title" class="dashboard-title">Dashboard</h1>
+          <h1 id="menu-manager-title" class="dashboard-title">Menu Manager</h1>
+          <p class="page-helper">Prepare and organize menu data before connecting it to the live customer menu.</p>
         </div>
-        <p class="dashboard-date" id="dashboard-date" aria-label="Today's date"></p>
+        <button type="button" class="publish-button" disabled>Publish Changes</button>
       </section>
 
-      <section class="metric-grid" aria-label="Dashboard status overview">
-        <article class="metric-card">
-          <p class="metric-label">Incoming Orders</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Today&rsquo;s Revenue</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Low Stock</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Unavailable Products</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
-        </article>
+      <section class="admin-notice" aria-labelledby="menu-manager-notice-title">
+        <h2 id="menu-manager-notice-title">Not connected to the live menu yet</h2>
+        <p>Changes made here will not affect the customer website until Supabase integration is built and approved.</p>
       </section>
 
-      <section class="recent-orders-panel" aria-labelledby="recent-orders-title">
-        <p class="eyebrow">Recent Activity</p>
-        <h2 id="recent-orders-title">Recent Orders</h2>
-        <p class="empty-message">No orders yet. Connect the backend to see recent activity.</p>
-      </section>
+      <section class="menu-manager-shell" aria-label="Static Menu Manager shell">
+        <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
+          <div class="panel-heading-row">
+            <p class="eyebrow">Categories</p>
+            <span class="static-status">Static shell</span>
+          </div>
+          <h2 id="category-panel-title">Menu Groups</h2>
+          <div class="category-list" aria-label="Menu categories">
+            <button type="button" class="category-item is-selected">CURV Picks</button>
+            <button type="button" class="category-item">Matcha &amp; Hojicha</button>
+            <button type="button" class="category-item">Espresso</button>
+            <button type="button" class="category-item">Curvccino</button>
+            <button type="button" class="category-item">Refreshers</button>
+            <button type="button" class="category-item">Bites</button>
+            <button type="button" class="category-item">Salad Bar</button>
+            <button type="button" class="category-item">Pastries &amp; Desserts</button>
+          </div>
 
-      <section class="quick-actions" aria-label="Quick actions">
-        <button type="button" disabled>New Manual Order</button>
-        <button type="button" disabled>View All Orders</button>
-        <button type="button" disabled>Check Inventory</button>
+          <div class="placeholder-products" aria-label="Sample placeholder products">
+            <p class="eyebrow">Sample Products</p>
+            <button type="button" class="product-row">Kagoshima Matcha Cream</button>
+            <button type="button" class="product-row">Strawberry Matcha Latte</button>
+            <button type="button" class="product-row">Spanish Latte</button>
+            <button type="button" class="product-row">Cloud Spanish Oat Latte</button>
+            <button type="button" class="product-row">OG Takoyaki</button>
+            <button type="button" class="product-row">Chicken Karaage</button>
+          </div>
+        </aside>
+
+        <section class="menu-manager-panel editor-panel" aria-labelledby="editor-panel-title">
+          <div class="editor-empty-state">
+            <p class="eyebrow">Product Editor</p>
+            <h2 id="editor-panel-title">Select a product to begin editing</h2>
+            <p>Product details, prices, availability, and publishing controls will appear here once the Menu Manager is connected.</p>
+          </div>
+
+          <div class="editor-section-grid" aria-label="Disabled editor sections">
+            <button type="button" class="editor-section-card" disabled>Basic Info</button>
+            <button type="button" class="editor-section-card" disabled>Pricing &amp; Sizes</button>
+            <button type="button" class="editor-section-card" disabled>Photo</button>
+            <button type="button" class="editor-section-card" disabled>Availability</button>
+            <button type="button" class="editor-section-card" disabled>CURV Picks</button>
+            <button type="button" class="editor-section-card" disabled>Draft / Published</button>
+          </div>
+
+          <p class="static-footnote">Static shell only &middot; No Supabase connection</p>
+        </section>
       </section>
     </main>
 
     <nav class="mobile-bottom-nav" aria-label="Mobile admin navigation">
-      <a href="index.html" class="mobile-nav-item is-active" aria-label="Dashboard" aria-current="page">
+      <a href="index.html" class="mobile-nav-item" aria-label="Dashboard">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
         <span>Dashboard</span>
       </a>
@@ -154,7 +174,7 @@
         <button type="button" class="mobile-more-close" data-more-close aria-label="Close more navigation">Close</button>
       </div>
       <div class="mobile-more-list">
-        <a href="menu-manager.html" class="mobile-more-item" aria-label="Menu Manager">
+        <a href="menu-manager.html" class="mobile-more-item is-active" aria-label="Menu Manager" aria-current="page">
           <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
           <span>Menu Manager</span>
         </a>
