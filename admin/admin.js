@@ -14,26 +14,57 @@
     });
   }
 
-  const navToggle = document.querySelector('.nav-toggle');
-  const sidebar = document.querySelector('.sidebar');
-  const navLinks = document.querySelectorAll('.admin-nav-link');
+  const moreButton = document.querySelector('.mobile-more-button');
+  const moreDrawer = document.getElementById('mobile-more-drawer');
+  const moreOverlay = document.querySelector('.mobile-more-overlay');
+  const moreCloseTargets = document.querySelectorAll('[data-more-close]');
+  let lastFocusedElement = null;
 
-  const closeMobileNav = () => {
-    if (!sidebar || !navToggle) return;
-    sidebar.classList.remove('is-open');
-    navToggle.setAttribute('aria-expanded', 'false');
+  const openMoreDrawer = () => {
+    if (!moreButton || !moreDrawer || !moreOverlay) return;
+    lastFocusedElement = document.activeElement;
+    moreDrawer.classList.add('is-open');
+    moreOverlay.classList.add('is-open');
+    moreOverlay.hidden = false;
+    moreDrawer.setAttribute('aria-hidden', 'false');
+    moreButton.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('more-drawer-open');
+    const firstDrawerButton = moreDrawer.querySelector('button');
+    if (firstDrawerButton) firstDrawerButton.focus();
   };
 
-  navLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      closeMobileNav();
-    });
-  });
+  const closeMoreDrawer = () => {
+    if (!moreButton || !moreDrawer || !moreOverlay) return;
+    moreDrawer.classList.remove('is-open');
+    moreOverlay.classList.remove('is-open');
+    moreOverlay.hidden = true;
+    moreDrawer.setAttribute('aria-hidden', 'true');
+    moreButton.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('more-drawer-open');
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+    }
+  };
 
-  if (navToggle && sidebar) {
-    navToggle.addEventListener('click', () => {
-      const isOpen = sidebar.classList.toggle('is-open');
-      navToggle.setAttribute('aria-expanded', String(isOpen));
+  if (moreButton && moreDrawer && moreOverlay) {
+    moreButton.addEventListener('click', () => {
+      const isOpen = moreButton.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        closeMoreDrawer();
+      } else {
+        openMoreDrawer();
+      }
+    });
+
+    moreCloseTargets.forEach((target) => {
+      target.addEventListener('click', closeMoreDrawer);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && moreButton.getAttribute('aria-expanded') === 'true') {
+        closeMoreDrawer();
+      }
     });
   }
+
 })();
