@@ -566,6 +566,7 @@ body.more-drawer-open {
     border-bottom: 0;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
   }
 
   .admin-nav {
@@ -604,11 +605,7 @@ body.more-drawer-open {
   }
 
   .sidebar-profile {
-    justify-content: center;
-    width: 100%;
-    padding: 0.45rem 0;
-    border-color: transparent;
-    background: transparent;
+    display: none;
   }
 
   .profile-avatar {
