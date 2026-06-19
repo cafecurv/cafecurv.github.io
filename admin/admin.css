@@ -1403,3 +1403,46 @@ body.more-drawer-open {
     width: 100%;
   }
 }
+
+.pricing-type-field {
+  border: 1px solid rgba(189, 196, 212, 0.18);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.34);
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.pricing-type-field legend {
+  padding: 0 0.25rem;
+  color: var(--slate);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.pricing-type-option {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--slate);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.pricing-type-option input {
+  accent-color: var(--accent);
+}
+
+.pricing-type-option:has(input:checked) {
+  color: var(--cream);
+}
+
+.pricing-type-field:has(input:disabled) {
+  opacity: 0.58;
+}

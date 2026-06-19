@@ -138,9 +138,28 @@
               <option value="">Sign in to load categories</option>
             </select>
           </label>
-          <label class="admin-field" for="draft-product-price">
+          <fieldset class="pricing-type-field draft-field-wide">
+            <legend>Pricing type</legend>
+            <label class="pricing-type-option">
+              <input type="radio" name="pricing_type" value="standard" checked disabled>
+              <span>Standard</span>
+            </label>
+            <label class="pricing-type-option">
+              <input type="radio" name="pricing_type" value="regular_large" disabled>
+              <span>Regular / Large</span>
+            </label>
+          </fieldset>
+          <label class="admin-field" for="draft-product-price" data-pricing-standard>
             <span>Standard price</span>
             <input id="draft-product-price" name="price" type="number" min="0" step="0.01" inputmode="decimal" required disabled>
+          </label>
+          <label class="admin-field" for="draft-product-regular-price" data-pricing-sized hidden>
+            <span>Regular price</span>
+            <input id="draft-product-regular-price" name="regular_price" type="number" min="0" step="0.01" inputmode="decimal" required disabled>
+          </label>
+          <label class="admin-field" for="draft-product-large-price" data-pricing-sized hidden>
+            <span>Large price</span>
+            <input id="draft-product-large-price" name="large_price" type="number" min="0" step="0.01" inputmode="decimal" required disabled>
           </label>
           <label class="admin-field" for="draft-product-image">
             <span>Image path</span>

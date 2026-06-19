@@ -91,6 +91,10 @@
   const draftForm = document.querySelector('[data-draft-product-form]');
   const draftCategorySelect = document.getElementById('draft-product-category');
   const createDraftButton = document.querySelector('[data-create-draft]');
+  const pricingTypeInputs = draftForm ? draftForm.querySelectorAll('[name="pricing_type"]') : [];
+  const standardPriceField = document.querySelector('[data-pricing-standard]');
+  const standardPriceInput = document.getElementById('draft-product-price');
+  const regularLargeFields = document.querySelectorAll('[data-pricing-sized]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
 
@@ -114,17 +118,39 @@
     if (signOutButton) signOutButton.disabled = !isSignedIn;
   };
 
+  const getPricingType = () => {
+    const selectedPricing = draftForm ? draftForm.querySelector('[name="pricing_type"]:checked') : null;
+    return selectedPricing ? selectedPricing.value : 'standard';
+  };
+
+  const syncPricingFields = () => {
+    const isRegularLarge = getPricingType() === 'regular_large';
+
+    if (standardPriceField) standardPriceField.hidden = isRegularLarge;
+    if (standardPriceInput) standardPriceInput.disabled = isRegularLarge;
+
+    regularLargeFields.forEach((field) => {
+      field.hidden = !isRegularLarge;
+      const input = field.querySelector('input');
+      if (input) input.disabled = !isRegularLarge;
+    });
+  };
+
   const setDraftFormDisabled = (isDisabled) => {
     if (!draftForm) return;
     draftForm.querySelectorAll('input, select, textarea, button').forEach((field) => {
       field.disabled = isDisabled;
     });
+    if (!isDisabled) syncPricingFields();
   };
 
   const resetDraftProductForm = () => {
     if (draftForm) draftForm.reset();
+    const standardPricingInput = draftForm ? draftForm.querySelector('[name="pricing_type"][value="standard"]') : null;
+    if (standardPricingInput) standardPricingInput.checked = true;
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
+    syncPricingFields();
     if (draftCategorySelect) {
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
@@ -363,8 +389,8 @@
     const formData = new FormData(draftForm);
     const name = String(formData.get('name') || '').trim();
     const categoryId = String(formData.get('category_id') || '').trim();
-    const priceText = String(formData.get('price') || '').trim();
-    const price = Number(priceText);
+    const pricingType = String(formData.get('pricing_type') || 'standard');
+    const sizeRows = [];
 
     if (!name) {
       return { error: 'Product name is required.' };
@@ -374,8 +400,33 @@
       return { error: 'Category is required.' };
     }
 
-    if (!priceText || !Number.isFinite(price) || price < 0) {
-      return { error: 'Standard price must be 0 or greater.' };
+    if (pricingType === 'regular_large') {
+      const regularPriceText = String(formData.get('regular_price') || '').trim();
+      const largePriceText = String(formData.get('large_price') || '').trim();
+      const regularPrice = Number(regularPriceText);
+      const largePrice = Number(largePriceText);
+
+      if (!regularPriceText || !Number.isFinite(regularPrice) || regularPrice < 0) {
+        return { error: 'Regular price must be 0 or greater.' };
+      }
+
+      if (!largePriceText || !Number.isFinite(largePrice) || largePrice < 0) {
+        return { error: 'Large price must be 0 or greater.' };
+      }
+
+      sizeRows.push(
+        { label: 'Regular', price: regularPrice, sort_order: 0 },
+        { label: 'Large', price: largePrice, sort_order: 1 }
+      );
+    } else {
+      const priceText = String(formData.get('price') || '').trim();
+      const price = Number(priceText);
+
+      if (!priceText || !Number.isFinite(price) || price < 0) {
+        return { error: 'Standard price must be 0 or greater.' };
+      }
+
+      sizeRows.push({ label: 'Standard', price, sort_order: 0 });
     }
 
     return {
@@ -390,7 +441,7 @@
         is_seasonal: formData.get('is_seasonal') === 'on',
         is_published: false,
         sort_order: 0,
-        price,
+        sizeRows,
       },
     };
   };
@@ -438,18 +489,20 @@
       return;
     }
 
+    const sizePayload = draft.sizeRows.map((size) => ({
+      product_id: product.id,
+      label: size.label,
+      price: size.price,
+      sort_order: size.sort_order,
+    }));
+
     const { error: sizeError } = await client
       .from('product_sizes')
-      .insert({
-        product_id: product.id,
-        label: 'Standard',
-        price: draft.price,
-        sort_order: 0,
-      });
+      .insert(sizePayload);
 
     if (sizeError) {
-      setStatus('Draft product row was created, but Standard price could not be saved. ' + sizeError.message);
       await loadProducts();
+      setStatus('Draft product row was created, but product sizes could not be saved. ' + sizeError.message);
       if (createDraftButton) createDraftButton.disabled = false;
       return;
     }
@@ -460,6 +513,10 @@
     await loadProducts();
     setStatus('Draft product created.');
   };
+
+  pricingTypeInputs.forEach((input) => {
+    input.addEventListener('change', syncPricingFields);
+  });
 
   if (draftForm) {
     draftForm.addEventListener('submit', createDraftProduct);
