@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const yearTarget = document.getElementById('current-year');
   if (yearTarget) {
     yearTarget.textContent = new Date().getFullYear();
@@ -96,8 +96,15 @@
   const variantList = document.querySelector('[data-variant-list]');
   const addVariantButton = document.querySelector('[data-add-variant]');
   const createDraftButton = document.querySelector('[data-create-draft]');
+  const cancelEditButton = document.querySelector('[data-cancel-edit]');
+  const draftProductTitle = document.getElementById('draft-product-title');
+  const productFilterBar = document.querySelector('[data-product-filter-bar]');
+  const productFilterList = document.querySelector('[data-product-filter-list]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
+  let latestProducts = [];
+  let selectedCategoryFilter = 'all';
+  let editingProductId = null;
   let variantRowCount = 1;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
@@ -118,6 +125,26 @@
   const setSignedInState = (isSignedIn) => {
     if (signInButton) signInButton.disabled = isSignedIn;
     if (signOutButton) signOutButton.disabled = !isSignedIn;
+  };
+
+  const setCreateMode = () => {
+    editingProductId = null;
+    if (draftProductTitle) draftProductTitle.textContent = 'Create Draft Product';
+    if (createDraftButton) createDraftButton.textContent = 'Create Draft Product';
+    if (cancelEditButton) {
+      cancelEditButton.hidden = true;
+      cancelEditButton.disabled = true;
+    }
+  };
+
+  const setEditMode = (productId) => {
+    editingProductId = productId;
+    if (draftProductTitle) draftProductTitle.textContent = 'Edit Draft Product';
+    if (createDraftButton) createDraftButton.textContent = 'Save Draft Product';
+    if (cancelEditButton) {
+      cancelEditButton.hidden = false;
+      cancelEditButton.disabled = false;
+    }
   };
 
   const getVariantRows = () => variantList ? Array.from(variantList.querySelectorAll('[data-variant-row]')) : [];
@@ -239,6 +266,7 @@
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
     resetVariantRows();
+    setCreateMode();
     syncVariantGroupFields();
     maybeSyncDefaultVariantLabel();
     if (draftCategorySelect) {
@@ -255,6 +283,32 @@
       option.value = category.id;
       option.textContent = category.name;
       draftCategorySelect.appendChild(option);
+    });
+  };
+
+  const renderProductFilters = (categories) => {
+    if (!productFilterBar || !productFilterList) return;
+    productFilterList.innerHTML = '';
+    productFilterBar.hidden = !categories.length;
+    if (!categories.length) return;
+
+    const makeFilterButton = (label, value) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = value === selectedCategoryFilter ? 'product-filter-button is-active' : 'product-filter-button';
+      button.textContent = label;
+      button.dataset.categoryFilter = value;
+      button.addEventListener('click', () => {
+        selectedCategoryFilter = value;
+        renderProductFilters(latestCategories);
+        renderProducts(latestProducts);
+      });
+      return button;
+    };
+
+    productFilterList.appendChild(makeFilterButton('All', 'all'));
+    categories.forEach((category) => {
+      productFilterList.appendChild(makeFilterButton(category.name, category.id));
     });
   };
 
@@ -279,8 +333,12 @@
   };
 
   const resetProductPreview = () => {
+    latestProducts = [];
+    selectedCategoryFilter = 'all';
     if (productStatus) productStatus.textContent = 'Locked';
     if (productCount) productCount.textContent = 'Sign in to load products.';
+    if (productFilterBar) productFilterBar.hidden = true;
+    if (productFilterList) productFilterList.innerHTML = '';
     renderProductEmptyState('Owner sign-in required', 'Products from Supabase will appear here after the owner account is connected.');
   };
 
@@ -300,6 +358,7 @@
   const renderCategories = (categories) => {
     latestCategories = categories;
     populateDraftCategorySelect(categories);
+    renderProductFilters(categories);
     setDraftFormDisabled(!categories.length);
     if (!categoryList) return;
     categoryList.innerHTML = '';
@@ -323,20 +382,37 @@
   };
 
   const renderProducts = (products) => {
+    latestProducts = products || [];
     if (!productList) return;
     productList.innerHTML = '';
 
-    if (!products.length) {
-      if (productStatus) productStatus.textContent = 'Supabase read-only';
+    const visibleProducts = selectedCategoryFilter === 'all'
+      ? latestProducts
+      : latestProducts.filter((product) => product.category_id === selectedCategoryFilter);
+
+    if (!latestProducts.length) {
+      if (productStatus) productStatus.textContent = 'Supabase draft list';
       if (productCount) productCount.textContent = '0 products';
-      renderProductEmptyState('No products in Supabase yet.', 'Product creation will be added in a later step.');
+      renderProductEmptyState('No products in Supabase yet.', 'Create a draft product to see it here.');
       return;
     }
 
-    if (productStatus) productStatus.textContent = 'Supabase read-only';
-    if (productCount) productCount.textContent = products.length === 1 ? '1 product' : products.length + ' products';
+    if (!visibleProducts.length) {
+      if (productStatus) productStatus.textContent = 'Supabase draft list';
+      if (productCount) productCount.textContent = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
+      renderProductEmptyState('No products in this category.', 'Choose All or another category to continue reviewing draft products.');
+      return;
+    }
 
-    products.forEach((product) => {
+    if (productStatus) productStatus.textContent = 'Supabase draft list';
+    if (productCount) {
+      const totalText = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
+      productCount.textContent = selectedCategoryFilter === 'all'
+        ? totalText
+        : visibleProducts.length + ' shown ? ' + totalText;
+    }
+
+    visibleProducts.forEach((product) => {
       const card = document.createElement('article');
       card.className = 'product-preview-card';
 
@@ -383,7 +459,7 @@
           if (variant.cost !== null && variant.cost !== undefined) {
             const cost = document.createElement('span');
             cost.className = 'product-variant-cost';
-            cost.textContent = ' ? Cost ' + formatPrice(variant.cost);
+            cost.textContent = ' - Cost ' + formatPrice(variant.cost);
             pill.appendChild(cost);
           }
           variantRow.appendChild(pill);
@@ -395,9 +471,103 @@
         variantRow.appendChild(pill);
       }
       card.appendChild(variantRow);
+
+      const actions = document.createElement('div');
+      actions.className = 'product-card-actions';
+      if (!product.is_published) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'product-action-button';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', () => loadProductIntoForm(product.id));
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'product-action-button is-danger';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => deleteDraftProduct(product.id));
+
+        actions.append(editButton, deleteButton);
+      } else {
+        const lockedButton = document.createElement('button');
+        lockedButton.type = 'button';
+        lockedButton.className = 'product-action-button';
+        lockedButton.disabled = true;
+        lockedButton.textContent = 'Published Locked';
+        actions.appendChild(lockedButton);
+      }
+      card.appendChild(actions);
       productList.appendChild(card);
     });
   };
+
+  const setVariantRows = (variants) => {
+    if (!variantList) return;
+    variantList.innerHTML = '';
+    variantRowCount = 0;
+    const rows = variants.length ? variants : [{ label: 'Each', price: '', cost: '', touched: false }];
+    rows.forEach((variant) => {
+      const row = createVariantRow({
+        label: variant.label || '',
+        price: variant.price ?? '',
+        cost: variant.cost ?? '',
+        touched: true,
+      });
+      variantList.appendChild(row);
+      bindVariantRow(row);
+    });
+    updateRemoveButtons();
+  };
+
+  const loadProductIntoForm = (productId) => {
+    const product = latestProducts.find((item) => item.id === productId);
+    if (!product) {
+      setStatus('Product could not be found in the current preview.');
+      return;
+    }
+
+    if (product.is_published) {
+      setStatus('Published products cannot be edited yet.');
+      return;
+    }
+
+    resetDraftProductForm();
+    populateDraftCategorySelect(latestCategories);
+    setDraftFormDisabled(false);
+
+    draftForm.elements.name.value = product.name || '';
+    draftForm.elements.category_id.value = product.category_id || '';
+    draftForm.elements.image_url.value = product.image_url || '';
+    draftForm.elements.description.value = product.description || '';
+    draftForm.elements.notes.value = product.notes || '';
+    draftForm.elements.is_available.checked = Boolean(product.is_available);
+    draftForm.elements.is_curv_pick.checked = Boolean(product.is_curv_pick);
+    draftForm.elements.is_seasonal.checked = Boolean(product.is_seasonal);
+
+    const knownGroups = ['Each', 'Size', 'Pieces', 'Weight / Volume', 'Pack / Box'];
+    const groupName = product.variant_group_name || 'Each';
+    if (variantGroupSelect) {
+      variantGroupSelect.value = knownGroups.includes(groupName) ? groupName : 'Custom';
+    }
+    if (customVariantInput) {
+      customVariantInput.value = knownGroups.includes(groupName) ? '' : groupName;
+    }
+    syncVariantGroupFields();
+
+    const variants = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
+    variants.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
+    setVariantRows(variants.map((variant) => ({
+      label: variant.label,
+      price: variant.price,
+      cost: variant.cost,
+      touched: true,
+    })));
+
+    setEditMode(product.id);
+    draftForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStatus('Editing draft product. Save changes or cancel edit.');
+  };
+
 
   resetProductPreview();
   resetDraftProductForm();
@@ -435,7 +605,7 @@
 
     renderCategories(data || []);
     if (categoryStatus) categoryStatus.textContent = 'Supabase read-only';
-    setStatus('Connected as owner. Categories loaded in read-only mode.');
+    setStatus('Connected as owner. Categories loaded.');
   };
 
   const loadProducts = async () => {
@@ -444,7 +614,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,name,description,image_url,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -464,7 +634,7 @@
     });
 
     renderProducts(products);
-    setStatus('Connected as owner. Categories and products loaded in read-only mode.');
+    setStatus('Connected as owner. Categories and products loaded.');
   };
 
   const refreshSession = async () => {
@@ -548,11 +718,11 @@
     };
   };
 
-  const createDraftProduct = async (event) => {
+  const saveDraftProduct = async (event) => {
     event.preventDefault();
 
     if (!latestCategories.length) {
-      setStatus('Load categories before creating a draft product.');
+      setStatus('Load categories before saving a draft product.');
       return;
     }
 
@@ -563,8 +733,10 @@
     }
 
     const draft = validation.value;
+    const isEditing = Boolean(editingProductId);
     if (createDraftButton) createDraftButton.disabled = true;
-    setStatus('Creating draft product...');
+    if (cancelEditButton) cancelEditButton.disabled = true;
+    setStatus(isEditing ? 'Saving draft product...' : 'Creating draft product...');
 
     const productPayload = {
       category_id: draft.category_id,
@@ -580,20 +752,52 @@
       sort_order: 0,
     };
 
-    const { data: product, error: productError } = await client
-      .from('products')
-      .insert(productPayload)
-      .select('id')
-      .single();
+    let productId = editingProductId;
 
-    if (productError) {
-      setStatus('Unable to create draft product. ' + productError.message);
-      if (createDraftButton) createDraftButton.disabled = false;
-      return;
+    if (isEditing) {
+      const { error: productError } = await client
+        .from('products')
+        .update(productPayload)
+        .eq('id', editingProductId)
+        .eq('is_published', false);
+
+      if (productError) {
+        setStatus('Unable to update draft product. ' + productError.message);
+        if (createDraftButton) createDraftButton.disabled = false;
+        if (cancelEditButton) cancelEditButton.disabled = false;
+        return;
+      }
+
+      const { error: deleteSizesError } = await client
+        .from('product_sizes')
+        .delete()
+        .eq('product_id', editingProductId);
+
+      if (deleteSizesError) {
+        await loadProducts();
+        setStatus('Draft product was updated, but existing variants could not be replaced. ' + deleteSizesError.message);
+        if (createDraftButton) createDraftButton.disabled = false;
+        if (cancelEditButton) cancelEditButton.disabled = false;
+        return;
+      }
+    } else {
+      const { data: product, error: productError } = await client
+        .from('products')
+        .insert(productPayload)
+        .select('id')
+        .single();
+
+      if (productError) {
+        setStatus('Unable to create draft product. ' + productError.message);
+        if (createDraftButton) createDraftButton.disabled = false;
+        return;
+      }
+
+      productId = product.id;
     }
 
     const sizePayload = draft.sizeRows.map((variant) => ({
-      product_id: product.id,
+      product_id: productId,
       label: variant.label,
       price: variant.price,
       cost: variant.cost,
@@ -606,8 +810,9 @@
 
     if (sizeError) {
       await loadProducts();
-      setStatus('Draft product row was created, but variants could not be saved. ' + sizeError.message);
+      setStatus((isEditing ? 'Draft product was updated, but variants could not be saved. ' : 'Draft product row was created, but variants could not be saved. ') + sizeError.message);
       if (createDraftButton) createDraftButton.disabled = false;
+      if (cancelEditButton) cancelEditButton.disabled = !isEditing;
       return;
     }
 
@@ -615,7 +820,55 @@
     populateDraftCategorySelect(latestCategories);
     setDraftFormDisabled(false);
     await loadProducts();
-    setStatus('Draft product created.');
+    setStatus(isEditing ? 'Draft product updated.' : 'Draft product created.');
+  };
+
+  const deleteDraftProduct = async (productId) => {
+    const product = latestProducts.find((item) => item.id === productId);
+    if (!product) {
+      setStatus('Product could not be found in the current preview.');
+      return;
+    }
+
+    if (product.is_published) {
+      setStatus('Published products cannot be deleted yet.');
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this draft product? This cannot be undone.');
+    if (!confirmed) return;
+
+    setStatus('Deleting draft product...');
+    const { error: sizeError } = await client
+      .from('product_sizes')
+      .delete()
+      .eq('product_id', productId);
+
+    if (sizeError) {
+      setStatus('Unable to delete draft product variants. ' + sizeError.message);
+      return;
+    }
+
+    const { error: productError } = await client
+      .from('products')
+      .delete()
+      .eq('id', productId)
+      .eq('is_published', false);
+
+    if (productError) {
+      setStatus('Draft variants were deleted, but the product could not be deleted. ' + productError.message);
+      await loadProducts();
+      return;
+    }
+
+    if (editingProductId === productId) {
+      resetDraftProductForm();
+      populateDraftCategorySelect(latestCategories);
+      setDraftFormDisabled(false);
+    }
+
+    await loadProducts();
+    setStatus('Draft product deleted.');
   };
 
   if (variantGroupSelect) {
@@ -643,7 +896,16 @@
   updateRemoveButtons();
 
   if (draftForm) {
-    draftForm.addEventListener('submit', createDraftProduct);
+    draftForm.addEventListener('submit', saveDraftProduct);
+  }
+
+  if (cancelEditButton) {
+    cancelEditButton.addEventListener('click', () => {
+      resetDraftProductForm();
+      populateDraftCategorySelect(latestCategories);
+      setDraftFormDisabled(false);
+      setStatus('Edit cancelled. Create mode restored.');
+    });
   }
 
   if (authForm) {

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -101,8 +101,8 @@
       <section class="admin-auth-panel" data-supabase-menu-manager aria-labelledby="owner-login-title">
         <div>
           <p class="eyebrow">Owner Access</p>
-          <h2 id="owner-login-title">Supabase Connection Test</h2>
-          <p>Sign in with the owner account to load categories in read-only mode.</p>
+          <h2 id="owner-login-title">Owner Menu Access</h2>
+          <p>Sign in with the owner account to manage draft products in Supabase.</p>
         </div>
         <form class="admin-login-form" data-auth-form>
           <label class="admin-field" for="owner-email">
@@ -209,6 +209,7 @@
 
           <div class="draft-actions draft-field-wide">
             <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
+            <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel Edit</button>
           </div>
         </form>
       </section>
@@ -255,8 +256,12 @@
               <span class="static-status" data-product-status>Locked</span>
             </div>
             <div class="product-preview-heading">
-              <h2 id="product-preview-title">Read-Only Product Preview</h2>
+              <h2 id="product-preview-title">Draft Product Preview</h2>
               <p data-product-count>Sign in to load products.</p>
+            </div>
+            <div class="product-filter-bar" data-product-filter-bar hidden>
+              <span class="product-filter-label">Filter</span>
+              <div class="product-filter-list" data-product-filter-list aria-label="Filter products by category"></div>
             </div>
             <div class="product-preview-list" data-product-list>
               <div class="product-empty-state">
@@ -268,14 +273,14 @@
 
           <div class="editor-section-grid" aria-label="Disabled editor sections">
             <button type="button" class="editor-section-card" disabled>Basic Info</button>
-            <button type="button" class="editor-section-card" disabled>Pricing &amp; Sizes</button>
+            <button type="button" class="editor-section-card" disabled>Variants</button>
             <button type="button" class="editor-section-card" disabled>Photo</button>
             <button type="button" class="editor-section-card" disabled>Availability</button>
             <button type="button" class="editor-section-card" disabled>CURV Picks</button>
             <button type="button" class="editor-section-card" disabled>Draft / Published</button>
           </div>
 
-          <p class="static-footnote">Static shell only &middot; No Supabase connection</p>
+          <p class="static-footnote">Draft-only admin &middot; No live menu connection</p>
         </section>
       </section>
     </main>

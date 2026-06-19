@@ -1211,6 +1211,56 @@ body.more-drawer-open {
   white-space: nowrap;
 }
 
+.product-filter-bar {
+  margin-bottom: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.product-filter-bar[hidden] {
+  display: none;
+}
+
+.product-filter-label {
+  color: var(--slate);
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.product-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.product-filter-button {
+  min-height: 34px;
+  border: 1px solid rgba(189, 196, 212, 0.16);
+  border-radius: 999px;
+  background: rgba(36, 44, 66, 0.3);
+  color: var(--slate);
+  padding: 0.42rem 0.7rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.product-filter-button:hover,
+.product-filter-button:focus-visible,
+.product-filter-button.is-active {
+  border-color: rgba(200, 184, 154, 0.42);
+  background: rgba(200, 184, 154, 0.1);
+  color: var(--cream);
+}
+
 .product-preview-list {
   display: grid;
   gap: 0.7rem;
@@ -1284,6 +1334,48 @@ body.more-drawer-open {
   border-color: rgba(189, 196, 212, 0.14);
 }
 
+.product-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.product-action-button {
+  min-height: 36px;
+  border: 1px solid rgba(200, 184, 154, 0.32);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
+  padding: 0.5rem 0.7rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.product-action-button:hover,
+.product-action-button:focus-visible {
+  border-color: rgba(200, 184, 154, 0.62);
+  background: rgba(200, 184, 154, 0.14);
+}
+
+.product-action-button.is-danger {
+  border-color: rgba(189, 196, 212, 0.18);
+  background: rgba(36, 44, 66, 0.42);
+  color: var(--slate);
+}
+
+.product-action-button:disabled {
+  border-color: rgba(189, 196, 212, 0.14);
+  background: rgba(36, 44, 66, 0.28);
+  color: rgba(189, 196, 212, 0.5);
+  cursor: not-allowed;
+}
+
 .product-variant-pill {
   color: var(--cream);
   background: rgba(20, 24, 36, 0.34);
@@ -1308,7 +1400,8 @@ body.more-drawer-open {
 
 @media (max-width: 600px) {
   .product-preview-heading,
-  .product-card-top {
+  .product-card-top,
+  .product-card-actions {
     flex-direction: column;
   }
 
@@ -1399,8 +1492,13 @@ body.more-drawer-open {
     grid-template-columns: 1fr;
   }
 
+  .draft-actions,
   .draft-actions .auth-button {
     width: 100%;
+  }
+
+  .draft-actions {
+    flex-direction: column;
   }
 }
 
