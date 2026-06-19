@@ -95,6 +95,7 @@
   const standardPriceField = document.querySelector('[data-pricing-standard]');
   const standardPriceInput = document.getElementById('draft-product-price');
   const regularLargeFields = document.querySelectorAll('[data-pricing-sized]');
+  const piecePriceFields = document.querySelectorAll('[data-pricing-pieces]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
 
@@ -124,15 +125,24 @@
   };
 
   const syncPricingFields = () => {
-    const isRegularLarge = getPricingType() === 'regular_large';
+    const pricingType = getPricingType();
+    const isStandard = pricingType === 'standard';
+    const isRegularLarge = pricingType === 'regular_large';
+    const isPieceBased = pricingType === 'piece_based';
 
-    if (standardPriceField) standardPriceField.hidden = isRegularLarge;
-    if (standardPriceInput) standardPriceInput.disabled = isRegularLarge;
+    if (standardPriceField) standardPriceField.hidden = !isStandard;
+    if (standardPriceInput) standardPriceInput.disabled = !isStandard;
 
     regularLargeFields.forEach((field) => {
       field.hidden = !isRegularLarge;
       const input = field.querySelector('input');
       if (input) input.disabled = !isRegularLarge;
+    });
+
+    piecePriceFields.forEach((field) => {
+      field.hidden = !isPieceBased;
+      const input = field.querySelector('input');
+      if (input) input.disabled = !isPieceBased;
     });
   };
 
@@ -418,6 +428,28 @@
         { label: 'Regular', price: regularPrice, sort_order: 0 },
         { label: 'Large', price: largePrice, sort_order: 1 }
       );
+    } else if (pricingType === 'piece_based') {
+      const piecePrices = [
+        { field: 'price_4pcs', label: '4 pcs', sort_order: 0 },
+        { field: 'price_8pcs', label: '8 pcs', sort_order: 1 },
+        { field: 'price_12pcs', label: '12 pcs', sort_order: 2 },
+      ];
+
+      for (const piece of piecePrices) {
+        const priceText = String(formData.get(piece.field) || '').trim();
+        if (!priceText) continue;
+
+        const price = Number(priceText);
+        if (!Number.isFinite(price) || price < 0) {
+          return { error: piece.label + ' price must be 0 or greater.' };
+        }
+
+        sizeRows.push({ label: piece.label, price, sort_order: piece.sort_order });
+      }
+
+      if (!sizeRows.length) {
+        return { error: 'Enter at least one piece price.' };
+      }
     } else {
       const priceText = String(formData.get('price') || '').trim();
       const price = Number(priceText);
