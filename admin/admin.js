@@ -90,14 +90,15 @@
   const productCount = document.querySelector('[data-product-count]');
   const draftForm = document.querySelector('[data-draft-product-form]');
   const draftCategorySelect = document.getElementById('draft-product-category');
+  const variantGroupSelect = document.getElementById('draft-variant-group');
+  const customVariantField = document.querySelector('[data-custom-variant-field]');
+  const customVariantInput = document.getElementById('draft-custom-variant-group');
+  const variantList = document.querySelector('[data-variant-list]');
+  const addVariantButton = document.querySelector('[data-add-variant]');
   const createDraftButton = document.querySelector('[data-create-draft]');
-  const pricingTypeInputs = draftForm ? draftForm.querySelectorAll('[name="pricing_type"]') : [];
-  const standardPriceField = document.querySelector('[data-pricing-standard]');
-  const standardPriceInput = document.getElementById('draft-product-price');
-  const regularLargeFields = document.querySelectorAll('[data-pricing-sized]');
-  const piecePriceFields = document.querySelectorAll('[data-pricing-pieces]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
+  let variantRowCount = 1;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -119,31 +120,107 @@
     if (signOutButton) signOutButton.disabled = !isSignedIn;
   };
 
-  const getPricingType = () => {
-    const selectedPricing = draftForm ? draftForm.querySelector('[name="pricing_type"]:checked') : null;
-    return selectedPricing ? selectedPricing.value : 'standard';
+  const getVariantRows = () => variantList ? Array.from(variantList.querySelectorAll('[data-variant-row]')) : [];
+
+  const getSelectedVariantGroup = () => {
+    if (!variantGroupSelect) return 'Each';
+    if (variantGroupSelect.value === 'Custom') {
+      return customVariantInput ? customVariantInput.value.trim() : '';
+    }
+    return variantGroupSelect.value.trim();
   };
 
-  const syncPricingFields = () => {
-    const pricingType = getPricingType();
-    const isStandard = pricingType === 'standard';
-    const isRegularLarge = pricingType === 'regular_large';
-    const isPieceBased = pricingType === 'piece_based';
-
-    if (standardPriceField) standardPriceField.hidden = !isStandard;
-    if (standardPriceInput) standardPriceInput.disabled = !isStandard;
-
-    regularLargeFields.forEach((field) => {
-      field.hidden = !isRegularLarge;
-      const input = field.querySelector('input');
-      if (input) input.disabled = !isRegularLarge;
+  const updateRemoveButtons = () => {
+    const rows = getVariantRows();
+    rows.forEach((row) => {
+      const removeButton = row.querySelector('[data-remove-variant]');
+      if (removeButton) removeButton.disabled = rows.length <= 1 || removeButton.dataset.locked === 'true';
     });
+  };
 
-    piecePriceFields.forEach((field) => {
-      field.hidden = !isPieceBased;
-      const input = field.querySelector('input');
-      if (input) input.disabled = !isPieceBased;
+  const setVariantRowDisabled = (row, isDisabled) => {
+    row.querySelectorAll('input, button').forEach((field) => {
+      field.disabled = isDisabled;
     });
+  };
+
+  const createVariantRow = ({ label = '', price = '', cost = '', touched = false } = {}) => {
+    variantRowCount += 1;
+    const row = document.createElement('div');
+    row.className = 'variant-row';
+    row.dataset.variantRow = '';
+    row.dataset.touched = touched ? 'true' : 'false';
+    row.innerHTML = `
+      <label class="admin-field" for="draft-variant-label-${variantRowCount}">
+        <span>Variant label</span>
+        <input id="draft-variant-label-${variantRowCount}" type="text" value="" data-variant-label required>
+      </label>
+      <label class="admin-field" for="draft-variant-price-${variantRowCount}">
+        <span>Price</span>
+        <input id="draft-variant-price-${variantRowCount}" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required>
+      </label>
+      <label class="admin-field" for="draft-variant-cost-${variantRowCount}">
+        <span>Cost</span>
+        <input id="draft-variant-cost-${variantRowCount}" type="number" min="0" step="0.01" inputmode="decimal" data-variant-cost>
+      </label>
+      <button type="button" class="variant-remove-button" data-remove-variant>Remove</button>
+    `;
+    row.querySelector('[data-variant-label]').value = label;
+    row.querySelector('[data-variant-price]').value = price;
+    row.querySelector('[data-variant-cost]').value = cost;
+    return row;
+  };
+
+  const syncVariantGroupFields = () => {
+    const isCustom = variantGroupSelect && variantGroupSelect.value === 'Custom';
+    if (customVariantField) customVariantField.hidden = !isCustom;
+    if (customVariantInput) customVariantInput.disabled = !isCustom || (variantGroupSelect && variantGroupSelect.disabled);
+  };
+
+  const maybeSyncDefaultVariantLabel = () => {
+    const rows = getVariantRows();
+    if (rows.length !== 1) return;
+    const row = rows[0];
+    const labelInput = row.querySelector('[data-variant-label]');
+    if (!labelInput || row.dataset.touched === 'true') return;
+    const groupLabel = getSelectedVariantGroup();
+    if (groupLabel) labelInput.value = groupLabel;
+  };
+
+  const bindVariantRow = (row) => {
+    const labelInput = row.querySelector('[data-variant-label]');
+    const removeButton = row.querySelector('[data-remove-variant]');
+
+    if (labelInput) {
+      labelInput.addEventListener('input', () => {
+        row.dataset.touched = 'true';
+      });
+    }
+
+    if (removeButton) {
+      removeButton.addEventListener('click', () => {
+        if (getVariantRows().length <= 1) return;
+        row.remove();
+        updateRemoveButtons();
+      });
+    }
+  };
+
+  const resetVariantRows = () => {
+    if (!variantList) return;
+    variantList.innerHTML = '';
+    variantRowCount = 1;
+    const row = createVariantRow({ label: 'Each', touched: false });
+    const labelInput = row.querySelector('[data-variant-label]');
+    labelInput.id = 'draft-variant-label-1';
+    row.querySelector('label[for^="draft-variant-label-"]').setAttribute('for', 'draft-variant-label-1');
+    row.querySelector('[data-variant-price]').id = 'draft-variant-price-1';
+    row.querySelector('label[for^="draft-variant-price-"]').setAttribute('for', 'draft-variant-price-1');
+    row.querySelector('[data-variant-cost]').id = 'draft-variant-cost-1';
+    row.querySelector('label[for^="draft-variant-cost-"]').setAttribute('for', 'draft-variant-cost-1');
+    variantList.appendChild(row);
+    bindVariantRow(row);
+    updateRemoveButtons();
   };
 
   const setDraftFormDisabled = (isDisabled) => {
@@ -151,16 +228,19 @@
     draftForm.querySelectorAll('input, select, textarea, button').forEach((field) => {
       field.disabled = isDisabled;
     });
-    if (!isDisabled) syncPricingFields();
+    syncVariantGroupFields();
+    updateRemoveButtons();
   };
 
   const resetDraftProductForm = () => {
     if (draftForm) draftForm.reset();
-    const standardPricingInput = draftForm ? draftForm.querySelector('[name="pricing_type"][value="standard"]') : null;
-    if (standardPricingInput) standardPricingInput.checked = true;
+    if (variantGroupSelect) variantGroupSelect.value = 'Each';
+    if (customVariantInput) customVariantInput.value = '';
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
-    syncPricingFields();
+    resetVariantRows();
+    syncVariantGroupFields();
+    maybeSyncDefaultVariantLabel();
     if (draftCategorySelect) {
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
@@ -217,6 +297,31 @@
     return badge;
   };
 
+  const renderCategories = (categories) => {
+    latestCategories = categories;
+    populateDraftCategorySelect(categories);
+    setDraftFormDisabled(!categories.length);
+    if (!categoryList) return;
+    categoryList.innerHTML = '';
+
+    if (!categories.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-message';
+      empty.textContent = 'No categories found.';
+      categoryList.appendChild(empty);
+      return;
+    }
+
+    categories.forEach((category, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = index === 0 ? 'category-item is-selected' : 'category-item';
+      button.textContent = category.name;
+      button.dataset.categoryId = category.id;
+      categoryList.appendChild(button);
+    });
+  };
+
   const renderProducts = (products) => {
     if (!productList) return;
     productList.innerHTML = '';
@@ -245,7 +350,10 @@
       const category = document.createElement('p');
       category.className = 'product-card-category';
       category.textContent = product.category ? product.category.name : 'Uncategorized';
-      titleWrap.append(title, category);
+      const soldBy = document.createElement('p');
+      soldBy.className = 'product-sold-by';
+      soldBy.textContent = 'Sold by: ' + (product.variant_group_name || 'Each');
+      titleWrap.append(title, category, soldBy);
 
       const badges = document.createElement('div');
       badges.className = 'product-badge-row';
@@ -263,50 +371,31 @@
         card.appendChild(description);
       }
 
-      const sizes = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
-      sizes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
-      const sizeRow = document.createElement('div');
-      sizeRow.className = 'product-size-row';
-      if (sizes.length) {
-        sizes.forEach((size) => {
+      const variants = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
+      variants.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
+      const variantRow = document.createElement('div');
+      variantRow.className = 'product-variant-row';
+      if (variants.length) {
+        variants.forEach((variant) => {
           const pill = document.createElement('span');
-          pill.className = 'product-size-pill';
-          pill.textContent = size.label + ' ' + formatPrice(size.price);
-          sizeRow.appendChild(pill);
+          pill.className = 'product-variant-pill';
+          pill.append(document.createTextNode(variant.label + ' ' + formatPrice(variant.price)));
+          if (variant.cost !== null && variant.cost !== undefined) {
+            const cost = document.createElement('span');
+            cost.className = 'product-variant-cost';
+            cost.textContent = ' ? Cost ' + formatPrice(variant.cost);
+            pill.appendChild(cost);
+          }
+          variantRow.appendChild(pill);
         });
       } else {
         const pill = document.createElement('span');
-        pill.className = 'product-size-pill';
-        pill.textContent = 'No sizes yet';
-        sizeRow.appendChild(pill);
+        pill.className = 'product-variant-pill';
+        pill.textContent = 'No variants yet';
+        variantRow.appendChild(pill);
       }
-      card.appendChild(sizeRow);
+      card.appendChild(variantRow);
       productList.appendChild(card);
-    });
-  };
-
-  const renderCategories = (categories) => {
-    latestCategories = categories;
-    populateDraftCategorySelect(categories);
-    setDraftFormDisabled(!categories.length);
-    if (!categoryList) return;
-    categoryList.innerHTML = '';
-
-    if (!categories.length) {
-      const empty = document.createElement('p');
-      empty.className = 'empty-message';
-      empty.textContent = 'No categories found.';
-      categoryList.appendChild(empty);
-      return;
-    }
-
-    categories.forEach((category, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = index === 0 ? 'category-item is-selected' : 'category-item';
-      button.textContent = category.name;
-      button.dataset.categoryId = category.id;
-      categoryList.appendChild(button);
     });
   };
 
@@ -355,7 +444,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,name,description,image_url,is_available,is_published,is_curv_pick,is_seasonal,sort_order,category:categories(id,name,sort_order),product_sizes(id,label,price,sort_order)')
+      .select('id,category_id,name,description,image_url,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -399,7 +488,8 @@
     const formData = new FormData(draftForm);
     const name = String(formData.get('name') || '').trim();
     const categoryId = String(formData.get('category_id') || '').trim();
-    const pricingType = String(formData.get('pricing_type') || 'standard');
+    const variantGroupName = getSelectedVariantGroup();
+    const variantRows = getVariantRows();
     const sizeRows = [];
 
     if (!name) {
@@ -410,55 +500,34 @@
       return { error: 'Category is required.' };
     }
 
-    if (pricingType === 'regular_large') {
-      const regularPriceText = String(formData.get('regular_price') || '').trim();
-      const largePriceText = String(formData.get('large_price') || '').trim();
-      const regularPrice = Number(regularPriceText);
-      const largePrice = Number(largePriceText);
+    if (!variantGroupName) {
+      return { error: 'Variant group is required.' };
+    }
 
-      if (!regularPriceText || !Number.isFinite(regularPrice) || regularPrice < 0) {
-        return { error: 'Regular price must be 0 or greater.' };
-      }
+    if (!variantRows.length) {
+      return { error: 'Add at least one variant.' };
+    }
 
-      if (!largePriceText || !Number.isFinite(largePrice) || largePrice < 0) {
-        return { error: 'Large price must be 0 or greater.' };
-      }
-
-      sizeRows.push(
-        { label: 'Regular', price: regularPrice, sort_order: 0 },
-        { label: 'Large', price: largePrice, sort_order: 1 }
-      );
-    } else if (pricingType === 'piece_based') {
-      const piecePrices = [
-        { field: 'price_4pcs', label: '4 pcs', sort_order: 0 },
-        { field: 'price_8pcs', label: '8 pcs', sort_order: 1 },
-        { field: 'price_12pcs', label: '12 pcs', sort_order: 2 },
-      ];
-
-      for (const piece of piecePrices) {
-        const priceText = String(formData.get(piece.field) || '').trim();
-        if (!priceText) continue;
-
-        const price = Number(priceText);
-        if (!Number.isFinite(price) || price < 0) {
-          return { error: piece.label + ' price must be 0 or greater.' };
-        }
-
-        sizeRows.push({ label: piece.label, price, sort_order: piece.sort_order });
-      }
-
-      if (!sizeRows.length) {
-        return { error: 'Enter at least one piece price.' };
-      }
-    } else {
-      const priceText = String(formData.get('price') || '').trim();
+    for (const [index, row] of variantRows.entries()) {
+      const label = row.querySelector('[data-variant-label]').value.trim();
+      const priceText = row.querySelector('[data-variant-price]').value.trim();
+      const costText = row.querySelector('[data-variant-cost]').value.trim();
       const price = Number(priceText);
+      const cost = costText ? Number(costText) : null;
+
+      if (!label) {
+        return { error: 'Variant label is required for row ' + (index + 1) + '.' };
+      }
 
       if (!priceText || !Number.isFinite(price) || price < 0) {
-        return { error: 'Standard price must be 0 or greater.' };
+        return { error: 'Variant price must be 0 or greater for row ' + (index + 1) + '.' };
       }
 
-      sizeRows.push({ label: 'Standard', price, sort_order: 0 });
+      if (costText && (!Number.isFinite(cost) || cost < 0)) {
+        return { error: 'Variant cost must be 0 or greater for row ' + (index + 1) + '.' };
+      }
+
+      sizeRows.push({ label, price, cost, sort_order: index });
     }
 
     return {
@@ -472,6 +541,7 @@
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
         is_published: false,
+        variant_group_name: variantGroupName,
         sort_order: 0,
         sizeRows,
       },
@@ -506,6 +576,7 @@
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
       is_published: false,
+      variant_group_name: draft.variant_group_name,
       sort_order: 0,
     };
 
@@ -521,11 +592,12 @@
       return;
     }
 
-    const sizePayload = draft.sizeRows.map((size) => ({
+    const sizePayload = draft.sizeRows.map((variant) => ({
       product_id: product.id,
-      label: size.label,
-      price: size.price,
-      sort_order: size.sort_order,
+      label: variant.label,
+      price: variant.price,
+      cost: variant.cost,
+      sort_order: variant.sort_order,
     }));
 
     const { error: sizeError } = await client
@@ -534,7 +606,7 @@
 
     if (sizeError) {
       await loadProducts();
-      setStatus('Draft product row was created, but product sizes could not be saved. ' + sizeError.message);
+      setStatus('Draft product row was created, but variants could not be saved. ' + sizeError.message);
       if (createDraftButton) createDraftButton.disabled = false;
       return;
     }
@@ -546,9 +618,29 @@
     setStatus('Draft product created.');
   };
 
-  pricingTypeInputs.forEach((input) => {
-    input.addEventListener('change', syncPricingFields);
-  });
+  if (variantGroupSelect) {
+    variantGroupSelect.addEventListener('change', () => {
+      syncVariantGroupFields();
+      maybeSyncDefaultVariantLabel();
+    });
+  }
+
+  if (customVariantInput) {
+    customVariantInput.addEventListener('input', maybeSyncDefaultVariantLabel);
+  }
+
+  if (addVariantButton && variantList) {
+    addVariantButton.addEventListener('click', () => {
+      const row = createVariantRow({ touched: true });
+      variantList.appendChild(row);
+      bindVariantRow(row);
+      setVariantRowDisabled(row, false);
+      updateRemoveButtons();
+    });
+  }
+
+  getVariantRows().forEach(bindVariantRow);
+  updateRemoveButtons();
 
   if (draftForm) {
     draftForm.addEventListener('submit', createDraftProduct);
