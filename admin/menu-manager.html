@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js" defer></script>
 </head>
 <body>
@@ -97,14 +98,37 @@
         <p>Changes made here will not affect the customer website until Supabase integration is built and approved.</p>
       </section>
 
+      <section class="admin-auth-panel" data-supabase-menu-manager aria-labelledby="owner-login-title">
+        <div>
+          <p class="eyebrow">Owner Access</p>
+          <h2 id="owner-login-title">Supabase Connection Test</h2>
+          <p>Sign in with the owner account to load categories in read-only mode.</p>
+        </div>
+        <form class="admin-login-form" data-auth-form>
+          <label class="admin-field" for="owner-email">
+            <span>Email</span>
+            <input id="owner-email" name="email" type="email" autocomplete="email" required>
+          </label>
+          <label class="admin-field" for="owner-password">
+            <span>Password</span>
+            <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <div class="auth-actions">
+            <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+            <button type="button" class="auth-button auth-button-secondary" data-sign-out disabled>Sign Out</button>
+          </div>
+        </form>
+        <p class="auth-status" data-auth-status role="status">Supabase config missing. Add project URL and publishable key before connecting.</p>
+      </section>
+
       <section class="menu-manager-shell" aria-label="Static Menu Manager shell">
         <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
           <div class="panel-heading-row">
             <p class="eyebrow">Categories</p>
-            <span class="static-status">Static shell</span>
+            <span class="static-status" data-category-status>Static shell</span>
           </div>
           <h2 id="category-panel-title">Menu Groups</h2>
-          <div class="category-list" aria-label="Menu categories">
+          <div class="category-list" data-category-list aria-label="Menu categories">
             <button type="button" class="category-item is-selected">CURV Picks</button>
             <button type="button" class="category-item">Matcha &amp; Hojicha</button>
             <button type="button" class="category-item">Espresso</button>
