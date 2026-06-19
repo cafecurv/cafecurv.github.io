@@ -121,6 +121,59 @@
         <p class="auth-status" data-auth-status role="status">Supabase config missing. Add project URL and publishable key before connecting.</p>
       </section>
 
+      <section class="draft-product-panel" data-draft-product-panel aria-labelledby="draft-product-title">
+        <div>
+          <p class="eyebrow">Draft Product</p>
+          <h2 id="draft-product-title">Create Draft Product</h2>
+          <p>Draft products are saved in Supabase only and do not appear on the customer menu yet.</p>
+        </div>
+        <form class="draft-product-form" data-draft-product-form novalidate>
+          <label class="admin-field" for="draft-product-name">
+            <span>Product name</span>
+            <input id="draft-product-name" name="name" type="text" autocomplete="off" required disabled>
+          </label>
+          <label class="admin-field" for="draft-product-category">
+            <span>Category</span>
+            <select id="draft-product-category" name="category_id" required disabled>
+              <option value="">Sign in to load categories</option>
+            </select>
+          </label>
+          <label class="admin-field" for="draft-product-price">
+            <span>Standard price</span>
+            <input id="draft-product-price" name="price" type="number" min="0" step="0.01" inputmode="decimal" required disabled>
+          </label>
+          <label class="admin-field" for="draft-product-image">
+            <span>Image path</span>
+            <input id="draft-product-image" name="image_url" type="text" autocomplete="off" disabled>
+          </label>
+          <label class="admin-field draft-field-wide" for="draft-product-description">
+            <span>Description</span>
+            <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>
+          </label>
+          <label class="admin-field draft-field-wide" for="draft-product-notes">
+            <span>Internal notes</span>
+            <textarea id="draft-product-notes" name="notes" rows="3" disabled></textarea>
+          </label>
+          <div class="draft-checkbox-row draft-field-wide">
+            <label class="draft-checkbox">
+              <input type="checkbox" name="is_available" checked disabled>
+              <span>Available</span>
+            </label>
+            <label class="draft-checkbox">
+              <input type="checkbox" name="is_curv_pick" disabled>
+              <span>CURV Pick</span>
+            </label>
+            <label class="draft-checkbox">
+              <input type="checkbox" name="is_seasonal" disabled>
+              <span>Seasonal</span>
+            </label>
+          </div>
+          <div class="draft-actions draft-field-wide">
+            <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
+          </div>
+        </form>
+      </section>
+
       <section class="menu-manager-shell" aria-label="Static Menu Manager shell">
         <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
           <div class="panel-heading-row">
@@ -156,6 +209,23 @@
             <h2 id="editor-panel-title">Select a product to begin editing</h2>
             <p>Product details, prices, availability, and publishing controls will appear here once the Menu Manager is connected.</p>
           </div>
+
+          <section class="product-preview" data-product-preview aria-labelledby="product-preview-title">
+            <div class="panel-heading-row">
+              <p class="eyebrow">Products</p>
+              <span class="static-status" data-product-status>Locked</span>
+            </div>
+            <div class="product-preview-heading">
+              <h2 id="product-preview-title">Read-Only Product Preview</h2>
+              <p data-product-count>Sign in to load products.</p>
+            </div>
+            <div class="product-preview-list" data-product-list>
+              <div class="product-empty-state">
+                <h3>Owner sign-in required</h3>
+                <p>Products from Supabase will appear here after the owner account is connected.</p>
+              </div>
+            </div>
+          </section>
 
           <div class="editor-section-grid" aria-label="Disabled editor sections">
             <button type="button" class="editor-section-card" disabled>Basic Info</button>

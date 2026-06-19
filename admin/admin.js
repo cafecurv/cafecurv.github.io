@@ -85,7 +85,14 @@
   const authStatus = menuManagerRoot.querySelector('[data-auth-status]');
   const categoryList = document.querySelector('[data-category-list]');
   const categoryStatus = document.querySelector('[data-category-status]');
+  const productList = document.querySelector('[data-product-list]');
+  const productStatus = document.querySelector('[data-product-status]');
+  const productCount = document.querySelector('[data-product-count]');
+  const draftForm = document.querySelector('[data-draft-product-form]');
+  const draftCategorySelect = document.getElementById('draft-product-category');
+  const createDraftButton = document.querySelector('[data-create-draft]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
+  let latestCategories = [];
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -107,12 +114,145 @@
     if (signOutButton) signOutButton.disabled = !isSignedIn;
   };
 
+  const setDraftFormDisabled = (isDisabled) => {
+    if (!draftForm) return;
+    draftForm.querySelectorAll('input, select, textarea, button').forEach((field) => {
+      field.disabled = isDisabled;
+    });
+  };
+
+  const resetDraftProductForm = () => {
+    if (draftForm) draftForm.reset();
+    const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
+    if (availableInput) availableInput.checked = true;
+    if (draftCategorySelect) {
+      draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
+    }
+    setDraftFormDisabled(true);
+  };
+
+  const populateDraftCategorySelect = (categories) => {
+    if (!draftCategorySelect) return;
+    draftCategorySelect.innerHTML = '<option value="">Select a category</option>';
+    categories.forEach((category) => {
+      const option = document.createElement('option');
+      option.value = category.id;
+      option.textContent = category.name;
+      draftCategorySelect.appendChild(option);
+    });
+  };
+
   const restoreStaticCategories = () => {
     if (categoryList && staticCategoryMarkup) categoryList.innerHTML = staticCategoryMarkup;
     if (categoryStatus) categoryStatus.textContent = 'Static shell';
   };
 
+  const renderProductEmptyState = (title, message) => {
+    if (!productList) return;
+    productList.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'product-empty-state';
+
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    const copy = document.createElement('p');
+    copy.textContent = message;
+
+    empty.append(heading, copy);
+    productList.appendChild(empty);
+  };
+
+  const resetProductPreview = () => {
+    if (productStatus) productStatus.textContent = 'Locked';
+    if (productCount) productCount.textContent = 'Sign in to load products.';
+    renderProductEmptyState('Owner sign-in required', 'Products from Supabase will appear here after the owner account is connected.');
+  };
+
+  const formatPrice = (price) => new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    maximumFractionDigits: 0,
+  }).format(Number(price || 0));
+
+  const makeBadge = (label, className) => {
+    const badge = document.createElement('span');
+    badge.className = className ? 'product-badge ' + className : 'product-badge';
+    badge.textContent = label;
+    return badge;
+  };
+
+  const renderProducts = (products) => {
+    if (!productList) return;
+    productList.innerHTML = '';
+
+    if (!products.length) {
+      if (productStatus) productStatus.textContent = 'Supabase read-only';
+      if (productCount) productCount.textContent = '0 products';
+      renderProductEmptyState('No products in Supabase yet.', 'Product creation will be added in a later step.');
+      return;
+    }
+
+    if (productStatus) productStatus.textContent = 'Supabase read-only';
+    if (productCount) productCount.textContent = products.length === 1 ? '1 product' : products.length + ' products';
+
+    products.forEach((product) => {
+      const card = document.createElement('article');
+      card.className = 'product-preview-card';
+
+      const top = document.createElement('div');
+      top.className = 'product-card-top';
+
+      const titleWrap = document.createElement('div');
+      const title = document.createElement('h3');
+      title.className = 'product-card-title';
+      title.textContent = product.name;
+      const category = document.createElement('p');
+      category.className = 'product-card-category';
+      category.textContent = product.category ? product.category.name : 'Uncategorized';
+      titleWrap.append(title, category);
+
+      const badges = document.createElement('div');
+      badges.className = 'product-badge-row';
+      badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
+      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
+      if (product.is_curv_pick) badges.appendChild(makeBadge('CURV Pick', 'is-special'));
+      if (product.is_seasonal) badges.appendChild(makeBadge('Seasonal', 'is-special'));
+      top.append(titleWrap, badges);
+      card.appendChild(top);
+
+      if (product.description) {
+        const description = document.createElement('p');
+        description.className = 'product-card-description';
+        description.textContent = product.description;
+        card.appendChild(description);
+      }
+
+      const sizes = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
+      sizes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
+      const sizeRow = document.createElement('div');
+      sizeRow.className = 'product-size-row';
+      if (sizes.length) {
+        sizes.forEach((size) => {
+          const pill = document.createElement('span');
+          pill.className = 'product-size-pill';
+          pill.textContent = size.label + ' ' + formatPrice(size.price);
+          sizeRow.appendChild(pill);
+        });
+      } else {
+        const pill = document.createElement('span');
+        pill.className = 'product-size-pill';
+        pill.textContent = 'No sizes yet';
+        sizeRow.appendChild(pill);
+      }
+      card.appendChild(sizeRow);
+      productList.appendChild(card);
+    });
+  };
+
   const renderCategories = (categories) => {
+    latestCategories = categories;
+    populateDraftCategorySelect(categories);
+    setDraftFormDisabled(!categories.length);
     if (!categoryList) return;
     categoryList.innerHTML = '';
 
@@ -133,6 +273,9 @@
       categoryList.appendChild(button);
     });
   };
+
+  resetProductPreview();
+  resetDraftProductForm();
 
   if (!hasSupabaseConfig) {
     setStatus('Supabase config missing. Add project URL and publishable key before connecting.');
@@ -157,7 +300,10 @@
       .order('sort_order', { ascending: true });
 
     if (error) {
+      latestCategories = [];
       restoreStaticCategories();
+      resetProductPreview();
+      resetDraftProductForm();
       setStatus('Unable to load categories. ' + error.message);
       return;
     }
@@ -167,17 +313,157 @@
     setStatus('Connected as owner. Categories loaded in read-only mode.');
   };
 
+  const loadProducts = async () => {
+    if (productStatus) productStatus.textContent = 'Loading';
+    if (productCount) productCount.textContent = 'Loading products...';
+
+    const { data, error } = await client
+      .from('products')
+      .select('id,category_id,name,description,image_url,is_available,is_published,is_curv_pick,is_seasonal,sort_order,category:categories(id,name,sort_order),product_sizes(id,label,price,sort_order)')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true })
+      .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
+
+    if (error) {
+      resetProductPreview();
+      setStatus('Unable to load products. ' + error.message);
+      return;
+    }
+
+    const products = (data || []).slice().sort((a, b) => {
+      const categorySortA = a.category && Number.isFinite(a.category.sort_order) ? a.category.sort_order : 9999;
+      const categorySortB = b.category && Number.isFinite(b.category.sort_order) ? b.category.sort_order : 9999;
+      return categorySortA - categorySortB
+        || (a.sort_order || 0) - (b.sort_order || 0)
+        || String(a.name).localeCompare(String(b.name));
+    });
+
+    renderProducts(products);
+    setStatus('Connected as owner. Categories and products loaded in read-only mode.');
+  };
+
   const refreshSession = async () => {
     const { data } = await client.auth.getSession();
     const isSignedIn = Boolean(data && data.session && data.session.user);
     setSignedInState(isSignedIn);
     if (isSignedIn) {
       await loadCategories();
+      await loadProducts();
     } else {
+      latestCategories = [];
       restoreStaticCategories();
+      resetProductPreview();
+      resetDraftProductForm();
       setStatus('Ready for owner sign in.');
     }
   };
+
+  const validateDraftProductForm = () => {
+    if (!draftForm) return null;
+    const formData = new FormData(draftForm);
+    const name = String(formData.get('name') || '').trim();
+    const categoryId = String(formData.get('category_id') || '').trim();
+    const priceText = String(formData.get('price') || '').trim();
+    const price = Number(priceText);
+
+    if (!name) {
+      return { error: 'Product name is required.' };
+    }
+
+    if (!categoryId) {
+      return { error: 'Category is required.' };
+    }
+
+    if (!priceText || !Number.isFinite(price) || price < 0) {
+      return { error: 'Standard price must be 0 or greater.' };
+    }
+
+    return {
+      value: {
+        category_id: categoryId,
+        name,
+        description: String(formData.get('description') || '').trim() || null,
+        image_url: String(formData.get('image_url') || '').trim() || null,
+        notes: String(formData.get('notes') || '').trim() || null,
+        is_available: formData.get('is_available') === 'on',
+        is_curv_pick: formData.get('is_curv_pick') === 'on',
+        is_seasonal: formData.get('is_seasonal') === 'on',
+        is_published: false,
+        sort_order: 0,
+        price,
+      },
+    };
+  };
+
+  const createDraftProduct = async (event) => {
+    event.preventDefault();
+
+    if (!latestCategories.length) {
+      setStatus('Load categories before creating a draft product.');
+      return;
+    }
+
+    const validation = validateDraftProductForm();
+    if (!validation || validation.error) {
+      setStatus(validation ? validation.error : 'Draft product form is unavailable.');
+      return;
+    }
+
+    const draft = validation.value;
+    if (createDraftButton) createDraftButton.disabled = true;
+    setStatus('Creating draft product...');
+
+    const productPayload = {
+      category_id: draft.category_id,
+      name: draft.name,
+      description: draft.description,
+      image_url: draft.image_url,
+      notes: draft.notes,
+      is_available: draft.is_available,
+      is_curv_pick: draft.is_curv_pick,
+      is_seasonal: draft.is_seasonal,
+      is_published: false,
+      sort_order: 0,
+    };
+
+    const { data: product, error: productError } = await client
+      .from('products')
+      .insert(productPayload)
+      .select('id')
+      .single();
+
+    if (productError) {
+      setStatus('Unable to create draft product. ' + productError.message);
+      if (createDraftButton) createDraftButton.disabled = false;
+      return;
+    }
+
+    const { error: sizeError } = await client
+      .from('product_sizes')
+      .insert({
+        product_id: product.id,
+        label: 'Standard',
+        price: draft.price,
+        sort_order: 0,
+      });
+
+    if (sizeError) {
+      setStatus('Draft product row was created, but Standard price could not be saved. ' + sizeError.message);
+      await loadProducts();
+      if (createDraftButton) createDraftButton.disabled = false;
+      return;
+    }
+
+    resetDraftProductForm();
+    populateDraftCategorySelect(latestCategories);
+    setDraftFormDisabled(false);
+    await loadProducts();
+    setStatus('Draft product created.');
+  };
+
+  if (draftForm) {
+    draftForm.addEventListener('submit', createDraftProduct);
+  }
 
   if (authForm) {
     authForm.addEventListener('submit', async (event) => {
@@ -201,6 +487,7 @@
       if (passwordInput) passwordInput.value = '';
       setSignedInState(true);
       await loadCategories();
+      await loadProducts();
     });
   }
 
@@ -212,8 +499,11 @@
         setStatus('Sign out failed. ' + error.message);
         return;
       }
+      latestCategories = [];
       setSignedInState(false);
       restoreStaticCategories();
+      resetProductPreview();
+      resetDraftProductForm();
       setStatus('Signed out.');
     });
   }
