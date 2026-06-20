@@ -17,6 +17,7 @@
 <meta name="twitter:description" content="Where uncertainty meets possibility. Japanese simplicity meets French creativity. Order for delivery in General Trias, Cavite.">
 <meta name="twitter:image" content="https://cafecurv.github.io/preview1.png">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg:        #F7F5F0;
@@ -4847,6 +4848,119 @@
   }
 
   // ── DOMContentLoaded ──
+  // Phase 2B: inert Supabase public menu fetch/log only.
+  // This does not render Supabase data and does not affect cart or ordering.
+  const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  let publicMenuFetchStarted = false;
+
+  function shapePublicMenuData(categories = [], products = [], productSizes = []) {
+    const variantsByProduct = productSizes.reduce((map, size) => {
+      if (!map[size.product_id]) map[size.product_id] = [];
+      map[size.product_id].push({
+        id: size.id,
+        product_id: size.product_id,
+        label: size.label,
+        price: size.price,
+        sort_order: size.sort_order
+      });
+      return map;
+    }, {});
+
+    const productsWithVariants = products.map(product => ({
+      id: product.id,
+      category_id: product.category_id,
+      name: product.name,
+      description: product.description,
+      image_url: product.image_url,
+      is_curv_pick: product.is_curv_pick,
+      is_seasonal: product.is_seasonal,
+      variant_group_name: product.variant_group_name,
+      sort_order: product.sort_order,
+      variants: variantsByProduct[product.id] || []
+    }));
+
+    const productsByCategory = productsWithVariants.reduce((map, product) => {
+      if (!map[product.category_id]) map[product.category_id] = [];
+      map[product.category_id].push(product);
+      return map;
+    }, {});
+
+    return {
+      categories: categories.map(category => ({
+        id: category.id,
+        name: category.name,
+        sort_order: category.sort_order,
+        products: productsByCategory[category.id] || []
+      })),
+      productsByCategory,
+      products: productsWithVariants
+    };
+  }
+
+  async function fetchPublicMenuFromSupabase() {
+    if (publicMenuFetchStarted) return;
+    publicMenuFetchStarted = true;
+
+    try {
+      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
+        return;
+      }
+
+      const client = window.supabase.createClient(
+        PUBLIC_MENU_SUPABASE_URL,
+        PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
+      );
+
+      const [categoryResult, productResult, sizeResult] = await Promise.all([
+        client
+          .from('public_menu_categories')
+          .select('id,name,sort_order')
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+        client
+          .from('public_menu_products')
+          .select('id,category_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,sort_order')
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+        client
+          .from('public_menu_product_sizes')
+          .select('id,product_id,label,price,sort_order')
+          .order('sort_order', { ascending: true })
+          .order('label', { ascending: true })
+      ]);
+
+      const errors = [categoryResult.error, productResult.error, sizeResult.error].filter(Boolean);
+      if (errors.length) {
+        console.warn('[CURV Phase 2B] Supabase public menu fetch failed. Hardcoded menu remains active.', errors);
+        return;
+      }
+
+      const rawCategories = categoryResult.data || [];
+      const rawProducts = productResult.data || [];
+      const rawProductSizes = sizeResult.data || [];
+      const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes);
+
+      console.groupCollapsed('[CURV Phase 2B] Supabase public menu data (inert)');
+      console.log('Raw public menu categories:', rawCategories);
+      console.log('Raw public menu products:', rawProducts);
+      console.log('Raw public menu product sizes:', rawProductSizes);
+      console.log('Shaped public menu data:', shapedPublicMenu);
+      console.groupEnd();
+
+      if (!rawCategories.length || !rawProducts.length || !rawProductSizes.length) {
+        console.warn('[CURV Phase 2B] Supabase public menu returned empty data. Hardcoded menu remains active.', {
+          categoryCount: rawCategories.length,
+          productCount: rawProducts.length,
+          variantCount: rawProductSizes.length
+        });
+      }
+    } catch (error) {
+      console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
+    }
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     renderAllEspressoPanels();
     renderAllMatchaPanels();
@@ -4857,6 +4971,7 @@
     try {
       if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
+    fetchPublicMenuFromSupabase();
   });
 
   window.addEventListener('DOMContentLoaded', () => {
