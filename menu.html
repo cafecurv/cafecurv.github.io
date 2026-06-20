@@ -4315,17 +4315,18 @@
     return wrap;
   }
 
-  function renderAllTakoyakiPanels() {
+  function renderAllTakoyakiPanels(items = TAKOYAKI_ITEMS) {
     const mount = document.getElementById('takoyaki-mount');
-    if (!mount) return; // mount div not in HTML yet — skip silently
+    if (!mount) return; // mount div not in HTML yet - skip silently
+    mount.innerHTML = '';
 
-    TAKOYAKI_ITEMS.forEach(item => {
+    items.forEach(item => {
       mount.appendChild(renderTakoyakiPanel(item));
       const defaults = {
         pieces: item.pieces[0].value,  // first available piece option
         spicy: 'no',
       };
-      // addons is multi — no default selection (starts empty)
+      // addons is multi - no default selection (starts empty)
       if (item.has_cheese) defaults.cheese = 'no';
       initPanel(item.id, defaults);
       // Phase 5A: wrap collapsible groups for this Takoyaki panel
@@ -4334,6 +4335,144 @@
     });
   }
 
+  // Phase 2D.3: Supabase Bites/Takoyaki mapping is intentionally strict.
+  // The hardcoded per-item option logic below is matched by exact product name.
+  // Admin product names must stay exactly as listed here or the whole Bites
+  // category falls back to TAKOYAKI_ITEMS so CURV Picks jump IDs and cheese
+  // pricing cannot drift silently.
+  const PUBLIC_TAKOYAKI_NAME_MAP = {
+    'OG Takoyaki': 'og-takoyaki',
+    'Aburi Salmon': 'aburi-salmon',
+    'Oozie Cheese': 'oozie-cheese',
+    'Lava Melt': 'lava-melt',
+    'Classic Veggie': 'classic-veggie',
+    'Salted Egg': 'salted-egg'
+  };
+
+  function mapPublicTakoyakiPieces(product, expectedItem) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return String(a.label || '').localeCompare(String(b.label || ''));
+    });
+
+    if (variants.length !== expectedItem.pieces.length) {
+      return { ok: false, reason: `${product.name || 'Product'} needs exactly ${expectedItem.pieces.length} Takoyaki variants.` };
+    }
+
+    const variantByLabel = variants.reduce((map, variant) => {
+      const label = String(variant.label || '').trim();
+      map[label] = variant;
+      return map;
+    }, {});
+
+    const pieces = [];
+    for (const expectedPiece of expectedItem.pieces) {
+      const variant = variantByLabel[expectedPiece.value];
+      if (!variant) {
+        return { ok: false, reason: `${product.name || 'Product'} is missing exact piece label ${expectedPiece.value}. Use 4pcs, 8pcs, or 12pcs with no space.` };
+      }
+
+      const price = parsePublicMenuPeso(variant.price);
+      if (price === null) {
+        return { ok: false, reason: `${product.name || 'Product'} has an invalid price for ${expectedPiece.value}.` };
+      }
+
+      pieces.push({
+        value: expectedPiece.value,
+        label: expectedPiece.label,
+        price
+      });
+    }
+
+    return { ok: true, pieces };
+  }
+
+  function mapPublicTakoyakiItems(shapedPublicMenu) {
+    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const bitesCategory = categories.find(category => normalizePublicMenuText(category.name) === 'bites');
+
+    if (!bitesCategory) {
+      return { ok: false, reason: 'Supabase public menu has no Bites category.' };
+    }
+
+    const products = Array.isArray(bitesCategory.products) ? bitesCategory.products : [];
+    if (!products.length) {
+      return { ok: false, reason: 'Supabase Bites category has no published available Takoyaki products.' };
+    }
+
+    const expectedNames = Object.keys(PUBLIC_TAKOYAKI_NAME_MAP);
+    const productByName = products.reduce((map, product) => {
+      const name = String(product.name || '').trim();
+      if (name) map[name] = product;
+      return map;
+    }, {});
+
+    const unknownProducts = products
+      .map(product => String(product.name || '').trim())
+      .filter(name => !PUBLIC_TAKOYAKI_NAME_MAP[name]);
+    if (unknownProducts.length) {
+      return { ok: false, reason: `Supabase Bites has unsupported Takoyaki product names: ${unknownProducts.join(', ')}.` };
+    }
+
+    const missingNames = expectedNames.filter(name => !productByName[name]);
+    if (missingNames.length) {
+      return { ok: false, reason: `Supabase Bites is missing expected Takoyaki products: ${missingNames.join(', ')}.` };
+    }
+
+    const hardcodedByName = TAKOYAKI_ITEMS.reduce((map, item) => {
+      map[item.name] = item;
+      return map;
+    }, {});
+    const mappedItems = [];
+
+    for (const name of expectedNames) {
+      const product = productByName[name];
+      const expectedItem = hardcodedByName[name];
+      const expectedId = PUBLIC_TAKOYAKI_NAME_MAP[name];
+      const slugId = slugifyPublicMenuId(name);
+
+      if (!expectedItem || slugId !== expectedId || expectedItem.id !== expectedId) {
+        return { ok: false, reason: `${name} cannot safely map to the hardcoded Takoyaki panel id.` };
+      }
+
+      const pieceMap = mapPublicTakoyakiPieces(product, expectedItem);
+      if (!pieceMap.ok) return pieceMap;
+
+      mappedItems.push({
+        id: expectedId,
+        name,
+        desc: product.description || expectedItem.desc,
+        variant_note: expectedItem.variant_note,
+        img: product.image_url || expectedItem.img,
+        pieces: pieceMap.pieces,
+        is_curv_pick: product.is_curv_pick,
+        is_seasonal: product.is_seasonal,
+        has_spicy: expectedItem.has_spicy,
+        has_addons: expectedItem.has_addons,
+        has_cheese: expectedItem.has_cheese
+      });
+    }
+
+    return { ok: true, items: mappedItems };
+  }
+
+  function renderSupabaseTakoyakiOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicTakoyakiItems(shapedPublicMenu);
+    if (!mapped.ok) {
+      console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback.', mapped.reason);
+      return false;
+    }
+
+    renderAllTakoyakiPanels(mapped.items);
+    console.groupCollapsed('[CURV Phase 2D.3] Bites/Takoyaki rendered from Supabase');
+    console.log('Mapped Bites/Takoyaki data:', mapped.items);
+    console.groupEnd();
+    return true;
+  }
 
   // ── SAVORY BITES ITEMS CONFIG (Phase 4G) ──
   // Single fixed price per item. No size, no temperature, no milk.
@@ -5248,6 +5387,7 @@
         console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase client unavailable.');
+        console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase client unavailable.');
         return;
       }
 
@@ -5280,6 +5420,7 @@
         console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch failed.');
+        console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch failed.');
         return;
       }
 
@@ -5306,11 +5447,13 @@
       renderSupabaseEspressoOrFallback(shapedPublicMenu);
       renderSupabaseRefreshersOrFallback(shapedPublicMenu);
       renderSupabaseCurvccinoOrFallback(shapedPublicMenu);
+      renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
       console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch errored.');
+      console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch errored.');
     }
   }
 
