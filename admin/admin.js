@@ -100,10 +100,14 @@
   const draftProductTitle = document.getElementById('draft-product-title');
   const productFilterBar = document.querySelector('[data-product-filter-bar]');
   const productFilterList = document.querySelector('[data-product-filter-list]');
+  const productSearchBar = document.querySelector('[data-product-search-bar]');
+  const productSearchInput = document.querySelector('[data-product-search]');
+  const clearProductSearchButton = document.querySelector('[data-clear-product-search]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
   let latestProducts = [];
   let selectedCategoryFilter = 'all';
+  let productSearchQuery = '';
   let editingProductId = null;
   let variantRowCount = 1;
 
@@ -337,8 +341,12 @@
     selectedCategoryFilter = 'all';
     if (productStatus) productStatus.textContent = 'Locked';
     if (productCount) productCount.textContent = 'Sign in to load products.';
+    productSearchQuery = '';
     if (productFilterBar) productFilterBar.hidden = true;
     if (productFilterList) productFilterList.innerHTML = '';
+    if (productSearchBar) productSearchBar.hidden = true;
+    if (productSearchInput) productSearchInput.value = '';
+    if (clearProductSearchButton) clearProductSearchButton.disabled = true;
     renderProductEmptyState('Owner sign-in required', 'Products from Supabase will appear here after the owner account is connected.');
   };
 
@@ -353,6 +361,47 @@
     badge.className = className ? 'product-badge ' + className : 'product-badge';
     badge.textContent = label;
     return badge;
+  };
+
+  const getProductSearchText = (product) => {
+    const variants = Array.isArray(product.product_sizes) ? product.product_sizes : [];
+    return [
+      product.name,
+      product.category ? product.category.name : '',
+      product.variant_group_name,
+      ...variants.map((variant) => variant.label),
+    ].filter(Boolean).join(' ').toLowerCase();
+  };
+
+  const appendImagePreview = (card, product) => {
+    if (!product.image_url) return;
+
+    const preview = document.createElement('div');
+    preview.className = 'product-image-preview';
+
+    const image = document.createElement('img');
+    image.src = product.image_url;
+    image.alt = '';
+    image.loading = 'lazy';
+
+    const copy = document.createElement('div');
+    const placeholder = document.createElement('p');
+    placeholder.className = 'product-image-placeholder';
+    placeholder.textContent = 'Image unavailable';
+    placeholder.hidden = true;
+    const path = document.createElement('p');
+    path.className = 'product-image-path';
+    path.textContent = product.image_url;
+    copy.append(placeholder, path);
+
+    image.addEventListener('error', () => {
+      image.hidden = true;
+      placeholder.hidden = false;
+      preview.classList.add('is-missing');
+    }, { once: true });
+
+    preview.append(image, copy);
+    card.appendChild(preview);
   };
 
   const renderCategories = (categories) => {
@@ -386,35 +435,43 @@
     if (!productList) return;
     productList.innerHTML = '';
 
-    const visibleProducts = selectedCategoryFilter === 'all'
+    if (productSearchBar) productSearchBar.hidden = !latestProducts.length;
+    if (clearProductSearchButton) clearProductSearchButton.disabled = !productSearchQuery;
+
+    const categoryFilteredProducts = selectedCategoryFilter === 'all'
       ? latestProducts
       : latestProducts.filter((product) => product.category_id === selectedCategoryFilter);
+
+    const query = productSearchQuery.trim().toLowerCase();
+    const visibleProducts = query
+      ? categoryFilteredProducts.filter((product) => getProductSearchText(product).includes(query))
+      : categoryFilteredProducts;
 
     if (!latestProducts.length) {
       if (productStatus) productStatus.textContent = 'Supabase draft list';
       if (productCount) productCount.textContent = '0 products';
-      renderProductEmptyState('No products in Supabase yet.', 'Create a draft product to see it here.');
+      renderProductEmptyState('No products in Supabase yet.', 'Create a draft product when you are ready. Drafts stay admin-only until a future approved menu connection.');
       return;
     }
 
     if (!visibleProducts.length) {
       if (productStatus) productStatus.textContent = 'Supabase draft list';
       if (productCount) productCount.textContent = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
-      renderProductEmptyState('No products in this category.', 'Choose All or another category to continue reviewing draft products.');
+      renderProductEmptyState('No products match this filter.', 'Try All categories, clear search, or use a different product name, category, sold-by value, or variant label.');
       return;
     }
 
     if (productStatus) productStatus.textContent = 'Supabase draft list';
     if (productCount) {
       const totalText = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
-      productCount.textContent = selectedCategoryFilter === 'all'
+      productCount.textContent = selectedCategoryFilter === 'all' && !query
         ? totalText
-        : visibleProducts.length + ' shown ? ' + totalText;
+        : visibleProducts.length + ' shown - ' + totalText;
     }
 
     visibleProducts.forEach((product) => {
       const card = document.createElement('article');
-      card.className = 'product-preview-card';
+      card.className = product.is_published ? 'product-preview-card is-published' : 'product-preview-card is-draft';
 
       const top = document.createElement('div');
       top.className = 'product-card-top';
@@ -440,6 +497,8 @@
       top.append(titleWrap, badges);
       card.appendChild(top);
 
+      appendImagePreview(card, product);
+
       if (product.description) {
         const description = document.createElement('p');
         description.className = 'product-card-description';
@@ -459,7 +518,7 @@
           if (variant.cost !== null && variant.cost !== undefined) {
             const cost = document.createElement('span');
             cost.className = 'product-variant-cost';
-            cost.textContent = ' - Cost ' + formatPrice(variant.cost);
+            cost.textContent = ' - Internal cost ' + formatPrice(variant.cost);
             pill.appendChild(cost);
           }
           variantRow.appendChild(pill);
@@ -939,6 +998,24 @@
 
   getVariantRows().forEach(bindVariantRow);
   updateRemoveButtons();
+
+  if (productSearchInput) {
+    productSearchInput.addEventListener('input', () => {
+      productSearchQuery = productSearchInput.value.trim();
+      if (clearProductSearchButton) clearProductSearchButton.disabled = !productSearchQuery;
+      renderProducts(latestProducts);
+    });
+  }
+
+  if (clearProductSearchButton && productSearchInput) {
+    clearProductSearchButton.addEventListener('click', () => {
+      productSearchInput.value = '';
+      productSearchQuery = '';
+      clearProductSearchButton.disabled = true;
+      renderProducts(latestProducts);
+      productSearchInput.focus();
+    });
+  }
 
   if (draftForm) {
     draftForm.addEventListener('submit', saveDraftProduct);

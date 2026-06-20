@@ -263,6 +263,13 @@
               <span class="product-filter-label">Filter</span>
               <div class="product-filter-list" data-product-filter-list aria-label="Filter products by category"></div>
             </div>
+            <div class="product-search-bar" data-product-search-bar hidden>
+              <label class="admin-field product-search-field" for="product-search-input">
+                <span>Search products</span>
+                <input id="product-search-input" type="search" autocomplete="off" placeholder="Name, category, sold by, or variant" data-product-search>
+              </label>
+              <button type="button" class="product-search-clear" data-clear-product-search disabled>Clear</button>
+            </div>
             <div class="product-preview-list" data-product-list>
               <div class="product-empty-state">
                 <h3>Owner sign-in required</h3>
