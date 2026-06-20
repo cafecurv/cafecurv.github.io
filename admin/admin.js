@@ -487,14 +487,27 @@
         deleteButton.textContent = 'Delete';
         deleteButton.addEventListener('click', () => deleteDraftProduct(product.id));
 
-        actions.append(editButton, deleteButton);
+        const publishButton = document.createElement('button');
+        publishButton.type = 'button';
+        publishButton.className = 'product-action-button is-publish';
+        publishButton.textContent = 'Publish';
+        publishButton.addEventListener('click', () => updateProductPublishedState(product.id, true));
+
+        actions.append(editButton, deleteButton, publishButton);
       } else {
         const lockedButton = document.createElement('button');
         lockedButton.type = 'button';
         lockedButton.className = 'product-action-button';
         lockedButton.disabled = true;
-        lockedButton.textContent = 'Published Locked';
-        actions.appendChild(lockedButton);
+        lockedButton.textContent = 'Edit Locked';
+
+        const unpublishButton = document.createElement('button');
+        unpublishButton.type = 'button';
+        unpublishButton.className = 'product-action-button is-publish';
+        unpublishButton.textContent = 'Unpublish';
+        unpublishButton.addEventListener('click', () => updateProductPublishedState(product.id, false));
+
+        actions.append(lockedButton, unpublishButton);
       }
       card.appendChild(actions);
       productList.appendChild(card);
@@ -821,6 +834,38 @@
     setDraftFormDisabled(false);
     await loadProducts();
     setStatus(isEditing ? 'Draft product updated.' : 'Draft product created.');
+  };
+
+  const updateProductPublishedState = async (productId, shouldPublish) => {
+    const product = latestProducts.find((item) => item.id === productId);
+    if (!product) {
+      setStatus('Product could not be found in the current preview.');
+      return;
+    }
+
+    const actionLabel = shouldPublish ? 'publish' : 'unpublish';
+    const confirmed = window.confirm((shouldPublish ? 'Publish' : 'Unpublish') + ' this product? This only changes the admin Supabase publish state.');
+    if (!confirmed) return;
+
+    setStatus((shouldPublish ? 'Publishing' : 'Unpublishing') + ' product...');
+    const { error } = await client
+      .from('products')
+      .update({ is_published: shouldPublish })
+      .eq('id', productId);
+
+    if (error) {
+      setStatus('Unable to ' + actionLabel + ' product. ' + error.message);
+      return;
+    }
+
+    if (shouldPublish && editingProductId === productId) {
+      resetDraftProductForm();
+      populateDraftCategorySelect(latestCategories);
+      setDraftFormDisabled(false);
+    }
+
+    await loadProducts();
+    setStatus(shouldPublish ? 'Product published in admin.' : 'Product unpublished and returned to draft.');
   };
 
   const deleteDraftProduct = async (productId) => {

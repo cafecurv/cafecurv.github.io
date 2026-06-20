@@ -1363,6 +1363,12 @@ body.more-drawer-open {
   background: rgba(200, 184, 154, 0.14);
 }
 
+.product-action-button.is-publish {
+  border-color: rgba(200, 184, 154, 0.48);
+  background: rgba(200, 184, 154, 0.14);
+  color: var(--accent);
+}
+
 .product-action-button.is-danger {
   border-color: rgba(189, 196, 212, 0.18);
   background: rgba(36, 44, 66, 0.42);
