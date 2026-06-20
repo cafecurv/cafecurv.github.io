@@ -3693,11 +3693,12 @@
     return wrap;
   }
 
-  function renderAllFrappePanels() {
+  function renderAllFrappePanels(items = FRAPPE_ITEMS) {
     const mount = document.getElementById('frappe-mount');
-    if (!mount) return; // mount div not in HTML yet — skip silently
+    if (!mount) return; // mount div not in HTML yet - skip silently
+    mount.innerHTML = '';
 
-    FRAPPE_ITEMS.forEach(item => {
+    items.forEach(item => {
       mount.appendChild(renderFrappePanel(item));
       const defaults = { size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none' };
       if (item.has_milk) defaults.milk = item.default_milk;
@@ -3708,6 +3709,114 @@
     });
   }
 
+  function mapPublicCurvccinoPrices(product) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label));
+    });
+
+    if (!variants.length || variants.length > 2) {
+      return { ok: false, reason: `${product.name || 'Product'} needs 1 or 2 Curvccino variants.` };
+    }
+
+    const parsed = variants.map(variant => ({
+      label: String(variant.label || '').trim(),
+      price: parsePublicMenuPeso(variant.price)
+    }));
+
+    if (parsed.some(variant => !variant.label || variant.price === null)) {
+      return { ok: false, reason: `${product.name || 'Product'} has an invalid variant label or price.` };
+    }
+
+    if (parsed.length === 1) {
+      return { ok: true, reg: parsed[0].price, lrg: parsed[0].price };
+    }
+
+    const findByLabel = patterns => parsed.find(variant => {
+      const label = normalizePublicMenuText(variant.label);
+      return patterns.some(pattern => pattern.test(label));
+    });
+
+    const regular = findByLabel([/\bregular\b/, /\breg\b/, /\b12\s*oz\b/, /\b16\s*oz\b/]) || parsed[0];
+    const large = findByLabel([/\blarge\b/, /\blrg\b/, /\b18\s*oz\b/, /\b22\s*oz\b/]) || parsed.find(variant => variant !== regular) || parsed[1];
+
+    return { ok: true, reg: regular.price, lrg: large.price };
+  }
+
+  function mapPublicCurvccinoItems(shapedPublicMenu) {
+    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const curvccinoCategory = categories.find(category => normalizePublicMenuText(category.name) === 'curvccino');
+
+    if (!curvccinoCategory) {
+      return { ok: false, reason: 'Supabase public menu has no Curvccino category.' };
+    }
+
+    const products = Array.isArray(curvccinoCategory.products) ? curvccinoCategory.products : [];
+    if (!products.length) {
+      return { ok: false, reason: 'Supabase Curvccino category has no published available products.' };
+    }
+
+    const hardcodedByName = FRAPPE_ITEMS.reduce((map, item) => {
+      map[normalizePublicMenuText(item.name)] = item;
+      return map;
+    }, {});
+    const usedIds = new Set();
+    const mappedItems = [];
+
+    for (const product of products) {
+      const name = String(product.name || '').trim();
+      if (!name) return { ok: false, reason: 'A Supabase Curvccino product is missing a name.' };
+
+      const priceMap = mapPublicCurvccinoPrices(product);
+      if (!priceMap.ok) return priceMap;
+
+      const matchingHardcodedItem = hardcodedByName[normalizePublicMenuText(name)];
+      const safeId = matchingHardcodedItem
+        ? matchingHardcodedItem.id
+        : `sb-curvccino-${slugifyPublicMenuId(name)}-${slugifyPublicMenuId(product.id).slice(0, 8)}`;
+
+      if (usedIds.has(safeId)) {
+        return { ok: false, reason: `Duplicate mapped Curvccino panel id: ${safeId}` };
+      }
+      usedIds.add(safeId);
+
+      mappedItems.push({
+        id: safeId,
+        name,
+        desc: product.description || null,
+        reg: priceMap.reg,
+        lrg: priceMap.lrg,
+        img: product.image_url || null,
+        is_curv_pick: product.is_curv_pick,
+        is_seasonal: product.is_seasonal,
+        default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
+        has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
+        has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
+        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
+        has_inclusions: matchingHardcodedItem ? matchingHardcodedItem.has_inclusions : true
+      });
+    }
+
+    return { ok: true, items: mappedItems };
+  }
+
+  function renderSupabaseCurvccinoOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicCurvccinoItems(shapedPublicMenu);
+    if (!mapped.ok) {
+      console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback.', mapped.reason);
+      return false;
+    }
+
+    renderAllFrappePanels(mapped.items);
+    console.groupCollapsed('[CURV Phase 2D.2] Curvccino rendered from Supabase');
+    console.log('Mapped Curvccino data:', mapped.items);
+    console.groupEnd();
+    return true;
+  }
   // ── REFRESHER ITEMS CONFIG (Phase 4E) ──
   // No milk options — Refreshers are fruit-based, fixed-recipe drinks.
   // Sauce options are Refresher-specific (Strawberry Sauce, Mango Sauce),
@@ -5079,7 +5188,7 @@
   }
 
   // ── DOMContentLoaded ──
-  // Phase 2B/2C/2D.1: fetch public menu data, then render approved categories only when safe.
+  // Phase 2B/2C/2D: fetch public menu data, then render approved categories only when safe.
   // Other categories, cart, and ordering continue using the hardcoded menu.
   const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
@@ -5138,6 +5247,7 @@
         console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
         console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase client unavailable.');
+        console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase client unavailable.');
         return;
       }
 
@@ -5169,6 +5279,7 @@
         console.warn('[CURV Phase 2B] Supabase public menu fetch failed. Hardcoded menu remains active.', errors);
         console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch failed.');
+        console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch failed.');
         return;
       }
 
@@ -5194,10 +5305,12 @@
 
       renderSupabaseEspressoOrFallback(shapedPublicMenu);
       renderSupabaseRefreshersOrFallback(shapedPublicMenu);
+      renderSupabaseCurvccinoOrFallback(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
       console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch errored.');
+      console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch errored.');
     }
   }
 
