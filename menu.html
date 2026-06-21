@@ -272,11 +272,28 @@
   .menu-item.unavailable { opacity: 0.45; pointer-events: none; }
 
   #salads .salad-row-img {
-    width: 54px;
-    height: 54px;
+    width: 72px;
+    height: 72px;
     border-radius: 8px;
     object-fit: cover;
     flex-shrink: 0;
+  }
+
+  #salads .salad-product-card {
+    background: rgba(255, 255, 255, 0.34);
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    padding: 0.85rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+  }
+
+  body.night-mode #salads .salad-product-card {
+    background: rgba(28, 34, 53, 0.38);
+  }
+
+  #salads .category .salad-product-card:last-child {
+    margin-bottom: 0;
   }
 
   .item-info { flex: 1; min-width: 0; }
@@ -2454,18 +2471,14 @@
     <div id="saladbar-hardcoded-fallback">
     <div class="category">
       <span class="category-label">Salads</span>
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         <div class="item-info">
           <div class="item-name">Curv Salad</div>
           <div class="item-desc">croutons · lettuce · cucumber · carrots · tomatoes · mangoes · parmesan cheese · salad dressing</div>
         </div>
         <div class="item-right"><div class="price-btn-row"><span class="price-single">₱160</span><button class="add-btn" onclick="addItem('Curv Salad', '', 160, this)">+</button></div></div>
       </div>
-      <div>
-        <div class="panel-img">
-          <img src="images/menu/salads/chicken-salad.jpg" alt="Chicken Salad" loading="lazy">
-        </div>
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         <img class="salad-row-img" src="images/menu/salads/chicken-salad.jpg" alt="" loading="lazy">
         <div class="item-info">
           <div class="item-name">Chicken Salad</div>
@@ -2473,12 +2486,7 @@
         </div>
         <div class="item-right"><div class="price-btn-row"><span class="price-single">₱210</span><button class="add-btn" onclick="addItem('Chicken Salad', '', 210, this)">+</button></div></div>
       </div>
-      </div>
-      <div>
-        <div class="panel-img">
-          <img src="images/menu/salads/coastal-salad.jpg" alt="Coastal Salad" loading="lazy">
-        </div>
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         <img class="salad-row-img" src="images/menu/salads/coastal-salad.jpg" alt="" loading="lazy">
         <div class="item-info">
           <div class="item-name">Coastal Salad</div>
@@ -2486,8 +2494,7 @@
         </div>
         <div class="item-right"><div class="price-btn-row"><span class="price-single">₱180</span><button class="add-btn" onclick="addItem('Coastal Salad', '', 180, this)">+</button></div></div>
       </div>
-      </div>
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         <div class="item-info">
           <div class="item-name">Chukawakame Salad</div>
           <div class="item-desc">100g serving</div>
@@ -2498,11 +2505,7 @@
 
     <div class="category">
       <span class="category-label">Spring Rolls</span>
-      <div>
-        <div class="panel-img">
-          <img src="images/menu/salads/spring-rolls.jpg" alt="Spring Rolls" loading="lazy">
-        </div>
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         <img class="salad-row-img" src="images/menu/salads/spring-rolls.jpg" alt="" loading="lazy">
         <div class="item-info">
           <div class="item-name">Spring Rolls</div>
@@ -2512,7 +2515,6 @@
           <div class="price-row"><span class="price-pieces">4 pcs <strong>₱150</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '4 pcs', 150, this)">+</button></div>
           <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
         </div>
-      </div>
       </div>
     </div>
     </div>
@@ -4799,7 +4801,7 @@
         ).join('');
 
     const rowHtml = `
-      <div class="menu-item">
+      <div class="menu-item salad-product-card">
         ${imgHtml}
         <div class="item-info">
           <div class="item-name">${item.name}</div>
