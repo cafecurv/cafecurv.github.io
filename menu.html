@@ -5057,27 +5057,30 @@
   function buildCurvPicksPanelIndex() {
     const index = {};
 
-    const addPanelItems = (items, sectionId, categoryLabel, defaultOptionsForItem = () => ({})) => {
+    const addPanelItems = (items, sectionId, categoryLabel, expectedPublicCategory, variantMode, defaultOptionsForItem = () => ({})) => {
       items.forEach(item => {
         index[normalizePublicMenuText(item.name)] = {
           sectionId,
           panelId: item.id,
           categoryLabel,
+          expectedPublicCategory,
+          variantMode,
+          hardcodedItem: item,
           defaultOptions: defaultOptionsForItem(item)
         };
       });
     };
 
-    addPanelItems(MATCHA_ITEMS, 'matcha', 'Matcha & Hojicha');
-    addPanelItems(ESPRESSO_ITEMS, 'espresso', 'Coffee', item => {
+    addPanelItems(MATCHA_ITEMS, 'matcha', 'Matcha & Hojicha', 'Matcha & Hojicha', 'single');
+    addPanelItems(ESPRESSO_ITEMS, 'espresso', 'Coffee', 'Espresso', 'regularLarge', item => {
       if (item.name === 'Spanish Latte') return { milk: 'Full Cream' };
       if (item.name === 'Cloud Spanish Oat Latte') return { milk: 'Oat Milk' };
       return {};
     });
-    addPanelItems(FRAPPE_ITEMS, 'blended', 'Blended');
-    addPanelItems(REFRESHER_ITEMS, 'refreshers', 'Refreshers');
-    addPanelItems(TAKOYAKI_ITEMS, 'bites', 'Bites & Light Meals');
-    addPanelItems(SAVORY_ITEMS, 'bites', 'Bites & Light Meals', item => (
+    addPanelItems(FRAPPE_ITEMS, 'blended', 'Blended', 'Curvccino', 'regularLarge');
+    addPanelItems(REFRESHER_ITEMS, 'refreshers', 'Refreshers', 'Refreshers', 'regularLarge');
+    addPanelItems(TAKOYAKI_ITEMS, 'bites', 'Bites & Light Meals', 'Bites', 'takoyakiPieces');
+    addPanelItems(SAVORY_ITEMS, 'bites', 'Bites & Light Meals', 'Savory', 'single', item => (
       item.default_sauce ? { sauce_pref: item.default_sauce } : {}
     ));
 
@@ -5113,11 +5116,15 @@
       return { ok: false, reason: `${product.name || 'CURV Pick'} has an invalid variant label or price.` };
     }
 
-    if (panelInfo.sectionId === 'bites' && parsed.length > 1) {
-      const allowedPieceLabels = ['4pcs', '8pcs', '12pcs'];
+    if (panelInfo.variantMode === 'takoyakiPieces') {
+      const expectedPieces = Array.isArray(panelInfo.hardcodedItem && panelInfo.hardcodedItem.pieces)
+        ? panelInfo.hardcodedItem.pieces.map(piece => piece.value)
+        : [];
+      const seenPieces = new Set();
       const pieceRows = parsed.map(variant => {
         const compact = variant.rawLabel.toLowerCase().replace(/\s+/g, '');
-        if (!allowedPieceLabels.includes(compact)) return null;
+        if (!expectedPieces.includes(compact) || seenPieces.has(compact)) return null;
+        seenPieces.add(compact);
         return {
           kind: 'piece',
           displayLabel: compact.replace('pcs', ' pcs'),
@@ -5126,14 +5133,18 @@
         };
       });
 
-      if (pieceRows.some(row => !row)) {
-        return { ok: false, reason: `${product.name || 'CURV Pick'} has piece labels that do not match 4pcs, 8pcs, or 12pcs.` };
+      if (pieceRows.some(row => !row) || pieceRows.length !== expectedPieces.length) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} has piece labels that do not match its hardcoded Takoyaki panel.` };
       }
 
       return { ok: true, variants: pieceRows };
     }
 
-    if (parsed.length === 1) {
+    if (panelInfo.variantMode === 'single') {
+      if (parsed.length !== 1) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} must have exactly one fixed-price variant.` };
+      }
+
       return {
         ok: true,
         variants: [{
@@ -5145,15 +5156,23 @@
       };
     }
 
-    if (parsed.length === 2) {
+    if (panelInfo.variantMode === 'regularLarge') {
+      if (parsed.length !== 2) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} must have Regular and Large variants.` };
+      }
+
       const regular = parsed.find(variant => {
         const label = normalizePublicMenuText(variant.rawLabel);
         return /\bregular\b|\breg\b|\b12\s*oz\b/.test(label);
-      }) || parsed[0];
+      });
       const large = parsed.find(variant => {
         const label = normalizePublicMenuText(variant.rawLabel);
         return /\blarge\b|\blrg\b|\b16\s*oz\b|\b18\s*oz\b/.test(label);
-      }) || parsed.find(variant => variant !== regular) || parsed[1];
+      });
+
+      if (!regular || !large || regular === large) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} needs clearly labeled Regular and Large variants.` };
+      }
 
       return {
         ok: true,
@@ -5188,6 +5207,14 @@
         return { ok: false, reason: `Supabase CURV Pick "${name || '(missing name)'}" does not map to an existing product panel.` };
       }
 
+      const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
+      if (normalizePublicMenuText(categoryName) !== normalizePublicMenuText(panelInfo.expectedPublicCategory)) {
+        return {
+          ok: false,
+          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected "${panelInfo.expectedPublicCategory}".`
+        };
+      }
+
       const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
       if (usedPanels.has(panelKey)) {
         return { ok: false, reason: `Duplicate Supabase CURV Pick panel target: ${panelKey}` };
@@ -5200,7 +5227,7 @@
       mapped.push({
         name,
         desc: product.description || '',
-        categoryName: getCurvPickCategoryName(shapedPublicMenu, product),
+        categoryName,
         categoryLabel: panelInfo.categoryLabel,
         sectionId: panelInfo.sectionId,
         panelId: panelInfo.panelId,
