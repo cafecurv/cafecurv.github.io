@@ -296,6 +296,14 @@
     margin-bottom: 0;
   }
 
+  #pastries .pastry-row-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
   .item-info { flex: 1; min-width: 0; }
 
   .item-name {
@@ -2543,6 +2551,8 @@
       <div class="section-desc">Baked with intention. Sweet things worth waiting for.</div>
     </div>
 
+    <div id="pastries-supabase-mount" style="display:none"></div>
+    <div id="pastries-hardcoded-fallback">
     <div class="note-box">
       <div class="note-label">Coming Soon</div>
       <p>Our pastry and dessert menu is currently in development. Each item is being perfected before it earns a spot on the menu — stay tuned.</p>
@@ -2581,6 +2591,7 @@
       <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Matcha Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">ceremonial matcha · burnt basque base · creamy, slightly bitter, deeply satisfying.</div></div></div>
       <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Classic Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">pure cream cheese · caramelized top · custardy center. the one that started the burnt basque obsession.</div></div></div>
       <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Blueberry Cheesecake <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">classic cheesecake base · blueberry compote · fresh and fruity with every forkful.</div></div></div>
+    </div>
     </div>
   </section>
 
@@ -4848,6 +4859,128 @@
     console.groupEnd();
     return true;
   }
+
+  function escapeMenuHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function mapPublicPastryVariants(product) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return String(a.label || '').localeCompare(String(b.label || ''));
+    });
+
+    if (!variants.length) {
+      return { ok: false, reason: `${product.name || 'Product'} needs at least 1 Pastries & Desserts price variant.` };
+    }
+
+    const mappedVariants = [];
+    for (const variant of variants) {
+      const label = String(variant.label || '').trim();
+      const price = parsePublicMenuPeso(variant.price);
+      if (!label || price === null) {
+        return { ok: false, reason: `${product.name || 'Product'} has an invalid Pastries & Desserts variant label or price.` };
+      }
+      mappedVariants.push({ label, price });
+    }
+
+    return { ok: true, variants: mappedVariants };
+  }
+
+  function mapPublicPastryItems(shapedPublicMenu) {
+    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const pastriesCategory = categories.find(category => normalizePublicMenuText(category.name) === 'pastries & desserts');
+
+    if (!pastriesCategory) {
+      return { ok: false, reason: 'Supabase public menu has no Pastries & Desserts category.' };
+    }
+
+    const products = Array.isArray(pastriesCategory.products) ? pastriesCategory.products : [];
+    if (!products.length) {
+      return { ok: false, reason: 'Supabase Pastries & Desserts category has no published available products.' };
+    }
+
+    const items = [];
+    for (const product of products) {
+      const name = String(product.name || '').trim();
+      if (!name) return { ok: false, reason: 'A Supabase Pastries & Desserts product is missing a name.' };
+
+      const variantMap = mapPublicPastryVariants(product);
+      if (!variantMap.ok) return variantMap;
+
+      items.push({
+        id: slugifyPublicMenuId(name),
+        name,
+        desc: product.description || '',
+        img: product.image_url || null,
+        is_curv_pick: product.is_curv_pick,
+        is_seasonal: product.is_seasonal,
+        variant_group_name: product.variant_group_name,
+        variants: variantMap.variants
+      });
+    }
+
+    return { ok: true, items };
+  }
+
+  function renderPastryProduct(item) {
+    const safeName = escapeMenuHtml(item.name);
+    const imgHtml = item.img
+      ? `<img class="pastry-row-img" src="${escapeMenuHtml(item.img)}" alt="" loading="lazy">`
+      : '';
+    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
+    const priceHtml = item.variants.length === 1
+      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn" onclick='addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)'>+</button></div>`
+      : item.variants.map(variant =>
+          `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill" onclick='addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)'>+</button></div>`
+        ).join('');
+
+    return `
+      <div class="menu-item">
+        ${imgHtml}
+        <div class="item-info">
+          <div class="item-name">${safeName}</div>
+          ${descHtml}
+        </div>
+        <div class="item-right">${priceHtml}</div>
+      </div>`;
+  }
+
+  function renderPastryCategory(items) {
+    return `
+      <div class="category">
+        <span class="category-label">Pastries & Desserts</span>
+        ${items.map(renderPastryProduct).join('')}
+      </div>`;
+  }
+
+  function renderSupabasePastriesOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicPastryItems(shapedPublicMenu);
+    const mount = document.getElementById('pastries-supabase-mount');
+    const fallback = document.getElementById('pastries-hardcoded-fallback');
+
+    if (!mapped.ok || !mount || !fallback) {
+      console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback.', mapped.reason || 'Pastries & Desserts mount unavailable.');
+      return false;
+    }
+
+    mount.innerHTML = renderPastryCategory(mapped.items);
+    mount.style.display = '';
+    fallback.style.display = 'none';
+    console.groupCollapsed('[CURV Phase 2D.6] Pastries & Desserts rendered from Supabase');
+    console.log('Mapped Pastries & Desserts data:', mapped.items);
+    console.groupEnd();
+    return true;
+  }
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
   const panelState = {};
@@ -5667,6 +5800,7 @@
         console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase client unavailable.');
+        console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase client unavailable.');
         return;
       }
 
@@ -5702,6 +5836,7 @@
         console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase fetch failed.');
+        console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase fetch failed.');
         return;
       }
 
@@ -5731,6 +5866,7 @@
       renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
       renderSupabaseSavoryOrFallback(shapedPublicMenu);
       renderSupabaseSaladBarOrFallback(shapedPublicMenu);
+      renderSupabasePastriesOrFallback(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
       console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch errored.');
@@ -5739,6 +5875,7 @@
       console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase fetch errored.');
+      console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase fetch errored.');
     }
   }
 
