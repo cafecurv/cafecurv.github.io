@@ -2147,6 +2147,8 @@
       <div class="section-desc">Not sure where to start? These are the ones we’d order for you.</div>
     </div>
 
+    <div id="curv-picks-supabase-mount" style="display:none"></div>
+    <div id="curv-picks-hardcoded-fallback">
     <div class="category">
       <span class="category-label">Matcha &amp; Hojicha</span>
       <div class="menu-item">
@@ -2289,6 +2291,7 @@
           <div class="price-row"><span class="price-pieces">8 pcs <strong>₱298</strong></span><button class="add-btn-pill" onclick="addItem('Spring Rolls', '8 pcs', 298, this)">+</button></div>
         </div>
       </div>
+    </div>
     </div>
   </section>
 
@@ -3131,9 +3134,6 @@
     }
 
     renderAllEspressoPanels(mapped.items);
-    console.groupCollapsed('[CURV Phase 2C] Espresso rendered from Supabase');
-    console.log('Mapped Espresso data:', mapped.items);
-    console.groupEnd();
     return true;
   }
   // ── MATCHA / HOJICHA ITEMS CONFIG (Phase 4C) ──
@@ -3490,8 +3490,13 @@
     return defaults;
   }
 
-  function renderAllMatchaPanels() {
-    MATCHA_ITEMS.forEach(item => {
+  function renderAllMatchaPanels(items = MATCHA_ITEMS) {
+    Object.values(MATCHA_MOUNTS).forEach(mountId => {
+      const mount = document.getElementById(mountId);
+      if (mount) mount.innerHTML = '';
+    });
+
+    items.forEach(item => {
       const mountId = MATCHA_MOUNTS[item.category];
       const mount   = document.getElementById(mountId);
       if (!mount) return; // mount divs not in HTML yet — skip silently
@@ -3502,6 +3507,91 @@
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
     });
+  }
+
+  function mapPublicMatchaPrice(product) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (variants.length !== 1) {
+      return {
+        ok: false,
+        reason: `${product.name || 'Matcha/Hojicha item'} must have exactly one Supabase variant for the current Matcha renderer.`
+      };
+    }
+
+    const price = parsePublicMenuPeso(variants[0].price);
+    if (price === null) {
+      return {
+        ok: false,
+        reason: `${product.name || 'Matcha/Hojicha item'} has an invalid Supabase price.`
+      };
+    }
+
+    return { ok: true, price };
+  }
+
+  function mapPublicMatchaItems(shapedPublicMenu) {
+    const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const matchaCategory = categories.find(category =>
+      normalizePublicMenuText(category.name) === 'matcha & hojicha'
+    );
+
+    if (!matchaCategory) {
+      return { ok: false, reason: 'Supabase category "Matcha & Hojicha" was not found.' };
+    }
+
+    const products = Array.isArray(matchaCategory.products) ? matchaCategory.products : [];
+    if (!products.length) {
+      return { ok: false, reason: 'Supabase category "Matcha & Hojicha" has no published products.' };
+    }
+
+    const hardcodedByName = MATCHA_ITEMS.reduce((map, item) => {
+      map[normalizePublicMenuText(item.name)] = item;
+      return map;
+    }, {});
+
+    const items = [];
+    for (const product of products) {
+      const productName = String(product.name || '').trim();
+      const hardcodedItem = hardcodedByName[normalizePublicMenuText(productName)];
+
+      // Matcha/Hojicha milk, sweetener, and extra powder options still live in
+      // hardcoded metadata. Admin product names must match exactly until those
+      // option groups exist in Supabase.
+      if (!hardcodedItem) {
+        return {
+          ok: false,
+          reason: `Supabase Matcha & Hojicha product "${productName || '(missing name)'}" does not match a hardcoded item.`
+        };
+      }
+
+      const priceResult = mapPublicMatchaPrice(product);
+      if (!priceResult.ok) return priceResult;
+
+      items.push({
+        ...hardcodedItem,
+        name: productName,
+        desc: product.description || hardcodedItem.desc,
+        price: priceResult.price,
+        img: product.image_url || hardcodedItem.img,
+        is_curv_pick: !!product.is_curv_pick,
+        is_seasonal: !!product.is_seasonal
+      });
+    }
+
+    return { ok: true, items };
+  }
+
+  function renderSupabaseMatchaOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicMatchaItems(shapedPublicMenu);
+    if (!mapped.ok) {
+      console.warn('[CURV Phase 2D.7] Matcha & Hojicha using hardcoded fallback.', mapped.reason);
+      return false;
+    }
+
+    renderAllMatchaPanels(mapped.items);
+    return true;
   }
 
   // ── FRAPPE / CURVCCINO ITEMS CONFIG (Phase 4D) ──
@@ -3828,9 +3918,6 @@
     }
 
     renderAllFrappePanels(mapped.items);
-    console.groupCollapsed('[CURV Phase 2D.2] Curvccino rendered from Supabase');
-    console.log('Mapped Curvccino data:', mapped.items);
-    console.groupEnd();
     return true;
   }
   // ── REFRESHER ITEMS CONFIG (Phase 4E) ──
@@ -4095,9 +4182,6 @@
     }
 
     renderAllRefresherPanels(mapped.items);
-    console.groupCollapsed('[CURV Phase 2D.1] Refreshers rendered from Supabase');
-    console.log('Mapped Refreshers data:', mapped.items);
-    console.groupEnd();
     return true;
   }
 
@@ -4484,9 +4568,6 @@
     }
 
     renderAllTakoyakiPanels(mapped.items);
-    console.groupCollapsed('[CURV Phase 2D.3] Bites/Takoyaki rendered from Supabase');
-    console.log('Mapped Bites/Takoyaki data:', mapped.items);
-    console.groupEnd();
     return true;
   }
 
@@ -4694,9 +4775,6 @@
     }
 
     renderAllSavoryPanels(mapped.items);
-    console.groupCollapsed('[CURV Phase 2D.4] Savory rendered from Supabase');
-    console.log('Mapped Savory data:', mapped.items);
-    console.groupEnd();
     return true;
   }
 
@@ -4854,9 +4932,6 @@
     mount.innerHTML = renderSaladBarCategories(mapped.items);
     mount.style.display = '';
     fallback.style.display = 'none';
-    console.groupCollapsed('[CURV Phase 2D.5] Salad Bar rendered from Supabase');
-    console.log('Mapped Salad Bar data:', mapped.items);
-    console.groupEnd();
     return true;
   }
 
@@ -4976,9 +5051,236 @@
     mount.innerHTML = renderPastryCategory(mapped.items);
     mount.style.display = '';
     fallback.style.display = 'none';
-    console.groupCollapsed('[CURV Phase 2D.6] Pastries & Desserts rendered from Supabase');
-    console.log('Mapped Pastries & Desserts data:', mapped.items);
-    console.groupEnd();
+    return true;
+  }
+
+  function buildCurvPicksPanelIndex() {
+    const index = {};
+
+    const addPanelItems = (items, sectionId, categoryLabel, defaultOptionsForItem = () => ({})) => {
+      items.forEach(item => {
+        index[normalizePublicMenuText(item.name)] = {
+          sectionId,
+          panelId: item.id,
+          categoryLabel,
+          defaultOptions: defaultOptionsForItem(item)
+        };
+      });
+    };
+
+    addPanelItems(MATCHA_ITEMS, 'matcha', 'Matcha & Hojicha');
+    addPanelItems(ESPRESSO_ITEMS, 'espresso', 'Coffee', item => {
+      if (item.name === 'Spanish Latte') return { milk: 'Full Cream' };
+      if (item.name === 'Cloud Spanish Oat Latte') return { milk: 'Oat Milk' };
+      return {};
+    });
+    addPanelItems(FRAPPE_ITEMS, 'blended', 'Blended');
+    addPanelItems(REFRESHER_ITEMS, 'refreshers', 'Refreshers');
+    addPanelItems(TAKOYAKI_ITEMS, 'bites', 'Bites & Light Meals');
+    addPanelItems(SAVORY_ITEMS, 'bites', 'Bites & Light Meals', item => (
+      item.default_sauce ? { sauce_pref: item.default_sauce } : {}
+    ));
+
+    return index;
+  }
+
+  function getCurvPickCategoryName(shapedPublicMenu, product) {
+    const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const category = categories.find(item => item.id === product.category_id);
+    return category ? category.name : '';
+  }
+
+  function mapCurvPickVariants(product, panelInfo) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label));
+    });
+
+    if (!variants.length || variants.length > 3) {
+      return { ok: false, reason: `${product.name || 'CURV Pick'} has an unsupported variant count.` };
+    }
+
+    const parsed = variants.map(variant => ({
+      rawLabel: String(variant.label || '').trim(),
+      price: parsePublicMenuPeso(variant.price)
+    }));
+
+    if (parsed.some(variant => !variant.rawLabel || variant.price === null)) {
+      return { ok: false, reason: `${product.name || 'CURV Pick'} has an invalid variant label or price.` };
+    }
+
+    if (panelInfo.sectionId === 'bites' && parsed.length > 1) {
+      const allowedPieceLabels = ['4pcs', '8pcs', '12pcs'];
+      const pieceRows = parsed.map(variant => {
+        const compact = variant.rawLabel.toLowerCase().replace(/\s+/g, '');
+        if (!allowedPieceLabels.includes(compact)) return null;
+        return {
+          kind: 'piece',
+          displayLabel: compact.replace('pcs', ' pcs'),
+          cartLabel: compact,
+          price: variant.price
+        };
+      });
+
+      if (pieceRows.some(row => !row)) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} has piece labels that do not match 4pcs, 8pcs, or 12pcs.` };
+      }
+
+      return { ok: true, variants: pieceRows };
+    }
+
+    if (parsed.length === 1) {
+      return {
+        ok: true,
+        variants: [{
+          kind: 'single',
+          displayLabel: '',
+          cartLabel: '',
+          price: parsed[0].price
+        }]
+      };
+    }
+
+    if (parsed.length === 2) {
+      const regular = parsed.find(variant => {
+        const label = normalizePublicMenuText(variant.rawLabel);
+        return /\bregular\b|\breg\b|\b12\s*oz\b/.test(label);
+      }) || parsed[0];
+      const large = parsed.find(variant => {
+        const label = normalizePublicMenuText(variant.rawLabel);
+        return /\blarge\b|\blrg\b|\b16\s*oz\b|\b18\s*oz\b/.test(label);
+      }) || parsed.find(variant => variant !== regular) || parsed[1];
+
+      return {
+        ok: true,
+        variants: [
+          { kind: 'size', displayLabel: 'R', cartLabel: 'Regular', price: regular.price },
+          { kind: 'size', displayLabel: 'L', cartLabel: 'Large', price: large.price }
+        ]
+      };
+    }
+
+    return { ok: false, reason: `${product.name || 'CURV Pick'} cannot be safely mapped to CURV Picks buttons.` };
+  }
+
+  function mapPublicCurvPicks(shapedPublicMenu) {
+    const products = Array.isArray(shapedPublicMenu && shapedPublicMenu.products)
+      ? shapedPublicMenu.products
+      : [];
+    const pickProducts = products.filter(product => product && product.is_curv_pick === true);
+
+    if (!pickProducts.length) {
+      return { ok: false, reason: 'Supabase public menu has no CURV Pick products.' };
+    }
+
+    const panelIndex = buildCurvPicksPanelIndex();
+    const mapped = [];
+    const usedPanels = new Set();
+
+    for (const product of pickProducts) {
+      const name = String(product.name || '').trim();
+      const panelInfo = panelIndex[normalizePublicMenuText(name)];
+      if (!name || !panelInfo) {
+        return { ok: false, reason: `Supabase CURV Pick "${name || '(missing name)'}" does not map to an existing product panel.` };
+      }
+
+      const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
+      if (usedPanels.has(panelKey)) {
+        return { ok: false, reason: `Duplicate Supabase CURV Pick panel target: ${panelKey}` };
+      }
+      usedPanels.add(panelKey);
+
+      const variantMap = mapCurvPickVariants(product, panelInfo);
+      if (!variantMap.ok) return variantMap;
+
+      mapped.push({
+        name,
+        desc: product.description || '',
+        categoryName: getCurvPickCategoryName(shapedPublicMenu, product),
+        categoryLabel: panelInfo.categoryLabel,
+        sectionId: panelInfo.sectionId,
+        panelId: panelInfo.panelId,
+        defaultOptions: panelInfo.defaultOptions || {},
+        variants: variantMap.variants,
+        sort_order: Number(product.sort_order) || 0
+      });
+    }
+
+    const categoryOrder = ['Matcha & Hojicha', 'Coffee', 'Blended', 'Refreshers', 'Bites & Light Meals'];
+    mapped.sort((a, b) => {
+      const orderA = categoryOrder.includes(a.categoryLabel) ? categoryOrder.indexOf(a.categoryLabel) : 99;
+      const orderB = categoryOrder.includes(b.categoryLabel) ? categoryOrder.indexOf(b.categoryLabel) : 99;
+      if (orderA !== orderB) return orderA - orderB;
+      if (a.categoryLabel !== b.categoryLabel) return a.categoryLabel.localeCompare(b.categoryLabel);
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.name.localeCompare(b.name);
+    });
+
+    return { ok: true, items: mapped };
+  }
+
+  function renderCurvPickAddButton(item, variant, buttonClass = 'add-btn') {
+    const options = item.defaultOptions && Object.keys(item.defaultOptions).length
+      ? `, ${JSON.stringify(item.defaultOptions)}`
+      : '';
+    const call = `addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.cartLabel)}, ${variant.price}, this${options})`;
+    return `<button class="${buttonClass}" onclick='${escapeMenuHtml(call)}'>+</button>`;
+  }
+
+  function renderCurvPickItem(item) {
+    const priceHtml = item.variants.length === 1
+      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span>${renderCurvPickAddButton(item, item.variants[0])}</div>`
+      : item.variants[0].kind === 'size'
+        ? `<div class="add-btn-rl">${item.variants.map((variant, index) =>
+            `<span class="add-btn-rl-label">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant)}${index === 0 ? '<span class="add-btn-rl-divider">|</span>' : ''}`
+          ).join('')}</div>`
+        : item.variants.map(variant =>
+            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
+          ).join('');
+
+    return `
+      <div class="menu-item">
+        <div class="item-info" onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')" style="cursor:pointer">
+          <div class="item-name">${escapeMenuHtml(item.name)}</div>
+          <div class="item-desc">${escapeMenuHtml(item.desc)}</div>
+        </div>
+        <div class="item-right">${priceHtml}</div>
+      </div>`;
+  }
+
+  function renderCurvPicksCategory(label, items) {
+    return `
+      <div class="category">
+        <span class="category-label">${escapeMenuHtml(label)}</span>
+        ${items.map(renderCurvPickItem).join('')}
+      </div>`;
+  }
+
+  function renderSupabaseCurvPicksOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicCurvPicks(shapedPublicMenu);
+    const mount = document.getElementById('curv-picks-supabase-mount');
+    const fallback = document.getElementById('curv-picks-hardcoded-fallback');
+
+    if (!mapped.ok || !mount || !fallback) {
+      console.warn('[CURV Phase 2D.8] CURV Picks using hardcoded fallback.', mapped.reason || 'CURV Picks mount unavailable.');
+      return false;
+    }
+
+    const groups = mapped.items.reduce((map, item) => {
+      if (!map[item.categoryLabel]) map[item.categoryLabel] = [];
+      map[item.categoryLabel].push(item);
+      return map;
+    }, {});
+
+    mount.innerHTML = Object.keys(groups)
+      .map(label => renderCurvPicksCategory(label, groups[label]))
+      .join('');
+    mount.style.display = '';
+    fallback.style.display = 'none';
     return true;
   }
   // ── EXPANSION PANEL SYSTEM ──
@@ -5737,8 +6039,8 @@
   }
 
   // ── DOMContentLoaded ──
-  // Phase 2B/2C/2D: fetch public menu data, then render approved categories only when safe.
-  // Other categories, cart, and ordering continue using the hardcoded menu.
+  // Phase 2D: fetch public menu data, then render each approved section only when safe.
+  // Hardcoded menu data remains the fallback for cart and ordering stability.
   const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
   let publicMenuFetchStarted = false;
@@ -5794,13 +6096,6 @@
     try {
       if (!window.supabase || typeof window.supabase.createClient !== 'function') {
         console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
-        console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase client unavailable.');
-        console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase client unavailable.');
         return;
       }
 
@@ -5830,13 +6125,6 @@
       const errors = [categoryResult.error, productResult.error, sizeResult.error].filter(Boolean);
       if (errors.length) {
         console.warn('[CURV Phase 2B] Supabase public menu fetch failed. Hardcoded menu remains active.', errors);
-        console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase fetch failed.');
-        console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase fetch failed.');
         return;
       }
 
@@ -5844,13 +6132,6 @@
       const rawProducts = productResult.data || [];
       const rawProductSizes = sizeResult.data || [];
       const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes);
-
-      console.groupCollapsed('[CURV Phase 2B] Supabase public menu data (inert)');
-      console.log('Raw public menu categories:', rawCategories);
-      console.log('Raw public menu products:', rawProducts);
-      console.log('Raw public menu product sizes:', rawProductSizes);
-      console.log('Shaped public menu data:', shapedPublicMenu);
-      console.groupEnd();
 
       if (!rawCategories.length || !rawProducts.length || !rawProductSizes.length) {
         console.warn('[CURV Phase 2B] Supabase public menu returned empty data. Hardcoded menu remains active.', {
@@ -5867,15 +6148,10 @@
       renderSupabaseSavoryOrFallback(shapedPublicMenu);
       renderSupabaseSaladBarOrFallback(shapedPublicMenu);
       renderSupabasePastriesOrFallback(shapedPublicMenu);
+      renderSupabaseMatchaOrFallback(shapedPublicMenu);
+      renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
-      console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback. Supabase fetch errored.');
-      console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback. Supabase fetch errored.');
     }
   }
 
