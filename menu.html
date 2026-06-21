@@ -4561,16 +4561,128 @@
     return wrap;
   }
 
-  function renderAllSavoryPanels() {
+  function renderAllSavoryPanels(items = SAVORY_ITEMS) {
     const mount = document.getElementById('savory-mount');
-    if (!mount) return; // mount div not in HTML yet — skip silently
+    if (!mount) return; // mount div not in HTML yet - skip silently
+    mount.innerHTML = '';
 
-    SAVORY_ITEMS.forEach(item => {
+    items.forEach(item => {
       mount.appendChild(renderSavoryPanel(item));
       initPanel(item.id, { sauce_pref: item.default_sauce });
     });
   }
 
+  // Phase 2D.4: Supabase Savory mapping keeps fixed sauce behavior hardcoded.
+  // Admin product names must match these known Savory items exactly so sauce_pref
+  // can continue coming from SAVORY_ITEMS until Supabase supports option metadata.
+  const PUBLIC_SAVORY_NAME_MAP = {
+    'Shrimp Tempura': 'shrimp-tempura',
+    'Chicken Karaage': 'chicken-karaage',
+    'Cream Dory Fillet': 'cream-dory-fillet'
+  };
+
+  function mapPublicSavoryPrice(product) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return String(a.label || '').localeCompare(String(b.label || ''));
+    });
+
+    if (variants.length !== 1) {
+      return { ok: false, reason: `${product.name || 'Product'} needs exactly 1 Savory price variant.` };
+    }
+
+    const label = String(variants[0].label || '').trim();
+    const price = parsePublicMenuPeso(variants[0].price);
+    if (!label || price === null) {
+      return { ok: false, reason: `${product.name || 'Product'} has an invalid Savory variant label or price.` };
+    }
+
+    return { ok: true, price };
+  }
+
+  function mapPublicSavoryItems(shapedPublicMenu) {
+    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const savoryCategory = categories.find(category => normalizePublicMenuText(category.name) === 'savory');
+
+    if (!savoryCategory) {
+      return { ok: false, reason: 'Supabase public menu has no Savory category.' };
+    }
+
+    const products = Array.isArray(savoryCategory.products) ? savoryCategory.products : [];
+    if (!products.length) {
+      return { ok: false, reason: 'Supabase Savory category has no published available products.' };
+    }
+
+    const expectedNames = Object.keys(PUBLIC_SAVORY_NAME_MAP);
+    const productByName = products.reduce((map, product) => {
+      const name = String(product.name || '').trim();
+      if (name) map[name] = product;
+      return map;
+    }, {});
+
+    const unknownProducts = products
+      .map(product => String(product.name || '').trim())
+      .filter(name => !PUBLIC_SAVORY_NAME_MAP[name]);
+    if (unknownProducts.length) {
+      return { ok: false, reason: `Supabase Savory has unsupported product names: ${unknownProducts.join(', ')}.` };
+    }
+
+    const missingNames = expectedNames.filter(name => !productByName[name]);
+    if (missingNames.length) {
+      return { ok: false, reason: `Supabase Savory is missing expected products: ${missingNames.join(', ')}.` };
+    }
+
+    const hardcodedByName = SAVORY_ITEMS.reduce((map, item) => {
+      map[item.name] = item;
+      return map;
+    }, {});
+    const mappedItems = [];
+
+    for (const name of expectedNames) {
+      const product = productByName[name];
+      const expectedItem = hardcodedByName[name];
+      const expectedId = PUBLIC_SAVORY_NAME_MAP[name];
+      const slugId = slugifyPublicMenuId(name);
+
+      if (!expectedItem || slugId !== expectedId || expectedItem.id !== expectedId || !expectedItem.default_sauce) {
+        return { ok: false, reason: `${name} cannot safely map to the hardcoded Savory panel metadata.` };
+      }
+
+      const priceMap = mapPublicSavoryPrice(product);
+      if (!priceMap.ok) return priceMap;
+
+      mappedItems.push({
+        id: expectedId,
+        name,
+        desc: product.description || expectedItem.desc,
+        price: priceMap.price,
+        default_sauce: expectedItem.default_sauce,
+        img: product.image_url || expectedItem.img,
+        is_curv_pick: product.is_curv_pick,
+        is_seasonal: product.is_seasonal
+      });
+    }
+
+    return { ok: true, items: mappedItems };
+  }
+
+  function renderSupabaseSavoryOrFallback(shapedPublicMenu) {
+    const mapped = mapPublicSavoryItems(shapedPublicMenu);
+    if (!mapped.ok) {
+      console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback.', mapped.reason);
+      return false;
+    }
+
+    renderAllSavoryPanels(mapped.items);
+    console.groupCollapsed('[CURV Phase 2D.4] Savory rendered from Supabase');
+    console.log('Mapped Savory data:', mapped.items);
+    console.groupEnd();
+    return true;
+  }
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
   const panelState = {};
@@ -5388,6 +5500,7 @@
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase client unavailable.');
         console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase client unavailable.');
+        console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase client unavailable.');
         return;
       }
 
@@ -5421,6 +5534,7 @@
         console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch failed.');
         console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch failed.');
+        console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch failed.');
         return;
       }
 
@@ -5448,12 +5562,14 @@
       renderSupabaseRefreshersOrFallback(shapedPublicMenu);
       renderSupabaseCurvccinoOrFallback(shapedPublicMenu);
       renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
+      renderSupabaseSavoryOrFallback(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
       console.warn('[CURV Phase 2C] Espresso using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback. Supabase fetch errored.');
       console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback. Supabase fetch errored.');
+      console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback. Supabase fetch errored.');
     }
   }
 
