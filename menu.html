@@ -272,28 +272,78 @@
   .menu-item.unavailable { opacity: 0.45; pointer-events: none; }
 
   #salads .salad-row-img {
-    width: 72px;
-    height: 72px;
+    width: 88px;
+    height: 88px;
     border-radius: 8px;
     object-fit: cover;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    border: 0.5px solid var(--bg3);
+    background: var(--bg2);
   }
 
   #salads .salad-product-card {
-    background: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.44);
     border: 0.5px solid var(--bg3);
     border-radius: 8px;
-    padding: 0.85rem;
+    padding: 0.95rem;
     margin-bottom: 0.75rem;
     align-items: center;
+    gap: 1rem;
+    box-shadow: 0 10px 28px rgba(20, 24, 36, 0.06);
   }
 
   body.night-mode #salads .salad-product-card {
-    background: rgba(28, 34, 53, 0.38);
+    background: rgba(28, 34, 53, 0.48);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+  }
+
+  #salads .salad-product-card .item-info {
+    min-width: 0;
+  }
+
+  #salads .salad-product-card .item-desc {
+    margin-top: 0.18rem;
+    line-height: 1.55;
+  }
+
+  #salads .salad-product-card .item-right {
+    align-self: center;
+  }
+
+  #salads .salad-product-card .price-btn-row,
+  #salads .salad-product-card .price-row {
+    justify-content: flex-end;
   }
 
   #salads .category .salad-product-card:last-child {
     margin-bottom: 0;
+  }
+
+  @media (max-width: 520px) {
+    #salads .salad-product-card {
+      gap: 0.75rem;
+      padding: 0.78rem;
+    }
+
+    #salads .salad-row-img {
+      width: 68px;
+      height: 68px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    #salads .salad-product-card {
+      flex-wrap: wrap;
+    }
+
+    #salads .salad-product-card .item-right {
+      width: 100%;
+    }
+
+    #salads .salad-product-card .price-btn-row,
+    #salads .salad-product-card .price-row {
+      justify-content: flex-start;
+    }
   }
 
   #pastries .pastry-row-img {
@@ -5233,6 +5283,24 @@
     return category ? category.name : '';
   }
 
+  const EXPECTED_PUBLIC_CURV_PICKS = [
+    { name: 'Kagoshima Matcha Cream', expectedPublicCategory: 'Matcha & Hojicha' },
+    { name: 'Strawberry Matcha Latte', expectedPublicCategory: 'Matcha & Hojicha' },
+    { name: 'Sea Salt Cream Hojicha', expectedPublicCategory: 'Matcha & Hojicha' },
+    { name: 'Spanish Latte', expectedPublicCategory: 'Espresso' },
+    { name: 'Cloud Spanish Oat Latte', expectedPublicCategory: 'Espresso' },
+    { name: 'White Chocolate Mocha', expectedPublicCategory: 'Espresso' },
+    { name: 'Javachip Brownie Curvccino', expectedPublicCategory: 'Curvccino' },
+    { name: 'Strawberries & Cream', expectedPublicCategory: 'Curvccino' },
+    { name: 'Tropic Kiss', expectedPublicCategory: 'Refreshers' },
+    { name: 'Hibiscus Cream Tea', expectedPublicCategory: 'Refreshers' },
+    { name: 'Dragon Dreams', expectedPublicCategory: 'Refreshers' },
+    { name: 'OG Takoyaki', expectedPublicCategory: 'Bites' },
+    { name: 'Oozie Cheese', expectedPublicCategory: 'Bites' },
+    { name: 'Chicken Karaage', expectedPublicCategory: 'Savory' },
+    { name: 'Spring Rolls', expectedPublicCategory: 'Salad Bar', quickAddOnly: true }
+  ];
+
   function mapCurvPickVariants(product, panelInfo) {
     const variants = [...(product.variants || [])].sort((a, b) => {
       const sortA = Number(a.sort_order) || 0;
@@ -5335,21 +5403,62 @@
     }
 
     const panelIndex = buildCurvPicksPanelIndex();
+    const pickProductsByName = pickProducts.reduce((map, product) => {
+      const name = normalizePublicMenuText(product && product.name);
+      if (!name) return map;
+      if (!map[name]) map[name] = [];
+      map[name].push(product);
+      return map;
+    }, {});
+    const expectedNames = new Set(EXPECTED_PUBLIC_CURV_PICKS.map(item => normalizePublicMenuText(item.name)));
+    const unexpectedPick = pickProducts.find(product => !expectedNames.has(normalizePublicMenuText(product && product.name)));
+
+    if (unexpectedPick) {
+      return {
+        ok: false,
+        reason: `Supabase CURV Pick "${unexpectedPick.name || '(missing name)'}" is not part of the expected hardcoded CURV Picks set.`
+      };
+    }
+
     const mapped = [];
     const usedPanels = new Set();
 
-    for (const product of pickProducts) {
-      const name = String(product.name || '').trim();
-      const panelInfo = panelIndex[normalizePublicMenuText(name)];
-      if (!name || !panelInfo) {
-        return { ok: false, reason: `Supabase CURV Pick "${name || '(missing name)'}" does not map to an existing product panel.` };
-      }
+    for (const expectedPick of EXPECTED_PUBLIC_CURV_PICKS) {
+      const expectedNameKey = normalizePublicMenuText(expectedPick.name);
+      const matchingProducts = pickProductsByName[expectedNameKey] || [];
 
-      const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
-      if (normalizePublicMenuText(categoryName) !== normalizePublicMenuText(panelInfo.expectedPublicCategory)) {
+      if (matchingProducts.length !== 1) {
         return {
           ok: false,
-          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected "${panelInfo.expectedPublicCategory}".`
+          reason: matchingProducts.length
+            ? `Supabase CURV Pick "${expectedPick.name}" appears more than once.`
+            : `Missing expected Supabase CURV Pick "${expectedPick.name}".`
+        };
+      }
+
+      const product = matchingProducts[0];
+      const name = String(product.name || '').trim();
+      const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
+
+      if (normalizePublicMenuText(categoryName) !== normalizePublicMenuText(expectedPick.expectedPublicCategory)) {
+        return {
+          ok: false,
+          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected "${expectedPick.expectedPublicCategory}".`
+        };
+      }
+
+      if (expectedPick.quickAddOnly) {
+        return {
+          ok: false,
+          reason: `Expected CURV Pick "${expectedPick.name}" is quick-add-only in the hardcoded section and has no safe Supabase panel mapping yet.`
+        };
+      }
+
+      const panelInfo = panelIndex[expectedNameKey];
+      if (!panelInfo) {
+        return {
+          ok: false,
+          reason: `Expected Supabase CURV Pick "${expectedPick.name}" does not map to an existing product panel.`
         };
       }
 
