@@ -2357,6 +2357,8 @@
 
     <div class="category">
       <span class="category-label">Non-Espresso</span>
+      <div id="espresso-nonespresso-supabase-mount" style="display:none"></div>
+      <div id="espresso-nonespresso-hardcoded-fallback">
       <div class="menu-item">
         <div class="item-info">
           <div class="item-name">Curv Chocolate</div>
@@ -2383,6 +2385,7 @@
         <div class="item-right">
           <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -3033,6 +3036,35 @@
     return price;
   }
 
+  const PUBLIC_ESPRESSO_NON_ESPRESSO_NAMES = new Set([
+    'curv chocolate',
+    'ube cloud latte',
+    'berry cloud latte'
+  ]);
+
+  function getPublicMenuGroupOrder(categoryName, groupName) {
+    if (normalizePublicMenuText(categoryName) !== 'espresso') return 0;
+    const group = normalizePublicMenuText(groupName || 'espresso');
+    if (group === 'espresso') return 0;
+    if (group === 'non-espresso') return 1;
+    if (group === 'add-ons') return 2;
+    return 99;
+  }
+
+  function comparePublicMenuProducts(categoryName) {
+    return (a, b) => {
+      const groupA = getPublicMenuGroupOrder(categoryName, a.menu_group);
+      const groupB = getPublicMenuGroupOrder(categoryName, b.menu_group);
+      if (groupA !== groupB) return groupA - groupB;
+
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+
+      return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
+    };
+  }
+
   function mapPublicEspressoPrices(product) {
     const variants = [...(product.variants || [])].sort((a, b) => {
       const sortA = Number(a.sort_order) || 0;
@@ -3069,6 +3101,36 @@
     return { ok: true, reg: regular.price, lrg: large.price };
   }
 
+  function mapPublicEspressoNonEspressoVariants(product) {
+    const variants = [...(product.variants || [])].sort((a, b) => {
+      const sortA = Number(a.sort_order) || 0;
+      const sortB = Number(b.sort_order) || 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label));
+    });
+
+    if (!variants.length || variants.length > 2) {
+      return { ok: false, reason: `${product.name || 'Product'} needs 1 or 2 Non-Espresso variants.` };
+    }
+
+    const parsed = variants.map(variant => ({
+      label: String(variant.label || '').trim(),
+      price: parsePublicMenuPeso(variant.price)
+    }));
+
+    if (parsed.some(variant => !variant.label || variant.price === null)) {
+      return { ok: false, reason: `${product.name || 'Product'} has an invalid Non-Espresso variant label or price.` };
+    }
+
+    if (parsed.length === 1) {
+      return { ok: true, type: 'single', variants: parsed };
+    }
+
+    const regular = parsed.find(variant => /\bregular\b|\breg\b/.test(normalizePublicMenuText(variant.label))) || parsed[0];
+    const large = parsed.find(variant => /\blarge\b|\blrg\b/.test(normalizePublicMenuText(variant.label))) || parsed.find(variant => variant !== regular) || parsed[1];
+    return { ok: true, type: 'regularLarge', variants: [regular, large] };
+  }
+
   function mapPublicEspressoItems(shapedPublicMenu) {
     const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
       ? shapedPublicMenu.categories
@@ -3090,15 +3152,42 @@
     }, {});
     const usedIds = new Set();
     const mappedItems = [];
+    const mappedNonEspressoItems = [];
 
     for (const product of products) {
       const name = String(product.name || '').trim();
       if (!name) return { ok: false, reason: 'A Supabase Espresso product is missing a name.' };
 
+      const normalizedName = normalizePublicMenuText(name);
+      const menuGroup = normalizePublicMenuText(product.menu_group || '');
+      const expectsNonEspresso = PUBLIC_ESPRESSO_NON_ESPRESSO_NAMES.has(normalizedName);
+
+      if (expectsNonEspresso && menuGroup !== 'non-espresso') {
+        return { ok: false, reason: `${name} must use menu_group Non-Espresso to avoid mixing Espresso subgroups.` };
+      }
+
+      if (menuGroup && menuGroup !== 'espresso' && menuGroup !== 'non-espresso') {
+        return { ok: false, reason: `${name} has unsupported Espresso menu_group: ${product.menu_group}.` };
+      }
+
+      if (menuGroup === 'non-espresso') {
+        const variantMap = mapPublicEspressoNonEspressoVariants(product);
+        if (!variantMap.ok) return variantMap;
+        mappedNonEspressoItems.push({
+          name,
+          desc: product.description || '',
+          variants: variantMap.variants,
+          type: variantMap.type,
+          menu_group: product.menu_group,
+          sort_order: Number(product.sort_order) || 0
+        });
+        continue;
+      }
+
       const priceMap = mapPublicEspressoPrices(product);
       if (!priceMap.ok) return priceMap;
 
-      const matchingHardcodedItem = hardcodedByName[normalizePublicMenuText(name)];
+      const matchingHardcodedItem = hardcodedByName[normalizedName];
       const safeId = matchingHardcodedItem
         ? matchingHardcodedItem.id
         : `sb-espresso-${slugifyPublicMenuId(name)}-${slugifyPublicMenuId(product.id).slice(0, 8)}`;
@@ -3119,11 +3208,59 @@
         default_milk: matchingHardcodedItem && matchingHardcodedItem.default_milk,
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
-        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true
+        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
+        menu_group: product.menu_group,
+        sort_order: Number(product.sort_order) || 0
       });
     }
 
-    return { ok: true, items: mappedItems };
+    mappedItems.sort(comparePublicMenuProducts('Espresso'));
+    mappedNonEspressoItems.sort(comparePublicMenuProducts('Espresso'));
+
+    return { ok: true, items: mappedItems, nonEspressoItems: mappedNonEspressoItems };
+  }
+
+  function renderSupabaseEspressoNonEspresso(items) {
+    const mount = document.getElementById('espresso-nonespresso-supabase-mount');
+    const fallback = document.getElementById('espresso-nonespresso-hardcoded-fallback');
+    if (!mount || !fallback || !Array.isArray(items) || !items.length) return false;
+
+    mount.innerHTML = items.map(item => {
+      const name = escapeMenuHtml(item.name);
+      const desc = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
+      const nameArg = escapeMenuHtml(JSON.stringify(item.name));
+
+      if (item.type === 'single') {
+        const variant = item.variants[0];
+        return `
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          ${desc}
+        </div>
+        <div class="item-right">
+          <div class="price-btn-row"><span class="price-single">₱${variant.price}</span><button class="add-btn" onclick="addItem(${nameArg}, '', ${variant.price}, this)">+</button></div>
+        </div>
+      </div>`;
+      }
+
+      const regular = item.variants[0];
+      const large = item.variants[1];
+      return `
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name">${name}</div>
+          ${desc}
+        </div>
+        <div class="item-right">
+          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱${regular.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Regular', ${regular.price}, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱${large.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Large', ${large.price}, this)">+</button></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    mount.style.display = '';
+    fallback.style.display = 'none';
+    return true;
   }
 
   function renderSupabaseEspressoOrFallback(shapedPublicMenu) {
@@ -3134,6 +3271,7 @@
     }
 
     renderAllEspressoPanels(mapped.items);
+    renderSupabaseEspressoNonEspresso(mapped.nonEspressoItems);
     return true;
   }
   // ── MATCHA / HOJICHA ITEMS CONFIG (Phase 4C) ──
@@ -6094,6 +6232,7 @@
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
       variant_group_name: product.variant_group_name,
+      menu_group: product.menu_group || null,
       sort_order: product.sort_order,
       variants: variantsByProduct[product.id] || []
     }));
@@ -6103,6 +6242,12 @@
       map[product.category_id].push(product);
       return map;
     }, {});
+
+    categories.forEach(category => {
+      if (productsByCategory[category.id]) {
+        productsByCategory[category.id].sort(comparePublicMenuProducts(category.name));
+      }
+    });
 
     return {
       categories: categories.map(category => ({
@@ -6139,7 +6284,7 @@
           .order('name', { ascending: true }),
         client
           .from('public_menu_products')
-          .select('id,category_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,sort_order')
+          .select('id,category_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order')
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
         client

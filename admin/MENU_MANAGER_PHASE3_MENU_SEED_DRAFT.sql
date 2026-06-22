@@ -1,4 +1,4 @@
--- CURV Control Menu Manager - Phase 3 menu seed draft
+﻿-- CURV Control Menu Manager - Phase 3 menu seed draft
 -- Review before running in Supabase SQL Editor.
 -- Draft seed only: products are inserted as unpublished and unavailable.
 -- Publish and enable availability later through CURV Control after checking names, prices, photos, and variants.
@@ -30,6 +30,7 @@ begin
     product_description text,
     image_url text,
     variant_group_name text,
+    menu_group text,
     is_curv_pick boolean not null default false,
     is_seasonal boolean not null default false,
     sort_order integer not null default 0
@@ -47,61 +48,61 @@ begin
 
   insert into curv_seed_products (
     seed_key, category_name, product_name, product_description, image_url,
-    variant_group_name, is_curv_pick, is_seasonal, sort_order
+    variant_group_name, menu_group, is_curv_pick, is_seasonal, sort_order
   )
   values
-  ('espresso-000-curv-latte', 'Espresso', 'Curv Latte', 'double espresso · full cream milk · a whisper of sweetness. the one that started it all.', 'images/menu/espresso/curv-latte.jpg', 'Size', false, false, 0),
-  ('espresso-001-einspanner-latte', 'Espresso', 'Einspanner Latte', 'double espresso · full cream milk · crowned with thick sweet cream.', 'images/menu/espresso/einspanner-latte.jpg', 'Size', false, false, 1),
-  ('espresso-002-spanish-latte', 'Espresso', 'Spanish Latte', 'double espresso · vanilla bean syrup · condensed milk · full cream milk.', null, 'Size', true, false, 2),
-  ('espresso-003-caramel-macchiato', 'Espresso', 'Caramel Macchiato', 'double espresso · caramel syrup · full cream milk · drizzled in caramel sauce.', 'images/menu/espresso/caramel-macchiato.jpg', 'Size', false, false, 3),
-  ('espresso-004-vanilla-latte', 'Espresso', 'Vanilla Latte', 'double espresso · vanilla bean syrup · full cream milk.', null, 'Size', false, false, 4),
-  ('espresso-005-white-chocolate-mocha', 'Espresso', 'White Chocolate Mocha', 'double espresso · white chocolate · white chocolate sauce · full cream milk · whipped cream on top.', 'images/menu/espresso/white-chocolate-mocha.jpg', 'Size', true, false, 5),
-  ('espresso-006-caff-mocha', 'Espresso', 'Caffè Mocha', 'double espresso · 60% dark chocolate · dark chocolate sauce · full cream milk · whipped cream on top.', 'images/menu/espresso/mocha-latte.jpg', 'Size', false, false, 6),
-  ('espresso-007-americano', 'Espresso', 'Americano', 'double espresso · water · nothing more, nothing less. brewed with Varese beans — 100% arabica, clean and sharp.', null, 'Size', false, false, 7),
-  ('espresso-008-cloud-spanish-oat-latte', 'Espresso', 'Cloud Spanish Oat Latte', 'double espresso · condensed milk · oat milk · salted cold foam on top.', 'images/menu/espresso/cloud-spanish-oat-latte.jpg', 'Size', true, true, 8),
-  ('espresso-009-cocoa-caramel-latte', 'Espresso', 'Cocoa Caramel Latte', 'triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.', 'images/menu/espresso/cocoa-caramel-latte.jpg', 'Size', false, true, 9),
-  ('espresso-010-white-ube-latte', 'Espresso', 'White Ube Latte', 'double espresso · white chocolate · ube · full cream milk.', null, 'Size', false, true, 10),
-  ('espresso-011-curv-chocolate', 'Espresso', 'Curv Chocolate', '60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.', null, 'Each', false, false, 11),
-  ('espresso-012-ube-cloud-latte', 'Espresso', 'Ube Cloud Latte', 'ube cold foam · whole milk · dusted in ube powder.', null, 'Size', false, false, 12),
-  ('espresso-013-berry-cloud-latte', 'Espresso', 'Berry Cloud Latte', 'strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.', null, 'Size', false, false, 13),
-  ('matcha-hojicha-000-einspanner-matcha', 'Matcha & Hojicha', 'Einspanner Matcha', 'thick sweet cream · ceremonial matcha · milk', null, 'Each', false, false, 0),
-  ('matcha-hojicha-001-kagoshima-matcha-cream', 'Matcha & Hojicha', 'Kagoshima Matcha Cream', 'ceremonial matcha ice cream · ceremonial matcha · milk', 'images/menu/matcha/kagoshima-matcha-cream.jpg', 'Each', true, false, 1),
-  ('matcha-hojicha-002-banana-fudge-matcha-latte', 'Matcha & Hojicha', 'Banana Fudge Matcha Latte', 'banana fudge pudding · ceremonial matcha · milk', null, 'Each', false, false, 2),
-  ('matcha-hojicha-003-cookie-crumb-matcha-latte', 'Matcha & Hojicha', 'Cookie Crumb Matcha Latte', 'matcha cookie · ceremonial matcha · milk', null, 'Each', false, false, 3),
-  ('matcha-hojicha-004-sea-salt-cream-matcha-latte', 'Matcha & Hojicha', 'Sea Salt Cream Matcha Latte', 'sea salt cream · ceremonial matcha · milk · agave syrup', 'images/menu/matcha/sea-salt-cream-matcha-latte.jpg', 'Each', false, false, 4),
-  ('matcha-hojicha-005-cs-matcha-oat-latte', 'Matcha & Hojicha', 'CS Matcha Oat Latte', 'ceremonial matcha · oat milk · agave syrup', 'images/menu/matcha/cs-matcha-oat-latte.jpg', 'Each', false, false, 5),
-  ('matcha-hojicha-006-strawberry-matcha-latte', 'Matcha & Hojicha', 'Strawberry Matcha Latte', 'strawberry purée · ceremonial matcha · milk', 'images/menu/matcha/strawberry-matcha-latte.jpg', 'Each', true, false, 6),
-  ('matcha-hojicha-007-pure-usucha', 'Matcha & Hojicha', 'Pure Usucha', 'ceremonial matcha · water · that''s all.', 'images/menu/matcha/pure-usucha.jpg', 'Each', false, false, 7),
-  ('matcha-hojicha-008-matcha-ube-latte', 'Matcha & Hojicha', 'Matcha Ube Latte', 'ube cold foam · ceremonial matcha · milk', 'images/menu/matcha/matcha-ube-latte.jpg', 'Each', false, true, 8),
-  ('matcha-hojicha-009-double-matcha-cloud', 'Matcha & Hojicha', 'Double Matcha Cloud', 'ceremonial matcha cold whisk · matcha cold foam · agave', 'images/menu/matcha/double-matcha-cloud.jpg', 'Each', false, true, 9),
-  ('matcha-hojicha-010-matcha-sunrise', 'Matcha & Hojicha', 'Matcha Sunrise', 'ceremonial matcha · coconut milk · mango and strawberry purée', null, 'Each', false, true, 10),
-  ('matcha-hojicha-011-hojicha-latte', 'Matcha & Hojicha', 'Hojicha Latte', 'dark roast hojicha · milk', 'images/menu/matcha/hojicha-latte.jpg', 'Each', false, false, 11),
-  ('matcha-hojicha-012-sea-salt-cream-hojicha', 'Matcha & Hojicha', 'Sea Salt Cream Hojicha', 'dark roast hojicha · salted cream · milk', null, 'Each', true, false, 12),
-  ('matcha-hojicha-013-pink-hojicha-latte', 'Matcha & Hojicha', 'Pink Hojicha Latte', 'strawberry cold foam · dark roast hojicha · milk · strawberry purée', null, 'Each', false, false, 13),
-  ('curvccino-000-double-chocolate-chip-cream', 'Curvccino', 'Double Chocolate Chip Cream', null, 'images/menu/frappe/double-chocolate-chip-cream.jpg', 'Size', false, false, 0),
-  ('curvccino-001-javachip-brownie-curvccino', 'Curvccino', 'Javachip Brownie Curvccino', null, 'images/menu/frappe/javachip-brownies-curvccino.jpg', 'Size', true, false, 1),
-  ('curvccino-002-javachip-jelly-curvccino', 'Curvccino', 'Javachip Jelly Curvccino', null, null, 'Size', false, false, 2),
-  ('curvccino-003-strawberries-cream', 'Curvccino', 'Strawberries & Cream', null, 'images/menu/frappe/strawberries-and-cream.jpg', 'Size', true, false, 3),
-  ('curvccino-004-white-caramel-curvccino', 'Curvccino', 'White Caramel Curvccino', null, 'images/menu/frappe/white-caramel-curvccino.jpg', 'Size', false, false, 4),
-  ('refreshers-000-dragon-dreams', 'Refreshers', 'Dragon Dreams', 'dragon fruit · sweet cream · milk', 'images/menu/refreshers/dragon-dreams.jpg', 'Size', true, false, 0),
-  ('refreshers-001-tropic-kiss', 'Refreshers', 'Tropic Kiss', 'strawberry lemonade · mango juice · mango bits', 'images/menu/refreshers/tropic-kiss.jpg', 'Size', true, false, 1),
-  ('refreshers-002-tokyo-sunrise', 'Refreshers', 'Tokyo Sunrise', 'mango purée · coconut milk · soft cream', 'images/menu/refreshers/tokyo-sunrise.jpg', 'Size', false, false, 2),
-  ('refreshers-003-hibiscus-cream-tea', 'Refreshers', 'Hibiscus Cream Tea', 'hibiscus tea · soft sweet cream on top', 'images/menu/refreshers/hibiscus-cream-tea.jpg', 'Size', true, false, 3),
-  ('refreshers-004-lime-cucumber', 'Refreshers', 'Lime Cucumber', 'fresh cucumber · sparkling lemon lime fizz', null, 'Size', false, false, 4),
-  ('bites-000-og-takoyaki', 'Bites', 'OG Takoyaki', 'octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi', 'images/menu/bites/og-takoyaki.jpg', 'Pieces', true, false, 0),
-  ('bites-001-aburi-salmon', 'Bites', 'Aburi Salmon', 'flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi', null, 'Pieces', false, false, 1),
-  ('bites-002-oozie-cheese', 'Bites', 'Oozie Cheese', 'cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi', null, 'Pieces', true, false, 2),
-  ('bites-003-lava-melt', 'Bites', 'Lava Melt', 'cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi', null, 'Pieces', false, false, 3),
-  ('bites-004-classic-veggie', 'Bites', 'Classic Veggie', 'veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi', null, 'Pieces', false, false, 4),
-  ('bites-005-salted-egg', 'Bites', 'Salted Egg', 'salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi', null, 'Pieces', false, false, 5),
-  ('savory-000-shrimp-tempura', 'Savory', 'Shrimp Tempura', 'shrimp tempura · side w/ chips or veggies · tempura sauce', null, 'Each', false, false, 0),
-  ('savory-001-chicken-karaage', 'Savory', 'Chicken Karaage', 'chicken karaage · side w/ chips or veggies · sweet chili sauce', 'images/menu/savory-bites/chicken-karaage.jpg', 'Each', true, false, 1),
-  ('savory-002-cream-dory-fillet', 'Savory', 'Cream Dory Fillet', 'cream dory · side w/ chips or veggies · garlic aioli', 'images/menu/savory-bites/cream-dory-fillet.jpg', 'Each', false, false, 2),
-  ('salad-bar-000-curv-salad', 'Salad Bar', 'Curv Salad', 'croutons · lettuce · cucumber · carrots · tomatoes · mangoes · parmesan cheese · salad dressing', null, 'Each', false, false, 0),
-  ('salad-bar-001-chicken-salad', 'Salad Bar', 'Chicken Salad', 'chicken breast · lettuce · cucumber · tomatoes · croutons · parmesan cheese · dressing', 'images/menu/salads/chicken-salad.jpg', 'Each', false, false, 1),
-  ('salad-bar-002-coastal-salad', 'Salad Bar', 'Coastal Salad', 'crab mix · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing · chuka wakame currently unavailable', 'images/menu/salads/coastal-salad.jpg', 'Each', false, false, 2),
-  ('salad-bar-003-chukawakame-salad', 'Salad Bar', 'Chukawakame Salad', '100g serving', null, 'Each', false, false, 3),
-  ('salad-bar-004-spring-rolls', 'Salad Bar', 'Spring Rolls', 'crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo', 'images/menu/salads/spring-rolls.jpg', 'Pieces', true, false, 4);
+  ('espresso-000-curv-latte', 'Espresso', 'Curv Latte', 'double espresso · full cream milk · a whisper of sweetness. the one that started it all.', 'images/menu/espresso/curv-latte.jpg', 'Size', 'Espresso', false, false, 0),
+  ('espresso-001-einspanner-latte', 'Espresso', 'Einspanner Latte', 'double espresso · full cream milk · crowned with thick sweet cream.', 'images/menu/espresso/einspanner-latte.jpg', 'Size', 'Espresso', false, false, 1),
+  ('espresso-002-spanish-latte', 'Espresso', 'Spanish Latte', 'double espresso · vanilla bean syrup · condensed milk · full cream milk.', null, 'Size', 'Espresso', true, false, 2),
+  ('espresso-003-caramel-macchiato', 'Espresso', 'Caramel Macchiato', 'double espresso · caramel syrup · full cream milk · drizzled in caramel sauce.', 'images/menu/espresso/caramel-macchiato.jpg', 'Size', 'Espresso', false, false, 3),
+  ('espresso-004-vanilla-latte', 'Espresso', 'Vanilla Latte', 'double espresso · vanilla bean syrup · full cream milk.', null, 'Size', 'Espresso', false, false, 4),
+  ('espresso-005-white-chocolate-mocha', 'Espresso', 'White Chocolate Mocha', 'double espresso · white chocolate · white chocolate sauce · full cream milk · whipped cream on top.', 'images/menu/espresso/white-chocolate-mocha.jpg', 'Size', 'Espresso', true, false, 5),
+  ('espresso-006-caff-mocha', 'Espresso', 'Caffè Mocha', 'double espresso · 60% dark chocolate · dark chocolate sauce · full cream milk · whipped cream on top.', 'images/menu/espresso/mocha-latte.jpg', 'Size', 'Espresso', false, false, 6),
+  ('espresso-007-americano', 'Espresso', 'Americano', 'double espresso · water · nothing more, nothing less. brewed with Varese beans — 100% arabica, clean and sharp.', null, 'Size', 'Espresso', false, false, 7),
+  ('espresso-008-cloud-spanish-oat-latte', 'Espresso', 'Cloud Spanish Oat Latte', 'double espresso · condensed milk · oat milk · salted cold foam on top.', 'images/menu/espresso/cloud-spanish-oat-latte.jpg', 'Size', 'Espresso', true, true, 8),
+  ('espresso-009-cocoa-caramel-latte', 'Espresso', 'Cocoa Caramel Latte', 'triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.', 'images/menu/espresso/cocoa-caramel-latte.jpg', 'Size', 'Espresso', false, true, 9),
+  ('espresso-010-white-ube-latte', 'Espresso', 'White Ube Latte', 'double espresso · white chocolate · ube · full cream milk.', null, 'Size', 'Espresso', false, true, 10),
+  ('espresso-011-curv-chocolate', 'Espresso', 'Curv Chocolate', '60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.', null, 'Each', 'Non-Espresso', false, false, 11),
+  ('espresso-012-ube-cloud-latte', 'Espresso', 'Ube Cloud Latte', 'ube cold foam · whole milk · dusted in ube powder.', null, 'Size', 'Non-Espresso', false, false, 12),
+  ('espresso-013-berry-cloud-latte', 'Espresso', 'Berry Cloud Latte', 'strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.', null, 'Size', 'Non-Espresso', false, false, 13),
+  ('matcha-hojicha-000-einspanner-matcha', 'Matcha & Hojicha', 'Einspanner Matcha', 'thick sweet cream · ceremonial matcha · milk', null, 'Each', null, false, false, 0),
+  ('matcha-hojicha-001-kagoshima-matcha-cream', 'Matcha & Hojicha', 'Kagoshima Matcha Cream', 'ceremonial matcha ice cream · ceremonial matcha · milk', 'images/menu/matcha/kagoshima-matcha-cream.jpg', 'Each', null, true, false, 1),
+  ('matcha-hojicha-002-banana-fudge-matcha-latte', 'Matcha & Hojicha', 'Banana Fudge Matcha Latte', 'banana fudge pudding · ceremonial matcha · milk', null, 'Each', null, false, false, 2),
+  ('matcha-hojicha-003-cookie-crumb-matcha-latte', 'Matcha & Hojicha', 'Cookie Crumb Matcha Latte', 'matcha cookie · ceremonial matcha · milk', null, 'Each', null, false, false, 3),
+  ('matcha-hojicha-004-sea-salt-cream-matcha-latte', 'Matcha & Hojicha', 'Sea Salt Cream Matcha Latte', 'sea salt cream · ceremonial matcha · milk · agave syrup', 'images/menu/matcha/sea-salt-cream-matcha-latte.jpg', 'Each', null, false, false, 4),
+  ('matcha-hojicha-005-cs-matcha-oat-latte', 'Matcha & Hojicha', 'CS Matcha Oat Latte', 'ceremonial matcha · oat milk · agave syrup', 'images/menu/matcha/cs-matcha-oat-latte.jpg', 'Each', null, false, false, 5),
+  ('matcha-hojicha-006-strawberry-matcha-latte', 'Matcha & Hojicha', 'Strawberry Matcha Latte', 'strawberry purée · ceremonial matcha · milk', 'images/menu/matcha/strawberry-matcha-latte.jpg', 'Each', null, true, false, 6),
+  ('matcha-hojicha-007-pure-usucha', 'Matcha & Hojicha', 'Pure Usucha', 'ceremonial matcha · water · that''s all.', 'images/menu/matcha/pure-usucha.jpg', 'Each', null, false, false, 7),
+  ('matcha-hojicha-008-matcha-ube-latte', 'Matcha & Hojicha', 'Matcha Ube Latte', 'ube cold foam · ceremonial matcha · milk', 'images/menu/matcha/matcha-ube-latte.jpg', 'Each', null, false, true, 8),
+  ('matcha-hojicha-009-double-matcha-cloud', 'Matcha & Hojicha', 'Double Matcha Cloud', 'ceremonial matcha cold whisk · matcha cold foam · agave', 'images/menu/matcha/double-matcha-cloud.jpg', 'Each', null, false, true, 9),
+  ('matcha-hojicha-010-matcha-sunrise', 'Matcha & Hojicha', 'Matcha Sunrise', 'ceremonial matcha · coconut milk · mango and strawberry purée', null, 'Each', null, false, true, 10),
+  ('matcha-hojicha-011-hojicha-latte', 'Matcha & Hojicha', 'Hojicha Latte', 'dark roast hojicha · milk', 'images/menu/matcha/hojicha-latte.jpg', 'Each', null, false, false, 11),
+  ('matcha-hojicha-012-sea-salt-cream-hojicha', 'Matcha & Hojicha', 'Sea Salt Cream Hojicha', 'dark roast hojicha · salted cream · milk', null, 'Each', null, true, false, 12),
+  ('matcha-hojicha-013-pink-hojicha-latte', 'Matcha & Hojicha', 'Pink Hojicha Latte', 'strawberry cold foam · dark roast hojicha · milk · strawberry purée', null, 'Each', null, false, false, 13),
+  ('curvccino-000-double-chocolate-chip-cream', 'Curvccino', 'Double Chocolate Chip Cream', null, 'images/menu/frappe/double-chocolate-chip-cream.jpg', 'Size', null, false, false, 0),
+  ('curvccino-001-javachip-brownie-curvccino', 'Curvccino', 'Javachip Brownie Curvccino', null, 'images/menu/frappe/javachip-brownies-curvccino.jpg', 'Size', null, true, false, 1),
+  ('curvccino-002-javachip-jelly-curvccino', 'Curvccino', 'Javachip Jelly Curvccino', null, null, 'Size', null, false, false, 2),
+  ('curvccino-003-strawberries-cream', 'Curvccino', 'Strawberries & Cream', null, 'images/menu/frappe/strawberries-and-cream.jpg', 'Size', null, true, false, 3),
+  ('curvccino-004-white-caramel-curvccino', 'Curvccino', 'White Caramel Curvccino', null, 'images/menu/frappe/white-caramel-curvccino.jpg', 'Size', null, false, false, 4),
+  ('refreshers-000-dragon-dreams', 'Refreshers', 'Dragon Dreams', 'dragon fruit · sweet cream · milk', 'images/menu/refreshers/dragon-dreams.jpg', 'Size', null, true, false, 0),
+  ('refreshers-001-tropic-kiss', 'Refreshers', 'Tropic Kiss', 'strawberry lemonade · mango juice · mango bits', 'images/menu/refreshers/tropic-kiss.jpg', 'Size', null, true, false, 1),
+  ('refreshers-002-tokyo-sunrise', 'Refreshers', 'Tokyo Sunrise', 'mango purée · coconut milk · soft cream', 'images/menu/refreshers/tokyo-sunrise.jpg', 'Size', null, false, false, 2),
+  ('refreshers-003-hibiscus-cream-tea', 'Refreshers', 'Hibiscus Cream Tea', 'hibiscus tea · soft sweet cream on top', 'images/menu/refreshers/hibiscus-cream-tea.jpg', 'Size', null, true, false, 3),
+  ('refreshers-004-lime-cucumber', 'Refreshers', 'Lime Cucumber', 'fresh cucumber · sparkling lemon lime fizz', null, 'Size', null, false, false, 4),
+  ('bites-000-og-takoyaki', 'Bites', 'OG Takoyaki', 'octobits · veggies · Japanese mayo · signature sauce · katsuoboshi · tenkasu · aonori · togarashi', 'images/menu/bites/og-takoyaki.jpg', 'Pieces', null, true, false, 0),
+  ('bites-001-aburi-salmon', 'Bites', 'Aburi Salmon', 'flamed salmon · veggies · sriracha mayo · Japanese mayo · signature sauce · premium floss · katsuoboshi · tenkasu · aonori · togarashi', null, 'Pieces', null, false, false, 1),
+  ('bites-002-oozie-cheese', 'Bites', 'Oozie Cheese', 'cheese filling · veggies · melted cheese · Japanese mayo · signature sauce · tenkasu · aonori · togarashi', null, 'Pieces', null, true, false, 2),
+  ('bites-003-lava-melt', 'Bites', 'Lava Melt', 'cheese filling · veggies · melted cheese · sriracha Japanese mayo · signature sauce · tenkasu · aonori · togarashi', null, 'Pieces', null, false, false, 3),
+  ('bites-004-classic-veggie', 'Bites', 'Classic Veggie', 'veggies · signature sauce · Japanese mayo · tenkasu · aonori · togarashi', null, 'Pieces', null, false, false, 4),
+  ('bites-005-salted-egg', 'Bites', 'Salted Egg', 'salted egg · signature sauce · Japanese mayo · katsuoboshi · meat floss · tenkasu · aonori · togarashi', null, 'Pieces', null, false, false, 5),
+  ('savory-000-shrimp-tempura', 'Savory', 'Shrimp Tempura', 'shrimp tempura · side w/ chips or veggies · tempura sauce', null, 'Each', null, false, false, 0),
+  ('savory-001-chicken-karaage', 'Savory', 'Chicken Karaage', 'chicken karaage · side w/ chips or veggies · sweet chili sauce', 'images/menu/savory-bites/chicken-karaage.jpg', 'Each', null, true, false, 1),
+  ('savory-002-cream-dory-fillet', 'Savory', 'Cream Dory Fillet', 'cream dory · side w/ chips or veggies · garlic aioli', 'images/menu/savory-bites/cream-dory-fillet.jpg', 'Each', null, false, false, 2),
+  ('salad-bar-000-curv-salad', 'Salad Bar', 'Curv Salad', 'croutons · lettuce · cucumber · carrots · tomatoes · mangoes · parmesan cheese · salad dressing', null, 'Each', null, false, false, 0),
+  ('salad-bar-001-chicken-salad', 'Salad Bar', 'Chicken Salad', 'chicken breast · lettuce · cucumber · tomatoes · croutons · parmesan cheese · dressing', 'images/menu/salads/chicken-salad.jpg', 'Each', null, false, false, 1),
+  ('salad-bar-002-coastal-salad', 'Salad Bar', 'Coastal Salad', 'crab mix · lettuce · cucumber · carrots · mangoes · sesame seeds · salad dressing · chuka wakame currently unavailable', 'images/menu/salads/coastal-salad.jpg', 'Each', null, false, false, 2),
+  ('salad-bar-003-chukawakame-salad', 'Salad Bar', 'Chukawakame Salad', '100g serving', null, 'Each', null, false, false, 3),
+  ('salad-bar-004-spring-rolls', 'Salad Bar', 'Spring Rolls', 'crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo', 'images/menu/salads/spring-rolls.jpg', 'Pieces', null, true, false, 4);
 
   insert into curv_seed_product_sizes (seed_key, label, price, sort_order)
   values
@@ -217,12 +218,12 @@ begin
     if target_product_id is null then
       insert into public.products (
         category_id, name, description, image_url, is_available, is_published,
-        is_curv_pick, is_seasonal, sort_order, notes, variant_group_name
+        is_curv_pick, is_seasonal, sort_order, notes, variant_group_name, menu_group
       )
       values (
         target_category_id, product_row.product_name, product_row.product_description,
         product_row.image_url, false, false, product_row.is_curv_pick,
-        product_row.is_seasonal, product_row.sort_order, null, product_row.variant_group_name
+        product_row.is_seasonal, product_row.sort_order, null, product_row.variant_group_name, product_row.menu_group
       )
       returning id into target_product_id;
     else
@@ -235,7 +236,8 @@ begin
             is_seasonal = product_row.is_seasonal,
             sort_order = product_row.sort_order,
             notes = null,
-            variant_group_name = product_row.variant_group_name
+            variant_group_name = product_row.variant_group_name,
+            menu_group = product_row.menu_group
         where id = target_product_id;
     end if;
 
@@ -253,3 +255,5 @@ begin
     end loop;
   end loop;
 end $$;
+
+
