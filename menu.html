@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1744,6 +1744,7 @@
   }
 
   .product-card-action {
+    display: block;
     margin-top: 0.25rem;
     font-family: 'Jost', sans-serif;
     font-size: 0.58rem;
@@ -1753,7 +1754,34 @@
     transition: color 0.2s ease;
   }
 
+  .product-card-action-open {
+    display: none;
+  }
+
+  .menu-item-wrap.open > .product-card .product-card-action-closed {
+    display: none;
+  }
+
+  .menu-item-wrap.open > .product-card .product-card-action-open {
+    display: block;
+  }
+
   .refresher-hybrid-wrap .expand-trigger {
+    display: none;
+  }
+
+  .frappe-hybrid-wrap .expand-trigger {
+    display: none;
+  }
+
+  .matcha-hybrid-wrap .expand-trigger {
+    display: none;
+  }
+
+  .espresso-hybrid-wrap .expand-trigger,
+  .nonespresso-hybrid-wrap .expand-trigger,
+  .bites-hybrid-wrap .expand-trigger,
+  .savory-hybrid-wrap .expand-trigger {
     display: none;
   }
 
@@ -2333,7 +2361,6 @@
         </div>
       </div>
     </div>
-
     <div class="category">
       <span class="category-label">Coffee</span>
       <div class="menu-item">
@@ -2513,31 +2540,79 @@
       <span class="category-label">Non-Espresso</span>
       <div id="espresso-nonespresso-supabase-mount" style="display:none"></div>
       <div id="espresso-nonespresso-hardcoded-fallback">
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Curv Chocolate</div>
-          <div class="item-desc">60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.</div>
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱150</span><button class="add-btn" onclick="addItem('Curv Chocolate', '', 150, this)">+</button></div>
+      <div class="menu-item-wrap nonespresso-hybrid-wrap" id="panel-wrap-nonespresso-curv-chocolate">
+        <button type="button" class="product-card" data-section="espresso" onclick="openProductPanel('nonespresso-curv-chocolate')">
+          <span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>
+          <span class="product-card-info">
+            <span class="item-name">Curv Chocolate</span>
+            <div class="item-desc">60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.</div>
+            <span class="product-card-action product-card-action-closed">Customize ↓</span>
+            <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
+          </span>
+          <span class="product-card-price">From ₱150</span>
+        </button>
+        <div class="expansion-panel" id="panel-nonespresso-curv-chocolate">
+          <div class="panel-inner">
+            <div class="menu-item">
+              <div class="item-info">
+                <div class="item-name">Curv Chocolate</div>
+                <div class="item-desc">60% dark chocolate · dark chocolate dust · whole milk. for the days when only chocolate will do.</div>
+              </div>
+              <div class="item-right">
+                <div class="price-btn-row"><span class="price-single">₱150</span><button class="add-btn" onclick="addItem('Curv Chocolate', '', 150, this)">+</button></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Ube Cloud Latte</div>
-          <div class="item-desc">ube cold foam · whole milk · dusted in ube powder.</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
+      <div class="menu-item-wrap nonespresso-hybrid-wrap" id="panel-wrap-nonespresso-ube-cloud-latte">
+        <button type="button" class="product-card" data-section="espresso" onclick="openProductPanel('nonespresso-ube-cloud-latte')">
+          <span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>
+          <span class="product-card-info">
+            <span class="item-name">Ube Cloud Latte</span>
+            <div class="item-desc">ube cold foam · whole milk · dusted in ube powder.</div>
+            <span class="product-card-action product-card-action-closed">Customize ↓</span>
+            <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
+          </span>
+          <span class="product-card-price">From ₱150</span>
+        </button>
+        <div class="expansion-panel" id="panel-nonespresso-ube-cloud-latte">
+          <div class="panel-inner">
+            <div class="menu-item">
+              <div class="item-info">
+                <div class="item-name">Ube Cloud Latte</div>
+                <div class="item-desc">ube cold foam · whole milk · dusted in ube powder.</div>
+              </div>
+              <div class="item-right">
+                <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Ube Cloud Latte', 'Large', 160, this)">+</button></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">Berry Cloud Latte</div>
-          <div class="item-desc">strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.</div>
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
+      <div class="menu-item-wrap nonespresso-hybrid-wrap" id="panel-wrap-nonespresso-berry-cloud-latte">
+        <button type="button" class="product-card" data-section="espresso" onclick="openProductPanel('nonespresso-berry-cloud-latte')">
+          <span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>
+          <span class="product-card-info">
+            <span class="item-name">Berry Cloud Latte</span>
+            <div class="item-desc">strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.</div>
+            <span class="product-card-action product-card-action-closed">Customize ↓</span>
+            <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
+          </span>
+          <span class="product-card-price">From ₱150</span>
+        </button>
+        <div class="expansion-panel" id="panel-nonespresso-berry-cloud-latte">
+          <div class="panel-inner">
+            <div class="menu-item">
+              <div class="item-info">
+                <div class="item-name">Berry Cloud Latte</div>
+                <div class="item-desc">strawberry cold foam · strawberry purée · whole milk · dried strawberries on top.</div>
+              </div>
+              <div class="item-right">
+                <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱150</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Regular', 150, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱160</strong></span><button class="add-btn" onclick="addItem('Berry Cloud Latte', 'Large', 160, this)">+</button></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       </div>
@@ -3091,9 +3166,10 @@
     const notePh = has_milk ? 'e.g. less ice, less sweet' : 'e.g. less ice';
 
     const wrap = document.createElement('div');
-    wrap.className = 'menu-item-wrap';
+    wrap.className = 'menu-item-wrap espresso-hybrid-wrap';
     wrap.id = `panel-wrap-${id}`;
     wrap.innerHTML = `
+      ${renderProductCard(item, 'espresso')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
           <div class="item-name">${name}${badgeHtml}</div>
@@ -3327,9 +3403,16 @@
       if (menuGroup === 'non-espresso') {
         const variantMap = mapPublicEspressoNonEspressoVariants(product);
         if (!variantMap.ok) return variantMap;
+        const safeNonEspressoId = `sb-nonespresso-${slugifyPublicMenuId(name)}-${slugifyPublicMenuId(product.id).slice(0, 8)}`;
+        if (usedIds.has(safeNonEspressoId)) {
+          return { ok: false, reason: `Duplicate mapped Non-Espresso panel id: ${safeNonEspressoId}` };
+        }
+        usedIds.add(safeNonEspressoId);
         mappedNonEspressoItems.push({
+          id: safeNonEspressoId,
           name,
           desc: product.description || '',
+          img: product.image_url || null,
           variants: variantMap.variants,
           type: variantMap.type,
           menu_group: product.menu_group,
@@ -3383,17 +3466,32 @@
       const name = escapeMenuHtml(item.name);
       const desc = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
       const nameArg = escapeMenuHtml(JSON.stringify(item.name));
+      const cardItem = {
+        id: item.id,
+        name: item.name,
+        desc: item.desc,
+        img: item.img || null,
+        reg: item.variants[0] && item.variants[0].price,
+        lrg: item.variants[1] && item.variants[1].price
+      };
 
       if (item.type === 'single') {
         const variant = item.variants[0];
         return `
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">${name}</div>
-          ${desc}
-        </div>
-        <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱${variant.price}</span><button class="add-btn" onclick="addItem(${nameArg}, '', ${variant.price}, this)">+</button></div>
+      <div class="menu-item-wrap nonespresso-hybrid-wrap" id="panel-wrap-${escapeMenuHtml(item.id)}">
+        ${renderProductCard(cardItem, 'espresso')}
+        <div class="expansion-panel" id="panel-${escapeMenuHtml(item.id)}">
+          <div class="panel-inner">
+            <div class="menu-item">
+              <div class="item-info">
+                <div class="item-name">${name}</div>
+                ${desc}
+              </div>
+              <div class="item-right">
+                <div class="price-btn-row"><span class="price-single">₱${variant.price}</span><button class="add-btn" onclick="addItem(${nameArg}, '', ${variant.price}, this)">+</button></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
       }
@@ -3401,13 +3499,20 @@
       const regular = item.variants[0];
       const large = item.variants[1];
       return `
-      <div class="menu-item">
-        <div class="item-info">
-          <div class="item-name">${name}</div>
-          ${desc}
-        </div>
-        <div class="item-right">
-          <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱${regular.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Regular', ${regular.price}, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱${large.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Large', ${large.price}, this)">+</button></div>
+      <div class="menu-item-wrap nonespresso-hybrid-wrap" id="panel-wrap-${escapeMenuHtml(item.id)}">
+        ${renderProductCard(cardItem, 'espresso')}
+        <div class="expansion-panel" id="panel-${escapeMenuHtml(item.id)}">
+          <div class="panel-inner">
+            <div class="menu-item">
+              <div class="item-info">
+                <div class="item-name">${name}</div>
+                ${desc}
+              </div>
+              <div class="item-right">
+                <div class="add-btn-rl"><span class="add-btn-rl-label">R <strong>₱${regular.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Regular', ${regular.price}, this)">+</button><span class="add-btn-rl-divider">|</span><span class="add-btn-rl-label">L <strong>₱${large.price}</strong></span><button class="add-btn" onclick="addItem(${nameArg}, 'Large', ${large.price}, this)">+</button></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -3728,9 +3833,10 @@
     })() : '';
 
     const wrap = document.createElement('div');
-    wrap.className = 'menu-item-wrap';
+    wrap.className = 'menu-item-wrap matcha-hybrid-wrap';
     wrap.id = `panel-wrap-${id}`;
     wrap.innerHTML = `
+      ${renderProductCard(item, 'matcha')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
           <div class="item-name">${name}${badgeHtml}</div>
@@ -4047,9 +4153,10 @@
       </div>` : '';
 
     const wrap = document.createElement('div');
-    wrap.className = 'menu-item-wrap';
+    wrap.className = 'menu-item-wrap frappe-hybrid-wrap';
     wrap.id = `panel-wrap-${id}`;
     wrap.innerHTML = `
+      ${renderProductCard(item, 'blended')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
           <div class="item-name">${name}</div>
@@ -4276,16 +4383,12 @@
   function openProductPanel(panelId) {
     const wrap = document.getElementById('panel-wrap-' + panelId);
     if (!wrap) return;
-
-    if (!wrap.classList.contains('open')) {
-      togglePanel(panelId);
-    } else {
-      wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    togglePanel(panelId);
   }
 
   function renderProductCard(item, sectionId) {
-    const prices = [Number(item.reg), Number(item.lrg)].filter(price => Number.isFinite(price) && price >= 0);
+    const piecePrices = Array.isArray(item.pieces) ? item.pieces.map(piece => Number(piece.price)) : [];
+    const prices = [Number(item.reg), Number(item.lrg), Number(item.price), ...piecePrices].filter(price => Number.isFinite(price) && price >= 0);
     const startingPrice = prices.length ? Math.min(...prices) : null;
     const thumbHtml = item.img
       ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
@@ -4301,7 +4404,8 @@
         <span class="product-card-info">
           <span class="item-name">${escapeMenuHtml(item.name)}</span>
           ${descHtml}
-          <span class="product-card-action">Customize &rarr;</span>
+          <span class="product-card-action product-card-action-closed">Customize ↓</span>
+          <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
         </span>
         ${priceHtml}
       </button>`;
@@ -4699,9 +4803,10 @@
       </div>` : '';
 
     const wrap = document.createElement('div');
-    wrap.className = 'menu-item-wrap';
+    wrap.className = 'menu-item-wrap bites-hybrid-wrap';
     wrap.id = `panel-wrap-${id}`;
     wrap.innerHTML = `
+      ${renderProductCard(item, 'bites')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
           <div class="item-name">${name}</div>
@@ -4946,9 +5051,10 @@
          </div>`;
 
     const wrap = document.createElement('div');
-    wrap.className = 'menu-item-wrap';
+    wrap.className = 'menu-item-wrap savory-hybrid-wrap';
     wrap.id = `panel-wrap-${id}`;
     wrap.innerHTML = `
+      ${renderProductCard(item, 'bites')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
           <div class="item-name">${name}</div>
