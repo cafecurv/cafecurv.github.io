@@ -1220,6 +1220,10 @@ body.more-drawer-open {
   flex-wrap: wrap;
 }
 
+.product-search-bar {
+  align-items: flex-end;
+}
+
 .product-filter-bar[hidden],
 .product-search-bar[hidden] {
   display: none;
@@ -1744,6 +1748,16 @@ body.more-drawer-open {
   .product-search-field {
     flex: 0 1 auto;
     width: 100%;
+    gap: 0.28rem;
+  }
+
+  .product-search-field input {
+    min-height: 46px;
+    height: 46px;
+    max-height: 56px;
+    box-sizing: border-box;
+    padding-top: 0.62rem;
+    padding-bottom: 0.62rem;
   }
 
   .product-search-clear {
