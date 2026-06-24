@@ -214,6 +214,41 @@
         </form>
       </section>
 
+      <section class="display-order-panel" data-display-order-panel aria-labelledby="display-order-title">
+        <div class="display-order-head">
+          <div>
+            <p class="eyebrow">Display Order</p>
+            <h2 id="display-order-title">Sort Products</h2>
+            <p>Choose one category, drag products into order, then save the display order for that category.</p>
+          </div>
+          <span class="static-status">Owner only</span>
+        </div>
+
+        <div class="display-order-controls">
+          <label class="admin-field display-order-category-field" for="display-order-category">
+            <span>Category</span>
+            <select id="display-order-category" data-display-order-category disabled>
+              <option value="">Sign in to load categories</option>
+            </select>
+          </label>
+          <p class="display-order-copy">Only products in the selected category are updated. Save affects product sort order in Supabase.</p>
+        </div>
+
+        <p class="display-order-unsaved" data-display-order-unsaved hidden>Unsaved local changes</p>
+        <div class="display-order-list" data-display-order-list aria-live="polite">
+          <div class="display-order-empty">
+            <h3>Select a category</h3>
+            <p>Sortable products will appear here after owner sign-in.</p>
+          </div>
+        </div>
+
+        <div class="display-order-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-reset-display-order disabled>Reset Local Order</button>
+          <button type="button" class="auth-button" data-save-display-order disabled>Save Display Order</button>
+        </div>
+        <p class="display-order-status" data-display-order-status role="status">Choose a category, reorder products, then save.</p>
+      </section>
+
       <section class="menu-manager-shell" aria-label="Static Menu Manager shell">
         <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
           <div class="panel-heading-row">
