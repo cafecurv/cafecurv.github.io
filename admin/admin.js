@@ -471,6 +471,28 @@
     renderDisplayOrderList();
   };
 
+  const handleDisplayOrderCategoryChange = () => {
+    if (!displayOrderCategorySelect) return;
+    const nextCategory = displayOrderCategorySelect.value;
+
+    if (displayOrderSaving) {
+      displayOrderCategorySelect.value = selectedDisplayOrderCategory;
+      return;
+    }
+
+    if (displayOrderDirty && nextCategory !== selectedDisplayOrderCategory) {
+      const shouldDiscard = window.confirm('You have unsaved display order changes. Switch categories and discard them?');
+      if (!shouldDiscard) {
+        displayOrderCategorySelect.value = selectedDisplayOrderCategory;
+        setDisplayOrderStatus('Category switch cancelled. Unsaved display order changes are still visible.');
+        updateDisplayOrderButtons();
+        return;
+      }
+    }
+
+    initializeDisplayOrderCategory(nextCategory);
+  };
+
   const resetDisplayOrder = () => {
     selectedDisplayOrderCategory = '';
     displayOrderOriginalProducts = [];
@@ -1289,9 +1311,7 @@
   }
 
   if (displayOrderCategorySelect) {
-    displayOrderCategorySelect.addEventListener('change', () => {
-      initializeDisplayOrderCategory(displayOrderCategorySelect.value);
-    });
+    displayOrderCategorySelect.addEventListener('change', handleDisplayOrderCategoryChange);
   }
 
   if (resetDisplayOrderButton) {
