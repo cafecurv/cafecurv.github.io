@@ -5010,9 +5010,15 @@
         is_seasonal: product.is_seasonal,
         has_spicy: expectedItem.has_spicy,
         has_addons: expectedItem.has_addons,
-        has_cheese: expectedItem.has_cheese
+        has_cheese: expectedItem.has_cheese,
+        sort_order: Number(product.sort_order) || 0
       });
     }
+
+    mappedItems.sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
+    });
 
     return { ok: true, items: mappedItems };
   }
@@ -5218,9 +5224,15 @@
         default_sauce: expectedItem.default_sauce,
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
-        is_seasonal: product.is_seasonal
+        is_seasonal: product.is_seasonal,
+        sort_order: Number(product.sort_order) || 0
       });
     }
+
+    mappedItems.sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
+    });
 
     return { ok: true, items: mappedItems };
   }
