@@ -6417,15 +6417,39 @@
     navTabs.scrollBy({ left: amount, behavior: 'smooth' });
   }
 
+  function centerActiveMenuTab(tab) {
+    if (!tab || !navTabs) return;
+
+    if (typeof tab.scrollIntoView === 'function') {
+      tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    } else {
+      const targetLeft = tab.offsetLeft - (navTabs.clientWidth - tab.offsetWidth) / 2;
+      navTabs.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    }
+
+    setTimeout(updateArrows, 250);
+  }
+
   navTabs.addEventListener('scroll', updateArrows);
   window.addEventListener('resize', updateArrows);
   setTimeout(updateArrows, 300);
+  setTimeout(() => centerActiveMenuTab(document.querySelector('.nav-tab.active')), 350);
 
   function showSection(id) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    event.target.classList.add('active');
+    const clickEvent = typeof event !== 'undefined' ? event : null;
+    const activeTab = clickEvent && clickEvent.target
+      ? clickEvent.target
+      : Array.from(document.querySelectorAll('.nav-tab')).find(tab => {
+        const onclick = tab.getAttribute('onclick') || '';
+        return onclick.includes("'" + id + "'");
+      });
+    if (activeTab) {
+      activeTab.classList.add('active');
+      centerActiveMenuTab(activeTab);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -6437,10 +6461,14 @@
     const targetSection = document.getElementById(sectionId);
     if (targetSection) targetSection.classList.add('active');
 
+    let activeTab = null;
     document.querySelectorAll('.nav-tab').forEach(tab => {
       const onclick = tab.getAttribute('onclick') || '';
-      tab.classList.toggle('active', onclick.includes("'" + sectionId + "'"));
+      const isActive = onclick.includes("'" + sectionId + "'");
+      tab.classList.toggle('active', isActive);
+      if (isActive) activeTab = tab;
     });
+    centerActiveMenuTab(activeTab);
 
     if (!panelId) return;
 
