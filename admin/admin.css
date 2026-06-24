@@ -1730,6 +1730,12 @@ body.more-drawer-open {
     margin-bottom: 0.65rem;
   }
 
+  .product-search-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
   .product-filter-bar {
     align-items: flex-start;
   }
@@ -1746,12 +1752,16 @@ body.more-drawer-open {
   }
 
   .product-search-field {
+    display: flex;
+    flex-direction: column;
     flex: 0 1 auto;
     width: 100%;
     gap: 0.28rem;
+    min-height: 0;
   }
 
   .product-search-field input {
+    appearance: none;
     min-height: 46px;
     height: 46px;
     max-height: 56px;
