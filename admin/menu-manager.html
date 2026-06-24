@@ -121,132 +121,144 @@
         <p class="auth-status" data-auth-status role="status">Supabase config missing. Add project URL and publishable key before connecting.</p>
       </section>
 
-      <section class="draft-product-panel" data-draft-product-panel aria-labelledby="draft-product-title">
-        <div>
-          <p class="eyebrow">Draft Product</p>
-          <h2 id="draft-product-title">Create Draft Product</h2>
-          <p>Draft products are saved in Supabase only and do not appear on the customer menu yet.</p>
+      <section class="draft-product-panel admin-collapsible-panel" data-draft-product-panel aria-labelledby="draft-product-section-title">
+        <div class="admin-collapsible-head">
+          <div>
+            <p class="eyebrow">Products</p>
+            <h2 id="draft-product-section-title">Product Setup</h2>
+            <p>Create or edit products here. Published and available items appear on the customer menu.</p>
+          </div>
+          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="draft-product-content" data-label-collapsed="+ Add Product" data-label-expanded="- Add Product" aria-expanded="false" aria-controls="draft-product-content">+ Add Product</button>
         </div>
-        <form class="draft-product-form" data-draft-product-form novalidate>
-          <label class="admin-field" for="draft-product-name">
-            <span>Product name</span>
-            <input id="draft-product-name" name="name" type="text" autocomplete="off" required disabled>
-          </label>
-          <label class="admin-field" for="draft-product-category">
-            <span>Category</span>
-            <select id="draft-product-category" name="category_id" required disabled>
-              <option value="">Sign in to load categories</option>
-            </select>
-          </label>
-          <label class="admin-field" for="draft-product-image">
-            <span>Image path</span>
-            <input id="draft-product-image" name="image_url" type="text" autocomplete="off" disabled>
-          </label>
-          <label class="admin-field" for="draft-variant-group">
-            <span>Sold by</span>
-            <select id="draft-variant-group" name="variant_group" required disabled>
-              <option value="Each">Each</option>
-              <option value="Size">Size</option>
-              <option value="Pieces">Pieces</option>
-              <option value="Weight / Volume">Weight / Volume</option>
-              <option value="Pack / Box">Pack / Box</option>
-              <option value="Custom">Custom</option>
-            </select>
-          </label>
-          <label class="admin-field draft-field-wide" for="draft-custom-variant-group" data-custom-variant-field hidden>
-            <span>Custom sold by name</span>
-            <input id="draft-custom-variant-group" name="custom_variant_group" type="text" autocomplete="off" disabled>
-          </label>
-          <label class="admin-field draft-field-wide" for="draft-product-description">
-            <span>Description</span>
-            <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>
-          </label>
-          <label class="admin-field draft-field-wide" for="draft-product-notes">
-            <span>Internal notes</span>
-            <textarea id="draft-product-notes" name="notes" rows="3" disabled></textarea>
-          </label>
-          <div class="draft-checkbox-row draft-field-wide">
-            <label class="draft-checkbox">
-              <input type="checkbox" name="is_available" checked disabled>
-              <span>Available</span>
-            </label>
-            <label class="draft-checkbox">
-              <input type="checkbox" name="is_curv_pick" disabled>
-              <span>CURV Pick</span>
-            </label>
-            <label class="draft-checkbox">
-              <input type="checkbox" name="is_seasonal" disabled>
-              <span>Seasonal</span>
-            </label>
+        <div id="draft-product-content" class="admin-collapsible-content" data-collapsible-content hidden>
+          <div class="draft-product-intro">
+            <p class="eyebrow">Draft Product</p>
+            <h3 id="draft-product-title">Create Draft Product</h3>
+            <p>Draft products are saved in Supabase only and do not appear on the customer menu yet.</p>
           </div>
-
-          <section class="variant-builder draft-field-wide" aria-labelledby="variant-builder-title">
-            <div class="variant-builder-heading">
-              <div>
-                <p class="eyebrow">Variants</p>
-                <h3 id="variant-builder-title">Variant Rows</h3>
-              </div>
-              <button type="button" class="auth-button auth-button-secondary" data-add-variant disabled>Add Variant</button>
+          <form class="draft-product-form" data-draft-product-form novalidate>
+            <label class="admin-field" for="draft-product-name">
+              <span>Product name</span>
+              <input id="draft-product-name" name="name" type="text" autocomplete="off" required disabled>
+            </label>
+            <label class="admin-field" for="draft-product-category">
+              <span>Category</span>
+              <select id="draft-product-category" name="category_id" required disabled>
+                <option value="">Sign in to load categories</option>
+              </select>
+            </label>
+            <label class="admin-field" for="draft-product-image">
+              <span>Image path</span>
+              <input id="draft-product-image" name="image_url" type="text" autocomplete="off" disabled>
+            </label>
+            <label class="admin-field" for="draft-variant-group">
+              <span>Sold by</span>
+              <select id="draft-variant-group" name="variant_group" required disabled>
+                <option value="Each">Each</option>
+                <option value="Size">Size</option>
+                <option value="Pieces">Pieces</option>
+                <option value="Weight / Volume">Weight / Volume</option>
+                <option value="Pack / Box">Pack / Box</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </label>
+            <label class="admin-field draft-field-wide" for="draft-custom-variant-group" data-custom-variant-field hidden>
+              <span>Custom sold by name</span>
+              <input id="draft-custom-variant-group" name="custom_variant_group" type="text" autocomplete="off" disabled>
+            </label>
+            <label class="admin-field draft-field-wide" for="draft-product-description">
+              <span>Description</span>
+              <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>
+            </label>
+            <label class="admin-field draft-field-wide" for="draft-product-notes">
+              <span>Internal notes</span>
+              <textarea id="draft-product-notes" name="notes" rows="3" disabled></textarea>
+            </label>
+            <div class="draft-checkbox-row draft-field-wide">
+              <label class="draft-checkbox">
+                <input type="checkbox" name="is_available" checked disabled>
+                <span>Available</span>
+              </label>
+              <label class="draft-checkbox">
+                <input type="checkbox" name="is_curv_pick" disabled>
+                <span>CURV Pick</span>
+              </label>
+              <label class="draft-checkbox">
+                <input type="checkbox" name="is_seasonal" disabled>
+                <span>Seasonal</span>
+              </label>
             </div>
-            <div class="variant-list" data-variant-list>
-              <div class="variant-row" data-variant-row data-touched="false">
-                <label class="admin-field" for="draft-variant-label-1">
-                  <span>Variant label</span>
-                  <input id="draft-variant-label-1" type="text" value="Each" data-variant-label required disabled>
-                </label>
-                <label class="admin-field" for="draft-variant-price-1">
-                  <span>Price</span>
-                  <input id="draft-variant-price-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required disabled>
-                </label>
-                <label class="admin-field" for="draft-variant-cost-1">
-                  <span>Cost</span>
-                  <input id="draft-variant-cost-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-cost disabled>
-                </label>
-                <button type="button" class="variant-remove-button" data-remove-variant disabled>Remove</button>
-              </div>
-            </div>
-          </section>
 
-          <div class="draft-actions draft-field-wide">
-            <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
-            <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel Edit</button>
-          </div>
-        </form>
+            <section class="variant-builder draft-field-wide" aria-labelledby="variant-builder-title">
+              <div class="variant-builder-heading">
+                <div>
+                  <p class="eyebrow">Variants</p>
+                  <h3 id="variant-builder-title">Variant Rows</h3>
+                </div>
+                <button type="button" class="auth-button auth-button-secondary" data-add-variant disabled>Add Variant</button>
+              </div>
+              <div class="variant-list" data-variant-list>
+                <div class="variant-row" data-variant-row data-touched="false">
+                  <label class="admin-field" for="draft-variant-label-1">
+                    <span>Variant label</span>
+                    <input id="draft-variant-label-1" type="text" value="Each" data-variant-label required disabled>
+                  </label>
+                  <label class="admin-field" for="draft-variant-price-1">
+                    <span>Price</span>
+                    <input id="draft-variant-price-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required disabled>
+                  </label>
+                  <label class="admin-field" for="draft-variant-cost-1">
+                    <span>Cost</span>
+                    <input id="draft-variant-cost-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-cost disabled>
+                  </label>
+                  <button type="button" class="variant-remove-button" data-remove-variant disabled>Remove</button>
+                </div>
+              </div>
+            </section>
+
+            <div class="draft-actions draft-field-wide">
+              <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
+              <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel Edit</button>
+            </div>
+          </form>
+        </div>
       </section>
 
-      <section class="display-order-panel" data-display-order-panel aria-labelledby="display-order-title">
-        <div class="display-order-head">
+      <section class="display-order-panel admin-collapsible-panel" data-display-order-panel aria-labelledby="display-order-title">
+        <div class="display-order-head admin-collapsible-head">
           <div>
             <p class="eyebrow">Display Order</p>
             <h2 id="display-order-title">Sort Products</h2>
-            <p>Choose one category, drag products into order, then save the display order for that category.</p>
+            <p>Drag to rearrange products. Customer order updates after saving.</p>
           </div>
-          <span class="static-status">Owner only</span>
+          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="display-order-content" data-label-collapsed="Arrange Display Order &#9662;" data-label-expanded="Arrange Display Order &#9652;" aria-expanded="false" aria-controls="display-order-content">Arrange Display Order &#9662;</button>
         </div>
 
-        <div class="display-order-controls">
-          <label class="admin-field display-order-category-field" for="display-order-category">
-            <span>Category</span>
-            <select id="display-order-category" data-display-order-category disabled>
-              <option value="">Sign in to load categories</option>
-            </select>
-          </label>
-          <p class="display-order-copy">Only products in the selected category are updated. Save affects product sort order in Supabase.</p>
-        </div>
-
-        <p class="display-order-unsaved" data-display-order-unsaved hidden>Unsaved local changes</p>
-        <div class="display-order-list" data-display-order-list aria-live="polite">
-          <div class="display-order-empty">
-            <h3>Select a category</h3>
-            <p>Sortable products will appear here after owner sign-in.</p>
+        <div id="display-order-content" class="admin-collapsible-content" data-collapsible-content hidden>
+          <div class="display-order-controls">
+            <label class="admin-field display-order-category-field" for="display-order-category">
+              <span>Category</span>
+              <select id="display-order-category" data-display-order-category disabled>
+                <option value="">Sign in to load categories</option>
+              </select>
+            </label>
+            <p class="display-order-copy">Only products in the selected category are updated. Save affects product sort order in Supabase.</p>
           </div>
-        </div>
 
-        <div class="display-order-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-reset-display-order disabled>Reset Local Order</button>
-          <button type="button" class="auth-button" data-save-display-order disabled>Save Display Order</button>
+          <p class="display-order-unsaved" data-display-order-unsaved hidden>Unsaved local changes</p>
+          <div class="display-order-list" data-display-order-list aria-live="polite">
+            <div class="display-order-empty">
+              <h3>Select a category</h3>
+              <p>Sortable products will appear here after owner sign-in.</p>
+            </div>
+          </div>
+
+          <div class="display-order-actions">
+            <button type="button" class="auth-button auth-button-secondary" data-reset-display-order disabled>Restore Saved Order</button>
+            <button type="button" class="auth-button" data-save-display-order disabled>Save Display Order</button>
+          </div>
+          <p class="display-order-status" data-display-order-status role="status">Choose a category, reorder products, then save.</p>
         </div>
-        <p class="display-order-status" data-display-order-status role="status">Choose a category, reorder products, then save.</p>
       </section>
 
       <section class="menu-manager-shell" aria-label="Static Menu Manager shell">

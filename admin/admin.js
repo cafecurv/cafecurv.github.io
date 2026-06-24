@@ -103,6 +103,7 @@
   const productSearchBar = document.querySelector('[data-product-search-bar]');
   const productSearchInput = document.querySelector('[data-product-search]');
   const clearProductSearchButton = document.querySelector('[data-clear-product-search]');
+  const collapsibleToggles = Array.from(document.querySelectorAll('[data-collapsible-toggle]'));
   const displayOrderCategorySelect = document.querySelector('[data-display-order-category]');
   const displayOrderList = document.querySelector('[data-display-order-list]');
   const displayOrderUnsaved = document.querySelector('[data-display-order-unsaved]');
@@ -144,6 +145,24 @@
     if (signOutButton) signOutButton.disabled = !isSignedIn;
   };
 
+  const setCollapsibleExpanded = (toggle, shouldExpand) => {
+    if (!toggle) return;
+    const targetId = toggle.dataset.collapsibleTarget;
+    const content = targetId ? document.getElementById(targetId) : null;
+    if (!content) return;
+
+    toggle.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+    toggle.textContent = shouldExpand
+      ? (toggle.dataset.labelExpanded || toggle.textContent)
+      : (toggle.dataset.labelCollapsed || toggle.textContent);
+    content.hidden = !shouldExpand;
+  };
+
+  const openCollapsibleById = (targetId) => {
+    const toggle = collapsibleToggles.find((item) => item.dataset.collapsibleTarget === targetId);
+    if (toggle) setCollapsibleExpanded(toggle, true);
+  };
+
   const setCreateMode = () => {
     editingProductId = null;
     if (draftProductTitle) draftProductTitle.textContent = 'Create Draft Product';
@@ -156,6 +175,7 @@
 
   const setEditMode = (productId) => {
     editingProductId = productId;
+    openCollapsibleById('draft-product-content');
     if (draftProductTitle) draftProductTitle.textContent = 'Edit Draft Product';
     if (createDraftButton) createDraftButton.textContent = 'Save Draft Product';
     if (cancelEditButton) {
@@ -371,6 +391,16 @@
     displayOrderList.appendChild(empty);
   };
 
+  const moveSortableProduct = (index, direction) => {
+    const nextIndex = index + direction;
+    if (displayOrderSaving || nextIndex < 0 || nextIndex >= sortableProducts.length) return;
+
+    const [moved] = sortableProducts.splice(index, 1);
+    sortableProducts.splice(nextIndex, 0, moved);
+    setDisplayOrderDirty(true);
+    renderDisplayOrderList();
+  };
+
   const renderDisplayOrderList = () => {
     if (!displayOrderList) return;
     displayOrderList.innerHTML = '';
@@ -410,7 +440,29 @@
       badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
       badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
 
-      row.append(handle, copy, badges);
+      const moveControls = document.createElement('div');
+      moveControls.className = 'display-order-move-controls';
+      const moveUpButton = document.createElement('button');
+      moveUpButton.type = 'button';
+      moveUpButton.className = 'display-order-move-button';
+      moveUpButton.innerHTML = '&uarr;';
+      moveUpButton.disabled = index === 0;
+      moveUpButton.setAttribute('aria-label', 'Move ' + (product.name || 'product') + ' up');
+      moveUpButton.title = 'Move product up';
+      moveUpButton.addEventListener('click', () => moveSortableProduct(index, -1));
+
+      const moveDownButton = document.createElement('button');
+      moveDownButton.type = 'button';
+      moveDownButton.className = 'display-order-move-button';
+      moveDownButton.innerHTML = '&darr;';
+      moveDownButton.disabled = index === sortableProducts.length - 1;
+      moveDownButton.setAttribute('aria-label', 'Move ' + (product.name || 'product') + ' down');
+      moveDownButton.title = 'Move product down';
+      moveDownButton.addEventListener('click', () => moveSortableProduct(index, 1));
+
+      moveControls.append(moveUpButton, moveDownButton);
+
+      row.append(handle, copy, badges, moveControls);
 
       row.addEventListener('dragstart', (event) => {
         draggedSortProductId = product.id;
@@ -1309,6 +1361,14 @@
       productSearchInput.focus();
     });
   }
+
+  collapsibleToggles.forEach((toggle) => {
+    setCollapsibleExpanded(toggle, toggle.getAttribute('aria-expanded') === 'true');
+    toggle.addEventListener('click', () => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      setCollapsibleExpanded(toggle, !isExpanded);
+    });
+  });
 
   if (displayOrderCategorySelect) {
     displayOrderCategorySelect.addEventListener('change', handleDisplayOrderCategoryChange);

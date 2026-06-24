@@ -1490,22 +1490,76 @@ body.more-drawer-open {
   text-transform: uppercase;
 }
 
-.display-order-panel {
+.admin-collapsible-panel {
   border: 1px solid rgba(189, 196, 212, 0.16);
   border-radius: 8px;
-  background: rgba(20, 24, 36, 0.3);
-  padding: 1rem;
+  background: linear-gradient(135deg, rgba(20, 24, 36, 0.38), rgba(36, 44, 66, 0.24));
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+  padding: 1.05rem;
   display: grid;
   gap: 1rem;
 }
 
-.display-order-head,
+.admin-collapsible-head,
 .display-order-controls,
 .display-order-actions {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.admin-collapsible-head {
+  align-items: center;
+}
+
+.admin-collapsible-head h2 {
+  margin-bottom: 0.35rem;
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.admin-collapsible-head p {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.admin-collapsible-toggle {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(200, 184, 154, 0.34);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.1);
+  color: var(--cream);
+  padding: 0.62rem 0.82rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.admin-collapsible-toggle:hover,
+.admin-collapsible-toggle:focus-visible {
+  border-color: rgba(200, 184, 154, 0.62);
+  background: rgba(200, 184, 154, 0.16);
+}
+
+.admin-collapsible-content {
+  border-top: 1px solid rgba(189, 196, 212, 0.12);
+  padding-top: 1rem;
+}
+
+.admin-collapsible-content[hidden] {
+  display: none;
 }
 
 .display-order-head h2 {
@@ -1573,7 +1627,7 @@ body.more-drawer-open {
 
 .display-order-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.75rem;
   cursor: grab;
@@ -1618,6 +1672,41 @@ body.more-drawer-open {
   gap: 0.35rem;
 }
 
+.display-order-move-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.display-order-move-button {
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid rgba(200, 184, 154, 0.28);
+  border-radius: 7px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
+  padding: 0.3rem 0.46rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.display-order-move-button:hover,
+.display-order-move-button:focus-visible {
+  border-color: rgba(200, 184, 154, 0.58);
+  background: rgba(200, 184, 154, 0.14);
+}
+
+.display-order-move-button:disabled {
+  border-color: rgba(189, 196, 212, 0.12);
+  background: rgba(36, 44, 66, 0.22);
+  color: rgba(189, 196, 212, 0.42);
+  cursor: not-allowed;
+}
+
 @media (max-width: 600px) {
   .product-preview-heading,
   .product-card-top,
@@ -1637,6 +1726,7 @@ body.more-drawer-open {
   }
 
   .display-order-head,
+  .admin-collapsible-head,
   .display-order-controls,
   .display-order-actions {
     flex-direction: column;
@@ -1647,9 +1737,15 @@ body.more-drawer-open {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .display-order-badges {
+  .display-order-badges,
+  .display-order-move-controls {
     grid-column: 1 / -1;
     justify-content: flex-start;
+  }
+
+  .display-order-move-button {
+    flex: 1 1 0;
+    min-height: 42px;
   }
 
   .product-preview-heading p {
@@ -1659,16 +1755,14 @@ body.more-drawer-open {
 }
 .draft-product-panel {
   margin-bottom: 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  padding: 1.25rem 1.35rem;
-  display: grid;
-  gap: 1.15rem;
 }
 
-.draft-product-panel h2 {
+.draft-product-intro {
+  margin-bottom: 1rem;
+}
+
+.draft-product-panel h2,
+.draft-product-intro h3 {
   margin-bottom: 0.65rem;
   font-family: 'Jost', sans-serif;
   font-size: 0.86rem;
