@@ -216,6 +216,61 @@
               </div>
             </section>
 
+            <section class="product-option-attachments draft-field-wide" aria-labelledby="product-options-title">
+              <div class="product-option-heading">
+                <div>
+                  <p class="eyebrow">Options</p>
+                  <h3 id="product-options-title">Option Groups</h3>
+                </div>
+                <button type="button" class="admin-collapsible-toggle product-option-toggle" data-collapsible-toggle data-collapsible-target="product-options-content" data-label-collapsed="Option Groups &#9662;" data-label-expanded="Option Groups &#9652;" aria-expanded="true" aria-controls="product-options-content">Option Groups &#9652;</button>
+              </div>
+              <div id="product-options-content" class="product-option-content" data-collapsible-content>
+                <div class="product-option-toolbar">
+                  <span class="static-status">Attach only</span>
+                  <button type="button" class="auth-button auth-button-secondary product-option-attach-button" data-show-attach-option-group hidden disabled>+ Attach Group</button>
+                </div>
+                <div class="product-option-list" data-product-option-attachments aria-live="polite">
+                  <div class="product-option-empty">
+                    <h4>Save the product before attaching option groups.</h4>
+                    <p>Existing product attachments will appear here when editing a product.</p>
+                  </div>
+                </div>
+                <div class="product-option-attach-form" data-product-option-attach-form hidden>
+                  <label class="admin-field" for="product-option-group-select">
+                    <span>Option Group</span>
+                    <select id="product-option-group-select" name="option_group_id" required disabled>
+                      <option value="">Select an active option group</option>
+                    </select>
+                  </label>
+                  <label class="draft-checkbox product-option-required-toggle">
+                    <input type="checkbox" name="is_required" disabled>
+                    <span>Required</span>
+                  </label>
+                  <label class="admin-field" for="product-option-min-selections">
+                    <span>Min Selections</span>
+                    <input id="product-option-min-selections" name="min_selections" type="number" min="0" step="1" inputmode="numeric" value="0" disabled>
+                  </label>
+                  <label class="admin-field" for="product-option-max-selections">
+                    <span>Max Selections</span>
+                    <input id="product-option-max-selections" name="max_selections" type="number" min="0" step="1" inputmode="numeric" placeholder="Unlimited" disabled>
+                  </label>
+                  <label class="admin-field" for="product-option-sort-order">
+                    <span>Sort Order</span>
+                    <input id="product-option-sort-order" name="sort_order" type="number" step="1" inputmode="numeric" value="0" disabled>
+                  </label>
+                  <label class="draft-checkbox product-option-active-toggle">
+                    <input type="checkbox" name="is_active" checked disabled>
+                    <span>Active</span>
+                  </label>
+                  <div class="product-option-attach-actions">
+                    <button type="button" class="auth-button" data-save-product-option-attachment disabled>Save Attachment</button>
+                    <button type="button" class="auth-button auth-button-secondary" data-cancel-product-option-attachment disabled>Cancel</button>
+                  </div>
+                </div>
+                <p class="product-option-status" data-product-option-status role="status">Save the product before attaching option groups.</p>
+              </div>
+            </section>
+
             <div class="draft-actions draft-field-wide">
               <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
               <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel Edit</button>
@@ -258,6 +313,120 @@
             <button type="button" class="auth-button" data-save-display-order disabled>Save Display Order</button>
           </div>
           <p class="display-order-status" data-display-order-status role="status">Choose a category, reorder products, then save.</p>
+        </div>
+      </section>
+
+      <section class="option-groups-panel admin-collapsible-panel" data-option-groups-panel aria-labelledby="option-groups-title">
+        <div class="admin-collapsible-head">
+          <div>
+            <p class="eyebrow">Option Groups</p>
+            <h2 id="option-groups-title">Reusable Options</h2>
+            <p>Reusable option groups only. Product attachment comes later.</p>
+          </div>
+          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="Option Groups &#9662;" data-label-expanded="Option Groups &#9652;" aria-expanded="false" aria-controls="option-groups-content">Option Groups &#9662;</button>
+        </div>
+
+        <div id="option-groups-content" class="admin-collapsible-content" data-collapsible-content hidden>
+          <div class="option-manager-grid">
+            <section class="option-manager-card" aria-labelledby="option-group-form-title">
+              <div class="panel-heading-row">
+                <p class="eyebrow">Setup</p>
+                <span class="static-status">Groups only</span>
+              </div>
+              <div class="option-form-heading">
+                <h3 id="option-group-form-title" data-option-group-form-title>Create Option Group</h3>
+                <p>Choices and product attachment come later.</p>
+              </div>
+              <form class="option-group-form" data-option-group-form novalidate>
+                <label class="admin-field" for="option-group-name">
+                  <span>Name</span>
+                  <input id="option-group-name" name="name" type="text" autocomplete="off" required disabled>
+                </label>
+                <label class="admin-field" for="option-group-key">
+                  <span>Group Key</span>
+                  <input id="option-group-key" name="group_key" type="text" autocomplete="off" placeholder="extra_shot" required disabled>
+                </label>
+                <label class="admin-field" for="option-group-selection-type">
+                  <span>Selection Type</span>
+                  <select id="option-group-selection-type" name="selection_type" required disabled>
+                    <option value="single">single</option>
+                    <option value="multi">multi</option>
+                  </select>
+                </label>
+                <label class="admin-field" for="option-group-sort-order">
+                  <span>Sort Order</span>
+                  <input id="option-group-sort-order" name="sort_order" type="number" step="1" inputmode="numeric" value="0" disabled>
+                </label>
+                <label class="draft-checkbox option-active-toggle">
+                  <input type="checkbox" name="is_active" checked disabled>
+                  <span>Active</span>
+                </label>
+                <div class="option-form-actions">
+                  <button type="submit" class="auth-button" data-save-option-group disabled>Save Option Group</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-group disabled>Cancel Edit / Reset Form</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="option-manager-card" aria-labelledby="option-group-list-title">
+              <div class="panel-heading-row">
+                <p class="eyebrow">Groups</p>
+                <span class="static-status" data-option-group-status>Locked</span>
+              </div>
+              <h3 id="option-group-list-title">Option Groups</h3>
+              <div class="option-group-list" data-option-group-list aria-live="polite">
+                <div class="option-empty-state">
+                  <h4>Owner sign-in required</h4>
+                  <p>Reusable option groups will appear here after owner sign-in.</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="option-manager-card" aria-labelledby="option-group-detail-title">
+              <div class="panel-heading-row">
+                <p class="eyebrow">Choices</p>
+                <span class="static-status">Selected group</span>
+              </div>
+              <div class="option-group-detail" data-option-group-detail>
+                <div class="option-empty-state">
+                  <h3 id="option-group-detail-title">Select a group</h3>
+                  <p>Select a group to see its choices.</p>
+                </div>
+              </div>
+              <div class="option-form-heading">
+                <h3 data-option-choice-form-title>Create Option Choice</h3>
+                <p>Choices belong to the selected option group.</p>
+              </div>
+              <form class="option-choice-form" data-option-choice-form novalidate>
+                <label class="admin-field" for="option-choice-label">
+                  <span>Label</span>
+                  <input id="option-choice-label" name="label" type="text" autocomplete="off" required disabled>
+                </label>
+                <label class="admin-field" for="option-choice-value">
+                  <span>Value</span>
+                  <input id="option-choice-value" name="value" type="text" autocomplete="off" placeholder="auto from label" disabled>
+                </label>
+                <label class="admin-field" for="option-choice-price-delta">
+                  <span>Price Delta</span>
+                  <input id="option-choice-price-delta" name="price_delta" type="number" min="0" step="1" inputmode="decimal" value="0" disabled>
+                </label>
+                <label class="admin-field" for="option-choice-sort-order">
+                  <span>Sort Order</span>
+                  <input id="option-choice-sort-order" name="sort_order" type="number" step="1" inputmode="numeric" value="0" disabled>
+                </label>
+                <label class="draft-checkbox option-active-toggle">
+                  <input type="checkbox" name="is_active" checked disabled>
+                  <span>Active</span>
+                </label>
+                <div class="option-form-actions">
+                  <button type="submit" class="auth-button" data-save-option-choice disabled>Save Choice</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-choice disabled>Cancel Edit / Reset Choice Form</button>
+                </div>
+              </form>
+              <div class="option-choice-list" data-option-choice-list aria-live="polite"></div>
+            </section>
+          </div>
+          <p class="option-manager-status" data-option-manager-status role="status">Sign in to load reusable option groups.</p>
         </div>
       </section>
 

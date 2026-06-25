@@ -1715,6 +1715,260 @@ body.more-drawer-open {
   cursor: not-allowed;
 }
 
+.option-groups-panel {
+  margin-bottom: 1rem;
+}
+
+.option-manager-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.option-manager-card {
+  border: 1px solid rgba(189, 196, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.option-manager-card h3,
+.option-empty-state h3,
+.option-empty-state h4,
+.option-detail-header h3,
+.option-choice-heading {
+  margin: 0;
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.option-form-heading {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.option-form-heading p {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.option-group-form,
+.option-choice-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.option-group-form .admin-field:nth-child(1),
+.option-group-form .admin-field:nth-child(2),
+.option-choice-form .admin-field:nth-child(1),
+.option-choice-form .admin-field:nth-child(2) {
+  grid-column: 1 / -1;
+}
+
+.option-active-toggle {
+  align-self: end;
+  min-height: 46px;
+}
+
+.option-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.option-group-list,
+.option-choice-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.option-group-item {
+  width: 100%;
+  border: 1px solid rgba(189, 196, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.3);
+  color: var(--slate);
+  padding: 0.78rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: start;
+  text-align: left;
+  font-family: 'Jost', sans-serif;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.option-group-item:hover,
+.option-group-item.is-selected {
+  border-color: rgba(200, 184, 154, 0.48);
+  background: rgba(200, 184, 154, 0.1);
+}
+
+.option-group-select {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.option-group-select:focus-visible,
+.option-mini-button:focus-visible {
+  outline: 2px solid rgba(200, 184, 154, 0.72);
+  outline-offset: 3px;
+}
+
+.option-group-actions,
+.option-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.option-mini-button {
+  border: 1px solid rgba(200, 184, 154, 0.26);
+  border-radius: 999px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
+  padding: 0.45rem 0.68rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.option-mini-button:hover {
+  border-color: rgba(200, 184, 154, 0.54);
+  background: rgba(200, 184, 154, 0.14);
+}
+
+.option-mini-button.is-muted {
+  color: rgba(189, 196, 212, 0.78);
+  background: rgba(36, 44, 66, 0.22);
+}
+
+.option-group-name {
+  color: var(--cream);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.option-group-meta,
+.option-choice-meta,
+.option-empty-state p,
+.option-manager-status {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.option-group-meta,
+.option-choice-meta {
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.option-status-pill {
+  justify-self: start;
+  border: 1px solid rgba(189, 196, 212, 0.16);
+  border-radius: 999px;
+  padding: 0.24rem 0.52rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.option-status-pill.is-active {
+  border-color: rgba(200, 184, 154, 0.42);
+  color: var(--accent);
+  background: rgba(200, 184, 154, 0.09);
+}
+
+.option-status-pill.is-inactive {
+  color: rgba(189, 196, 212, 0.58);
+  background: rgba(36, 44, 66, 0.24);
+}
+
+.option-status-pill.is-type {
+  border-color: rgba(189, 196, 212, 0.2);
+  color: var(--slate);
+  background: rgba(20, 24, 36, 0.28);
+}
+
+.option-empty-state,
+.option-choice-card {
+  border: 1px solid rgba(189, 196, 212, 0.12);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.3);
+  padding: 0.85rem;
+}
+
+.option-detail-header,
+.option-choice-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.option-detail-list {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.option-detail-list dt {
+  color: var(--accent);
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.option-detail-list dd {
+  margin: 0 0 0.35rem;
+  color: var(--cream);
+  font-size: 0.82rem;
+}
+
+.option-choice-card {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.option-choice-actions {
+  justify-content: flex-start;
+}
+
+.option-choice-top h5 {
+  margin: 0;
+  color: var(--cream);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
 @media (max-width: 600px) {
   .product-preview-heading,
   .product-card-top,
@@ -1818,6 +2072,51 @@ body.more-drawer-open {
   .display-order-move-button {
     min-height: 42px;
     width: 100%;
+  }
+
+  .option-manager-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .option-group-form,
+  .option-choice-form {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .option-group-form .admin-field:nth-child(1),
+  .option-group-form .admin-field:nth-child(2),
+  .option-choice-form .admin-field:nth-child(1),
+  .option-choice-form .admin-field:nth-child(2),
+  .option-form-actions {
+    grid-column: auto;
+  }
+
+  .option-form-actions {
+    flex-direction: column;
+  }
+
+  .option-form-actions .auth-button {
+    width: 100%;
+  }
+
+  .option-group-item {
+    grid-template-columns: 1fr;
+  }
+
+  .option-group-actions,
+  .option-choice-actions {
+    justify-content: stretch;
+  }
+
+  .option-mini-button {
+    flex: 1 1 120px;
+    min-height: 40px;
+  }
+
+  .option-detail-header,
+  .option-choice-top {
+    flex-direction: column;
   }
 
   .product-preview-heading p {
@@ -1979,6 +2278,209 @@ body.more-drawer-open {
   cursor: not-allowed;
 }
 
+.product-option-attachments {
+  border: 1px solid rgba(189, 196, 212, 0.16);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.product-option-heading,
+.product-option-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.product-option-toggle {
+  min-height: 38px;
+}
+
+.product-option-content {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.product-option-content[hidden] {
+  display: none;
+}
+
+.product-option-toolbar,
+.product-option-attach-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.product-option-attach-button {
+  min-height: 38px;
+  padding: 0.55rem 0.85rem;
+}
+
+.product-option-attach-form {
+  border: 1px solid rgba(189, 196, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.26);
+  padding: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.product-option-attach-form[hidden] {
+  display: none;
+}
+
+.product-option-attach-form .admin-field:first-child,
+.product-option-attach-actions {
+  grid-column: 1 / -1;
+}
+
+.product-option-heading h3,
+.product-option-empty h4,
+.product-option-card h4 {
+  margin: 0;
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.product-option-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.product-option-empty,
+.product-option-card {
+  border: 1px solid rgba(189, 196, 212, 0.12);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.3);
+  padding: 0.85rem;
+}
+
+.product-option-empty p,
+.product-option-key,
+.product-option-warning {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.product-option-card {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.product-option-key {
+  margin-top: 0.22rem;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.product-option-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.product-option-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.product-option-meta dt {
+  color: var(--accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.product-option-meta dd {
+  margin: 0.16rem 0 0;
+  color: var(--cream);
+  font-size: 0.78rem;
+}
+
+.product-option-warning {
+  border: 1px solid rgba(200, 184, 154, 0.26);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--accent);
+  padding: 0.55rem 0.65rem;
+}
+
+.product-option-default-editor {
+  border-top: 1px solid rgba(189, 196, 212, 0.12);
+  padding-top: 0.72rem;
+  display: grid;
+  gap: 0.58rem;
+}
+
+.product-option-default-editor h5 {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.product-option-default-copy {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.72rem;
+}
+
+.product-option-default-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.product-option-default-check {
+  min-height: 38px;
+  border: 1px solid rgba(189, 196, 212, 0.14);
+  border-radius: 999px;
+  background: rgba(20, 24, 36, 0.28);
+  color: var(--cream);
+  padding: 0.45rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+}
+
+.product-option-default-select {
+  max-width: 360px;
+}
+
+.product-option-default-save {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0.55rem 0.85rem;
+}
+
+.product-option-status {
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
 .product-sold-by {
   margin: 0;
   color: var(--accent);
@@ -2014,6 +2516,50 @@ body.more-drawer-open {
   }
 
   .variant-row {
+    grid-template-columns: 1fr;
+  }
+
+  .product-option-heading,
+  .product-option-top {
+    flex-direction: column;
+  }
+
+  .product-option-badges {
+    justify-content: flex-start;
+  }
+
+  .product-option-meta {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .product-option-toolbar,
+  .product-option-attach-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .product-option-attach-button,
+  .product-option-attach-actions .auth-button {
+    width: 100%;
+  }
+
+  .product-option-attach-form {
+    grid-template-columns: 1fr;
+  }
+
+  .product-option-attach-form .admin-field:first-child,
+  .product-option-attach-actions {
+    grid-column: auto;
+  }
+
+  .product-option-default-select,
+  .product-option-default-save {
+    max-width: none;
+    width: 100%;
+  }
+
+  .product-option-default-checkboxes {
+    display: grid;
     grid-template-columns: 1fr;
   }
 }

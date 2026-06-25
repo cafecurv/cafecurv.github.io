@@ -98,6 +98,13 @@
   const createDraftButton = document.querySelector('[data-create-draft]');
   const cancelEditButton = document.querySelector('[data-cancel-edit]');
   const draftProductTitle = document.getElementById('draft-product-title');
+  const productOptionAttachmentList = document.querySelector('[data-product-option-attachments]');
+  const showAttachOptionGroupButton = document.querySelector('[data-show-attach-option-group]');
+  const productOptionAttachForm = document.querySelector('[data-product-option-attach-form]');
+  const productOptionGroupSelect = document.getElementById('product-option-group-select');
+  const saveProductOptionAttachmentButton = document.querySelector('[data-save-product-option-attachment]');
+  const cancelProductOptionAttachmentButton = document.querySelector('[data-cancel-product-option-attachment]');
+  const productOptionStatus = document.querySelector('[data-product-option-status]');
   const productFilterBar = document.querySelector('[data-product-filter-bar]');
   const productFilterList = document.querySelector('[data-product-filter-list]');
   const productSearchBar = document.querySelector('[data-product-search-bar]');
@@ -110,12 +117,40 @@
   const displayOrderStatus = document.querySelector('[data-display-order-status]');
   const resetDisplayOrderButton = document.querySelector('[data-reset-display-order]');
   const saveDisplayOrderButton = document.querySelector('[data-save-display-order]');
+  const optionGroupStatus = document.querySelector('[data-option-group-status]');
+  const optionGroupList = document.querySelector('[data-option-group-list]');
+  const optionGroupDetail = document.querySelector('[data-option-group-detail]');
+  const optionChoiceList = document.querySelector('[data-option-choice-list]');
+  const optionManagerStatus = document.querySelector('[data-option-manager-status]');
+  const optionGroupForm = document.querySelector('[data-option-group-form]');
+  const optionGroupFormTitle = document.querySelector('[data-option-group-form-title]');
+  const saveOptionGroupButton = document.querySelector('[data-save-option-group]');
+  const resetOptionGroupButton = document.querySelector('[data-reset-option-group]');
+  const optionChoiceForm = document.querySelector('[data-option-choice-form]');
+  const optionChoiceFormTitle = document.querySelector('[data-option-choice-form-title]');
+  const saveOptionChoiceButton = document.querySelector('[data-save-option-choice]');
+  const resetOptionChoiceButton = document.querySelector('[data-reset-option-choice]');
   const staticCategoryMarkup = categoryList ? categoryList.innerHTML : '';
   let latestCategories = [];
   let latestProducts = [];
+  let optionGroupsList = [];
+  let optionChoicesList = [];
   let selectedCategoryFilter = 'all';
   let productSearchQuery = '';
   let editingProductId = null;
+  let productOptionAttachments = [];
+  let availableProductOptionGroups = [];
+  let activeProductOptionGroupCount = 0;
+  let productOptionAttachmentSaving = false;
+  let productOptionDefaultSaving = false;
+  let selectedOptionGroupId = '';
+  let editingOptionGroupId = null;
+  let editingOptionChoiceId = null;
+  let isOwnerSignedIn = false;
+  let optionGroupsLoaded = false;
+  let optionGroupsLoading = false;
+  let optionGroupSaving = false;
+  let optionChoiceSaving = false;
   let variantRowCount = 1;
   let selectedDisplayOrderCategory = '';
   let displayOrderOriginalProducts = [];
@@ -134,6 +169,10 @@
     if (authStatus) authStatus.textContent = message;
   };
 
+  const setOptionManagerStatus = (message) => {
+    if (optionManagerStatus) optionManagerStatus.textContent = message;
+  };
+
   const setFormDisabled = (isDisabled) => {
     if (emailInput) emailInput.disabled = isDisabled;
     if (passwordInput) passwordInput.disabled = isDisabled;
@@ -141,6 +180,7 @@
   };
 
   const setSignedInState = (isSignedIn) => {
+    isOwnerSignedIn = isSignedIn;
     if (signInButton) signInButton.disabled = isSignedIn;
     if (signOutButton) signOutButton.disabled = !isSignedIn;
   };
@@ -296,6 +336,467 @@
     updateRemoveButtons();
   };
 
+  const renderProductOptionEmpty = (title, message) => {
+    if (!productOptionAttachmentList) return;
+    productOptionAttachmentList.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'product-option-empty';
+
+    const heading = document.createElement('h4');
+    heading.textContent = title;
+    const copy = document.createElement('p');
+    copy.textContent = message;
+
+    empty.append(heading, copy);
+    productOptionAttachmentList.appendChild(empty);
+  };
+
+  const setProductOptionStatus = (message) => {
+    if (productOptionStatus) productOptionStatus.textContent = message;
+  };
+
+  const setProductOptionAttachFormDisabled = (isDisabled) => {
+    if (!productOptionAttachForm) return;
+    const shouldDisable = isDisabled || productOptionAttachmentSaving;
+    Array.from(productOptionAttachForm.querySelectorAll('input, select, button')).forEach((field) => {
+      field.disabled = shouldDisable;
+    });
+    if (saveProductOptionAttachmentButton) saveProductOptionAttachmentButton.disabled = shouldDisable;
+    if (cancelProductOptionAttachmentButton) cancelProductOptionAttachmentButton.disabled = shouldDisable;
+  };
+
+  const getNextProductOptionSortOrder = () => {
+    if (!productOptionAttachments.length) return 0;
+    return Math.max(...productOptionAttachments.map((item) => Number(item.sort_order || 0))) + 1;
+  };
+
+  const resetProductOptionAttachForm = () => {
+    if (productOptionAttachForm) {
+      productOptionAttachForm.hidden = true;
+      if (productOptionGroupSelect) productOptionGroupSelect.value = '';
+      const minInput = productOptionAttachForm.querySelector('[name="min_selections"]');
+      const maxInput = productOptionAttachForm.querySelector('[name="max_selections"]');
+      const sortInput = productOptionAttachForm.querySelector('[name="sort_order"]');
+      const activeInput = productOptionAttachForm.querySelector('[name="is_active"]');
+      const requiredInput = productOptionAttachForm.querySelector('[name="is_required"]');
+      if (minInput) minInput.value = '0';
+      if (maxInput) maxInput.value = '';
+      if (sortInput) sortInput.value = String(getNextProductOptionSortOrder());
+      if (activeInput) activeInput.checked = true;
+      if (requiredInput) requiredInput.checked = false;
+    }
+    setProductOptionAttachFormDisabled(true);
+  };
+
+  const updateProductOptionAttachAvailability = () => {
+    const isEditing = Boolean(editingProductId);
+    if (showAttachOptionGroupButton) {
+      showAttachOptionGroupButton.hidden = !isEditing;
+      showAttachOptionGroupButton.disabled = !isEditing || productOptionAttachmentSaving;
+    }
+    if (!isEditing) {
+      resetProductOptionAttachForm();
+      setProductOptionStatus('Save the product before attaching option groups.');
+    }
+  };
+
+  const renderProductOptionAttachments = (attachments = productOptionAttachments) => {
+    productOptionAttachments = attachments || [];
+    if (!productOptionAttachmentList) return;
+    productOptionAttachmentList.innerHTML = '';
+    updateProductOptionAttachAvailability();
+
+    if (!editingProductId) {
+      renderProductOptionEmpty('Save the product before attaching option groups.', 'Existing product attachments will appear here when editing a product.');
+      return;
+    }
+
+    if (!productOptionAttachments.length) {
+      renderProductOptionEmpty('No option groups attached yet.', 'Product attachment comes in the next step.');
+      return;
+    }
+
+    productOptionAttachments.forEach((attachment) => {
+      const group = attachment.group || {};
+      const card = document.createElement('article');
+      card.className = 'product-option-card';
+      card.dataset.optionGroupId = attachment.option_group_id || '';
+
+      const top = document.createElement('div');
+      top.className = 'product-option-top';
+      const titleBlock = document.createElement('div');
+      const name = document.createElement('h4');
+      name.textContent = group.name || 'Missing option group';
+      const key = document.createElement('p');
+      key.className = 'product-option-key';
+      key.textContent = group.group_key || 'missing_group_key';
+      titleBlock.append(name, key);
+
+      const badgeRow = document.createElement('div');
+      badgeRow.className = 'product-option-badges';
+      const typeBadge = document.createElement('span');
+      typeBadge.className = 'option-status-pill is-type';
+      typeBadge.textContent = String(group.selection_type || 'unknown').toUpperCase();
+      const requiredBadge = document.createElement('span');
+      requiredBadge.className = attachment.is_required ? 'option-status-pill is-active' : 'option-status-pill is-type';
+      requiredBadge.textContent = attachment.is_required ? 'REQUIRED' : 'OPTIONAL';
+      const activeBadge = document.createElement('span');
+      activeBadge.className = attachment.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
+      activeBadge.textContent = attachment.is_active ? 'ASSIGNMENT ACTIVE' : 'ASSIGNMENT INACTIVE';
+      badgeRow.append(typeBadge, requiredBadge, activeBadge);
+      top.append(titleBlock, badgeRow);
+
+      const meta = document.createElement('dl');
+      meta.className = 'product-option-meta';
+      const addMeta = (label, value) => {
+        const term = document.createElement('dt');
+        term.textContent = label;
+        const description = document.createElement('dd');
+        description.textContent = value;
+        meta.append(term, description);
+      };
+      addMeta('Min selections', String(attachment.min_selections ?? 0));
+      addMeta('Max selections', attachment.max_selections === null || attachment.max_selections === undefined ? 'Unlimited' : String(attachment.max_selections));
+      addMeta('Sort order', String(attachment.sort_order ?? 0));
+
+      const defaultText = attachment.defaults.length
+        ? attachment.defaults.map((item) => item.choice && item.choice.is_active ? item.choice.label : 'Default choice inactive or missing').join(', ')
+        : '-';
+      addMeta('Default', defaultText);
+
+      if (group.is_active === false || attachment.defaults.some((item) => !item.choice || !item.choice.is_active)) {
+        const warning = document.createElement('p');
+        warning.className = 'product-option-warning';
+        warning.textContent = group.is_active === false ? 'Option group inactive' : 'Default choice inactive or missing';
+        card.append(top, meta, warning);
+      } else {
+        card.append(top, meta);
+      }
+
+      const choices = attachment.choices || [];
+      const selectedChoiceIds = new Set(attachment.defaults
+        .filter((item) => item.choice && item.choice.is_active)
+        .map((item) => item.option_choice_id));
+      const defaultEditor = document.createElement('div');
+      defaultEditor.className = 'product-option-default-editor';
+
+      const editorTitle = document.createElement('h5');
+      editorTitle.textContent = group.selection_type === 'multi' ? 'Default choices' : 'Default choice';
+      defaultEditor.appendChild(editorTitle);
+
+      if (!choices.length) {
+        const empty = document.createElement('p');
+        empty.className = 'product-option-default-copy';
+        empty.textContent = 'No active choices available for this group.';
+        defaultEditor.appendChild(empty);
+      } else if (group.selection_type === 'multi') {
+        const list = document.createElement('div');
+        list.className = 'product-option-default-checkboxes';
+        choices.forEach((choice) => {
+          const label = document.createElement('label');
+          label.className = 'product-option-default-check';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.value = choice.id;
+          input.dataset.defaultChoice = '';
+          input.checked = selectedChoiceIds.has(choice.id);
+          const text = document.createElement('span');
+          text.textContent = choice.label || 'Untitled choice';
+          label.append(input, text);
+          list.appendChild(label);
+        });
+        defaultEditor.appendChild(list);
+      } else {
+        const label = document.createElement('label');
+        label.className = 'admin-field product-option-default-select';
+        const labelText = document.createElement('span');
+        labelText.textContent = 'Default';
+        const select = document.createElement('select');
+        select.dataset.defaultChoice = '';
+        const none = document.createElement('option');
+        none.value = '';
+        none.textContent = 'No default';
+        select.appendChild(none);
+        choices.forEach((choice) => {
+          const option = document.createElement('option');
+          option.value = choice.id;
+          option.textContent = choice.label || 'Untitled choice';
+          select.appendChild(option);
+        });
+        select.value = selectedChoiceIds.size ? Array.from(selectedChoiceIds)[0] : '';
+        label.append(labelText, select);
+        defaultEditor.appendChild(label);
+      }
+
+      const saveDefaultsButton = document.createElement('button');
+      saveDefaultsButton.type = 'button';
+      saveDefaultsButton.className = 'auth-button auth-button-secondary product-option-default-save';
+      saveDefaultsButton.textContent = group.selection_type === 'multi' ? 'Save Defaults' : 'Save Default';
+      saveDefaultsButton.disabled = !choices.length;
+      saveDefaultsButton.addEventListener('click', () => saveProductOptionDefaults(attachment.option_group_id));
+      defaultEditor.appendChild(saveDefaultsButton);
+      card.appendChild(defaultEditor);
+
+      productOptionAttachmentList.appendChild(card);
+    });
+  };
+
+  const resetProductOptionAttachments = () => {
+    productOptionAttachments = [];
+    availableProductOptionGroups = [];
+    activeProductOptionGroupCount = 0;
+    resetProductOptionAttachForm();
+    renderProductOptionAttachments([]);
+  };
+
+  const populateProductOptionGroupSelect = (groups) => {
+    if (!productOptionGroupSelect) return;
+    productOptionGroupSelect.innerHTML = '<option value="">Select an active option group</option>';
+    groups.forEach((group) => {
+      const option = document.createElement('option');
+      option.value = group.id;
+      option.textContent = group.name + ' (' + group.group_key + ')';
+      option.dataset.selectionType = group.selection_type || '';
+      productOptionGroupSelect.appendChild(option);
+    });
+  };
+
+  const loadAvailableProductOptionGroups = async () => {
+    if (!editingProductId) {
+      availableProductOptionGroups = [];
+      populateProductOptionGroupSelect([]);
+      return [];
+    }
+
+    const attachedGroupIds = new Set(productOptionAttachments.map((item) => item.option_group_id));
+    const { data, error } = await client
+      .from('option_groups')
+      .select('id,name,group_key,selection_type,sort_order')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      availableProductOptionGroups = [];
+      activeProductOptionGroupCount = 0;
+      populateProductOptionGroupSelect([]);
+      setProductOptionStatus('Unable to load available option groups. ' + error.message);
+      return [];
+    }
+
+    activeProductOptionGroupCount = (data || []).length;
+    availableProductOptionGroups = (data || []).filter((group) => !attachedGroupIds.has(group.id));
+    populateProductOptionGroupSelect(availableProductOptionGroups);
+    return availableProductOptionGroups;
+  };
+
+  const openProductOptionAttachForm = async () => {
+    if (!editingProductId || !productOptionAttachForm) {
+      setProductOptionStatus('Save the product before attaching option groups.');
+      return;
+    }
+
+    setProductOptionStatus('Loading available option groups...');
+    const groups = await loadAvailableProductOptionGroups();
+    if (!groups.length) {
+      setProductOptionStatus(activeProductOptionGroupCount ? 'All active option groups are already attached.' : 'No available option groups to attach.');
+      productOptionAttachForm.hidden = true;
+      setProductOptionAttachFormDisabled(true);
+      return;
+    }
+
+    productOptionAttachForm.hidden = false;
+    if (productOptionGroupSelect) productOptionGroupSelect.value = '';
+    const minInput = productOptionAttachForm.querySelector('[name="min_selections"]');
+    const maxInput = productOptionAttachForm.querySelector('[name="max_selections"]');
+    const sortInput = productOptionAttachForm.querySelector('[name="sort_order"]');
+    const activeInput = productOptionAttachForm.querySelector('[name="is_active"]');
+    const requiredInput = productOptionAttachForm.querySelector('[name="is_required"]');
+    if (minInput) minInput.value = '0';
+    if (maxInput) maxInput.value = '';
+    if (sortInput) sortInput.value = String(getNextProductOptionSortOrder());
+    if (activeInput) activeInput.checked = true;
+    if (requiredInput) requiredInput.checked = false;
+    setProductOptionAttachFormDisabled(false);
+    setProductOptionStatus('Choose an active option group to attach.');
+  };
+
+  const syncProductOptionAttachmentLimits = () => {
+    if (!productOptionAttachForm || !productOptionGroupSelect) return;
+    const group = availableProductOptionGroups.find((item) => item.id === productOptionGroupSelect.value);
+    if (!group || group.selection_type !== 'single') return;
+
+    const requiredInput = productOptionAttachForm.querySelector('[name="is_required"]');
+    const minInput = productOptionAttachForm.querySelector('[name="min_selections"]');
+    const maxInput = productOptionAttachForm.querySelector('[name="max_selections"]');
+    if (requiredInput && minInput) minInput.value = requiredInput.checked ? '1' : '0';
+    if (maxInput) maxInput.value = '1';
+  };
+
+  const validateProductOptionAttachmentForm = () => {
+    if (!editingProductId) return { error: 'Save the product before attaching option groups.' };
+    if (!productOptionAttachForm) return null;
+
+    const optionGroupField = productOptionAttachForm.querySelector('[name="option_group_id"]');
+    const requiredField = productOptionAttachForm.querySelector('[name="is_required"]');
+    const minField = productOptionAttachForm.querySelector('[name="min_selections"]');
+    const maxField = productOptionAttachForm.querySelector('[name="max_selections"]');
+    const sortField = productOptionAttachForm.querySelector('[name="sort_order"]');
+    const activeField = productOptionAttachForm.querySelector('[name="is_active"]');
+    const optionGroupId = optionGroupField ? String(optionGroupField.value || '').trim() : '';
+    const group = availableProductOptionGroups.find((item) => item.id === optionGroupId);
+    const isRequired = Boolean(requiredField && requiredField.checked);
+    let minSelections = Number(String(minField ? minField.value || '0' : '0').trim());
+    const maxText = String(maxField ? maxField.value || '' : '').trim();
+    let maxSelections = maxText ? Number(maxText) : null;
+    const sortText = String(sortField ? sortField.value || '' : '').trim();
+    const sortOrder = sortText ? Number(sortText) : getNextProductOptionSortOrder();
+
+    if (!optionGroupId || !group) return { error: 'Select an option group to attach.' };
+    if (!Number.isInteger(minSelections) || minSelections < 0) return { error: 'Min selections must be a whole number 0 or greater.' };
+    if (maxSelections !== null && (!Number.isInteger(maxSelections) || maxSelections < minSelections)) {
+      return { error: 'Max selections must be blank or greater than or equal to min selections.' };
+    }
+    if (!Number.isInteger(sortOrder)) return { error: 'Sort order must be a whole number.' };
+
+    if (group.selection_type === 'single') {
+      minSelections = isRequired ? 1 : 0;
+      maxSelections = 1;
+    } else if (isRequired && minSelections === 0) {
+      minSelections = 1;
+    }
+
+    return {
+      value: {
+        product_id: editingProductId,
+        option_group_id: optionGroupId,
+        is_required: isRequired,
+        min_selections: minSelections,
+        max_selections: maxSelections,
+        sort_order: sortOrder,
+        is_active: Boolean(activeField && activeField.checked),
+      },
+    };
+  };
+
+  const saveProductOptionAttachment = async (event) => {
+    if (event) event.preventDefault();
+    if (!isOwnerSignedIn || productOptionAttachmentSaving) return;
+
+    const validation = validateProductOptionAttachmentForm();
+    if (!validation) return;
+    if (validation.error) {
+      setProductOptionStatus(validation.error);
+      return;
+    }
+
+    productOptionAttachmentSaving = true;
+    setProductOptionAttachFormDisabled(false);
+    setProductOptionStatus('Attaching option group...');
+
+    const { error } = await client
+      .from('product_option_groups')
+      .insert(validation.value);
+
+    productOptionAttachmentSaving = false;
+
+    if (error) {
+      setProductOptionAttachFormDisabled(false);
+      const duplicateAttachment = error.message && /duplicate|unique/i.test(error.message);
+      setProductOptionStatus(duplicateAttachment
+        ? 'That option group is already attached to this product.'
+        : 'Unable to attach option group. ' + error.message);
+      return;
+    }
+
+    resetProductOptionAttachForm();
+    await loadProductOptionAttachments(editingProductId);
+    setProductOptionStatus('Option group attached.');
+  };
+
+  const validateProductOptionDefaults = (optionGroupId) => {
+    if (!editingProductId) return { error: 'Save the product before setting defaults.' };
+    const attachment = productOptionAttachments.find((item) => item.option_group_id === optionGroupId);
+    if (!attachment) return { error: 'This option group is not attached to the current product.' };
+
+    const group = attachment.group || {};
+    const activeChoiceIds = new Set((attachment.choices || []).map((choice) => choice.id));
+    const card = productOptionAttachmentList
+      ? productOptionAttachmentList.querySelector(`[data-option-group-id="${optionGroupId}"]`)
+      : null;
+    if (!card) return { error: 'Default controls could not be found.' };
+
+    let selectedChoiceIds = [];
+    if (group.selection_type === 'multi') {
+      selectedChoiceIds = Array.from(card.querySelectorAll('[data-default-choice]:checked')).map((item) => item.value);
+    } else {
+      const select = card.querySelector('[data-default-choice]');
+      selectedChoiceIds = select && select.value ? [select.value] : [];
+    }
+
+    const uniqueChoiceIds = Array.from(new Set(selectedChoiceIds));
+    if (uniqueChoiceIds.some((choiceId) => !activeChoiceIds.has(choiceId))) {
+      return { error: 'Defaults can only use active choices from this option group.' };
+    }
+    if (group.selection_type === 'single' && uniqueChoiceIds.length > 1) {
+      return { error: 'Single-choice groups can only have one default.' };
+    }
+    if (group.selection_type === 'multi' && attachment.max_selections !== null && attachment.max_selections !== undefined && uniqueChoiceIds.length > Number(attachment.max_selections)) {
+      return { error: 'Default choices cannot exceed max selections.' };
+    }
+
+    return {
+      value: uniqueChoiceIds.map((choiceId) => ({
+        product_id: editingProductId,
+        option_group_id: optionGroupId,
+        option_choice_id: choiceId,
+      })),
+    };
+  };
+
+  const saveProductOptionDefaults = async (optionGroupId) => {
+    if (!isOwnerSignedIn || productOptionDefaultSaving) return;
+
+    const validation = validateProductOptionDefaults(optionGroupId);
+    if (!validation) return;
+    if (validation.error) {
+      setProductOptionStatus(validation.error);
+      return;
+    }
+
+    productOptionDefaultSaving = true;
+    setProductOptionStatus('Saving default choices...');
+
+    const { error: deleteError } = await client
+      .from('product_option_defaults')
+      .delete()
+      .eq('product_id', editingProductId)
+      .eq('option_group_id', optionGroupId);
+
+    if (deleteError) {
+      productOptionDefaultSaving = false;
+      setProductOptionStatus('Unable to clear existing defaults. ' + deleteError.message);
+      return;
+    }
+
+    if (validation.value.length) {
+      const { error: insertError } = await client
+        .from('product_option_defaults')
+        .insert(validation.value);
+
+      if (insertError) {
+        productOptionDefaultSaving = false;
+        setProductOptionStatus('Existing defaults were cleared, but new defaults could not be saved. ' + insertError.message);
+        await loadProductOptionAttachments(editingProductId);
+        return;
+      }
+    }
+
+    productOptionDefaultSaving = false;
+    await loadProductOptionAttachments(editingProductId);
+    setProductOptionStatus(validation.value.length ? 'Default choices saved.' : 'Defaults cleared.');
+  };
+
   const resetDraftProductForm = () => {
     if (draftForm) draftForm.reset();
     if (variantGroupSelect) variantGroupSelect.value = 'Each';
@@ -310,6 +811,7 @@
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
     setDraftFormDisabled(true);
+    resetProductOptionAttachments();
   };
 
   const populateDraftCategorySelect = (categories) => {
@@ -692,6 +1194,7 @@
     if (productSearchInput) productSearchInput.value = '';
     if (clearProductSearchButton) clearProductSearchButton.disabled = true;
     resetDisplayOrder();
+    resetOptionGroups();
     renderProductEmptyState('Owner sign-in required', 'Products from Supabase will appear here after the owner account is connected.');
   };
 
@@ -774,6 +1277,376 @@
       button.dataset.categoryId = category.id;
       categoryList.appendChild(button);
     });
+  };
+
+  const renderOptionEmptyState = (container, title, message, titleLevel = 'h3') => {
+    if (!container) return;
+    container.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'option-empty-state';
+
+    const heading = document.createElement(titleLevel);
+    heading.textContent = title;
+    const copy = document.createElement('p');
+    copy.textContent = message;
+
+    empty.append(heading, copy);
+    container.appendChild(empty);
+  };
+
+  const setOptionGroupFormDisabled = (isDisabled) => {
+    if (!optionGroupForm) return;
+    Array.from(optionGroupForm.elements).forEach((field) => {
+      field.disabled = isDisabled || optionGroupSaving;
+    });
+    if (saveOptionGroupButton) saveOptionGroupButton.disabled = isDisabled || optionGroupSaving;
+    if (resetOptionGroupButton) resetOptionGroupButton.disabled = isDisabled || optionGroupSaving;
+  };
+
+  const resetOptionGroupForm = () => {
+    editingOptionGroupId = null;
+    if (optionGroupForm) {
+      optionGroupForm.reset();
+      if (optionGroupForm.elements.selection_type) optionGroupForm.elements.selection_type.value = 'single';
+      if (optionGroupForm.elements.sort_order) optionGroupForm.elements.sort_order.value = '0';
+      if (optionGroupForm.elements.is_active) optionGroupForm.elements.is_active.checked = true;
+    }
+    if (optionGroupFormTitle) optionGroupFormTitle.textContent = 'Create Option Group';
+    setOptionGroupFormDisabled(!isOwnerSignedIn);
+  };
+
+  const loadOptionGroupIntoForm = (groupId) => {
+    const group = optionGroupsList.find((item) => item.id === groupId);
+    if (!group || !optionGroupForm) {
+      setOptionManagerStatus('Option group could not be found.');
+      return;
+    }
+
+    editingOptionGroupId = group.id;
+    optionGroupForm.elements.name.value = group.name || '';
+    optionGroupForm.elements.group_key.value = group.group_key || '';
+    optionGroupForm.elements.selection_type.value = group.selection_type || 'single';
+    optionGroupForm.elements.sort_order.value = String(group.sort_order ?? 0);
+    optionGroupForm.elements.is_active.checked = Boolean(group.is_active);
+    if (optionGroupFormTitle) optionGroupFormTitle.textContent = 'Edit Option Group';
+    setOptionGroupFormDisabled(false);
+    setOptionManagerStatus('Editing option group. Save changes or reset the form.');
+  };
+
+  const validateOptionGroupForm = () => {
+    if (!optionGroupForm) return null;
+    const formData = new FormData(optionGroupForm);
+    const name = String(formData.get('name') || '').trim();
+    const groupKey = String(formData.get('group_key') || '').trim();
+    const selectionType = String(formData.get('selection_type') || '').trim();
+    const sortOrderText = String(formData.get('sort_order') || '').trim();
+    const sortOrder = sortOrderText ? Number(sortOrderText) : 0;
+
+    if (!name) return { error: 'Option group name is required.' };
+    if (!groupKey) return { error: 'Group key is required.' };
+    if (!/^[a-z][a-z0-9_]*$/.test(groupKey)) {
+      return { error: 'Group key must use lowercase snake_case, such as milk, extra_shot, or savory_sauce.' };
+    }
+    if (!['single', 'multi'].includes(selectionType)) {
+      return { error: 'Selection type must be single or multi.' };
+    }
+    if (!Number.isInteger(sortOrder)) {
+      return { error: 'Sort order must be a whole number.' };
+    }
+
+    return {
+      value: {
+        name,
+        group_key: groupKey,
+        selection_type: selectionType,
+        sort_order: sortOrder,
+        is_active: formData.get('is_active') === 'on',
+      },
+    };
+  };
+
+  const createOptionValueFromLabel = (label) => {
+    return String(label || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'choice';
+  };
+
+  const setOptionChoiceFormDisabled = (isDisabled) => {
+    if (!optionChoiceForm) return;
+    const shouldDisable = isDisabled || optionChoiceSaving;
+    Array.from(optionChoiceForm.elements).forEach((field) => {
+      field.disabled = shouldDisable;
+    });
+    if (saveOptionChoiceButton) saveOptionChoiceButton.disabled = shouldDisable;
+    if (resetOptionChoiceButton) resetOptionChoiceButton.disabled = shouldDisable;
+  };
+
+  const resetOptionChoiceForm = () => {
+    editingOptionChoiceId = null;
+    if (optionChoiceForm) {
+      optionChoiceForm.reset();
+      if (optionChoiceForm.elements.price_delta) optionChoiceForm.elements.price_delta.value = '0';
+      if (optionChoiceForm.elements.sort_order) optionChoiceForm.elements.sort_order.value = '0';
+      if (optionChoiceForm.elements.is_active) optionChoiceForm.elements.is_active.checked = true;
+    }
+    if (optionChoiceFormTitle) optionChoiceFormTitle.textContent = 'Create Option Choice';
+    setOptionChoiceFormDisabled(!isOwnerSignedIn || !selectedOptionGroupId);
+  };
+
+  const loadOptionChoiceIntoForm = (choiceId) => {
+    const choice = optionChoicesList.find((item) => item.id === choiceId);
+    if (!choice || !optionChoiceForm) {
+      setOptionManagerStatus('Option choice could not be found.');
+      return;
+    }
+
+    editingOptionChoiceId = choice.id;
+    optionChoiceForm.elements.label.value = choice.label || '';
+    optionChoiceForm.elements.value.value = choice.value || '';
+    optionChoiceForm.elements.price_delta.value = String(choice.price_delta ?? 0);
+    optionChoiceForm.elements.sort_order.value = String(choice.sort_order ?? 0);
+    optionChoiceForm.elements.is_active.checked = Boolean(choice.is_active);
+    if (optionChoiceFormTitle) optionChoiceFormTitle.textContent = 'Edit Option Choice';
+    setOptionChoiceFormDisabled(false);
+    setOptionManagerStatus('Editing option choice. Save changes or reset the choice form.');
+  };
+
+  const validateOptionChoiceForm = () => {
+    if (!optionChoiceForm) return null;
+    if (!selectedOptionGroupId) return { error: 'Select an option group before creating a choice.' };
+
+    const formData = new FormData(optionChoiceForm);
+    const label = String(formData.get('label') || '').trim();
+    const rawValue = String(formData.get('value') || '').trim();
+    const value = rawValue || createOptionValueFromLabel(label);
+    const priceDeltaText = String(formData.get('price_delta') || '').trim();
+    const sortOrderText = String(formData.get('sort_order') || '').trim();
+    const priceDelta = priceDeltaText ? Number(priceDeltaText) : 0;
+    const sortOrder = sortOrderText ? Number(sortOrderText) : 0;
+
+    if (!label) return { error: 'Choice label is required.' };
+    if (!Number.isFinite(priceDelta) || priceDelta < 0) {
+      return { error: 'Price delta must be 0 or greater.' };
+    }
+    if (!Number.isInteger(sortOrder)) {
+      return { error: 'Sort order must be a whole number.' };
+    }
+
+    return {
+      value: {
+        option_group_id: selectedOptionGroupId,
+        label,
+        value,
+        price_delta: priceDelta,
+        sort_order: sortOrder,
+        is_active: formData.get('is_active') === 'on',
+      },
+    };
+  };
+
+  const resetOptionGroups = () => {
+    optionGroupsList = [];
+    optionChoicesList = [];
+    selectedOptionGroupId = '';
+    editingOptionGroupId = null;
+    editingOptionChoiceId = null;
+    optionGroupsLoaded = false;
+    optionGroupsLoading = false;
+    if (optionGroupStatus) optionGroupStatus.textContent = 'Locked';
+    resetOptionGroupForm();
+    setOptionGroupFormDisabled(true);
+    resetOptionChoiceForm();
+    setOptionChoiceFormDisabled(true);
+    renderOptionEmptyState(optionGroupList, 'Owner sign-in required', 'Reusable option groups will appear here after owner sign-in.', 'h4');
+    renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
+    if (optionChoiceList) optionChoiceList.innerHTML = '';
+    setOptionManagerStatus('Sign in to load reusable option groups.');
+  };
+
+  const renderOptionGroups = (groups) => {
+    optionGroupsList = groups || [];
+    if (!optionGroupList) return;
+    optionGroupList.innerHTML = '';
+
+    if (optionGroupStatus) optionGroupStatus.textContent = 'Owner access';
+
+    if (!optionGroupsList.length) {
+      renderOptionEmptyState(optionGroupList, 'No option groups yet.', 'Use the form above to create the first reusable group.', 'h4');
+      return;
+    }
+
+    optionGroupsList.forEach((group) => {
+      const item = document.createElement('article');
+      item.className = group.id === selectedOptionGroupId ? 'option-group-item is-selected' : 'option-group-item';
+      item.dataset.optionGroupId = group.id;
+
+      const selectButton = document.createElement('button');
+      selectButton.type = 'button';
+      selectButton.className = 'option-group-select';
+
+      const name = document.createElement('span');
+      name.className = 'option-group-name';
+      name.textContent = group.name || 'Untitled group';
+
+      const meta = document.createElement('span');
+      meta.className = 'option-group-meta';
+      meta.textContent = group.group_key || 'no key';
+
+      const type = document.createElement('span');
+      type.className = 'option-status-pill is-type';
+      type.textContent = String(group.selection_type || 'unknown').toUpperCase();
+
+      const status = document.createElement('span');
+      status.className = group.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
+      status.textContent = group.is_active ? 'ACTIVE' : 'INACTIVE';
+
+      selectButton.append(name, meta, type, status);
+      selectButton.addEventListener('click', () => selectOptionGroup(group.id));
+
+      const actions = document.createElement('div');
+      actions.className = 'option-group-actions';
+
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'option-mini-button';
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => {
+        selectOptionGroup(group.id);
+        loadOptionGroupIntoForm(group.id);
+      });
+
+      const activeButton = document.createElement('button');
+      activeButton.type = 'button';
+      activeButton.className = group.is_active ? 'option-mini-button is-muted' : 'option-mini-button';
+      activeButton.textContent = group.is_active ? 'Deactivate' : 'Reactivate';
+      activeButton.addEventListener('click', () => toggleOptionGroupActive(group.id, !group.is_active));
+
+      actions.append(editButton, activeButton);
+      item.append(selectButton, actions);
+      optionGroupList.appendChild(item);
+    });
+  };
+
+  const renderOptionGroupDetail = (group) => {
+    if (!optionGroupDetail) return;
+
+    if (!group) {
+      renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
+      return;
+    }
+
+    optionGroupDetail.innerHTML = '';
+    const header = document.createElement('div');
+    header.className = 'option-detail-header';
+
+    const title = document.createElement('h3');
+    title.textContent = group.name || 'Untitled group';
+    const status = document.createElement('span');
+    status.className = group.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
+    status.textContent = group.is_active ? 'ACTIVE' : 'INACTIVE';
+    header.append(title, status);
+
+    const details = document.createElement('dl');
+    details.className = 'option-detail-list';
+
+    const addDetail = (label, value) => {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const description = document.createElement('dd');
+      description.textContent = value || '-';
+      details.append(term, description);
+    };
+
+    addDetail('Group key', group.group_key);
+    addDetail('Selection type', group.selection_type);
+    addDetail('Sort order', String(group.sort_order ?? 0));
+
+    optionGroupDetail.append(header, details);
+  };
+
+  const renderOptionChoices = (choices) => {
+    optionChoicesList = choices || [];
+    if (!optionChoiceList) return;
+    optionChoiceList.innerHTML = '';
+
+    if (!selectedOptionGroupId) {
+      renderOptionEmptyState(optionChoiceList, 'Select a group to see its choices.', 'Choices will appear after you select an option group.', 'h4');
+      return;
+    }
+
+    const heading = document.createElement('h4');
+    heading.className = 'option-choice-heading';
+    heading.textContent = 'Choices';
+    optionChoiceList.appendChild(heading);
+
+    if (!optionChoicesList.length) {
+      renderOptionEmptyState(optionChoiceList, 'This group has no choices yet.', 'Choices will appear here after they are added in the next step.', 'h4');
+      return;
+    }
+
+    optionChoicesList.forEach((choice) => {
+      const row = document.createElement('article');
+      row.className = 'option-choice-card';
+
+      const top = document.createElement('div');
+      top.className = 'option-choice-top';
+      const name = document.createElement('h5');
+      name.textContent = choice.label || 'Untitled choice';
+      const status = document.createElement('span');
+      status.className = choice.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
+      status.textContent = choice.is_active ? 'ACTIVE' : 'INACTIVE';
+      top.append(name, status);
+
+      const meta = document.createElement('p');
+      meta.className = 'option-choice-meta';
+      const priceDelta = Number(choice.price_delta || 0);
+      meta.textContent = [
+        choice.value ? 'Value: ' + choice.value : 'No value set',
+        priceDelta > 0 ? '+' + formatPrice(priceDelta) : 'Free',
+        'Sort: ' + String(choice.sort_order ?? 0),
+      ].join(' - ');
+
+      row.append(top, meta);
+      const actions = document.createElement('div');
+      actions.className = 'option-choice-actions';
+
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'option-mini-button';
+      editButton.textContent = 'Edit';
+      editButton.addEventListener('click', () => loadOptionChoiceIntoForm(choice.id));
+
+      const activeButton = document.createElement('button');
+      activeButton.type = 'button';
+      activeButton.className = choice.is_active ? 'option-mini-button is-muted' : 'option-mini-button';
+      activeButton.textContent = choice.is_active ? 'Deactivate' : 'Reactivate';
+      activeButton.addEventListener('click', () => toggleOptionChoiceActive(choice.id, !choice.is_active));
+
+      actions.append(editButton, activeButton);
+      row.appendChild(actions);
+      optionChoiceList.appendChild(row);
+    });
+  };
+
+  const selectOptionGroup = async (groupId) => {
+    selectedOptionGroupId = groupId || '';
+    resetOptionChoiceForm();
+    renderOptionGroups(optionGroupsList);
+
+    const group = optionGroupsList.find((item) => item.id === selectedOptionGroupId);
+    renderOptionGroupDetail(group);
+
+    if (!group) {
+      optionChoicesList = [];
+      if (optionChoiceList) optionChoiceList.innerHTML = '';
+      setOptionChoiceFormDisabled(true);
+      setOptionManagerStatus('Select an option group to view choices.');
+      return;
+    }
+
+    await loadOptionChoices(group.id);
   };
 
   const renderProducts = (products) => {
@@ -982,6 +1855,7 @@
     })));
 
     setEditMode(product.id);
+    loadProductOptionAttachments(product.id);
     draftForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setStatus('Editing draft product. Save changes or cancel edit.');
   };
@@ -1004,6 +1878,397 @@
   }
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const loadOptionGroups = async (forceReload = false) => {
+    if (!isOwnerSignedIn) {
+      resetOptionGroups();
+      return;
+    }
+
+    if (!forceReload && (optionGroupsLoaded || optionGroupsLoading)) {
+      setOptionGroupFormDisabled(false);
+      renderOptionGroups(optionGroupsList);
+      renderOptionGroupDetail(optionGroupsList.find((item) => item.id === selectedOptionGroupId));
+      renderOptionChoices(optionChoicesList);
+      return;
+    }
+
+    optionGroupsLoading = true;
+    if (optionGroupStatus) optionGroupStatus.textContent = 'Loading';
+    setOptionManagerStatus('Loading option groups...');
+
+    const { data, error } = await client
+      .from('option_groups')
+      .select('id,name,group_key,selection_type,is_active,sort_order')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      optionGroupsList = [];
+      optionChoicesList = [];
+      selectedOptionGroupId = '';
+      optionGroupsLoading = false;
+      optionGroupsLoaded = false;
+      if (optionGroupStatus) optionGroupStatus.textContent = 'Error';
+      renderOptionEmptyState(optionGroupList, 'Unable to load option groups.', error.message, 'h4');
+      renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
+      if (optionChoiceList) optionChoiceList.innerHTML = '';
+      setOptionManagerStatus('Unable to load option groups. ' + error.message);
+      return;
+    }
+
+    const groups = data || [];
+    optionGroupsList = groups;
+    optionGroupsLoading = false;
+    optionGroupsLoaded = true;
+    if (selectedOptionGroupId && !groups.some((group) => group.id === selectedOptionGroupId)) {
+      selectedOptionGroupId = '';
+    }
+    optionChoicesList = [];
+    setOptionGroupFormDisabled(false);
+    renderOptionGroups(groups);
+    renderOptionGroupDetail(optionGroupsList.find((item) => item.id === selectedOptionGroupId));
+    if (selectedOptionGroupId) {
+      await loadOptionChoices(selectedOptionGroupId);
+    } else {
+      renderOptionChoices([]);
+    }
+
+    if (!groups.length) {
+      setOptionManagerStatus('No option groups yet.');
+      return;
+    }
+
+    setOptionManagerStatus('Option groups loaded. Select a group to see its choices.');
+  };
+
+  const loadOptionChoices = async (groupId) => {
+    if (!groupId) {
+      optionChoicesList = [];
+      renderOptionChoices([]);
+      return;
+    }
+
+    setOptionManagerStatus('Loading option choices...');
+    const { data, error } = await client
+      .from('option_choices')
+      .select('id,option_group_id,label,value,price_delta,sort_order,is_active')
+      .eq('option_group_id', groupId)
+      .order('sort_order', { ascending: true })
+      .order('label', { ascending: true });
+
+    if (error) {
+      optionChoicesList = [];
+      renderOptionEmptyState(optionChoiceList, 'Unable to load choices.', error.message, 'h4');
+      setOptionManagerStatus('Unable to load option choices. ' + error.message);
+      return;
+    }
+
+    renderOptionChoices(data || []);
+    setOptionChoiceFormDisabled(false);
+    setOptionManagerStatus((data || []).length ? 'Option choices loaded.' : 'No choices in this group yet.');
+  };
+
+  const saveOptionChoice = async (event) => {
+    event.preventDefault();
+    if (!isOwnerSignedIn || optionChoiceSaving) return;
+
+    const validation = validateOptionChoiceForm();
+    if (!validation) return;
+    if (validation.error) {
+      setOptionManagerStatus(validation.error);
+      return;
+    }
+
+    const wasEditing = Boolean(editingOptionChoiceId);
+    optionChoiceSaving = true;
+    setOptionChoiceFormDisabled(false);
+    setOptionManagerStatus(wasEditing ? 'Saving option choice...' : 'Creating option choice...');
+
+    const payload = validation.value;
+    let error = null;
+
+    if (editingOptionChoiceId) {
+      const response = await client
+        .from('option_choices')
+        .update({
+          label: payload.label,
+          value: payload.value,
+          price_delta: payload.price_delta,
+          sort_order: payload.sort_order,
+          is_active: payload.is_active,
+        })
+        .eq('id', editingOptionChoiceId)
+        .eq('option_group_id', selectedOptionGroupId)
+        .select('id')
+        .single();
+      error = response.error;
+    } else {
+      const response = await client
+        .from('option_choices')
+        .insert(payload)
+        .select('id')
+        .single();
+      error = response.error;
+    }
+
+    optionChoiceSaving = false;
+
+    if (error) {
+      setOptionChoiceFormDisabled(false);
+      setOptionManagerStatus('Unable to save option choice. ' + error.message);
+      return;
+    }
+
+    resetOptionChoiceForm();
+    await loadOptionChoices(selectedOptionGroupId);
+    setOptionManagerStatus(wasEditing ? 'Option choice updated.' : 'Option choice created.');
+  };
+
+  const toggleOptionChoiceActive = async (choiceId, shouldBeActive) => {
+    if (!isOwnerSignedIn || optionChoiceSaving || !selectedOptionGroupId) return;
+    const choice = optionChoicesList.find((item) => item.id === choiceId);
+    if (!choice) {
+      setOptionManagerStatus('Option choice could not be found.');
+      return;
+    }
+
+    const actionLabel = shouldBeActive ? 'reactivate' : 'deactivate';
+    const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option choice?');
+    if (!confirmed) return;
+
+    optionChoiceSaving = true;
+    setOptionChoiceFormDisabled(false);
+    setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option choice...');
+
+    const { error } = await client
+      .from('option_choices')
+      .update({ is_active: shouldBeActive })
+      .eq('id', choiceId)
+      .eq('option_group_id', selectedOptionGroupId);
+
+    optionChoiceSaving = false;
+
+    if (error) {
+      setOptionChoiceFormDisabled(false);
+      setOptionManagerStatus('Unable to ' + actionLabel + ' option choice. ' + error.message);
+      return;
+    }
+
+    if (editingOptionChoiceId === choiceId && optionChoiceForm && optionChoiceForm.elements.is_active) {
+      optionChoiceForm.elements.is_active.checked = shouldBeActive;
+    }
+    await loadOptionChoices(selectedOptionGroupId);
+    setOptionManagerStatus('Option choice ' + (shouldBeActive ? 'reactivated.' : 'deactivated.'));
+  };
+
+  const saveOptionGroup = async (event) => {
+    event.preventDefault();
+    if (!isOwnerSignedIn || optionGroupSaving) return;
+
+    const validation = validateOptionGroupForm();
+    if (!validation) return;
+    if (validation.error) {
+      setOptionManagerStatus(validation.error);
+      return;
+    }
+
+    const wasEditing = Boolean(editingOptionGroupId);
+    optionGroupSaving = true;
+    setOptionGroupFormDisabled(false);
+    setOptionManagerStatus(wasEditing ? 'Saving option group...' : 'Creating option group...');
+
+    const payload = validation.value;
+    let savedGroupId = editingOptionGroupId;
+    let error = null;
+
+    if (editingOptionGroupId) {
+      const response = await client
+        .from('option_groups')
+        .update(payload)
+        .eq('id', editingOptionGroupId)
+        .select('id')
+        .single();
+      error = response.error;
+    } else {
+      const response = await client
+        .from('option_groups')
+        .insert(payload)
+        .select('id')
+        .single();
+      error = response.error;
+      if (response.data && response.data.id) savedGroupId = response.data.id;
+    }
+
+    optionGroupSaving = false;
+
+    if (error) {
+      const duplicateKey = error.message && /duplicate|unique/i.test(error.message);
+      setOptionGroupFormDisabled(false);
+      setOptionManagerStatus(duplicateKey
+        ? 'That group key already exists. Use a different lowercase snake_case key.'
+        : 'Unable to save option group. ' + error.message);
+      return;
+    }
+
+    selectedOptionGroupId = savedGroupId || '';
+    resetOptionGroupForm();
+    selectedOptionGroupId = savedGroupId || selectedOptionGroupId;
+    optionGroupsLoaded = false;
+    await loadOptionGroups(true);
+    setOptionManagerStatus(wasEditing ? 'Option group updated.' : 'Option group created.');
+  };
+
+  const toggleOptionGroupActive = async (groupId, shouldBeActive) => {
+    if (!isOwnerSignedIn || optionGroupSaving) return;
+    const group = optionGroupsList.find((item) => item.id === groupId);
+    if (!group) {
+      setOptionManagerStatus('Option group could not be found.');
+      return;
+    }
+
+    const actionLabel = shouldBeActive ? 'reactivate' : 'deactivate';
+    const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option group?');
+    if (!confirmed) return;
+
+    optionGroupSaving = true;
+    setOptionGroupFormDisabled(false);
+    setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option group...');
+
+    const { error } = await client
+      .from('option_groups')
+      .update({ is_active: shouldBeActive })
+      .eq('id', groupId);
+
+    optionGroupSaving = false;
+
+    if (error) {
+      setOptionGroupFormDisabled(false);
+      setOptionManagerStatus('Unable to ' + actionLabel + ' option group. ' + error.message);
+      return;
+    }
+
+    selectedOptionGroupId = groupId;
+    if (editingOptionGroupId === groupId && optionGroupForm && optionGroupForm.elements.is_active) {
+      optionGroupForm.elements.is_active.checked = shouldBeActive;
+    }
+    optionGroupsLoaded = false;
+    await loadOptionGroups(true);
+    setOptionManagerStatus('Option group ' + (shouldBeActive ? 'reactivated.' : 'deactivated.'));
+  };
+
+  const loadProductOptionAttachments = async (productId) => {
+    if (!productId) {
+      resetProductOptionAttachments();
+      return;
+    }
+
+    renderProductOptionEmpty('Loading option attachments...', 'Checking product option groups in Supabase.');
+    updateProductOptionAttachAvailability();
+
+    const { data: assignments, error: assignmentError } = await client
+      .from('product_option_groups')
+      .select('product_id,option_group_id,is_required,min_selections,max_selections,sort_order,is_active')
+      .eq('product_id', productId)
+      .order('sort_order', { ascending: true });
+
+    if (editingProductId !== productId) return;
+
+    if (assignmentError) {
+      productOptionAttachments = [];
+      renderProductOptionEmpty('Unable to load option attachments.', assignmentError.message);
+      return;
+    }
+
+    if (!assignments || !assignments.length) {
+      productOptionAttachments = [];
+      renderProductOptionAttachments([]);
+      return;
+    }
+
+    const groupIds = Array.from(new Set(assignments.map((item) => item.option_group_id).filter(Boolean)));
+
+    const [
+      { data: groups, error: groupError },
+      { data: defaults, error: defaultError },
+    ] = await Promise.all([
+      client
+        .from('option_groups')
+        .select('id,name,group_key,selection_type,is_active')
+        .in('id', groupIds),
+      client
+        .from('product_option_defaults')
+        .select('product_id,option_group_id,option_choice_id')
+        .eq('product_id', productId),
+    ]);
+
+    if (editingProductId !== productId) return;
+
+    if (groupError || defaultError) {
+      productOptionAttachments = [];
+      renderProductOptionEmpty('Unable to load option attachments.', (groupError || defaultError).message);
+      return;
+    }
+
+    const choiceIds = Array.from(new Set((defaults || []).map((item) => item.option_choice_id).filter(Boolean)));
+    let choices = [];
+    if (choiceIds.length) {
+      const { data: choiceRows, error: choiceError } = await client
+        .from('option_choices')
+        .select('id,option_group_id,label,is_active')
+        .in('id', choiceIds);
+
+      if (choiceError) {
+        productOptionAttachments = [];
+        renderProductOptionEmpty('Unable to load option attachments.', choiceError.message);
+        return;
+      }
+      choices = choiceRows || [];
+    }
+
+    const { data: activeChoices, error: activeChoiceError } = await client
+      .from('option_choices')
+      .select('id,option_group_id,label,sort_order,is_active')
+      .in('option_group_id', groupIds)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('label', { ascending: true });
+
+    if (activeChoiceError) {
+      productOptionAttachments = [];
+      renderProductOptionEmpty('Unable to load option attachments.', activeChoiceError.message);
+      return;
+    }
+
+    if (editingProductId !== productId) return;
+
+    const groupMap = new Map((groups || []).map((group) => [group.id, group]));
+    const choiceMap = new Map(choices.map((choice) => [choice.id, choice]));
+    const choicesByGroup = new Map();
+    (activeChoices || []).forEach((choice) => {
+      const list = choicesByGroup.get(choice.option_group_id) || [];
+      list.push(choice);
+      choicesByGroup.set(choice.option_group_id, list);
+    });
+    const defaultsByGroup = new Map();
+    (defaults || []).forEach((item) => {
+      const list = defaultsByGroup.get(item.option_group_id) || [];
+      list.push({
+        ...item,
+        choice: choiceMap.get(item.option_choice_id) || null,
+      });
+      defaultsByGroup.set(item.option_group_id, list);
+    });
+
+    const attachments = assignments.map((assignment) => ({
+      ...assignment,
+      group: groupMap.get(assignment.option_group_id) || null,
+      choices: choicesByGroup.get(assignment.option_group_id) || [],
+      defaults: defaultsByGroup.get(assignment.option_group_id) || [],
+    }));
+
+    renderProductOptionAttachments(attachments);
+  };
 
   const loadCategories = async () => {
     setStatus('Loading categories...');
@@ -1366,7 +2631,11 @@
     setCollapsibleExpanded(toggle, toggle.getAttribute('aria-expanded') === 'true');
     toggle.addEventListener('click', () => {
       const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-      setCollapsibleExpanded(toggle, !isExpanded);
+      const shouldExpand = !isExpanded;
+      setCollapsibleExpanded(toggle, shouldExpand);
+      if (shouldExpand && toggle.dataset.collapsibleTarget === 'option-groups-content') {
+        loadOptionGroups();
+      }
     });
   });
 
@@ -1389,6 +2658,52 @@
 
   if (draftForm) {
     draftForm.addEventListener('submit', saveDraftProduct);
+  }
+
+  if (optionGroupForm) {
+    optionGroupForm.addEventListener('submit', saveOptionGroup);
+  }
+
+  if (resetOptionGroupButton) {
+    resetOptionGroupButton.addEventListener('click', () => {
+      resetOptionGroupForm();
+      setOptionManagerStatus('Option group form reset.');
+    });
+  }
+
+  if (optionChoiceForm) {
+    optionChoiceForm.addEventListener('submit', saveOptionChoice);
+  }
+
+  if (resetOptionChoiceButton) {
+    resetOptionChoiceButton.addEventListener('click', () => {
+      resetOptionChoiceForm();
+      setOptionManagerStatus('Option choice form reset.');
+    });
+  }
+
+  if (showAttachOptionGroupButton) {
+    showAttachOptionGroupButton.addEventListener('click', openProductOptionAttachForm);
+  }
+
+  if (saveProductOptionAttachmentButton) {
+    saveProductOptionAttachmentButton.addEventListener('click', saveProductOptionAttachment);
+  }
+
+  if (cancelProductOptionAttachmentButton) {
+    cancelProductOptionAttachmentButton.addEventListener('click', () => {
+      resetProductOptionAttachForm();
+      setProductOptionStatus(editingProductId ? 'Attach cancelled.' : 'Save the product before attaching option groups.');
+    });
+  }
+
+  if (productOptionGroupSelect) {
+    productOptionGroupSelect.addEventListener('change', syncProductOptionAttachmentLimits);
+  }
+
+  if (productOptionAttachForm) {
+    const requiredInput = productOptionAttachForm.querySelector('[name="is_required"]');
+    if (requiredInput) requiredInput.addEventListener('change', syncProductOptionAttachmentLimits);
   }
 
   if (cancelEditButton) {
