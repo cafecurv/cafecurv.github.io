@@ -144,6 +144,7 @@
   let productOptionAttachmentSaving = false;
   let productOptionDefaultSaving = false;
   let productOptionSettingsSaving = false;
+  let productOptionDetachSaving = false;
   let editingProductOptionSettingsGroupId = '';
   let selectedOptionGroupId = '';
   let editingOptionGroupId = null;
@@ -481,13 +482,20 @@
       editSettingsButton.type = 'button';
       editSettingsButton.className = 'auth-button auth-button-secondary product-option-settings-toggle';
       editSettingsButton.textContent = editingProductOptionSettingsGroupId === attachment.option_group_id ? 'Editing Settings' : 'Edit Settings';
-      editSettingsButton.disabled = productOptionSettingsSaving;
+      editSettingsButton.disabled = productOptionSettingsSaving || productOptionDetachSaving;
       editSettingsButton.addEventListener('click', () => {
         editingProductOptionSettingsGroupId = attachment.option_group_id;
         renderProductOptionAttachments(productOptionAttachments);
         setProductOptionStatus('Editing option group settings.');
       });
-      cardActions.appendChild(editSettingsButton);
+
+      const detachButton = document.createElement('button');
+      detachButton.type = 'button';
+      detachButton.className = 'auth-button auth-button-secondary product-option-detach-button';
+      detachButton.textContent = 'Detach';
+      detachButton.disabled = productOptionDetachSaving || productOptionSettingsSaving;
+      detachButton.addEventListener('click', () => detachProductOptionGroup(attachment.option_group_id));
+      cardActions.append(editSettingsButton, detachButton);
       card.appendChild(cardActions);
 
       const settingsForm = document.createElement('div');
@@ -889,6 +897,46 @@
     editingProductOptionSettingsGroupId = '';
     await loadProductOptionAttachments(editingProductId);
     setProductOptionStatus('Option group settings updated.');
+  };
+
+  const detachProductOptionGroup = async (optionGroupId) => {
+    if (!isOwnerSignedIn || productOptionDetachSaving) return;
+    if (!editingProductId) {
+      setProductOptionStatus('Save the product before detaching option groups.');
+      return;
+    }
+
+    const attachment = productOptionAttachments.find((item) => item.option_group_id === optionGroupId);
+    if (!attachment) {
+      setProductOptionStatus('This option group is not attached to the current product.');
+      return;
+    }
+
+    const confirmed = window.confirm('Remove this option group from this product? Saved defaults for this product/group will also be removed.');
+    if (!confirmed) return;
+
+    productOptionDetachSaving = true;
+    if (editingProductOptionSettingsGroupId === optionGroupId) editingProductOptionSettingsGroupId = '';
+    renderProductOptionAttachments(productOptionAttachments);
+    setProductOptionStatus('Detaching option group...');
+
+    const { error } = await client
+      .from('product_option_groups')
+      .delete()
+      .eq('product_id', editingProductId)
+      .eq('option_group_id', optionGroupId);
+
+    productOptionDetachSaving = false;
+
+    if (error) {
+      renderProductOptionAttachments(productOptionAttachments);
+      setProductOptionStatus('Unable to detach option group. ' + error.message);
+      return;
+    }
+
+    resetProductOptionAttachForm();
+    await loadProductOptionAttachments(editingProductId);
+    setProductOptionStatus('Option group detached from product.');
   };
 
   const validateProductOptionDefaults = (optionGroupId) => {

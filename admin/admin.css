@@ -2429,9 +2429,22 @@ body.more-drawer-open {
 }
 
 .product-option-settings-toggle,
-.product-option-settings-save {
+.product-option-settings-save,
+.product-option-detach-button {
   min-height: 38px;
   padding: 0.55rem 0.85rem;
+}
+
+.product-option-detach-button {
+  border-color: rgba(214, 126, 126, 0.28);
+  color: rgba(255, 210, 210, 0.9);
+  background: rgba(214, 126, 126, 0.08);
+}
+
+.product-option-detach-button:hover,
+.product-option-detach-button:focus-visible {
+  border-color: rgba(214, 126, 126, 0.5);
+  background: rgba(214, 126, 126, 0.13);
 }
 
 .product-option-settings-form {
