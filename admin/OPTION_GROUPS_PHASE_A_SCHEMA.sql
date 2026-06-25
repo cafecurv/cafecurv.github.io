@@ -339,7 +339,6 @@ grant select (
   name,
   group_key,
   selection_type,
-  is_active,
   sort_order
 ) on public.option_groups to anon;
 
@@ -349,8 +348,7 @@ grant select (
   label,
   value,
   price_delta,
-  sort_order,
-  is_active
+  sort_order
 ) on public.option_choices to anon;
 
 grant select (
@@ -359,8 +357,7 @@ grant select (
   is_required,
   min_selections,
   max_selections,
-  sort_order,
-  is_active
+  sort_order
 ) on public.product_option_groups to anon;
 
 grant select (
