@@ -2609,6 +2609,7 @@ body.more-drawer-open {
   }
 
   .product-option-settings-toggle,
+  .product-option-detach-button,
   .product-option-settings-actions .auth-button {
     width: 100%;
   }

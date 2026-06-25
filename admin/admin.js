@@ -409,13 +409,18 @@
     productOptionAttachmentList.innerHTML = '';
     updateProductOptionAttachAvailability();
 
+    const attachedGroupIds = new Set(productOptionAttachments.map((item) => item.option_group_id).filter(Boolean));
+    if (editingProductOptionSettingsGroupId && !attachedGroupIds.has(editingProductOptionSettingsGroupId)) {
+      editingProductOptionSettingsGroupId = '';
+    }
+
     if (!editingProductId) {
       renderProductOptionEmpty('Save the product before attaching option groups.', 'Existing product attachments will appear here when editing a product.');
       return;
     }
 
     if (!productOptionAttachments.length) {
-      renderProductOptionEmpty('No option groups attached yet.', 'Product attachment comes in the next step.');
+      renderProductOptionEmpty('No option groups attached yet.', 'Use + Attach Group to add reusable options to this product.');
       return;
     }
 
@@ -642,6 +647,10 @@
     availableProductOptionGroups = [];
     activeProductOptionGroupCount = 0;
     editingProductOptionSettingsGroupId = '';
+    productOptionAttachmentSaving = false;
+    productOptionDefaultSaving = false;
+    productOptionSettingsSaving = false;
+    productOptionDetachSaving = false;
     resetProductOptionAttachForm();
     renderProductOptionAttachments([]);
   };
