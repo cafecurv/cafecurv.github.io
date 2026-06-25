@@ -143,6 +143,8 @@
   let activeProductOptionGroupCount = 0;
   let productOptionAttachmentSaving = false;
   let productOptionDefaultSaving = false;
+  let productOptionSettingsSaving = false;
+  let editingProductOptionSettingsGroupId = '';
   let selectedOptionGroupId = '';
   let editingOptionGroupId = null;
   let editingOptionChoiceId = null;
@@ -473,6 +475,92 @@
         card.append(top, meta);
       }
 
+      const cardActions = document.createElement('div');
+      cardActions.className = 'product-option-card-actions';
+      const editSettingsButton = document.createElement('button');
+      editSettingsButton.type = 'button';
+      editSettingsButton.className = 'auth-button auth-button-secondary product-option-settings-toggle';
+      editSettingsButton.textContent = editingProductOptionSettingsGroupId === attachment.option_group_id ? 'Editing Settings' : 'Edit Settings';
+      editSettingsButton.disabled = productOptionSettingsSaving;
+      editSettingsButton.addEventListener('click', () => {
+        editingProductOptionSettingsGroupId = attachment.option_group_id;
+        renderProductOptionAttachments(productOptionAttachments);
+        setProductOptionStatus('Editing option group settings.');
+      });
+      cardActions.appendChild(editSettingsButton);
+      card.appendChild(cardActions);
+
+      const settingsForm = document.createElement('div');
+      settingsForm.className = 'product-option-settings-form';
+      settingsForm.dataset.productOptionSettingsForm = '';
+      settingsForm.hidden = editingProductOptionSettingsGroupId !== attachment.option_group_id;
+
+      const requiredLabel = document.createElement('label');
+      requiredLabel.className = 'draft-checkbox product-option-required-toggle';
+      const requiredInput = document.createElement('input');
+      requiredInput.type = 'checkbox';
+      requiredInput.name = 'is_required';
+      requiredInput.checked = Boolean(attachment.is_required);
+      requiredInput.disabled = productOptionSettingsSaving;
+      const requiredText = document.createElement('span');
+      requiredText.textContent = 'Required';
+      requiredLabel.append(requiredInput, requiredText);
+
+      const buildSettingsField = (labelText, name, value, placeholder = '') => {
+        const label = document.createElement('label');
+        label.className = 'admin-field';
+        const span = document.createElement('span');
+        span.textContent = labelText;
+        const input = document.createElement('input');
+        input.name = name;
+        input.type = 'number';
+        input.step = '1';
+        input.inputMode = 'numeric';
+        input.value = value;
+        input.placeholder = placeholder;
+        input.disabled = productOptionSettingsSaving;
+        if (name !== 'sort_order') input.min = '0';
+        label.append(span, input);
+        return label;
+      };
+
+      const minField = buildSettingsField('Min Selections', 'min_selections', String(attachment.min_selections ?? 0));
+      const maxField = buildSettingsField('Max Selections', 'max_selections', attachment.max_selections === null || attachment.max_selections === undefined ? '' : String(attachment.max_selections), 'Unlimited');
+      const sortField = buildSettingsField('Sort Order', 'sort_order', String(attachment.sort_order ?? 0));
+
+      const activeLabel = document.createElement('label');
+      activeLabel.className = 'draft-checkbox product-option-active-toggle';
+      const activeInput = document.createElement('input');
+      activeInput.type = 'checkbox';
+      activeInput.name = 'is_active';
+      activeInput.checked = Boolean(attachment.is_active);
+      activeInput.disabled = productOptionSettingsSaving;
+      const activeText = document.createElement('span');
+      activeText.textContent = 'Active';
+      activeLabel.append(activeInput, activeText);
+
+      const settingsActions = document.createElement('div');
+      settingsActions.className = 'product-option-settings-actions';
+      const saveSettingsButton = document.createElement('button');
+      saveSettingsButton.type = 'button';
+      saveSettingsButton.className = 'auth-button product-option-settings-save';
+      saveSettingsButton.textContent = 'Save Settings';
+      saveSettingsButton.disabled = productOptionSettingsSaving;
+      saveSettingsButton.addEventListener('click', () => saveProductOptionSettings(attachment.option_group_id));
+      const cancelSettingsButton = document.createElement('button');
+      cancelSettingsButton.type = 'button';
+      cancelSettingsButton.className = 'auth-button auth-button-secondary';
+      cancelSettingsButton.textContent = 'Cancel';
+      cancelSettingsButton.disabled = productOptionSettingsSaving;
+      cancelSettingsButton.addEventListener('click', () => {
+        editingProductOptionSettingsGroupId = '';
+        renderProductOptionAttachments(productOptionAttachments);
+        setProductOptionStatus('Settings edit cancelled.');
+      });
+      settingsActions.append(saveSettingsButton, cancelSettingsButton);
+      settingsForm.append(requiredLabel, minField, maxField, sortField, activeLabel, settingsActions);
+      card.appendChild(settingsForm);
+
       const choices = attachment.choices || [];
       const selectedChoiceIds = new Set(attachment.defaults
         .filter((item) => item.choice && item.choice.is_active)
@@ -545,6 +633,7 @@
     productOptionAttachments = [];
     availableProductOptionGroups = [];
     activeProductOptionGroupCount = 0;
+    editingProductOptionSettingsGroupId = '';
     resetProductOptionAttachForm();
     renderProductOptionAttachments([]);
   };
@@ -712,6 +801,94 @@
     resetProductOptionAttachForm();
     await loadProductOptionAttachments(editingProductId);
     setProductOptionStatus('Option group attached.');
+  };
+
+  const validateProductOptionSettings = (optionGroupId) => {
+    if (!editingProductId) return { error: 'Save the product before editing option group settings.' };
+    const attachment = productOptionAttachments.find((item) => item.option_group_id === optionGroupId);
+    if (!attachment) return { error: 'This option group is not attached to the current product.' };
+
+    const card = productOptionAttachmentList
+      ? productOptionAttachmentList.querySelector(`[data-option-group-id="${optionGroupId}"]`)
+      : null;
+    const settingsForm = card ? card.querySelector('[data-product-option-settings-form]') : null;
+    if (!settingsForm) return { error: 'Settings controls could not be found.' };
+
+    const group = attachment.group || {};
+    const requiredField = settingsForm.querySelector('[name="is_required"]');
+    const minField = settingsForm.querySelector('[name="min_selections"]');
+    const maxField = settingsForm.querySelector('[name="max_selections"]');
+    const sortField = settingsForm.querySelector('[name="sort_order"]');
+    const activeField = settingsForm.querySelector('[name="is_active"]');
+    const isRequired = Boolean(requiredField && requiredField.checked);
+    let minSelections = Number(String(minField ? minField.value || '0' : '0').trim());
+    const maxText = String(maxField ? maxField.value || '' : '').trim();
+    let maxSelections = maxText ? Number(maxText) : null;
+    const sortText = String(sortField ? sortField.value || '0' : '0').trim();
+    const sortOrder = sortText ? Number(sortText) : 0;
+
+    if (!Number.isInteger(minSelections) || minSelections < 0) {
+      return { error: 'Min selections must be a whole number 0 or greater.' };
+    }
+    if (maxSelections !== null && (!Number.isInteger(maxSelections) || maxSelections < minSelections)) {
+      return { error: 'Max selections must be blank or greater than or equal to min selections.' };
+    }
+    if (!Number.isInteger(sortOrder)) return { error: 'Sort order must be a whole number.' };
+
+    if (group.selection_type === 'single') {
+      minSelections = isRequired ? 1 : 0;
+      maxSelections = 1;
+    } else if (isRequired && minSelections === 0) {
+      minSelections = 1;
+    }
+
+    const activeDefaultCount = (attachment.defaults || []).filter((item) => item.choice && item.choice.is_active).length;
+    if (maxSelections !== null && activeDefaultCount > maxSelections) {
+      return { error: 'Max selections cannot be lower than the saved default choices. Adjust defaults first.' };
+    }
+
+    return {
+      value: {
+        is_required: isRequired,
+        min_selections: minSelections,
+        max_selections: maxSelections,
+        sort_order: sortOrder,
+        is_active: Boolean(activeField && activeField.checked),
+      },
+    };
+  };
+
+  const saveProductOptionSettings = async (optionGroupId) => {
+    if (!isOwnerSignedIn || productOptionSettingsSaving) return;
+
+    const validation = validateProductOptionSettings(optionGroupId);
+    if (!validation) return;
+    if (validation.error) {
+      setProductOptionStatus(validation.error);
+      return;
+    }
+
+    productOptionSettingsSaving = true;
+    renderProductOptionAttachments(productOptionAttachments);
+    setProductOptionStatus('Saving option group settings...');
+
+    const { error } = await client
+      .from('product_option_groups')
+      .update(validation.value)
+      .eq('product_id', editingProductId)
+      .eq('option_group_id', optionGroupId);
+
+    productOptionSettingsSaving = false;
+
+    if (error) {
+      renderProductOptionAttachments(productOptionAttachments);
+      setProductOptionStatus('Unable to save option group settings. ' + error.message);
+      return;
+    }
+
+    editingProductOptionSettingsGroupId = '';
+    await loadProductOptionAttachments(editingProductId);
+    setProductOptionStatus('Option group settings updated.');
   };
 
   const validateProductOptionDefaults = (optionGroupId) => {

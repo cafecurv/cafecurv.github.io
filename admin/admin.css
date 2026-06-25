@@ -2422,6 +2422,39 @@ body.more-drawer-open {
   padding: 0.55rem 0.65rem;
 }
 
+.product-option-card-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.55rem;
+}
+
+.product-option-settings-toggle,
+.product-option-settings-save {
+  min-height: 38px;
+  padding: 0.55rem 0.85rem;
+}
+
+.product-option-settings-form {
+  border: 1px solid rgba(200, 184, 154, 0.16);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.24);
+  padding: 0.78rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.product-option-settings-form[hidden] {
+  display: none;
+}
+
+.product-option-settings-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
 .product-option-default-editor {
   border-top: 1px solid rgba(189, 196, 212, 0.12);
   padding-top: 0.72rem;
@@ -2548,8 +2581,23 @@ body.more-drawer-open {
   }
 
   .product-option-attach-form .admin-field:first-child,
-  .product-option-attach-actions {
+  .product-option-attach-actions,
+  .product-option-settings-actions {
     grid-column: auto;
+  }
+
+  .product-option-card-actions,
+  .product-option-settings-actions {
+    flex-direction: column;
+  }
+
+  .product-option-settings-form {
+    grid-template-columns: 1fr;
+  }
+
+  .product-option-settings-toggle,
+  .product-option-settings-actions .auth-button {
+    width: 100%;
   }
 
   .product-option-default-select,
