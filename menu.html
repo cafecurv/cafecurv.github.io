@@ -6680,6 +6680,104 @@
     };
   }
 
+  function buildSupabaseOptionsMap(optionGroups = [], optionChoices = [], optionDefaults = [], products = []) {
+    if (!Array.isArray(optionGroups) || !Array.isArray(optionChoices) || !Array.isArray(optionDefaults) || !Array.isArray(products)) {
+      throw new Error('Option data response was not an array.');
+    }
+
+    const productById = products.reduce((map, product) => {
+      if (product && product.id) map[product.id] = product;
+      return map;
+    }, {});
+    const choicesByProductGroup = optionChoices.reduce((map, choice) => {
+      if (!choice.product_id || !choice.option_group_id || !choice.option_choice_id) {
+        throw new Error('Option choice row is missing required identifiers.');
+      }
+      const key = `${choice.product_id}:${choice.option_group_id}`;
+      if (!map[key]) map[key] = [];
+      map[key].push({
+        product_id: choice.product_id,
+        option_group_id: choice.option_group_id,
+        option_choice_id: choice.option_choice_id,
+        label: choice.label,
+        value: choice.value,
+        price_delta: choice.price_delta,
+        sort_order: choice.sort_order
+      });
+      return map;
+    }, {});
+    const defaultsByProductGroup = optionDefaults.reduce((map, item) => {
+      if (!item.product_id || !item.option_group_id || !item.option_choice_id) {
+        throw new Error('Option default row is missing required identifiers.');
+      }
+      const key = `${item.product_id}:${item.option_group_id}`;
+      if (!map[key]) map[key] = [];
+      map[key].push({
+        product_id: item.product_id,
+        option_group_id: item.option_group_id,
+        option_choice_id: item.option_choice_id
+      });
+      return map;
+    }, {});
+
+    const byProductId = {};
+    const byProductName = {};
+
+    optionGroups.forEach(group => {
+      if (!group.product_id || !group.option_group_id) {
+        throw new Error('Option group row is missing required identifiers.');
+      }
+
+      const product = productById[group.product_id];
+      const productName = product && String(product.name || '').trim();
+      if (!productName) {
+        throw new Error('Option group row points to a product that is missing from the public product fetch.');
+      }
+
+      if (!byProductId[group.product_id]) {
+        byProductId[group.product_id] = {
+          product_id: group.product_id,
+          product_name: productName,
+          groups: [],
+          choicesByGroupId: {},
+          defaultsByGroupId: {}
+        };
+      }
+
+      if (byProductName[productName] && byProductName[productName].product_id !== group.product_id) {
+        throw new Error(`Option data cannot be keyed safely because "${productName}" appears more than once.`);
+      }
+
+      const entry = byProductId[group.product_id];
+      const key = `${group.product_id}:${group.option_group_id}`;
+      const choices = choicesByProductGroup[key] || [];
+      const defaults = (defaultsByProductGroup[key] || []).map(defaultItem => ({
+        ...defaultItem,
+        choice: choices.find(choice => choice.option_choice_id === defaultItem.option_choice_id) || null
+      }));
+      const shapedGroup = {
+        product_id: group.product_id,
+        option_group_id: group.option_group_id,
+        group_key: group.group_key,
+        name: group.name,
+        selection_type: group.selection_type,
+        is_required: group.is_required,
+        min_selections: group.min_selections,
+        max_selections: group.max_selections,
+        sort_order: group.sort_order,
+        choices,
+        defaults
+      };
+
+      entry.groups.push(shapedGroup);
+      entry.choicesByGroupId[group.option_group_id] = choices;
+      entry.defaultsByGroupId[group.option_group_id] = defaults;
+      byProductName[productName] = entry;
+    });
+
+    return { byProductName, byProductId };
+  }
+
   async function fetchPublicMenuFromSupabase() {
     if (publicMenuFetchStarted) return;
     publicMenuFetchStarted = true;
@@ -6695,7 +6793,7 @@
         PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
       );
 
-      const [categoryResult, productResult, sizeResult] = await Promise.all([
+      const [categoryResult, productResult, sizeResult, optionGroupResult, optionChoiceResult, optionDefaultResult] = await Promise.all([
         client
           .from('public_menu_categories')
           .select('id,name,sort_order')
@@ -6710,7 +6808,23 @@
           .from('public_menu_product_sizes')
           .select('id,product_id,label,price,sort_order')
           .order('sort_order', { ascending: true })
-          .order('label', { ascending: true })
+          .order('label', { ascending: true }),
+        client
+          .from('public_menu_option_groups')
+          .select('product_id,option_group_id,group_key,name,selection_type,is_required,min_selections,max_selections,sort_order')
+          .order('product_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+        client
+          .from('public_menu_option_choices')
+          .select('product_id,option_group_id,option_choice_id,label,value,price_delta,sort_order')
+          .order('product_id', { ascending: true })
+          .order('option_group_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('label', { ascending: true }),
+        client
+          .from('public_menu_option_defaults')
+          .select('product_id,option_group_id,option_choice_id')
       ]);
 
       const errors = [categoryResult.error, productResult.error, sizeResult.error].filter(Boolean);
@@ -6723,6 +6837,25 @@
       const rawProducts = productResult.data || [];
       const rawProductSizes = sizeResult.data || [];
       const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes);
+      const optionErrors = [optionGroupResult.error, optionChoiceResult.error, optionDefaultResult.error].filter(Boolean);
+      shapedPublicMenu.options = null;
+
+      if (optionErrors.length) {
+        console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionErrors);
+      } else {
+        try {
+          shapedPublicMenu.options = buildSupabaseOptionsMap(
+            optionGroupResult.data || [],
+            optionChoiceResult.data || [],
+            optionDefaultResult.data || [],
+            rawProducts
+          );
+          console.log('[CURV Phase D.1] Option data fetched:', shapedPublicMenu.options);
+        } catch (optionError) {
+          shapedPublicMenu.options = null;
+          console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionError);
+        }
+      }
 
       if (!rawCategories.length || !rawProducts.length || !rawProductSizes.length) {
         console.warn('[CURV Phase 2B] Supabase public menu returned empty data. Hardcoded menu remains active.', {
