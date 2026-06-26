@@ -98,6 +98,9 @@
   const createDraftButton = document.querySelector('[data-create-draft]');
   const cancelEditButton = document.querySelector('[data-cancel-edit]');
   const draftProductTitle = document.getElementById('draft-product-title');
+  const productEditorViewTitle = document.querySelector('[data-product-editor-view-title]');
+  const openProductEditorButton = document.querySelector('[data-open-product-editor]');
+  const backToProductsButton = document.querySelector('[data-back-to-products]');
   const productOptionAttachmentList = document.querySelector('[data-product-option-attachments]');
   const showAttachOptionGroupButton = document.querySelector('[data-show-attach-option-group]');
   const productOptionAttachForm = document.querySelector('[data-product-option-attach-form]');
@@ -110,6 +113,9 @@
   const productSearchBar = document.querySelector('[data-product-search-bar]');
   const productSearchInput = document.querySelector('[data-product-search]');
   const clearProductSearchButton = document.querySelector('[data-clear-product-search]');
+  const menuManagerViewTabs = Array.from(document.querySelectorAll('[data-menu-manager-view-tab]'));
+  const menuManagerViewSections = Array.from(document.querySelectorAll('[data-menu-view-section]'));
+  const productSubviewSections = Array.from(document.querySelectorAll('[data-product-subview]'));
   const collapsibleToggles = Array.from(document.querySelectorAll('[data-collapsible-toggle]'));
   const displayOrderCategorySelect = document.querySelector('[data-display-order-category]');
   const displayOrderList = document.querySelector('[data-display-order-list]');
@@ -146,6 +152,8 @@
   let productOptionSettingsSaving = false;
   let productOptionDetachSaving = false;
   let editingProductOptionSettingsGroupId = '';
+  let activeMenuManagerView = 'products';
+  let activeProductSubview = 'list';
   let selectedOptionGroupId = '';
   let editingOptionGroupId = null;
   let editingOptionChoiceId = null;
@@ -186,6 +194,7 @@
     isOwnerSignedIn = isSignedIn;
     if (signInButton) signInButton.disabled = isSignedIn;
     if (signOutButton) signOutButton.disabled = !isSignedIn;
+    if (openProductEditorButton) openProductEditorButton.disabled = !isSignedIn;
   };
 
   const setCollapsibleExpanded = (toggle, shouldExpand) => {
@@ -206,9 +215,73 @@
     if (toggle) setCollapsibleExpanded(toggle, true);
   };
 
+  const setMenuManagerView = (viewName) => {
+    const nextView = viewName || 'products';
+    activeMenuManagerView = nextView;
+
+    menuManagerViewTabs.forEach((tab) => {
+      const isActive = tab.dataset.menuManagerViewTab === nextView;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    menuManagerViewSections.forEach((section) => {
+      const viewNames = String(section.dataset.menuViewSection || '').split(/\s+/).filter(Boolean);
+      section.hidden = !viewNames.includes(nextView);
+    });
+
+    if (nextView === 'option-library') {
+      openCollapsibleById('option-groups-content');
+      loadOptionGroups();
+    }
+
+    if (nextView === 'display-order') {
+      openCollapsibleById('display-order-content');
+    }
+  };
+
+  const setProductSubview = (subviewName) => {
+    const nextSubview = subviewName || 'list';
+    activeProductSubview = nextSubview;
+    productSubviewSections.forEach((section) => {
+      section.hidden = section.dataset.productSubview !== nextSubview;
+    });
+  };
+
+  const showProductListView = () => {
+    setMenuManagerView('products');
+    setProductSubview('list');
+  };
+
+  const showProductEditorView = (mode = 'create') => {
+    setMenuManagerView('products');
+    setProductSubview('editor');
+    openCollapsibleById('draft-product-content');
+    if (productEditorViewTitle) {
+      productEditorViewTitle.textContent = mode === 'edit' ? 'Edit Item' : 'Create Item';
+    }
+  };
+
+  const openCreateProductEditor = () => {
+    resetDraftProductForm();
+    populateDraftCategorySelect(latestCategories);
+    setDraftFormDisabled(!isOwnerSignedIn);
+    showProductEditorView('create');
+    setStatus(isOwnerSignedIn ? 'Create a new draft item.' : 'Sign in before creating an item.');
+  };
+
+  const returnToProductList = (message = 'Returned to product list.') => {
+    resetDraftProductForm();
+    populateDraftCategorySelect(latestCategories);
+    setDraftFormDisabled(!isOwnerSignedIn);
+    showProductListView();
+    setStatus(message);
+  };
+
   const setCreateMode = () => {
     editingProductId = null;
-    if (draftProductTitle) draftProductTitle.textContent = 'Create Draft Product';
+    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Create Item';
+    if (draftProductTitle) draftProductTitle.textContent = 'Create Item';
     if (createDraftButton) createDraftButton.textContent = 'Create Draft Product';
     if (cancelEditButton) {
       cancelEditButton.hidden = true;
@@ -218,8 +291,10 @@
 
   const setEditMode = (productId) => {
     editingProductId = productId;
+    showProductEditorView('edit');
     openCollapsibleById('draft-product-content');
-    if (draftProductTitle) draftProductTitle.textContent = 'Edit Draft Product';
+    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Edit Item';
+    if (draftProductTitle) draftProductTitle.textContent = 'Edit Item';
     if (createDraftButton) createDraftButton.textContent = 'Save Draft Product';
     if (cancelEditButton) {
       cancelEditButton.hidden = false;
@@ -2565,6 +2640,7 @@
       restoreStaticCategories();
       resetProductPreview();
       resetDraftProductForm();
+      showProductListView();
       setStatus('Ready for owner sign in.');
     }
   };
@@ -2861,6 +2937,27 @@
     });
   }
 
+  if (openProductEditorButton) {
+    openProductEditorButton.addEventListener('click', openCreateProductEditor);
+  }
+
+  if (backToProductsButton) {
+    backToProductsButton.addEventListener('click', () => {
+      returnToProductList('Returned to product list.');
+    });
+  }
+
+  menuManagerViewTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const nextView = tab.dataset.menuManagerViewTab || 'products';
+      if (nextView === 'products') {
+        showProductListView();
+      } else {
+        setMenuManagerView(nextView);
+      }
+    });
+  });
+
   collapsibleToggles.forEach((toggle) => {
     setCollapsibleExpanded(toggle, toggle.getAttribute('aria-expanded') === 'true');
     toggle.addEventListener('click', () => {
@@ -2872,6 +2969,9 @@
       }
     });
   });
+
+  setMenuManagerView(activeMenuManagerView);
+  setProductSubview(activeProductSubview);
 
   if (displayOrderCategorySelect) {
     displayOrderCategorySelect.addEventListener('change', handleDisplayOrderCategoryChange);
@@ -2942,10 +3042,7 @@
 
   if (cancelEditButton) {
     cancelEditButton.addEventListener('click', () => {
-      resetDraftProductForm();
-      populateDraftCategorySelect(latestCategories);
-      setDraftFormDisabled(false);
-      setStatus('Edit cancelled. Create mode restored.');
+      returnToProductList('Edit cancelled. Product list restored.');
     });
   }
 

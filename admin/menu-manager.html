@@ -121,14 +121,21 @@
         <p class="auth-status" data-auth-status role="status">Supabase config missing. Add project URL and publishable key before connecting.</p>
       </section>
 
-      <section class="draft-product-panel admin-collapsible-panel" data-draft-product-panel aria-labelledby="draft-product-section-title">
+      <nav class="menu-manager-view-tabs" aria-label="Menu Manager areas">
+        <button type="button" class="menu-manager-view-tab is-active" data-menu-manager-view-tab="products" aria-pressed="true">Products</button>
+        <button type="button" class="menu-manager-view-tab" data-menu-manager-view-tab="option-library" aria-pressed="false">Option Library</button>
+        <button type="button" class="menu-manager-view-tab" data-menu-manager-view-tab="display-order" aria-pressed="false">Display Order</button>
+      </nav>
+
+      <section class="draft-product-panel product-editor-panel admin-collapsible-panel menu-manager-view-section" data-menu-view-section="products" data-product-subview="editor" data-draft-product-panel aria-labelledby="draft-product-section-title" hidden>
         <div class="admin-collapsible-head">
           <div>
-            <p class="eyebrow">Products</p>
-            <h2 id="draft-product-section-title">Product Setup</h2>
+            <button type="button" class="product-editor-back" data-back-to-products>&larr; Back to Products</button>
+            <p class="eyebrow">Product Editor</p>
+            <h2 id="draft-product-section-title" data-product-editor-view-title>Create Item</h2>
             <p>Create or edit products here. Published and available items appear on the customer menu.</p>
           </div>
-          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="draft-product-content" data-label-collapsed="+ Add Product" data-label-expanded="- Add Product" aria-expanded="false" aria-controls="draft-product-content">+ Add Product</button>
+          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="draft-product-content" data-label-collapsed="+ Add Item" data-label-expanded="- Add Item" aria-expanded="false" aria-controls="draft-product-content">+ Add Item</button>
         </div>
         <div id="draft-product-content" class="admin-collapsible-content" data-collapsible-content hidden>
           <div class="draft-product-intro">
@@ -279,7 +286,7 @@
         </div>
       </section>
 
-      <section class="display-order-panel admin-collapsible-panel" data-display-order-panel aria-labelledby="display-order-title">
+      <section class="display-order-panel admin-collapsible-panel menu-manager-view-section" data-menu-view-section="display-order" data-display-order-panel aria-labelledby="display-order-title" hidden>
         <div class="display-order-head admin-collapsible-head">
           <div>
             <p class="eyebrow">Display Order</p>
@@ -316,14 +323,14 @@
         </div>
       </section>
 
-      <section class="option-groups-panel admin-collapsible-panel" data-option-groups-panel aria-labelledby="option-groups-title">
+      <section class="option-groups-panel admin-collapsible-panel menu-manager-view-section" data-menu-view-section="option-library" data-option-groups-panel aria-labelledby="option-groups-title" hidden>
         <div class="admin-collapsible-head">
           <div>
-            <p class="eyebrow">Option Groups</p>
-            <h2 id="option-groups-title">Reusable Options</h2>
+            <p class="eyebrow">Option Library</p>
+            <h2 id="option-groups-title">Option Groups &amp; Choices</h2>
             <p>Reusable option groups only. Product attachment comes later.</p>
           </div>
-          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="Option Groups &#9662;" data-label-expanded="Option Groups &#9652;" aria-expanded="false" aria-controls="option-groups-content">Option Groups &#9662;</button>
+          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="Option Library &#9662;" data-label-expanded="Option Library &#9652;" aria-expanded="false" aria-controls="option-groups-content">Option Library &#9662;</button>
         </div>
 
         <div id="option-groups-content" class="admin-collapsible-content" data-collapsible-content hidden>
@@ -430,7 +437,7 @@
         </div>
       </section>
 
-      <section class="menu-manager-shell" aria-label="Static Menu Manager shell">
+      <section class="menu-manager-shell menu-manager-view-section" data-menu-view-section="products" data-product-subview="list" aria-label="Static Menu Manager shell">
         <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
           <div class="panel-heading-row">
             <p class="eyebrow">Categories</p>
@@ -472,8 +479,11 @@
               <span class="static-status" data-product-status>Locked</span>
             </div>
             <div class="product-preview-heading">
-              <h2 id="product-preview-title">Draft Product Preview</h2>
-              <p data-product-count>Sign in to load products.</p>
+              <div>
+                <h2 id="product-preview-title">Product List</h2>
+                <p data-product-count>Sign in to load products.</p>
+              </div>
+              <button type="button" class="auth-button product-list-add-button" data-open-product-editor disabled>+ Add Item</button>
             </div>
             <div class="product-filter-bar" data-product-filter-bar hidden>
               <span class="product-filter-label">Filter</span>

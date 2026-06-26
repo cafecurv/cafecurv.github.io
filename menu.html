@@ -5122,14 +5122,23 @@
     return wrap;
   }
 
-  function renderAllSavoryPanels(items = SAVORY_ITEMS) {
+  function renderAllSavoryPanels(items = SAVORY_ITEMS, shapedPublicMenu = null) {
     const mount = document.getElementById('savory-mount');
     if (!mount) return; // mount div not in HTML yet - skip silently
     mount.innerHTML = '';
 
     items.forEach(item => {
       mount.appendChild(renderSavoryPanel(item));
-      initPanel(item.id, { sauce_pref: item.default_sauce });
+      const supabaseSauceDefault = getSupabaseDefaultOptionValue(item.name, 'sauce_pref', shapedPublicMenu);
+      const sauceDefault = supabaseSauceDefault || item.default_sauce;
+      const defaults = { sauce_pref: sauceDefault };
+      initPanel(item.id, defaults);
+      if (panelState[item.id]) {
+        panelState[item.id].options = { ...panelState[item.id].options, ...defaults };
+      }
+      if (supabaseSauceDefault) {
+        console.log(`[CURV Phase D.2] Using Supabase sauce default for ${item.name}: ${supabaseSauceDefault}`);
+      }
     });
   }
 
@@ -5244,7 +5253,7 @@
       return false;
     }
 
-    renderAllSavoryPanels(mapped.items);
+    renderAllSavoryPanels(mapped.items, shapedPublicMenu);
     return true;
   }
 
@@ -6628,6 +6637,7 @@
   const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
   let publicMenuFetchStarted = false;
+  let latestPublicMenuOptions = null;
 
   function shapePublicMenuData(categories = [], products = [], productSizes = []) {
     const variantsByProduct = productSizes.reduce((map, size) => {
@@ -6778,6 +6788,29 @@
     return { byProductName, byProductId };
   }
 
+  function getSupabaseDefaultOptionValue(productName, groupKey, shapedPublicMenu = null) {
+    const options = shapedPublicMenu && shapedPublicMenu.options
+      ? shapedPublicMenu.options
+      : latestPublicMenuOptions;
+    if (!options || !options.byProductName || !productName || !groupKey) return null;
+
+    const exactEntry = options.byProductName[productName];
+    const normalizedProductName = normalizePublicMenuText(productName);
+    const productEntry = exactEntry || Object.keys(options.byProductName).reduce((match, name) => {
+      if (match) return match;
+      return normalizePublicMenuText(name) === normalizedProductName ? options.byProductName[name] : null;
+    }, null);
+    if (!productEntry || !Array.isArray(productEntry.groups)) return null;
+
+    const group = productEntry.groups.find(item => item && item.group_key === groupKey);
+    if (!group || !Array.isArray(group.defaults) || !group.defaults.length) return null;
+
+    const defaultChoice = group.defaults.find(item => item && item.choice && (item.choice.label || item.choice.value));
+    if (!defaultChoice || !defaultChoice.choice) return null;
+
+    return defaultChoice.choice.label || defaultChoice.choice.value || null;
+  }
+
   async function fetchPublicMenuFromSupabase() {
     if (publicMenuFetchStarted) return;
     publicMenuFetchStarted = true;
@@ -6839,6 +6872,7 @@
       const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes);
       const optionErrors = [optionGroupResult.error, optionChoiceResult.error, optionDefaultResult.error].filter(Boolean);
       shapedPublicMenu.options = null;
+      latestPublicMenuOptions = null;
 
       if (optionErrors.length) {
         console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionErrors);
@@ -6850,9 +6884,11 @@
             optionDefaultResult.data || [],
             rawProducts
           );
+          latestPublicMenuOptions = shapedPublicMenu.options;
           console.log('[CURV Phase D.1] Option data fetched:', shapedPublicMenu.options);
         } catch (optionError) {
           shapedPublicMenu.options = null;
+          latestPublicMenuOptions = null;
           console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionError);
         }
       }
