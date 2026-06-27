@@ -330,7 +330,13 @@
                 <option value="">Sign in to load categories</option>
               </select>
             </label>
-            <p class="display-order-copy">Only products in the selected category are updated. Save affects product sort order in Supabase.</p>
+            <label class="admin-field display-order-category-field" for="display-order-section">
+              <span>Section</span>
+              <select id="display-order-section" data-display-order-section disabled>
+                <option value="">Select category first</option>
+              </select>
+            </label>
+            <p class="display-order-copy">Select a category and section to reorder products inside that section.</p>
           </div>
 
           <p class="display-order-unsaved" data-display-order-unsaved hidden>Unsaved local changes</p>

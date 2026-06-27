@@ -145,6 +145,7 @@
   const productSubviewSections = Array.from(document.querySelectorAll('[data-product-subview]'));
   const collapsibleToggles = Array.from(document.querySelectorAll('[data-collapsible-toggle]'));
   const displayOrderCategorySelect = document.querySelector('[data-display-order-category]');
+  const displayOrderSectionSelect = document.querySelector('[data-display-order-section]');
   const displayOrderList = document.querySelector('[data-display-order-list]');
   const displayOrderUnsaved = document.querySelector('[data-display-order-unsaved]');
   const displayOrderStatus = document.querySelector('[data-display-order-status]');
@@ -204,11 +205,14 @@
   let optionChoiceSaving = false;
   let variantRowCount = 1;
   let selectedDisplayOrderCategory = '';
+  let selectedDisplayOrderSection = 'all';
+  let latestDisplayOrderSections = [];
   let displayOrderOriginalProducts = [];
   let sortableProducts = [];
   let displayOrderDirty = false;
   let displayOrderSaving = false;
   let displayOrderLoadedCategory = '';
+  let displayOrderLoadedSection = 'all';
   let draggedSortProductId = null;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
@@ -1621,11 +1625,22 @@
     if (displayOrderStatus) displayOrderStatus.textContent = message;
   };
 
+  const isDisplayOrderSectionSortable = () => Boolean(selectedDisplayOrderCategory)
+    && selectedDisplayOrderSection
+    && selectedDisplayOrderSection !== 'all';
+
+  const getDisplayOrderSectionLabel = () => {
+    if (selectedDisplayOrderSection === '__none__') return 'No section';
+    const section = latestDisplayOrderSections.find((item) => item.id === selectedDisplayOrderSection);
+    return section ? section.name : 'Selected section';
+  };
+
   const updateDisplayOrderButtons = () => {
     const hasCategory = Boolean(selectedDisplayOrderCategory);
+    const hasSortableSection = isDisplayOrderSectionSortable();
     const hasProducts = sortableProducts.length > 0;
     if (resetDisplayOrderButton) resetDisplayOrderButton.disabled = displayOrderSaving || !displayOrderDirty;
-    if (saveDisplayOrderButton) saveDisplayOrderButton.disabled = displayOrderSaving || !displayOrderDirty || !hasCategory || !hasProducts;
+    if (saveDisplayOrderButton) saveDisplayOrderButton.disabled = displayOrderSaving || !displayOrderDirty || !hasCategory || !hasSortableSection || !hasProducts;
   };
 
   const populateDisplayOrderCategorySelect = (categories) => {
@@ -1643,6 +1658,69 @@
     } else {
       selectedDisplayOrderCategory = '';
     }
+  };
+
+  const renderDisplayOrderSections = (sections = []) => {
+    latestDisplayOrderSections = sections;
+    if (!displayOrderSectionSelect) return;
+
+    displayOrderSectionSelect.innerHTML = '';
+
+    const makeOption = (label, value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    };
+
+    if (!selectedDisplayOrderCategory) {
+      selectedDisplayOrderSection = 'all';
+      displayOrderSectionSelect.appendChild(makeOption('Select category first', ''));
+      displayOrderSectionSelect.value = '';
+      displayOrderSectionSelect.disabled = true;
+      return;
+    }
+
+    displayOrderSectionSelect.disabled = displayOrderSaving || !isOwnerSignedIn;
+    displayOrderSectionSelect.appendChild(makeOption('All sections', 'all'));
+    displayOrderSectionSelect.appendChild(makeOption('No section', '__none__'));
+    sections.forEach((section) => {
+      const label = section.is_active === false ? section.name + ' (inactive)' : section.name;
+      displayOrderSectionSelect.appendChild(makeOption(label, section.id));
+    });
+
+    if (selectedDisplayOrderSection !== '__none__' && selectedDisplayOrderSection !== 'all' && !sections.some((section) => section.id === selectedDisplayOrderSection)) {
+      selectedDisplayOrderSection = 'all';
+    }
+    displayOrderSectionSelect.value = selectedDisplayOrderSection;
+  };
+
+  const loadDisplayOrderSections = async (categoryId) => {
+    if (!categoryId) {
+      renderDisplayOrderSections([]);
+      return;
+    }
+
+    if (displayOrderSectionSelect) {
+      displayOrderSectionSelect.disabled = true;
+      displayOrderSectionSelect.innerHTML = '<option value="">Loading sections...</option>';
+    }
+
+    const { data, error } = await client
+      .from('category_sections')
+      .select('id,category_id,name,sort_order,is_active')
+      .eq('category_id', categoryId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      latestDisplayOrderSections = [];
+      renderDisplayOrderSections([]);
+      setDisplayOrderStatus('Unable to load sections. ' + error.message);
+      return;
+    }
+
+    renderDisplayOrderSections(data || []);
   };
 
   const getProductSortOrder = (product) => {
@@ -1669,7 +1747,9 @@
     displayOrderDirty = isDirty;
     if (displayOrderUnsaved) displayOrderUnsaved.hidden = !isDirty;
     updateDisplayOrderButtons();
-    setDisplayOrderStatus(isDirty ? 'Unsaved local changes. Save Display Order to update this category.' : 'Choose a category, reorder products, then save.');
+    setDisplayOrderStatus(isDirty
+      ? 'Unsaved local changes. Save Display Order to update ' + getDisplayOrderSectionLabel() + '.'
+      : 'Choose a category and section, reorder products, then save.');
   };
 
   const renderDisplayOrderEmpty = (title, message) => {
@@ -1700,12 +1780,17 @@
     displayOrderList.innerHTML = '';
 
     if (!selectedDisplayOrderCategory) {
-      renderDisplayOrderEmpty('Select a category', 'Choose a category to preview a local drag order. Nothing saves yet.');
+      renderDisplayOrderEmpty('Select a category', 'Choose a category and section to reorder products.');
+      return;
+    }
+
+    if (selectedDisplayOrderSection === 'all') {
+      renderDisplayOrderEmpty('Choose a section to reorder safely.', 'All sections is view-only for now so products do not get mixed across sections.');
       return;
     }
 
     if (!sortableProducts.length) {
-      renderDisplayOrderEmpty('No products in this category yet.', 'Create or move products into this category before sorting.');
+      renderDisplayOrderEmpty('No products in this section yet.', 'Create products or assign products to this section before sorting.');
       return;
     }
 
@@ -1726,7 +1811,7 @@
       name.textContent = product.name || 'Untitled product';
       const meta = document.createElement('p');
       meta.className = 'display-order-meta';
-      meta.textContent = 'Current sort_order ' + getProductSortOrder(product) + ' - Local position ' + (index + 1);
+      meta.textContent = getDisplayOrderSectionLabel() + ' - Current sort_order ' + getProductSortOrder(product) + ' - Local position ' + (index + 1);
       copy.append(name, meta);
 
       const badges = document.createElement('div');
@@ -1795,29 +1880,54 @@
     });
   };
 
-  const initializeDisplayOrderCategory = (categoryId) => {
+  const getDisplayOrderProductsForSelection = () => {
+    if (!selectedDisplayOrderCategory || selectedDisplayOrderSection === 'all') return [];
+    return sortProductsForDisplayOrder(latestProducts.filter((product) => {
+      if (product.category_id !== selectedDisplayOrderCategory) return false;
+      if (selectedDisplayOrderSection === '__none__') return !product.category_section_id;
+      return product.category_section_id === selectedDisplayOrderSection;
+    }));
+  };
+
+  const initializeDisplayOrderCategory = async (categoryId) => {
     selectedDisplayOrderCategory = categoryId || '';
     if (displayOrderCategorySelect) displayOrderCategorySelect.value = selectedDisplayOrderCategory;
 
     if (!selectedDisplayOrderCategory) {
+      selectedDisplayOrderSection = 'all';
+      latestDisplayOrderSections = [];
       displayOrderOriginalProducts = [];
       sortableProducts = [];
       displayOrderLoadedCategory = '';
+      displayOrderLoadedSection = 'all';
+      renderDisplayOrderSections([]);
       setDisplayOrderDirty(false);
       renderDisplayOrderList();
       return;
     }
 
+    selectedDisplayOrderSection = 'all';
+    await loadDisplayOrderSections(selectedDisplayOrderCategory);
     displayOrderLoadedCategory = selectedDisplayOrderCategory;
-    displayOrderOriginalProducts = sortProductsForDisplayOrder(
-      latestProducts.filter((product) => product.category_id === selectedDisplayOrderCategory)
-    );
+    displayOrderLoadedSection = selectedDisplayOrderSection;
+    displayOrderOriginalProducts = getDisplayOrderProductsForSelection();
     sortableProducts = displayOrderOriginalProducts.slice();
     setDisplayOrderDirty(false);
     renderDisplayOrderList();
   };
 
-  const handleDisplayOrderCategoryChange = () => {
+  const initializeDisplayOrderSection = (sectionValue) => {
+    selectedDisplayOrderSection = sectionValue || 'all';
+    if (displayOrderSectionSelect) displayOrderSectionSelect.value = selectedDisplayOrderSection;
+    displayOrderLoadedCategory = selectedDisplayOrderCategory;
+    displayOrderLoadedSection = selectedDisplayOrderSection;
+    displayOrderOriginalProducts = getDisplayOrderProductsForSelection();
+    sortableProducts = displayOrderOriginalProducts.slice();
+    setDisplayOrderDirty(false);
+    renderDisplayOrderList();
+  };
+
+  const handleDisplayOrderCategoryChange = async () => {
     if (!displayOrderCategorySelect) return;
     const nextCategory = displayOrderCategorySelect.value;
 
@@ -1836,19 +1946,45 @@
       }
     }
 
-    initializeDisplayOrderCategory(nextCategory);
+    await initializeDisplayOrderCategory(nextCategory);
+  };
+
+  const handleDisplayOrderSectionChange = () => {
+    if (!displayOrderSectionSelect) return;
+    const nextSection = displayOrderSectionSelect.value || 'all';
+
+    if (displayOrderSaving) {
+      displayOrderSectionSelect.value = selectedDisplayOrderSection;
+      return;
+    }
+
+    if (displayOrderDirty && nextSection !== selectedDisplayOrderSection) {
+      const shouldDiscard = window.confirm('You have unsaved display order changes. Switch sections and discard them?');
+      if (!shouldDiscard) {
+        displayOrderSectionSelect.value = selectedDisplayOrderSection;
+        setDisplayOrderStatus('Section switch cancelled. Unsaved display order changes are still visible.');
+        updateDisplayOrderButtons();
+        return;
+      }
+    }
+
+    initializeDisplayOrderSection(nextSection);
   };
 
   const resetDisplayOrder = () => {
     selectedDisplayOrderCategory = '';
+    selectedDisplayOrderSection = 'all';
+    latestDisplayOrderSections = [];
     displayOrderOriginalProducts = [];
     sortableProducts = [];
     displayOrderLoadedCategory = '';
+    displayOrderLoadedSection = 'all';
     displayOrderSaving = false;
     if (displayOrderCategorySelect) {
       displayOrderCategorySelect.value = '';
       displayOrderCategorySelect.disabled = !latestCategories.length;
     }
+    renderDisplayOrderSections([]);
     setDisplayOrderDirty(false);
     renderDisplayOrderEmpty('Select a category', 'Sortable products will appear here after owner sign-in.');
   };
@@ -1868,15 +2004,25 @@
       return;
     }
 
-    if (selectedDisplayOrderCategory !== displayOrderLoadedCategory) {
-      setDisplayOrderStatus('Category changed before save. Reload the category order and try again.');
+    if (!isDisplayOrderSectionSortable()) {
+      setDisplayOrderStatus('Choose a real section or No section before saving display order.');
       updateDisplayOrderButtons();
       return;
     }
 
-    const mismatchedProduct = sortableProducts.find((product) => product.category_id !== selectedDisplayOrderCategory);
+    if (selectedDisplayOrderCategory !== displayOrderLoadedCategory || selectedDisplayOrderSection !== displayOrderLoadedSection) {
+      setDisplayOrderStatus('Category or section changed before save. Reload the section order and try again.');
+      updateDisplayOrderButtons();
+      return;
+    }
+
+    const mismatchedProduct = sortableProducts.find((product) => {
+      if (product.category_id !== selectedDisplayOrderCategory) return true;
+      if (selectedDisplayOrderSection === '__none__') return Boolean(product.category_section_id);
+      return product.category_section_id !== selectedDisplayOrderSection;
+    });
     if (mismatchedProduct) {
-      setDisplayOrderStatus('Display order stopped because a product does not belong to the selected category.');
+      setDisplayOrderStatus('Display order stopped because a product does not belong to the selected category and section.');
       updateDisplayOrderButtons();
       return;
     }
@@ -1889,21 +2035,27 @@
 
     displayOrderSaving = true;
     if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = true;
+    if (displayOrderSectionSelect) displayOrderSectionSelect.disabled = true;
     updateDisplayOrderButtons();
     setDisplayOrderStatus('Saving display order...');
 
     for (const product of savedOrder) {
-      const { data, error } = await client
+      let updateQuery = client
         .from('products')
         .update({ sort_order: product.sort_order })
         .eq('id', product.id)
-        .eq('category_id', selectedDisplayOrderCategory)
-        .select('id')
-        .single();
+        .eq('category_id', selectedDisplayOrderCategory);
+
+      updateQuery = selectedDisplayOrderSection === '__none__'
+        ? updateQuery.is('category_section_id', null)
+        : updateQuery.eq('category_section_id', selectedDisplayOrderSection);
+
+      const { data, error } = await updateQuery.select('id').single();
 
       if (error || !data) {
         displayOrderSaving = false;
         if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !latestCategories.length;
+        renderDisplayOrderSections(latestDisplayOrderSections);
         updateDisplayOrderButtons();
         setDisplayOrderStatus('Unable to save display order for ' + product.name + '. Earlier rows may have saved; local order is still visible so you can retry. ' + (error ? error.message : 'No matching product row was updated.'));
         return;
@@ -1912,20 +2064,19 @@
 
     const savedSortById = new Map(savedOrder.map((product) => [product.id, product.sort_order]));
     latestProducts = sortProductsForPreview(latestProducts.map((product) => {
-      if (product.category_id !== selectedDisplayOrderCategory || !savedSortById.has(product.id)) return product;
+      if (!savedSortById.has(product.id)) return product;
       return { ...product, sort_order: savedSortById.get(product.id) };
     }));
 
-    displayOrderOriginalProducts = sortProductsForDisplayOrder(
-      latestProducts.filter((product) => product.category_id === selectedDisplayOrderCategory)
-    );
+    displayOrderOriginalProducts = getDisplayOrderProductsForSelection();
     sortableProducts = displayOrderOriginalProducts.slice();
     displayOrderSaving = false;
     if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !latestCategories.length;
+    renderDisplayOrderSections(latestDisplayOrderSections);
     setDisplayOrderDirty(false);
     renderDisplayOrderList();
     renderProducts(latestProducts);
-    setDisplayOrderStatus('Display order saved for this category.');
+    setDisplayOrderStatus('Display order saved for ' + getDisplayOrderSectionLabel() + '.');
   };
 
   const renderProductFilters = (categories) => {
@@ -3462,7 +3613,12 @@
 
     renderProducts(products);
     if (selectedDisplayOrderCategory) {
-      initializeDisplayOrderCategory(selectedDisplayOrderCategory);
+      const currentDisplayOrderCategory = selectedDisplayOrderCategory;
+      const currentDisplayOrderSection = selectedDisplayOrderSection;
+      await initializeDisplayOrderCategory(currentDisplayOrderCategory);
+      if (currentDisplayOrderSection && currentDisplayOrderSection !== 'all') {
+        initializeDisplayOrderSection(currentDisplayOrderSection);
+      }
     } else {
       renderDisplayOrderList();
     }
@@ -4018,6 +4174,10 @@
 
   if (displayOrderCategorySelect) {
     displayOrderCategorySelect.addEventListener('change', handleDisplayOrderCategoryChange);
+  }
+
+  if (displayOrderSectionSelect) {
+    displayOrderSectionSelect.addEventListener('change', handleDisplayOrderSectionChange);
   }
 
   if (resetDisplayOrderButton) {
