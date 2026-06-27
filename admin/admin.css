@@ -1326,7 +1326,9 @@ body.more-drawer-open {
   padding-bottom: 0.58rem;
 }
 
-.product-filter-rename {
+.product-filter-rename,
+.product-filter-section-create,
+.product-filter-section-rename {
   flex: 1 1 100%;
 }
 

@@ -90,16 +90,32 @@
   const productCount = document.querySelector('[data-product-count]');
   const draftForm = document.querySelector('[data-draft-product-form]');
   const draftCategorySelect = document.getElementById('draft-product-category');
+  const draftSectionSelect = document.getElementById('draft-product-section');
   const inlineCategoryCreate = document.querySelector('[data-inline-category-create]');
   const inlineCategoryNameInput = document.querySelector('[data-inline-category-name]');
   const saveInlineCategoryButton = document.querySelector('[data-save-inline-category]');
   const cancelInlineCategoryButton = document.querySelector('[data-cancel-inline-category]');
+  const inlineDraftSectionCreate = document.querySelector('[data-inline-draft-section-create]');
+  const inlineDraftSectionNameInput = document.querySelector('[data-inline-draft-section-name]');
+  const saveInlineDraftSectionButton = document.querySelector('[data-save-inline-draft-section]');
+  const cancelInlineDraftSectionButton = document.querySelector('[data-cancel-inline-draft-section]');
   const inlineCategoryRename = document.querySelector('[data-inline-category-rename]');
   const inlineCategoryRenameInput = document.querySelector('[data-inline-category-rename-name]');
   const saveInlineCategoryRenameButton = document.querySelector('[data-save-inline-category-rename]');
   const cancelInlineCategoryRenameButton = document.querySelector('[data-cancel-inline-category-rename]');
   const renameSelectedCategoryButton = document.querySelector('[data-rename-selected-category]');
   const deleteSelectedCategoryButton = document.querySelector('[data-delete-selected-category]');
+  const productSectionFilter = document.querySelector('[data-product-section-filter]');
+  const inlineSectionCreate = document.querySelector('[data-inline-section-create]');
+  const inlineSectionNameInput = document.querySelector('[data-inline-section-name]');
+  const saveInlineSectionButton = document.querySelector('[data-save-inline-section]');
+  const cancelInlineSectionButton = document.querySelector('[data-cancel-inline-section]');
+  const inlineSectionRename = document.querySelector('[data-inline-section-rename]');
+  const inlineSectionRenameInput = document.querySelector('[data-inline-section-rename-name]');
+  const saveInlineSectionRenameButton = document.querySelector('[data-save-inline-section-rename]');
+  const cancelInlineSectionRenameButton = document.querySelector('[data-cancel-inline-section-rename]');
+  const renameSelectedSectionButton = document.querySelector('[data-rename-selected-section]');
+  const deleteSelectedSectionButton = document.querySelector('[data-delete-selected-section]');
   const variantGroupSelect = document.getElementById('draft-variant-group');
   const customVariantField = document.querySelector('[data-custom-variant-field]');
   const customVariantInput = document.getElementById('draft-custom-variant-group');
@@ -152,7 +168,10 @@
   let latestProducts = [];
   let optionGroupsList = [];
   let optionChoicesList = [];
+  let latestCategorySections = [];
+  let latestDraftCategorySections = [];
   let selectedCategoryFilter = 'all';
+  let selectedSectionFilter = 'all';
   let selectedProductStatusFilter = 'all';
   let productSearchQuery = '';
   let editingProductId = null;
@@ -167,9 +186,14 @@
   let activeMenuManagerView = 'products';
   let activeProductSubview = 'list';
   let previousDraftCategoryValue = '';
+  let previousDraftSectionValue = '';
   let inlineCategorySaving = false;
+  let inlineDraftSectionSaving = false;
   let inlineCategoryRenameSaving = false;
   let inlineCategoryDeleteSaving = false;
+  let inlineSectionSaving = false;
+  let inlineSectionRenameSaving = false;
+  let inlineSectionDeleteSaving = false;
   let selectedOptionGroupId = '';
   let editingOptionGroupId = null;
   let editingOptionChoiceId = null;
@@ -285,10 +309,10 @@
     }
   };
 
-  const openCreateProductEditor = () => {
+  const openCreateProductEditor = async () => {
     resetDraftProductForm();
     populateDraftCategorySelect(latestCategories);
-    preselectDraftCategoryFromFilter();
+    await preselectDraftCategoryFromFilter();
     setDraftFormDisabled(!isOwnerSignedIn);
     showProductEditorView('create');
     setStatus(isOwnerSignedIn ? 'Create a new draft item.' : 'Sign in before creating an item.');
@@ -429,12 +453,24 @@
     updateRemoveButtons();
   };
 
+  const getDraftCategoryId = () => {
+    const categoryId = draftCategorySelect ? draftCategorySelect.value : '';
+    if (!categoryId || categoryId === '__create_category__') return '';
+    return latestCategories.some((category) => category.id === categoryId) ? categoryId : '';
+  };
+
+  const syncDraftSectionSelectDisabled = () => {
+    if (!draftSectionSelect) return;
+    draftSectionSelect.disabled = !isOwnerSignedIn || !getDraftCategoryId() || Boolean(draftCategorySelect && draftCategorySelect.disabled);
+  };
+
   const setDraftFormDisabled = (isDisabled) => {
     if (!draftForm) return;
     draftForm.querySelectorAll('input, select, textarea, button').forEach((field) => {
       field.disabled = isDisabled;
     });
     syncVariantGroupFields();
+    syncDraftSectionSelectDisabled();
     updateRemoveButtons();
     updateCategoryActionButtons();
   };
@@ -1144,6 +1180,10 @@
     if (draftCategorySelect) {
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
+    latestDraftCategorySections = [];
+    previousDraftSectionValue = '';
+    renderDraftProductSections([], '');
+    hideInlineDraftSectionCreate(false);
     hideInlineCategoryCreate(false);
     hideInlineCategoryRename();
     setDraftFormDisabled(true);
@@ -1188,14 +1228,39 @@
     const isDisabled = !isOwnerSignedIn || isBusy || !hasCategory;
     if (renameSelectedCategoryButton) renameSelectedCategoryButton.disabled = isDisabled;
     if (deleteSelectedCategoryButton) deleteSelectedCategoryButton.disabled = isDisabled;
+    updateSectionActionButtons();
   };
 
-  const preselectDraftCategoryFromFilter = () => {
+  const getSelectedSectionId = () => {
+    if (!selectedSectionFilter || selectedSectionFilter === 'all') return '';
+    return latestCategorySections.some((section) => section.id === selectedSectionFilter)
+      ? selectedSectionFilter
+      : '';
+  };
+
+  const getSelectedSection = () => {
+    const sectionId = getSelectedSectionId();
+    return sectionId ? latestCategorySections.find((section) => section.id === sectionId) || null : null;
+  };
+
+  const updateSectionActionButtons = () => {
+    const hasCategory = Boolean(getSelectedProductListCategoryId());
+    const hasSection = Boolean(getSelectedSectionId());
+    const isBusy = inlineSectionSaving || inlineSectionRenameSaving || inlineSectionDeleteSaving;
+    const actionsDisabled = !isOwnerSignedIn || isBusy || !hasCategory || !hasSection;
+    if (renameSelectedSectionButton) renameSelectedSectionButton.disabled = actionsDisabled;
+    if (deleteSelectedSectionButton) deleteSelectedSectionButton.disabled = actionsDisabled;
+  };
+
+  const preselectDraftCategoryFromFilter = async () => {
     const filteredCategoryId = getSelectedProductListCategoryId();
     if (filteredCategoryId && draftCategorySelect) {
       draftCategorySelect.value = filteredCategoryId;
       previousDraftCategoryValue = filteredCategoryId;
+      await loadDraftCategorySections(filteredCategoryId, getSelectedSectionId());
       updateCategoryActionButtons();
+    } else {
+      renderDraftProductSections([], '');
     }
   };
 
@@ -1256,6 +1321,292 @@
     if (inlineCategoryRenameInput) inlineCategoryRenameInput.value = '';
     setInlineCategoryRenameDisabled(true);
     updateCategoryActionButtons();
+  };
+
+  const setInlineDraftSectionDisabled = (isDisabled) => {
+    if (inlineDraftSectionNameInput) inlineDraftSectionNameInput.disabled = isDisabled;
+    if (saveInlineDraftSectionButton) saveInlineDraftSectionButton.disabled = isDisabled;
+    if (cancelInlineDraftSectionButton) cancelInlineDraftSectionButton.disabled = isDisabled;
+  };
+
+  const hideInlineDraftSectionCreate = (restorePrevious = true) => {
+    if (inlineDraftSectionCreate) inlineDraftSectionCreate.hidden = true;
+    if (inlineDraftSectionNameInput) inlineDraftSectionNameInput.value = '';
+    setInlineDraftSectionDisabled(true);
+    if (restorePrevious && draftSectionSelect && draftSectionSelect.value === '__create_section__') {
+      draftSectionSelect.value = previousDraftSectionValue || '';
+    }
+    previousDraftSectionValue = draftSectionSelect && draftSectionSelect.value !== '__create_section__'
+      ? draftSectionSelect.value
+      : '';
+  };
+
+  const showInlineDraftSectionCreate = () => {
+    if (!getDraftCategoryId()) {
+      setStatus('Choose a product category before adding a section.');
+      return;
+    }
+    if (inlineDraftSectionCreate) inlineDraftSectionCreate.hidden = false;
+    setInlineDraftSectionDisabled(!isOwnerSignedIn || inlineDraftSectionSaving);
+    if (inlineDraftSectionNameInput) {
+      inlineDraftSectionNameInput.value = '';
+      inlineDraftSectionNameInput.focus();
+    }
+  };
+
+  const getNextDraftSectionSortOrder = () => {
+    const maxSort = latestDraftCategorySections.reduce((max, section) => {
+      const sortOrder = Number(section && section.sort_order);
+      return Number.isFinite(sortOrder) ? Math.max(max, sortOrder) : max;
+    }, -1);
+    return maxSort + 1;
+  };
+
+  const renderDraftProductSections = (sections = [], selectedValue = '') => {
+    latestDraftCategorySections = sections;
+    if (!draftSectionSelect) return;
+
+    const categoryId = getDraftCategoryId();
+    draftSectionSelect.innerHTML = '';
+
+    const makeOption = (label, value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    };
+
+    if (!categoryId) {
+      draftSectionSelect.appendChild(makeOption('Select category first', ''));
+      draftSectionSelect.value = '';
+      syncDraftSectionSelectDisabled();
+      hideInlineDraftSectionCreate(false);
+      return;
+    }
+
+    draftSectionSelect.appendChild(makeOption('No section', ''));
+    sections.forEach((section) => {
+      const label = section.is_active === false ? section.name + ' (inactive)' : section.name;
+      draftSectionSelect.appendChild(makeOption(label, section.id));
+    });
+    draftSectionSelect.appendChild(makeOption('+ Add section...', '__create_section__'));
+
+    draftSectionSelect.value = sections.some((section) => section.id === selectedValue) ? selectedValue : '';
+    previousDraftSectionValue = draftSectionSelect.value;
+    syncDraftSectionSelectDisabled();
+  };
+
+  const loadDraftCategorySections = async (categoryId, selectedValue = '') => {
+    if (!categoryId) {
+      renderDraftProductSections([], '');
+      return;
+    }
+
+    if (draftSectionSelect) {
+      draftSectionSelect.disabled = true;
+      draftSectionSelect.innerHTML = '<option value="">Loading sections...</option>';
+    }
+
+    const { data, error } = await client
+      .from('category_sections')
+      .select('id,category_id,name,sort_order,is_active')
+      .eq('category_id', categoryId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      latestDraftCategorySections = [];
+      renderDraftProductSections([], '');
+      setStatus('Unable to load product sections. ' + error.message);
+      return;
+    }
+
+    renderDraftProductSections(data || [], selectedValue);
+  };
+
+  const createInlineDraftSection = async () => {
+    if (!isOwnerSignedIn || inlineDraftSectionSaving) return;
+
+    const categoryId = getDraftCategoryId();
+    const name = inlineDraftSectionNameInput ? inlineDraftSectionNameInput.value.trim() : '';
+    if (!categoryId) {
+      setStatus('Choose a product category before adding a section.');
+      return;
+    }
+    if (!name) {
+      setStatus('Section name is required.');
+      if (inlineDraftSectionNameInput) inlineDraftSectionNameInput.focus();
+      return;
+    }
+
+    inlineDraftSectionSaving = true;
+    setInlineDraftSectionDisabled(true);
+    setStatus('Creating section...');
+
+    const { data, error } = await client
+      .from('category_sections')
+      .insert({
+        category_id: categoryId,
+        name,
+        sort_order: getNextDraftSectionSortOrder(),
+        is_active: true,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      inlineDraftSectionSaving = false;
+      setInlineDraftSectionDisabled(false);
+      const duplicateHint = error.code === '23505' ? ' A section with this name may already exist in this category.' : '';
+      setStatus('Unable to create section.' + duplicateHint + ' ' + error.message);
+      return;
+    }
+
+    await loadDraftCategorySections(categoryId, data && data.id ? data.id : '');
+    if (getSelectedProductListCategoryId() === categoryId) {
+      await loadCategorySections(categoryId);
+    }
+    inlineDraftSectionSaving = false;
+    hideInlineDraftSectionCreate(false);
+    setStatus('Section created and selected.');
+  };
+
+  const setInlineSectionCreateDisabled = (isDisabled) => {
+    if (inlineSectionNameInput) inlineSectionNameInput.disabled = isDisabled;
+    if (saveInlineSectionButton) saveInlineSectionButton.disabled = isDisabled;
+    if (cancelInlineSectionButton) cancelInlineSectionButton.disabled = isDisabled;
+  };
+
+  const setInlineSectionRenameDisabled = (isDisabled) => {
+    if (inlineSectionRenameInput) inlineSectionRenameInput.disabled = isDisabled;
+    if (saveInlineSectionRenameButton) saveInlineSectionRenameButton.disabled = isDisabled;
+    if (cancelInlineSectionRenameButton) cancelInlineSectionRenameButton.disabled = isDisabled;
+  };
+
+  const hideInlineSectionCreate = () => {
+    if (inlineSectionCreate) inlineSectionCreate.hidden = true;
+    if (inlineSectionNameInput) inlineSectionNameInput.value = '';
+    setInlineSectionCreateDisabled(true);
+    if (productSectionFilter && productSectionFilter.value === '__create_section__') {
+      productSectionFilter.value = selectedSectionFilter || 'all';
+    }
+    updateSectionActionButtons();
+  };
+
+  const showInlineSectionCreate = () => {
+    const categoryId = getSelectedProductListCategoryId();
+    if (!categoryId) {
+      setStatus('Choose a category before adding a section.');
+      return;
+    }
+    hideInlineSectionRename();
+    if (inlineSectionCreate) inlineSectionCreate.hidden = false;
+    setInlineSectionCreateDisabled(!isOwnerSignedIn || inlineSectionSaving);
+    if (inlineSectionNameInput) {
+      inlineSectionNameInput.value = '';
+      inlineSectionNameInput.focus();
+    }
+    updateSectionActionButtons();
+  };
+
+  const hideInlineSectionRename = () => {
+    if (inlineSectionRename) inlineSectionRename.hidden = true;
+    if (inlineSectionRenameInput) inlineSectionRenameInput.value = '';
+    setInlineSectionRenameDisabled(true);
+    updateSectionActionButtons();
+  };
+
+  const showInlineSectionRename = () => {
+    const section = getSelectedSection();
+    if (!section) {
+      setStatus('Choose a section before renaming.');
+      return;
+    }
+    hideInlineSectionCreate();
+    if (inlineSectionRename) inlineSectionRename.hidden = false;
+    setInlineSectionRenameDisabled(!isOwnerSignedIn || inlineSectionRenameSaving);
+    if (inlineSectionRenameInput) {
+      inlineSectionRenameInput.value = section.name || '';
+      inlineSectionRenameInput.focus();
+      inlineSectionRenameInput.select();
+    }
+    updateSectionActionButtons();
+  };
+
+  const getNextSectionSortOrder = () => {
+    const maxSort = latestCategorySections.reduce((max, section) => {
+      const sortOrder = Number(section && section.sort_order);
+      return Number.isFinite(sortOrder) ? Math.max(max, sortOrder) : max;
+    }, -1);
+    return maxSort + 1;
+  };
+
+  const renderProductSections = (sections = []) => {
+    latestCategorySections = sections;
+    if (!productSectionFilter) return;
+
+    const categoryId = getSelectedProductListCategoryId();
+    productSectionFilter.innerHTML = '';
+
+    const makeOption = (label, value) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    };
+
+    if (!categoryId) {
+      selectedSectionFilter = 'all';
+      productSectionFilter.appendChild(makeOption('Select category first', ''));
+      productSectionFilter.value = '';
+      productSectionFilter.disabled = true;
+      hideInlineSectionCreate();
+      hideInlineSectionRename();
+      updateSectionActionButtons();
+      return;
+    }
+
+    productSectionFilter.disabled = !isOwnerSignedIn;
+    productSectionFilter.appendChild(makeOption('All sections', 'all'));
+    sections.forEach((section) => {
+      const label = section.is_active === false ? section.name + ' (inactive)' : section.name;
+      productSectionFilter.appendChild(makeOption(label, section.id));
+    });
+    productSectionFilter.appendChild(makeOption('+ Add section...', '__create_section__'));
+
+    if (!sections.some((section) => section.id === selectedSectionFilter)) {
+      selectedSectionFilter = 'all';
+    }
+    productSectionFilter.value = selectedSectionFilter;
+    updateSectionActionButtons();
+  };
+
+  const loadCategorySections = async (categoryId) => {
+    if (!categoryId) {
+      renderProductSections([]);
+      return;
+    }
+
+    if (productSectionFilter) {
+      productSectionFilter.disabled = true;
+      productSectionFilter.innerHTML = '<option value="">Loading sections...</option>';
+    }
+
+    const { data, error } = await client
+      .from('category_sections')
+      .select('id,category_id,name,sort_order,is_active')
+      .eq('category_id', categoryId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      latestCategorySections = [];
+      renderProductSections([]);
+      setStatus('Unable to load sections. ' + error.message);
+      return;
+    }
+
+    renderProductSections(data || []);
   };
 
   const getNextCategorySortOrder = () => {
@@ -1581,7 +1932,10 @@
     if (!productFilterBar || !productFilterList) return;
     productFilterList.innerHTML = '';
     productFilterBar.hidden = !categories.length;
-    if (!categories.length) return;
+    if (!categories.length) {
+      renderProductSections([]);
+      return;
+    }
 
     const makeFilterOption = (label, value) => {
       const option = document.createElement('option');
@@ -1595,12 +1949,17 @@
       productFilterList.appendChild(makeFilterOption(category.name, category.id));
     });
     productFilterList.value = selectedCategoryFilter;
-    productFilterList.onchange = () => {
+    productFilterList.onchange = async () => {
       selectedCategoryFilter = productFilterList.value || 'all';
+      selectedSectionFilter = 'all';
       hideInlineCategoryRename();
+      hideInlineSectionCreate();
+      hideInlineSectionRename();
       updateCategoryActionButtons();
+      await loadCategorySections(getSelectedProductListCategoryId());
       renderProducts(latestProducts);
     };
+    loadCategorySections(getSelectedProductListCategoryId());
     updateCategoryActionButtons();
   };
 
@@ -1626,13 +1985,16 @@
 
   const resetProductPreview = () => {
     latestProducts = [];
+    latestCategorySections = [];
     selectedCategoryFilter = 'all';
+    selectedSectionFilter = 'all';
     selectedProductStatusFilter = 'all';
     if (productStatus) productStatus.textContent = 'Locked';
     if (productCount) productCount.textContent = 'Sign in to load products.';
     productSearchQuery = '';
     if (productFilterBar) productFilterBar.hidden = true;
     if (productFilterList) productFilterList.innerHTML = '';
+    renderProductSections([]);
     if (productStatusFilter) productStatusFilter.value = 'all';
     if (productSearchBar) productSearchBar.hidden = true;
     if (productSearchInput) productSearchInput.value = '';
@@ -1657,9 +2019,13 @@
 
   const getProductSearchText = (product) => {
     const variants = Array.isArray(product.product_sizes) ? product.product_sizes : [];
+    const section = product.category_section_id
+      ? latestCategorySections.find((item) => item.id === product.category_section_id)
+      : null;
     return [
       product.name,
       product.category ? product.category.name : '',
+      section ? section.name : '',
       product.variant_group_name,
       ...variants.map((variant) => variant.label),
     ].filter(Boolean).join(' ').toLowerCase();
@@ -2106,7 +2472,11 @@
       ? latestProducts
       : latestProducts.filter((product) => product.category_id === selectedCategoryFilter);
 
-    const statusFilteredProducts = categoryFilteredProducts.filter((product) => {
+    const sectionFilteredProducts = selectedSectionFilter === 'all'
+      ? categoryFilteredProducts
+      : categoryFilteredProducts.filter((product) => product.category_section_id === selectedSectionFilter);
+
+    const statusFilteredProducts = sectionFilteredProducts.filter((product) => {
       if (selectedProductStatusFilter === 'draft') return !product.is_published;
       if (selectedProductStatusFilter === 'published') return product.is_published;
       if (selectedProductStatusFilter === 'available') return product.is_available;
@@ -2136,7 +2506,7 @@
     if (productStatus) productStatus.textContent = 'Supabase draft list';
     if (productCount) {
       const totalText = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
-      productCount.textContent = selectedCategoryFilter === 'all' && selectedProductStatusFilter === 'all' && !query
+      productCount.textContent = selectedCategoryFilter === 'all' && selectedSectionFilter === 'all' && selectedProductStatusFilter === 'all' && !query
         ? totalText
         : visibleProducts.length + ' shown - ' + totalText;
     }
@@ -2155,6 +2525,12 @@
       const category = document.createElement('p');
       category.className = 'product-card-category';
       category.textContent = product.category ? product.category.name : 'Uncategorized';
+      const section = product.category_section_id
+        ? latestCategorySections.find((item) => item.id === product.category_section_id)
+        : null;
+      if (section) {
+        category.textContent += ' / ' + section.name;
+      }
       const soldBy = document.createElement('p');
       soldBy.className = 'product-sold-by';
       soldBy.textContent = 'Sold by: ' + (product.variant_group_name || 'Each');
@@ -2265,7 +2641,7 @@
     updateRemoveButtons();
   };
 
-  const loadProductIntoForm = (productId) => {
+  const loadProductIntoForm = async (productId) => {
     const product = latestProducts.find((item) => item.id === productId);
     if (!product) {
       setStatus('Product could not be found in the current preview.');
@@ -2284,6 +2660,7 @@
     draftForm.elements.name.value = product.name || '';
     draftForm.elements.category_id.value = product.category_id || '';
     previousDraftCategoryValue = product.category_id || '';
+    await loadDraftCategorySections(product.category_id || '', product.category_section_id || '');
     updateCategoryActionButtons();
     draftForm.elements.image_url.value = product.image_url || '';
     draftForm.elements.description.value = product.description || '';
@@ -2783,6 +3160,8 @@
     await loadCategories();
     if (draftCategorySelect && data && data.id) {
       draftCategorySelect.value = data.id;
+      previousDraftCategoryValue = data.id;
+      await loadDraftCategorySections(data.id, '');
     }
     inlineCategorySaving = false;
     hideInlineCategoryCreate(false);
@@ -2889,14 +3268,177 @@
 
     if (draftCategorySelect) draftCategorySelect.value = '';
     if (selectedCategoryFilter === categoryId) selectedCategoryFilter = 'all';
+    selectedSectionFilter = 'all';
     if (selectedDisplayOrderCategory === categoryId) selectedDisplayOrderCategory = '';
     hideInlineCategoryCreate(false);
     hideInlineCategoryRename();
+    renderProductSections([]);
     await loadCategories();
     await loadProducts();
     inlineCategoryDeleteSaving = false;
     updateCategoryActionButtons();
     setStatus('Category deleted.');
+  };
+
+  const createInlineSection = async () => {
+    if (!isOwnerSignedIn || inlineSectionSaving) return;
+
+    const categoryId = getSelectedProductListCategoryId();
+    const name = inlineSectionNameInput ? inlineSectionNameInput.value.trim() : '';
+    if (!categoryId) {
+      setStatus('Choose a category before adding a section.');
+      return;
+    }
+    if (!name) {
+      setStatus('Section name is required.');
+      if (inlineSectionNameInput) inlineSectionNameInput.focus();
+      return;
+    }
+
+    inlineSectionSaving = true;
+    setInlineSectionCreateDisabled(true);
+    updateSectionActionButtons();
+    setStatus('Creating section...');
+
+    const { data, error } = await client
+      .from('category_sections')
+      .insert({
+        category_id: categoryId,
+        name,
+        sort_order: getNextSectionSortOrder(),
+        is_active: true,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      inlineSectionSaving = false;
+      setInlineSectionCreateDisabled(false);
+      updateSectionActionButtons();
+      const duplicateHint = error.code === '23505' ? ' A section with this name may already exist in this category.' : '';
+      setStatus('Unable to create section.' + duplicateHint + ' ' + error.message);
+      return;
+    }
+
+    selectedSectionFilter = data && data.id ? data.id : 'all';
+    await loadCategorySections(categoryId);
+    hideInlineSectionCreate();
+    renderProducts(latestProducts);
+    inlineSectionSaving = false;
+    updateSectionActionButtons();
+    setStatus('Section created and selected.');
+  };
+
+  const renameSelectedSection = async () => {
+    if (!isOwnerSignedIn || inlineSectionRenameSaving) return;
+
+    const sectionId = getSelectedSectionId();
+    const categoryId = getSelectedProductListCategoryId();
+    const name = inlineSectionRenameInput ? inlineSectionRenameInput.value.trim() : '';
+    if (!categoryId || !sectionId) {
+      setStatus('Choose a section before renaming.');
+      return;
+    }
+    if (!name) {
+      setStatus('Section name is required.');
+      if (inlineSectionRenameInput) inlineSectionRenameInput.focus();
+      return;
+    }
+
+    inlineSectionRenameSaving = true;
+    setInlineSectionRenameDisabled(true);
+    updateSectionActionButtons();
+    setStatus('Renaming section...');
+
+    const { error } = await client
+      .from('category_sections')
+      .update({ name })
+      .eq('id', sectionId)
+      .eq('category_id', categoryId);
+
+    if (error) {
+      inlineSectionRenameSaving = false;
+      setInlineSectionRenameDisabled(false);
+      updateSectionActionButtons();
+      const duplicateHint = error.code === '23505' ? ' A section with this name may already exist in this category.' : '';
+      setStatus('Unable to rename section.' + duplicateHint + ' ' + error.message);
+      return;
+    }
+
+    await loadCategorySections(categoryId);
+    selectedSectionFilter = sectionId;
+    if (productSectionFilter) productSectionFilter.value = sectionId;
+    hideInlineSectionRename();
+    renderProducts(latestProducts);
+    inlineSectionRenameSaving = false;
+    updateSectionActionButtons();
+    setStatus('Section renamed.');
+  };
+
+  const deleteSelectedSectionIfUnused = async () => {
+    if (!isOwnerSignedIn || inlineSectionDeleteSaving) return;
+
+    const sectionId = getSelectedSectionId();
+    const categoryId = getSelectedProductListCategoryId();
+    const section = getSelectedSection();
+    if (!categoryId || !sectionId || !section) {
+      setStatus('Choose a section before deleting.');
+      return;
+    }
+
+    inlineSectionDeleteSaving = true;
+    updateSectionActionButtons();
+    setStatus('Checking section products...');
+
+    const { count, error: countError } = await client
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_section_id', sectionId);
+
+    if (countError) {
+      inlineSectionDeleteSaving = false;
+      updateSectionActionButtons();
+      setStatus('Unable to check section products. ' + countError.message);
+      return;
+    }
+
+    if ((count || 0) > 0) {
+      inlineSectionDeleteSaving = false;
+      updateSectionActionButtons();
+      setStatus('This section has ' + count + ' products. Reassign or remove those products before deleting this section.');
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this section permanently? This cannot be undone.');
+    if (!confirmed) {
+      inlineSectionDeleteSaving = false;
+      updateSectionActionButtons();
+      setStatus('Section deletion cancelled.');
+      return;
+    }
+
+    setStatus('Deleting section...');
+    const { error } = await client
+      .from('category_sections')
+      .delete()
+      .eq('id', sectionId)
+      .eq('category_id', categoryId);
+
+    if (error) {
+      inlineSectionDeleteSaving = false;
+      updateSectionActionButtons();
+      setStatus('Unable to delete section. ' + error.message);
+      return;
+    }
+
+    selectedSectionFilter = 'all';
+    hideInlineSectionCreate();
+    hideInlineSectionRename();
+    await loadCategorySections(categoryId);
+    renderProducts(latestProducts);
+    inlineSectionDeleteSaving = false;
+    updateSectionActionButtons();
+    setStatus('Section deleted.');
   };
 
   const loadProducts = async () => {
@@ -2905,7 +3447,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -2994,6 +3536,9 @@
     return {
       value: {
         category_id: categoryId,
+        category_section_id: draftSectionSelect && draftSectionSelect.value && draftSectionSelect.value !== '__create_section__'
+          ? draftSectionSelect.value
+          : null,
         name,
         description: String(formData.get('description') || '').trim() || null,
         image_url: String(formData.get('image_url') || '').trim() || null,
@@ -3031,6 +3576,7 @@
 
     const productPayload = {
       category_id: draft.category_id,
+      category_section_id: draft.category_section_id,
       name: draft.name,
       description: draft.description,
       image_url: draft.image_url,
@@ -3249,14 +3795,18 @@
         previousDraftCategoryValue = draftCategorySelect.value;
       }
     });
-    draftCategorySelect.addEventListener('change', () => {
+    draftCategorySelect.addEventListener('change', async () => {
       if (draftCategorySelect.value === '__create_category__') {
         hideInlineCategoryRename();
+        renderDraftProductSections([], '');
+        hideInlineDraftSectionCreate(false);
         showInlineCategoryCreate();
       } else {
         previousDraftCategoryValue = draftCategorySelect.value;
         hideInlineCategoryCreate(false);
         hideInlineCategoryRename();
+        hideInlineDraftSectionCreate(false);
+        await loadDraftCategorySections(getDraftCategoryId(), '');
       }
       updateCategoryActionButtons();
     });
@@ -3267,21 +3817,63 @@
   }
 
   if (inlineCategoryNameInput) {
-    inlineCategoryNameInput.addEventListener('keydown', (event) => {
+    inlineCategoryNameInput.addEventListener('keydown', async (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
         createInlineCategory();
       }
       if (event.key === 'Escape') {
         hideInlineCategoryCreate(true);
+        await loadDraftCategorySections(getDraftCategoryId(), previousDraftSectionValue);
       }
     });
   }
 
   if (cancelInlineCategoryButton) {
-    cancelInlineCategoryButton.addEventListener('click', () => {
+    cancelInlineCategoryButton.addEventListener('click', async () => {
       hideInlineCategoryCreate(true);
+      await loadDraftCategorySections(getDraftCategoryId(), previousDraftSectionValue);
       setStatus('Category creation cancelled.');
+    });
+  }
+
+  if (draftSectionSelect) {
+    draftSectionSelect.addEventListener('focus', () => {
+      if (draftSectionSelect.value !== '__create_section__') {
+        previousDraftSectionValue = draftSectionSelect.value;
+      }
+    });
+    draftSectionSelect.addEventListener('change', () => {
+      if (draftSectionSelect.value === '__create_section__') {
+        showInlineDraftSectionCreate();
+      } else {
+        previousDraftSectionValue = draftSectionSelect.value;
+        hideInlineDraftSectionCreate(false);
+      }
+    });
+  }
+
+  if (saveInlineDraftSectionButton) {
+    saveInlineDraftSectionButton.addEventListener('click', createInlineDraftSection);
+  }
+
+  if (inlineDraftSectionNameInput) {
+    inlineDraftSectionNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        createInlineDraftSection();
+      }
+      if (event.key === 'Escape') {
+        hideInlineDraftSectionCreate(true);
+        setStatus('Section creation cancelled.');
+      }
+    });
+  }
+
+  if (cancelInlineDraftSectionButton) {
+    cancelInlineDraftSectionButton.addEventListener('click', () => {
+      hideInlineDraftSectionCreate(true);
+      setStatus('Section creation cancelled.');
     });
   }
 
@@ -3314,6 +3906,78 @@
 
   if (deleteSelectedCategoryButton) {
     deleteSelectedCategoryButton.addEventListener('click', deleteSelectedCategoryIfUnused);
+  }
+
+  if (productSectionFilter) {
+    productSectionFilter.addEventListener('change', () => {
+      const value = productSectionFilter.value || 'all';
+      if (value === '__create_section__') {
+        productSectionFilter.value = selectedSectionFilter || 'all';
+        showInlineSectionCreate();
+        return;
+      }
+      selectedSectionFilter = value;
+      hideInlineSectionCreate();
+      hideInlineSectionRename();
+      updateSectionActionButtons();
+      renderProducts(latestProducts);
+    });
+  }
+
+  if (saveInlineSectionButton) {
+    saveInlineSectionButton.addEventListener('click', createInlineSection);
+  }
+
+  if (inlineSectionNameInput) {
+    inlineSectionNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        createInlineSection();
+      }
+      if (event.key === 'Escape') {
+        hideInlineSectionCreate();
+        setStatus('Section creation cancelled.');
+      }
+    });
+  }
+
+  if (cancelInlineSectionButton) {
+    cancelInlineSectionButton.addEventListener('click', () => {
+      hideInlineSectionCreate();
+      setStatus('Section creation cancelled.');
+    });
+  }
+
+  if (renameSelectedSectionButton) {
+    renameSelectedSectionButton.addEventListener('click', showInlineSectionRename);
+  }
+
+  if (saveInlineSectionRenameButton) {
+    saveInlineSectionRenameButton.addEventListener('click', renameSelectedSection);
+  }
+
+  if (inlineSectionRenameInput) {
+    inlineSectionRenameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        renameSelectedSection();
+      }
+      if (event.key === 'Escape') {
+        hideInlineSectionRename();
+        setStatus('Section rename cancelled.');
+      }
+    });
+  }
+
+  if (cancelInlineSectionRenameButton) {
+    cancelInlineSectionRenameButton.addEventListener('click', () => {
+      hideInlineSectionRename();
+      setStatus('Section rename cancelled.');
+    });
+  }
+
+  if (deleteSelectedSectionButton) {
+    deleteSelectedSectionButton.addEventListener('click', deleteSelectedSectionIfUnused);
   }
 
   if (openProductEditorButton) {

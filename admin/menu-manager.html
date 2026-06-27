@@ -154,6 +154,12 @@
                 <option value="">Sign in to load categories</option>
               </select>
             </label>
+            <label class="admin-field" for="draft-product-section">
+              <span>Section</span>
+              <select id="draft-product-section" name="category_section_id" disabled>
+                <option value="">Select category first</option>
+              </select>
+            </label>
             <div class="inline-category-create draft-field-wide" data-inline-category-create hidden>
               <label class="admin-field" for="inline-category-name">
                 <span>New category</span>
@@ -162,6 +168,16 @@
               <div class="inline-category-actions">
                 <button type="button" class="auth-button" data-save-inline-category disabled>Add</button>
                 <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category disabled>Cancel</button>
+              </div>
+            </div>
+            <div class="inline-category-create draft-field-wide" data-inline-draft-section-create hidden>
+              <label class="admin-field" for="inline-draft-section-name">
+                <span>New section</span>
+                <input id="inline-draft-section-name" type="text" autocomplete="off" placeholder="Section name" data-inline-draft-section-name disabled>
+              </label>
+              <div class="inline-category-actions">
+                <button type="button" class="auth-button" data-save-inline-draft-section disabled>Add</button>
+                <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-draft-section disabled>Cancel</button>
               </div>
             </div>
             <label class="admin-field" for="draft-product-image">
@@ -506,6 +522,18 @@
                   </span>
                 </span>
               </label>
+              <label class="admin-field product-filter-field" for="product-section-filter">
+                <span>Section</span>
+                <span class="category-select-row">
+                  <select id="product-section-filter" data-product-section-filter aria-label="Filter products by section" disabled>
+                    <option value="">Select category first</option>
+                  </select>
+                  <span class="category-inline-actions">
+                    <button type="button" class="category-icon-button" data-rename-selected-section title="Rename selected section" aria-label="Rename selected section" disabled>&#9998;</button>
+                    <button type="button" class="category-icon-button is-danger" data-delete-selected-section title="Delete selected section" aria-label="Delete selected section" disabled>&#128465;</button>
+                  </span>
+                </span>
+              </label>
               <label class="admin-field product-filter-field" for="product-status-filter">
                 <span>Status</span>
                 <select id="product-status-filter" data-product-status-filter aria-label="Filter products by status">
@@ -524,6 +552,26 @@
                 <div class="inline-category-actions">
                   <button type="button" class="auth-button" data-save-inline-category-rename disabled>Save</button>
                   <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category-rename disabled>Cancel</button>
+                </div>
+              </div>
+              <div class="inline-category-create product-filter-section-create" data-inline-section-create hidden>
+                <label class="admin-field" for="inline-section-name">
+                  <span>New section</span>
+                  <input id="inline-section-name" type="text" autocomplete="off" placeholder="Section name" data-inline-section-name disabled>
+                </label>
+                <div class="inline-category-actions">
+                  <button type="button" class="auth-button" data-save-inline-section disabled>Add</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-section disabled>Cancel</button>
+                </div>
+              </div>
+              <div class="inline-category-create product-filter-section-rename" data-inline-section-rename hidden>
+                <label class="admin-field" for="inline-section-rename-name">
+                  <span>Rename section</span>
+                  <input id="inline-section-rename-name" type="text" autocomplete="off" placeholder="Section name" data-inline-section-rename-name disabled>
+                </label>
+                <div class="inline-category-actions">
+                  <button type="button" class="auth-button" data-save-inline-section-rename disabled>Save</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-section-rename disabled>Cancel</button>
                 </div>
               </div>
             </div>
