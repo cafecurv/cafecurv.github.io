@@ -154,6 +154,16 @@
                 <option value="">Sign in to load categories</option>
               </select>
             </label>
+            <div class="inline-category-create draft-field-wide" data-inline-category-create hidden>
+              <label class="admin-field" for="inline-category-name">
+                <span>New category</span>
+                <input id="inline-category-name" type="text" autocomplete="off" placeholder="Category name" data-inline-category-name disabled>
+              </label>
+              <div class="inline-category-actions">
+                <button type="button" class="auth-button" data-save-inline-category disabled>Add</button>
+                <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category disabled>Cancel</button>
+              </div>
+            </div>
             <label class="admin-field" for="draft-product-image">
               <span>Image path</span>
               <input id="draft-product-image" name="image_url" type="text" autocomplete="off" disabled>
@@ -229,7 +239,7 @@
                   <p class="eyebrow">Options</p>
                   <h3 id="product-options-title">Option Groups</h3>
                 </div>
-                <button type="button" class="admin-collapsible-toggle product-option-toggle" data-collapsible-toggle data-collapsible-target="product-options-content" data-label-collapsed="Option Groups &#9662;" data-label-expanded="Option Groups &#9652;" aria-expanded="true" aria-controls="product-options-content">Option Groups &#9652;</button>
+                <button type="button" class="admin-collapsible-toggle product-option-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="product-options-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand product option groups" data-aria-label-expanded="Collapse product option groups" aria-label="Collapse product option groups" title="Collapse product option groups" aria-expanded="true" aria-controls="product-options-content">&#9652;</button>
               </div>
               <div id="product-options-content" class="product-option-content" data-collapsible-content>
                 <div class="product-option-toolbar">
@@ -293,7 +303,7 @@
             <h2 id="display-order-title">Sort Products</h2>
             <p>Drag to rearrange products. Customer order updates after saving.</p>
           </div>
-          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="display-order-content" data-label-collapsed="Arrange Display Order &#9662;" data-label-expanded="Arrange Display Order &#9652;" aria-expanded="false" aria-controls="display-order-content">Arrange Display Order &#9662;</button>
+          <button type="button" class="admin-collapsible-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="display-order-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand display order" data-aria-label-expanded="Collapse display order" aria-label="Expand display order" title="Expand display order" aria-expanded="false" aria-controls="display-order-content">&#9662;</button>
         </div>
 
         <div id="display-order-content" class="admin-collapsible-content" data-collapsible-content hidden>
@@ -330,7 +340,7 @@
             <h2 id="option-groups-title">Option Groups &amp; Choices</h2>
             <p>Reusable option groups only. Product attachment comes later.</p>
           </div>
-          <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="Option Library &#9662;" data-label-expanded="Option Library &#9652;" aria-expanded="false" aria-controls="option-groups-content">Option Library &#9662;</button>
+          <button type="button" class="admin-collapsible-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand option library" data-aria-label-expanded="Collapse option library" aria-label="Expand option library" title="Expand option library" aria-expanded="false" aria-controls="option-groups-content">&#9662;</button>
         </div>
 
         <div id="option-groups-content" class="admin-collapsible-content" data-collapsible-content hidden>
@@ -486,8 +496,36 @@
               <button type="button" class="auth-button product-list-add-button" data-open-product-editor disabled>+ Add Item</button>
             </div>
             <div class="product-filter-bar" data-product-filter-bar hidden>
-              <span class="product-filter-label">Filter</span>
-              <div class="product-filter-list" data-product-filter-list aria-label="Filter products by category"></div>
+              <label class="admin-field product-filter-field" for="product-category-filter">
+                <span>Category</span>
+                <span class="category-select-row">
+                  <select id="product-category-filter" data-product-filter-list aria-label="Filter products by category"></select>
+                  <span class="category-inline-actions">
+                    <button type="button" class="category-icon-button" data-rename-selected-category title="Rename selected category" aria-label="Rename selected category" disabled>✎</button>
+                    <button type="button" class="category-icon-button is-danger" data-delete-selected-category title="Delete selected category" aria-label="Delete selected category" disabled>🗑️</button>
+                  </span>
+                </span>
+              </label>
+              <label class="admin-field product-filter-field" for="product-status-filter">
+                <span>Status</span>
+                <select id="product-status-filter" data-product-status-filter aria-label="Filter products by status">
+                  <option value="all">All statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="available">Available</option>
+                  <option value="unavailable">Unavailable</option>
+                </select>
+              </label>
+              <div class="inline-category-create product-filter-rename" data-inline-category-rename hidden>
+                <label class="admin-field" for="inline-category-rename-name">
+                  <span>Rename category</span>
+                  <input id="inline-category-rename-name" type="text" autocomplete="off" placeholder="Category name" data-inline-category-rename-name disabled>
+                </label>
+                <div class="inline-category-actions">
+                  <button type="button" class="auth-button" data-save-inline-category-rename disabled>Save</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category-rename disabled>Cancel</button>
+                </div>
+              </div>
             </div>
             <div class="product-search-bar" data-product-search-bar hidden>
               <label class="admin-field product-search-field" for="product-search-input">

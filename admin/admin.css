@@ -1310,34 +1310,24 @@ body.more-drawer-open {
   text-transform: uppercase;
 }
 
-.product-filter-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+.product-filter-field {
+  flex: 1 1 190px;
+  max-width: 260px;
 }
 
-.product-filter-button {
-  min-height: 34px;
-  border: 1px solid rgba(189, 196, 212, 0.16);
-  border-radius: 999px;
-  background: rgba(36, 44, 66, 0.3);
-  color: var(--slate);
-  padding: 0.42rem 0.7rem;
-  font-family: 'Jost', sans-serif;
-  font-size: 0.55rem;
-  font-weight: 500;
-  letter-spacing: 1.3px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+.product-filter-field:first-child {
+  flex-basis: 300px;
+  max-width: 420px;
 }
 
-.product-filter-button:hover,
-.product-filter-button:focus-visible,
-.product-filter-button.is-active {
-  border-color: rgba(200, 184, 154, 0.42);
-  background: rgba(200, 184, 154, 0.1);
-  color: var(--cream);
+.product-filter-field select {
+  min-height: 42px;
+  padding-top: 0.58rem;
+  padding-bottom: 0.58rem;
+}
+
+.product-filter-rename {
+  flex: 1 1 100%;
 }
 
 .product-search-field {
@@ -1668,6 +1658,14 @@ body.more-drawer-open {
   text-transform: uppercase;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.admin-collapsible-toggle.is-icon-toggle {
+  min-width: 42px;
+  width: 42px;
+  padding: 0.58rem;
+  font-size: 0.86rem;
+  letter-spacing: 0;
 }
 
 .admin-collapsible-toggle:hover,
@@ -2113,15 +2111,9 @@ body.more-drawer-open {
     align-items: flex-start;
   }
 
-  .product-filter-list {
+  .product-filter-field {
     width: 100%;
-    gap: 0.32rem;
-  }
-
-  .product-filter-button {
-    min-height: 32px;
-    padding: 0.36rem 0.58rem;
-    font-size: 0.5rem;
+    max-width: none;
   }
 
   .product-search-field {
@@ -2277,6 +2269,75 @@ body.more-drawer-open {
   grid-column: 1 / -1;
 }
 
+.category-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.category-inline-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.category-icon-button {
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid rgba(200, 184, 154, 0.28);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.category-icon-button:hover,
+.category-icon-button:focus-visible {
+  border-color: rgba(200, 184, 154, 0.58);
+  background: rgba(200, 184, 154, 0.14);
+}
+
+.category-icon-button.is-danger {
+  border-color: rgba(189, 196, 212, 0.18);
+  background: rgba(36, 44, 66, 0.42);
+  color: var(--slate);
+}
+
+.category-icon-button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.inline-category-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: end;
+  border: 1px solid rgba(200, 184, 154, 0.22);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.06);
+  padding: 0.75rem;
+}
+
+.inline-category-create[hidden] {
+  display: none;
+}
+
+.inline-category-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .admin-field textarea {
   resize: vertical;
   min-height: 92px;
@@ -2321,6 +2382,32 @@ body.more-drawer-open {
 @media (max-width: 600px) {
   .draft-product-form {
     grid-template-columns: 1fr;
+  }
+
+  .category-select-row {
+    grid-template-columns: 1fr;
+  }
+
+  .category-inline-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-icon-button {
+    width: 100%;
+  }
+
+  .inline-category-create {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-category-actions {
+    flex-direction: column;
+  }
+
+  .inline-category-actions .auth-button {
+    width: 100%;
   }
 
   .draft-actions,
