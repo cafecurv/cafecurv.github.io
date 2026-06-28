@@ -1368,6 +1368,28 @@ body.more-drawer-open {
   cursor: not-allowed;
 }
 
+.product-bulk-actions {
+  margin: -0.15rem 0 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.product-bulk-actions[hidden] {
+  display: none;
+}
+
+.product-bulk-actions span {
+  color: var(--slate);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
 .product-preview-list {
   display: grid;
   gap: 0.7rem;
@@ -2261,6 +2283,12 @@ body.more-drawer-open {
   font-size: 0.84rem;
 }
 
+.editor-publish-note {
+  margin-top: 0.55rem;
+  color: var(--accent) !important;
+  font-size: 0.72rem;
+}
+
 .draft-product-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2379,6 +2407,8 @@ body.more-drawer-open {
 .draft-actions {
   display: flex;
   justify-content: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 600px) {
@@ -2419,6 +2449,18 @@ body.more-drawer-open {
 
   .draft-actions {
     flex-direction: column;
+  }
+
+  .product-bulk-actions {
+    justify-content: stretch;
+  }
+
+  .product-bulk-actions span {
+    width: 100%;
+  }
+
+  .product-bulk-actions .product-action-button {
+    flex: 1 1 140px;
   }
 }
 

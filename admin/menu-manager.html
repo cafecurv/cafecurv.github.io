@@ -140,8 +140,9 @@
         <div id="draft-product-content" class="admin-collapsible-content" data-collapsible-content hidden>
           <div class="draft-product-intro">
             <p class="eyebrow">Draft Product</p>
-            <h3 id="draft-product-title">Create Draft Product</h3>
+            <h3 id="draft-product-title">Create Item</h3>
             <p>Draft products are saved in Supabase only and do not appear on the customer menu yet.</p>
+            <p class="editor-publish-note" data-editor-publish-note hidden>This item is published. Saving changes updates the live menu.</p>
           </div>
           <form class="draft-product-form" data-draft-product-form novalidate>
             <label class="admin-field" for="draft-product-name">
@@ -305,8 +306,10 @@
             </section>
 
             <div class="draft-actions draft-field-wide">
-              <button type="submit" class="auth-button" data-create-draft disabled>Create Draft Product</button>
-              <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel Edit</button>
+              <button type="submit" class="auth-button" data-create-draft disabled>Save Draft</button>
+              <button type="button" class="auth-button auth-button-secondary" data-editor-publish-action hidden disabled>Publish Item</button>
+              <button type="button" class="auth-button auth-button-secondary" data-undo-product-changes hidden disabled>Undo changes</button>
+              <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel</button>
             </div>
           </form>
         </div>
@@ -587,6 +590,11 @@
                 <input id="product-search-input" type="search" autocomplete="off" placeholder="Name, category, sold by, or variant" data-product-search>
               </label>
               <button type="button" class="product-search-clear" data-clear-product-search disabled>Clear</button>
+            </div>
+            <div class="product-bulk-actions" data-product-bulk-actions hidden>
+              <span data-bulk-publish-count>0 filtered products</span>
+              <button type="button" class="product-action-button is-publish" data-bulk-publish-filtered disabled>Publish filtered</button>
+              <button type="button" class="product-action-button" data-bulk-unpublish-filtered disabled>Unpublish filtered</button>
             </div>
             <div class="product-preview-list" data-product-list>
               <div class="product-empty-state">
