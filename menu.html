@@ -6639,7 +6639,45 @@
   let publicMenuFetchStarted = false;
   let latestPublicMenuOptions = null;
 
-  function shapePublicMenuData(categories = [], products = [], productSizes = []) {
+  function buildCategorySectionsMap(categorySections = []) {
+    if (!Array.isArray(categorySections)) {
+      throw new Error('Category section response was not an array.');
+    }
+
+    const normalizedSections = categorySections
+      .filter(section => section && section.id && section.category_id)
+      .map(section => ({
+        id: section.id,
+        category_id: section.category_id,
+        name: section.name,
+        sort_order: section.sort_order
+      }))
+      .sort((a, b) => {
+        const sortA = Number(a.sort_order) || 0;
+        const sortB = Number(b.sort_order) || 0;
+        if (sortA !== sortB) return sortA - sortB;
+        return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
+      });
+
+    const byCategoryId = normalizedSections.reduce((map, section) => {
+      if (!map[section.category_id]) map[section.category_id] = [];
+      map[section.category_id].push(section);
+      return map;
+    }, {});
+
+    const byId = normalizedSections.reduce((map, section) => {
+      map[section.id] = section;
+      return map;
+    }, {});
+
+    return {
+      all: normalizedSections,
+      byCategoryId,
+      byId
+    };
+  }
+
+  function shapePublicMenuData(categories = [], products = [], productSizes = [], categorySections = []) {
     const variantsByProduct = productSizes.reduce((map, size) => {
       if (!map[size.product_id]) map[size.product_id] = [];
       map[size.product_id].push({
@@ -6662,6 +6700,7 @@
       is_seasonal: product.is_seasonal,
       variant_group_name: product.variant_group_name,
       menu_group: product.menu_group || null,
+      category_section_id: product.category_section_id || null,
       sort_order: product.sort_order,
       variants: variantsByProduct[product.id] || []
     }));
@@ -6686,7 +6725,8 @@
         products: productsByCategory[category.id] || []
       })),
       productsByCategory,
-      products: productsWithVariants
+      products: productsWithVariants,
+      categorySections: buildCategorySectionsMap(categorySections)
     };
   }
 
@@ -6826,7 +6866,7 @@
         PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
       );
 
-      const [categoryResult, productResult, sizeResult, optionGroupResult, optionChoiceResult, optionDefaultResult] = await Promise.all([
+      const [categoryResult, productResult, sizeResult, sectionResult, optionGroupResult, optionChoiceResult, optionDefaultResult] = await Promise.all([
         client
           .from('public_menu_categories')
           .select('id,name,sort_order')
@@ -6834,7 +6874,7 @@
           .order('name', { ascending: true }),
         client
           .from('public_menu_products')
-          .select('id,category_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order')
+          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order')
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
         client
@@ -6842,6 +6882,12 @@
           .select('id,product_id,label,price,sort_order')
           .order('sort_order', { ascending: true })
           .order('label', { ascending: true }),
+        client
+          .from('public_menu_category_sections')
+          .select('id,category_id,name,sort_order')
+          .order('category_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
         client
           .from('public_menu_option_groups')
           .select('product_id,option_group_id,group_key,name,selection_type,is_required,min_selections,max_selections,sort_order')
@@ -6869,7 +6915,14 @@
       const rawCategories = categoryResult.data || [];
       const rawProducts = productResult.data || [];
       const rawProductSizes = sizeResult.data || [];
-      const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes);
+      const rawCategorySections = sectionResult.error ? [] : (sectionResult.data || []);
+      if (sectionResult.error) {
+        console.warn('[CURV Phase S5B] Category section fetch failed. Menu rendering continues without section data.', sectionResult.error);
+      }
+      const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes, rawCategorySections);
+      if (!sectionResult.error) {
+        console.log('[CURV Phase S5B] Category sections fetched:', shapedPublicMenu.categorySections);
+      }
       const optionErrors = [optionGroupResult.error, optionChoiceResult.error, optionDefaultResult.error].filter(Boolean);
       shapedPublicMenu.options = null;
       latestPublicMenuOptions = null;
