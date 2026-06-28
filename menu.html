@@ -2521,24 +2521,28 @@
       <p>An extra gram of matcha is available for an additional charge. Less ice or no ice will result in a non-full cup.</p>
     </div>
 
-    <div class="category">
-      <span class="category-label">Signature</span>
-      <div id="matcha-mount-signature"></div>
-    </div>
+    <div id="matcha-sectioned-supabase-mount" class="category" style="display:none"></div>
 
-    <div class="category">
-      <span class="category-label">Popular</span>
-      <div id="matcha-mount-popular"></div>
-    </div>
+    <div id="matcha-standard-layout">
+      <div class="category">
+        <span class="category-label">Signature</span>
+        <div id="matcha-mount-signature"></div>
+      </div>
 
-    <div class="category">
-      <span class="category-label seasonal">Seasonal</span>
-      <div id="matcha-mount-seasonal"></div>
-    </div>
+      <div class="category">
+        <span class="category-label">Popular</span>
+        <div id="matcha-mount-popular"></div>
+      </div>
 
-    <div class="category">
-      <span class="category-label">Hojicha</span>
-      <div id="matcha-mount-hojicha"></div>
+      <div class="category">
+        <span class="category-label seasonal">Seasonal</span>
+        <div id="matcha-mount-seasonal"></div>
+      </div>
+
+      <div class="category">
+        <span class="category-label">Hojicha</span>
+        <div id="matcha-mount-hojicha"></div>
+      </div>
     </div>
   </section>
 
@@ -3273,24 +3277,42 @@
     });
   }
 
-  function renderAllSupabaseEspressoPanels(items = [], categorySections = []) {
-    const mount = document.getElementById('espresso-panels-mount');
-    if (!mount) return;
+  function normalizePublicMenuText(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
 
-    const activeSections = Array.isArray(categorySections) ? categorySections : [];
-    if (!activeSections.length) {
-      renderAllEspressoPanels(items);
-      return;
-    }
+  function compareSectionedMenuItems(a, b) {
+    const sortA = Number(a && a.sort_order) || 0;
+    const sortB = Number(b && b.sort_order) || 0;
+    if (sortA !== sortB) return sortA - sortB;
+    return normalizePublicMenuText(a && a.name).localeCompare(normalizePublicMenuText(b && b.name));
+  }
+
+  function getPublicCategorySectionsForCategory(shapedPublicMenu, categoryId) {
+    return shapedPublicMenu
+      && shapedPublicMenu.categorySections
+      && shapedPublicMenu.categorySections.byCategoryId
+      && categoryId
+      ? shapedPublicMenu.categorySections.byCategoryId[categoryId] || []
+      : [];
+  }
+
+  function buildPublicCategorySectionGroups(items = [], categorySections = [], compareItems = compareSectionedMenuItems) {
+    const activeSections = Array.isArray(categorySections)
+      ? categorySections
+          .filter(section => section && section.id)
+          .sort((a, b) => compareSectionedMenuItems(a, b))
+      : [];
+    if (!activeSections.length) return null;
 
     const sectionById = activeSections.reduce((map, section) => {
-      if (section && section.id) map[section.id] = section;
+      map[section.id] = section;
       return map;
     }, {});
     const unsectionedItems = [];
     const itemsBySectionId = {};
 
-    items.forEach(item => {
+    (Array.isArray(items) ? items : []).forEach(item => {
       const sectionId = item && item.category_section_id;
       if (!sectionId || !sectionById[sectionId]) {
         unsectionedItems.push(item);
@@ -3300,14 +3322,44 @@
       itemsBySectionId[sectionId].push(item);
     });
 
-    const sectionsWithItems = activeSections.filter(section => (
-      section && section.id && Array.isArray(itemsBySectionId[section.id]) && itemsBySectionId[section.id].length
-    ));
+    const sectionGroups = activeSections
+      .map(section => ({
+        section,
+        items: (itemsBySectionId[section.id] || []).slice().sort(compareItems)
+      }))
+      .filter(group => group.items.length);
 
-    if (!sectionsWithItems.length) {
-      renderAllEspressoPanels(items);
-      return;
-    }
+    if (!sectionGroups.length) return null;
+
+    return {
+      unsectionedItems: unsectionedItems.slice().sort(compareItems),
+      sectionGroups
+    };
+  }
+
+  function appendCategorySectionLabel(mount, labelText) {
+    const label = document.createElement('span');
+    label.className = 'category-label';
+    label.textContent = labelText;
+    mount.appendChild(label);
+  }
+
+  function renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem, compareItems = compareSectionedMenuItems) {
+    const groups = buildPublicCategorySectionGroups(items, categorySections, compareItems);
+    if (!groups) return false;
+
+    mount.innerHTML = '';
+    groups.unsectionedItems.forEach(renderItem);
+    groups.sectionGroups.forEach(group => {
+      appendCategorySectionLabel(mount, group.section.name);
+      group.items.forEach(renderItem);
+    });
+    return true;
+  }
+
+  function renderAllSupabaseEspressoPanels(items = [], categorySections = []) {
+    const mount = document.getElementById('espresso-panels-mount');
+    if (!mount) return;
 
     const renderItem = item => {
       mount.appendChild(renderEspressoPanel(item));
@@ -3316,23 +3368,15 @@
       wrapAccordionGroups(panelEl);
     };
 
-    mount.innerHTML = '';
-    unsectionedItems.sort(comparePublicMenuProducts('Espresso')).forEach(renderItem);
+    const didRenderSections = renderPanelItemsWithOptionalSections(
+      mount,
+      items,
+      categorySections,
+      renderItem,
+      comparePublicMenuProducts('Espresso')
+    );
 
-    sectionsWithItems.forEach(section => {
-      const label = document.createElement('span');
-      label.className = 'category-label';
-      label.textContent = section.name;
-      mount.appendChild(label);
-
-      itemsBySectionId[section.id]
-        .sort(comparePublicMenuProducts('Espresso'))
-        .forEach(renderItem);
-    });
-  }
-
-  function normalizePublicMenuText(value) {
-    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!didRenderSections) renderAllEspressoPanels(items);
   }
 
   function slugifyPublicMenuId(value) {
@@ -3980,6 +4024,14 @@
   }
 
   function renderAllMatchaPanels(items = MATCHA_ITEMS) {
+    const sectionedMount = document.getElementById('matcha-sectioned-supabase-mount');
+    const standardLayout = document.getElementById('matcha-standard-layout');
+    if (sectionedMount) {
+      sectionedMount.innerHTML = '';
+      sectionedMount.style.display = 'none';
+    }
+    if (standardLayout) standardLayout.style.display = '';
+
     Object.values(MATCHA_MOUNTS).forEach(mountId => {
       const mount = document.getElementById(mountId);
       if (mount) mount.innerHTML = '';
@@ -3996,6 +4048,37 @@
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
     });
+  }
+
+  function renderAllSupabaseMatchaPanels(items = [], categorySections = []) {
+    const mount = document.getElementById('matcha-sectioned-supabase-mount');
+    const standardLayout = document.getElementById('matcha-standard-layout');
+    if (!mount || !standardLayout) {
+      renderAllMatchaPanels(items);
+      return;
+    }
+
+    const renderItem = item => {
+      mount.appendChild(renderMatchaPanel(item));
+      initPanel(item.id, buildMatchaDefaults(item));
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    };
+
+    const didRenderSections = renderPanelItemsWithOptionalSections(
+      mount,
+      items,
+      categorySections,
+      renderItem
+    );
+
+    if (!didRenderSections) {
+      renderAllMatchaPanels(items);
+      return;
+    }
+
+    mount.style.display = '';
+    standardLayout.style.display = 'none';
   }
 
   function mapPublicMatchaPrice(product) {
@@ -4065,11 +4148,17 @@
         price: priceResult.price,
         img: product.image_url || hardcodedItem.img,
         is_curv_pick: !!product.is_curv_pick,
-        is_seasonal: !!product.is_seasonal
+        is_seasonal: !!product.is_seasonal,
+        category_section_id: product.category_section_id || null,
+        sort_order: Number(product.sort_order) || 0
       });
     }
 
-    return { ok: true, items };
+    return {
+      ok: true,
+      items,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, matchaCategory.id)
+    };
   }
 
   function renderSupabaseMatchaOrFallback(shapedPublicMenu) {
@@ -4079,7 +4168,7 @@
       return false;
     }
 
-    renderAllMatchaPanels(mapped.items);
+    renderAllSupabaseMatchaPanels(mapped.items, mapped.categorySections);
     return true;
   }
 
@@ -4289,12 +4378,12 @@
     return wrap;
   }
 
-  function renderAllFrappePanels(items = FRAPPE_ITEMS) {
+  function renderAllFrappePanels(items = FRAPPE_ITEMS, categorySections = []) {
     const mount = document.getElementById('frappe-mount');
     if (!mount) return; // mount div not in HTML yet - skip silently
     mount.innerHTML = '';
 
-    items.forEach(item => {
+    const renderItem = item => {
       mount.appendChild(renderFrappePanel(item));
       const defaults = { size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none' };
       if (item.has_milk) defaults.milk = item.default_milk;
@@ -4302,7 +4391,10 @@
       // Phase 5A: wrap collapsible groups for this Frappe panel
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
-    });
+    };
+
+    if (renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem)) return;
+    items.forEach(renderItem);
   }
 
   function mapPublicCurvccinoPrices(product) {
@@ -4393,11 +4485,17 @@
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
-        has_inclusions: matchingHardcodedItem ? matchingHardcodedItem.has_inclusions : true
+        has_inclusions: matchingHardcodedItem ? matchingHardcodedItem.has_inclusions : true,
+        category_section_id: product.category_section_id || null,
+        sort_order: Number(product.sort_order) || 0
       });
     }
 
-    return { ok: true, items: mappedItems };
+    return {
+      ok: true,
+      items: mappedItems,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, curvccinoCategory.id)
+    };
   }
 
   function renderSupabaseCurvccinoOrFallback(shapedPublicMenu) {
@@ -4407,7 +4505,7 @@
       return false;
     }
 
-    renderAllFrappePanels(mapped.items);
+    renderAllFrappePanels(mapped.items, mapped.categorySections);
     return true;
   }
   // ── REFRESHER ITEMS CONFIG (Phase 4E) ──
@@ -4589,19 +4687,22 @@
     return wrap;
   }
 
-  function renderAllRefresherPanels(items = REFRESHER_ITEMS) {
+  function renderAllRefresherPanels(items = REFRESHER_ITEMS, categorySections = []) {
     const mount = document.getElementById('refresher-mount');
     if (!mount) return; // mount div not in HTML yet - skip silently
     mount.innerHTML = '';
 
-    items.forEach(item => {
+    const renderItem = item => {
       mount.appendChild(renderRefresherPanel(item));
       const defaults = { size: 'regular', syrup: 'none', sauce: 'none' };
       initPanel(item.id, defaults);
       // Phase 5A: wrap collapsible groups for this Refresher panel
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
-    });
+    };
+
+    if (renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem)) return;
+    items.forEach(renderItem);
   }
 
   function mapPublicRefresherPrices(product) {
@@ -4689,11 +4790,17 @@
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
-        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true
+        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
+        category_section_id: product.category_section_id || null,
+        sort_order: Number(product.sort_order) || 0
       });
     }
 
-    return { ok: true, items: mappedItems };
+    return {
+      ok: true,
+      items: mappedItems,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, refresherCategory.id)
+    };
   }
 
   function renderSupabaseRefreshersOrFallback(shapedPublicMenu) {
@@ -4703,7 +4810,7 @@
       return false;
     }
 
-    renderAllRefresherPanels(mapped.items);
+    renderAllRefresherPanels(mapped.items, mapped.categorySections);
     return true;
   }
 
@@ -4938,12 +5045,12 @@
     return wrap;
   }
 
-  function renderAllTakoyakiPanels(items = TAKOYAKI_ITEMS) {
+  function renderAllTakoyakiPanels(items = TAKOYAKI_ITEMS, categorySections = []) {
     const mount = document.getElementById('takoyaki-mount');
     if (!mount) return; // mount div not in HTML yet - skip silently
     mount.innerHTML = '';
 
-    items.forEach(item => {
+    const renderItem = item => {
       mount.appendChild(renderTakoyakiPanel(item));
       const defaults = {
         pieces: item.pieces[0].value,  // first available piece option
@@ -4955,7 +5062,10 @@
       // Phase 5A: wrap collapsible groups for this Takoyaki panel
       const panelEl = document.getElementById('panel-' + item.id);
       wrapAccordionGroups(panelEl);
-    });
+    };
+
+    if (renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem)) return;
+    items.forEach(renderItem);
   }
 
   // Phase 2D.3: Supabase Bites/Takoyaki mapping is intentionally strict.
@@ -5077,6 +5187,7 @@
         has_spicy: expectedItem.has_spicy,
         has_addons: expectedItem.has_addons,
         has_cheese: expectedItem.has_cheese,
+        category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
     }
@@ -5086,7 +5197,11 @@
       return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
     });
 
-    return { ok: true, items: mappedItems };
+    return {
+      ok: true,
+      items: mappedItems,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, bitesCategory.id)
+    };
   }
 
   function renderSupabaseTakoyakiOrFallback(shapedPublicMenu) {
@@ -5096,7 +5211,7 @@
       return false;
     }
 
-    renderAllTakoyakiPanels(mapped.items);
+    renderAllTakoyakiPanels(mapped.items, mapped.categorySections);
     return true;
   }
 
@@ -5188,12 +5303,12 @@
     return wrap;
   }
 
-  function renderAllSavoryPanels(items = SAVORY_ITEMS, shapedPublicMenu = null) {
+  function renderAllSavoryPanels(items = SAVORY_ITEMS, shapedPublicMenu = null, categorySections = []) {
     const mount = document.getElementById('savory-mount');
     if (!mount) return; // mount div not in HTML yet - skip silently
     mount.innerHTML = '';
 
-    items.forEach(item => {
+    const renderItem = item => {
       mount.appendChild(renderSavoryPanel(item));
       const supabaseSauceDefault = getSupabaseDefaultOptionValue(item.name, 'sauce_pref', shapedPublicMenu);
       const sauceDefault = supabaseSauceDefault || item.default_sauce;
@@ -5205,7 +5320,10 @@
       if (supabaseSauceDefault) {
         console.log(`[CURV Phase D.2] Using Supabase sauce default for ${item.name}: ${supabaseSauceDefault}`);
       }
-    });
+    };
+
+    if (renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem)) return;
+    items.forEach(renderItem);
   }
 
   // Phase 2D.4: Supabase Savory mapping keeps fixed sauce behavior hardcoded.
@@ -5300,6 +5418,7 @@
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
     }
@@ -5309,7 +5428,11 @@
       return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
     });
 
-    return { ok: true, items: mappedItems };
+    return {
+      ok: true,
+      items: mappedItems,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, savoryCategory.id)
+    };
   }
 
   function renderSupabaseSavoryOrFallback(shapedPublicMenu) {
@@ -5319,7 +5442,7 @@
       return false;
     }
 
-    renderAllSavoryPanels(mapped.items, shapedPublicMenu);
+    renderAllSavoryPanels(mapped.items, shapedPublicMenu, mapped.categorySections);
     return true;
   }
 
@@ -5416,11 +5539,17 @@
         img: product.image_url || meta.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        variants: variantMap.variants
+        variants: variantMap.variants,
+        category_section_id: product.category_section_id || null,
+        sort_order: Number(product.sort_order) || 0
       });
     }
 
-    return { ok: true, items };
+    return {
+      ok: true,
+      items,
+      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, saladBarCategory.id)
+    };
   }
 
   function renderSaladBarProduct(item) {
@@ -5447,7 +5576,18 @@
     return rowHtml;
   }
 
-  function renderSaladBarCategories(items) {
+  function renderSaladBarCategories(items, categorySections = []) {
+    const sectionGroups = buildPublicCategorySectionGroups(items, categorySections);
+    if (sectionGroups) {
+      const unsectionedHtml = sectionGroups.unsectionedItems.map(renderSaladBarProduct).join('');
+      const sectionHtml = sectionGroups.sectionGroups.map(group => `
+        <div class="category">
+          <span class="category-label">${escapeMenuHtml(group.section.name)}</span>
+          ${group.items.map(renderSaladBarProduct).join('')}
+        </div>`).join('');
+      return `${unsectionedHtml}${sectionHtml}`;
+    }
+
     const grouped = items.reduce((map, item) => {
       if (!map[item.category]) map[item.category] = [];
       map[item.category].push(item);
@@ -5474,7 +5614,7 @@
       return false;
     }
 
-    mount.innerHTML = renderSaladBarCategories(mapped.items);
+    mount.innerHTML = renderSaladBarCategories(mapped.items, mapped.categorySections);
     mount.style.display = '';
     fallback.style.display = 'none';
     return true;
