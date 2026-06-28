@@ -140,6 +140,7 @@
   const productFilterBar = document.querySelector('[data-product-filter-bar]');
   const productFilterList = document.querySelector('[data-product-filter-list]');
   const productStatusFilter = document.querySelector('[data-product-status-filter]');
+  const productListSortSelect = document.querySelector('[data-product-list-sort]');
   const productSearchBar = document.querySelector('[data-product-search-bar]');
   const productSearchInput = document.querySelector('[data-product-search]');
   const clearProductSearchButton = document.querySelector('[data-clear-product-search]');
@@ -182,6 +183,7 @@
   let selectedCategoryFilter = 'all';
   let selectedSectionFilter = 'all';
   let selectedProductStatusFilter = 'all';
+  let selectedProductListSort = 'menu';
   let productSearchQuery = '';
   let editingProductId = null;
   let draftFormBaseline = '';
@@ -1849,6 +1851,50 @@
     || String(a.name || '').localeCompare(String(b.name || ''))
   );
 
+  const getProductCreatedTime = (product) => {
+    const time = Date.parse(product && product.created_at ? product.created_at : '');
+    return Number.isFinite(time) ? time : 0;
+  };
+
+  const sortProductsForBrowsing = (products = []) => {
+    const sourceProducts = products || [];
+    if (selectedProductListSort === 'name_asc') {
+      return sourceProducts.slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    }
+    if (selectedProductListSort === 'name_desc') {
+      return sourceProducts.slice().sort((a, b) => String(b.name || '').localeCompare(String(a.name || '')));
+    }
+    if (selectedProductListSort === 'newest') {
+      return sourceProducts.slice().sort((a, b) =>
+        getProductCreatedTime(b) - getProductCreatedTime(a)
+        || String(a.name || '').localeCompare(String(b.name || ''))
+      );
+    }
+    if (selectedProductListSort === 'oldest') {
+      return sourceProducts.slice().sort((a, b) =>
+        getProductCreatedTime(a) - getProductCreatedTime(b)
+        || String(a.name || '').localeCompare(String(b.name || ''))
+      );
+    }
+    if (selectedProductListSort === 'published_first') {
+      return sourceProducts.slice().sort((a, b) =>
+        Number(Boolean(b.is_published)) - Number(Boolean(a.is_published))
+        || getCategorySortOrder(a) - getCategorySortOrder(b)
+        || getProductSortOrder(a) - getProductSortOrder(b)
+        || String(a.name || '').localeCompare(String(b.name || ''))
+      );
+    }
+    if (selectedProductListSort === 'draft_first') {
+      return sourceProducts.slice().sort((a, b) =>
+        Number(Boolean(a.is_published)) - Number(Boolean(b.is_published))
+        || getCategorySortOrder(a) - getCategorySortOrder(b)
+        || getProductSortOrder(a) - getProductSortOrder(b)
+        || String(a.name || '').localeCompare(String(b.name || ''))
+      );
+    }
+    return sortProductsForPreview(sourceProducts);
+  };
+
   const setDisplayOrderDirty = (isDirty) => {
     displayOrderDirty = isDirty;
     if (displayOrderUnsaved) displayOrderUnsaved.hidden = !isDirty;
@@ -2309,9 +2355,10 @@
     });
 
     const query = productSearchQuery.trim().toLowerCase();
-    return query
+    const searchedProducts = query
       ? statusFilteredProducts.filter((product) => getProductSearchText(product).includes(query))
       : statusFilteredProducts;
+    return sortProductsForBrowsing(searchedProducts);
   };
 
   const updateBulkPublishControls = () => {
@@ -2760,6 +2807,7 @@
 
     if (productSearchBar) productSearchBar.hidden = !latestProducts.length;
     if (productStatusFilter) productStatusFilter.value = selectedProductStatusFilter;
+    if (productListSortSelect) productListSortSelect.value = selectedProductListSort;
     if (clearProductSearchButton) clearProductSearchButton.disabled = !productSearchQuery;
 
     const query = productSearchQuery.trim().toLowerCase();
@@ -3721,7 +3769,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,category_section_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -4192,6 +4240,13 @@
   if (productStatusFilter) {
     productStatusFilter.addEventListener('change', () => {
       selectedProductStatusFilter = productStatusFilter.value || 'all';
+      renderProducts(latestProducts);
+    });
+  }
+
+  if (productListSortSelect) {
+    productListSortSelect.addEventListener('change', () => {
+      selectedProductListSort = productListSortSelect.value || 'menu';
       renderProducts(latestProducts);
     });
   }
