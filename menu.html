@@ -3273,6 +3273,64 @@
     });
   }
 
+  function renderAllSupabaseEspressoPanels(items = [], categorySections = []) {
+    const mount = document.getElementById('espresso-panels-mount');
+    if (!mount) return;
+
+    const activeSections = Array.isArray(categorySections) ? categorySections : [];
+    if (!activeSections.length) {
+      renderAllEspressoPanels(items);
+      return;
+    }
+
+    const sectionById = activeSections.reduce((map, section) => {
+      if (section && section.id) map[section.id] = section;
+      return map;
+    }, {});
+    const unsectionedItems = [];
+    const itemsBySectionId = {};
+
+    items.forEach(item => {
+      const sectionId = item && item.category_section_id;
+      if (!sectionId || !sectionById[sectionId]) {
+        unsectionedItems.push(item);
+        return;
+      }
+      if (!itemsBySectionId[sectionId]) itemsBySectionId[sectionId] = [];
+      itemsBySectionId[sectionId].push(item);
+    });
+
+    const sectionsWithItems = activeSections.filter(section => (
+      section && section.id && Array.isArray(itemsBySectionId[section.id]) && itemsBySectionId[section.id].length
+    ));
+
+    if (!sectionsWithItems.length) {
+      renderAllEspressoPanels(items);
+      return;
+    }
+
+    const renderItem = item => {
+      mount.appendChild(renderEspressoPanel(item));
+      initPanel(item.id, buildEspressoDefaults(item));
+      const panelEl = document.getElementById('panel-' + item.id);
+      wrapAccordionGroups(panelEl);
+    };
+
+    mount.innerHTML = '';
+    unsectionedItems.sort(comparePublicMenuProducts('Espresso')).forEach(renderItem);
+
+    sectionsWithItems.forEach(section => {
+      const label = document.createElement('span');
+      label.className = 'category-label';
+      label.textContent = section.name;
+      mount.appendChild(label);
+
+      itemsBySectionId[section.id]
+        .sort(comparePublicMenuProducts('Espresso'))
+        .forEach(renderItem);
+    });
+  }
+
   function normalizePublicMenuText(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
@@ -3472,6 +3530,7 @@
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
         menu_group: product.menu_group,
+        category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
     }
@@ -3479,7 +3538,14 @@
     mappedItems.sort(comparePublicMenuProducts('Espresso'));
     mappedNonEspressoItems.sort(comparePublicMenuProducts('Espresso'));
 
-    return { ok: true, items: mappedItems, nonEspressoItems: mappedNonEspressoItems };
+    const espressoSections = shapedPublicMenu
+      && shapedPublicMenu.categorySections
+      && shapedPublicMenu.categorySections.byCategoryId
+      && espressoCategory.id
+      ? shapedPublicMenu.categorySections.byCategoryId[espressoCategory.id] || []
+      : [];
+
+    return { ok: true, items: mappedItems, nonEspressoItems: mappedNonEspressoItems, categorySections: espressoSections };
   }
 
   function renderSupabaseEspressoNonEspresso(items) {
@@ -3554,7 +3620,7 @@
       return false;
     }
 
-    renderAllEspressoPanels(mapped.items);
+    renderAllSupabaseEspressoPanels(mapped.items, mapped.categorySections);
     renderSupabaseEspressoNonEspresso(mapped.nonEspressoItems);
     return true;
   }
