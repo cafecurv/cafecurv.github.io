@@ -191,15 +191,30 @@
                 <option value="Each">Each</option>
                 <option value="Size">Size</option>
                 <option value="Pieces">Pieces</option>
-                <option value="Weight / Volume">Weight / Volume</option>
+                <option value="Weight">Weight</option>
                 <option value="Pack / Box">Pack / Box</option>
-                <option value="Custom">Custom</option>
+                <option value="__add_custom_sold_by__">+ Add custom...</option>
               </select>
             </label>
-            <label class="admin-field draft-field-wide" for="draft-custom-variant-group" data-custom-variant-field hidden>
-              <span>Custom sold by name</span>
-              <input id="draft-custom-variant-group" name="custom_variant_group" type="text" autocomplete="off" disabled>
-            </label>
+            <div class="inline-category-create inline-sold-by-create" data-custom-variant-field hidden>
+              <label class="admin-field" for="draft-custom-variant-group">
+                <span>Custom sold by</span>
+                <input id="draft-custom-variant-group" name="custom_variant_group" type="text" autocomplete="off" placeholder="Custom label" disabled>
+              </label>
+              <div class="inline-category-actions">
+                <button type="button" class="auth-button" data-save-custom-sold-by disabled>Add</button>
+                <button type="button" class="auth-button auth-button-secondary" data-cancel-custom-sold-by disabled>Cancel</button>
+              </div>
+            </div>
+            <div class="admin-field product-badges-editor" aria-labelledby="product-badges-label">
+              <span id="product-badges-label">Badges</span>
+              <div class="product-badge-chip-field" data-product-badge-chip-field>
+                <div class="product-badge-chip-list" data-product-badge-chip-list aria-label="Product badges"></div>
+                <label class="sr-only" for="product-badge-input">Type badge label</label>
+                <input id="product-badge-input" type="text" autocomplete="off" maxlength="24" placeholder="type badge here..." data-product-badge-input disabled>
+              </div>
+              <p class="product-badge-helper" data-product-badge-status hidden></p>
+            </div>
             <label class="admin-field draft-field-wide" for="draft-product-description">
               <span>Description</span>
               <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>

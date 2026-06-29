@@ -119,6 +119,8 @@
   const variantGroupSelect = document.getElementById('draft-variant-group');
   const customVariantField = document.querySelector('[data-custom-variant-field]');
   const customVariantInput = document.getElementById('draft-custom-variant-group');
+  const saveCustomSoldByButton = document.querySelector('[data-save-custom-sold-by]');
+  const cancelCustomSoldByButton = document.querySelector('[data-cancel-custom-sold-by]');
   const variantList = document.querySelector('[data-variant-list]');
   const addVariantButton = document.querySelector('[data-add-variant]');
   const createDraftButton = document.querySelector('[data-create-draft]');
@@ -128,6 +130,9 @@
   const draftProductTitle = document.getElementById('draft-product-title');
   const editorPublishNote = document.querySelector('[data-editor-publish-note]');
   const productEditorViewTitle = document.querySelector('[data-product-editor-view-title]');
+  const productBadgeChipList = document.querySelector('[data-product-badge-chip-list]');
+  const productBadgeInput = document.querySelector('[data-product-badge-input]');
+  const productBadgeStatus = document.querySelector('[data-product-badge-status]');
   const openProductEditorButton = document.querySelector('[data-open-product-editor]');
   const backToProductsButton = document.querySelector('[data-back-to-products]');
   const productOptionAttachmentList = document.querySelector('[data-product-option-attachments]');
@@ -185,6 +190,8 @@
   let selectedProductStatusFilter = 'all';
   let selectedProductListSort = 'menu';
   let productSearchQuery = '';
+  let productBadgeLabels = [];
+  let productBadgesDisabled = true;
   let editingProductId = null;
   let draftFormBaseline = '';
   let draftFormSavedLabelActive = false;
@@ -202,6 +209,7 @@
   let activeProductSubview = 'list';
   let previousDraftCategoryValue = '';
   let previousDraftSectionValue = '';
+  let previousVariantGroupValue = 'Each';
   let inlineCategorySaving = false;
   let inlineDraftSectionSaving = false;
   let inlineCategoryRenameSaving = false;
@@ -228,6 +236,9 @@
   let displayOrderLoadedCategory = '';
   let displayOrderLoadedSection = 'all';
   let draggedSortProductId = null;
+  const DEFAULT_VARIANT_GROUPS = ['Each', 'Size', 'Pieces', 'Weight', 'Pack / Box'];
+  const PRODUCT_BADGE_MAX_COUNT = 3;
+  const PRODUCT_BADGE_MAX_LENGTH = 24;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -364,6 +375,7 @@
       is_available: formData.get('is_available') === 'on',
       is_curv_pick: formData.get('is_curv_pick') === 'on',
       is_seasonal: formData.get('is_seasonal') === 'on',
+      badge_labels: productBadgeLabels.slice(),
       variants,
     });
   };
@@ -392,6 +404,103 @@
   };
 
   const hasUnsavedDraftFormChanges = () => isDraftFormDirty();
+
+  const setProductBadgeStatus = (message) => {
+    if (!productBadgeStatus) return;
+    const nextMessage = String(message || '');
+    productBadgeStatus.textContent = nextMessage;
+    productBadgeStatus.hidden = !nextMessage;
+  };
+
+  const normalizeProductBadgeLabel = (label) => String(label || '').trim().replace(/\s+/g, ' ');
+
+  const renderProductBadges = () => {
+    if (!productBadgeChipList) return;
+    productBadgeChipList.innerHTML = '';
+
+    productBadgeLabels.forEach((label) => {
+      const chip = document.createElement('span');
+      chip.className = 'product-badge-chip';
+
+      const text = document.createElement('span');
+      text.textContent = label;
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = '×';
+      removeButton.title = 'Remove ' + label + ' badge';
+      removeButton.setAttribute('aria-label', 'Remove ' + label + ' badge');
+      removeButton.disabled = productBadgesDisabled;
+      removeButton.addEventListener('click', () => {
+        productBadgeLabels = productBadgeLabels.filter((item) => item !== label);
+        renderProductBadges();
+        markDraftFormDirty();
+        setProductBadgeStatus('Badge removed.');
+      });
+
+      chip.append(text, removeButton);
+      productBadgeChipList.appendChild(chip);
+    });
+
+    if (productBadgeInput) {
+      productBadgeInput.disabled = productBadgesDisabled || productBadgeLabels.length >= PRODUCT_BADGE_MAX_COUNT;
+      productBadgeInput.placeholder = productBadgeLabels.length >= PRODUCT_BADGE_MAX_COUNT
+        ? 'badge limit reached'
+        : 'type badge here...';
+    }
+
+    if (!productBadgeLabels.length) {
+      setProductBadgeStatus('');
+    }
+  };
+
+  const setProductBadges = (labels = []) => {
+    const seen = new Set();
+    productBadgeLabels = (Array.isArray(labels) ? labels : [])
+      .map(normalizeProductBadgeLabel)
+      .filter((label) => {
+        const key = label.toLowerCase();
+        if (!label || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, PRODUCT_BADGE_MAX_COUNT);
+    if (productBadgeInput) productBadgeInput.value = '';
+    renderProductBadges();
+  };
+
+  const setProductBadgesDisabled = (isDisabled) => {
+    productBadgesDisabled = isDisabled;
+    renderProductBadges();
+  };
+
+  const addProductBadgeFromInput = () => {
+    if (!productBadgeInput || productBadgesDisabled) return;
+    const label = normalizeProductBadgeLabel(productBadgeInput.value);
+    if (!label) {
+      productBadgeInput.value = '';
+      return;
+    }
+    if (label.length > PRODUCT_BADGE_MAX_LENGTH) {
+      setProductBadgeStatus('Keep badges to 24 characters or fewer.');
+      return;
+    }
+    if (productBadgeLabels.length >= PRODUCT_BADGE_MAX_COUNT) {
+      setProductBadgeStatus('Use up to 3 badges per product.');
+      return;
+    }
+    if (productBadgeLabels.some((item) => item.toLowerCase() === label.toLowerCase())) {
+      productBadgeInput.value = '';
+      setProductBadgeStatus('That badge is already added.');
+      return;
+    }
+
+    productBadgeLabels = [...productBadgeLabels, label];
+    productBadgeInput.value = '';
+    renderProductBadges();
+    markDraftFormDirty();
+    setProductBadgeStatus('Badge added.');
+  };
 
   const updateEditorPublishAction = () => {
     if (!editorPublishActionButton) return;
@@ -459,11 +568,41 @@
 
   const getVariantRows = () => variantList ? Array.from(variantList.querySelectorAll('[data-variant-row]')) : [];
 
+  const ensureVariantGroupOption = (label) => {
+    const value = String(label || '').trim();
+    if (!variantGroupSelect || !value || value === '__add_custom_sold_by__') return;
+    const existing = Array.from(variantGroupSelect.options).some((option) => option.value === value);
+    if (existing) return;
+
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    const addCustomOption = Array.from(variantGroupSelect.options).find((item) => item.value === '__add_custom_sold_by__');
+    variantGroupSelect.insertBefore(option, addCustomOption || null);
+  };
+
+  const resetVariantGroupOptions = (selectedValue = 'Each') => {
+    if (!variantGroupSelect) return;
+    variantGroupSelect.innerHTML = '';
+    DEFAULT_VARIANT_GROUPS.forEach((label) => {
+      const option = document.createElement('option');
+      option.value = label;
+      option.textContent = label;
+      variantGroupSelect.appendChild(option);
+    });
+    const addCustomOption = document.createElement('option');
+    addCustomOption.value = '__add_custom_sold_by__';
+    addCustomOption.textContent = '+ Add custom...';
+    variantGroupSelect.appendChild(addCustomOption);
+    ensureVariantGroupOption(selectedValue);
+    variantGroupSelect.value = selectedValue || 'Each';
+    if (variantGroupSelect.value === '__add_custom_sold_by__') variantGroupSelect.value = 'Each';
+    previousVariantGroupValue = variantGroupSelect.value || 'Each';
+  };
+
   const getSelectedVariantGroup = () => {
     if (!variantGroupSelect) return 'Each';
-    if (variantGroupSelect.value === 'Custom') {
-      return customVariantInput ? customVariantInput.value.trim() : '';
-    }
+    if (variantGroupSelect.value === '__add_custom_sold_by__') return '';
     return variantGroupSelect.value.trim();
   };
 
@@ -509,9 +648,42 @@
   };
 
   const syncVariantGroupFields = () => {
-    const isCustom = variantGroupSelect && variantGroupSelect.value === 'Custom';
-    if (customVariantField) customVariantField.hidden = !isCustom;
-    if (customVariantInput) customVariantInput.disabled = !isCustom || (variantGroupSelect && variantGroupSelect.disabled);
+    const isAddingCustom = variantGroupSelect && variantGroupSelect.value === '__add_custom_sold_by__';
+    const isDisabled = !isAddingCustom || (variantGroupSelect && variantGroupSelect.disabled);
+    if (customVariantField) customVariantField.hidden = !isAddingCustom;
+    if (customVariantInput) customVariantInput.disabled = isDisabled;
+    if (saveCustomSoldByButton) saveCustomSoldByButton.disabled = isDisabled;
+    if (cancelCustomSoldByButton) cancelCustomSoldByButton.disabled = isDisabled;
+  };
+
+  const hideCustomSoldByCreate = (restorePrevious = false) => {
+    if (restorePrevious && variantGroupSelect) {
+      variantGroupSelect.value = previousVariantGroupValue || 'Each';
+    }
+    if (customVariantInput) customVariantInput.value = '';
+    syncVariantGroupFields();
+    if (restorePrevious) {
+      if (editingProductId && !isDraftFormDirty()) {
+        draftFormSavedLabelActive = true;
+      }
+      syncEditorSaveLabels();
+    }
+  };
+
+  const addCustomSoldByLabel = () => {
+    if (!variantGroupSelect || !customVariantInput) return;
+    const label = customVariantInput.value.trim().replace(/\s+/g, ' ');
+    if (!label) {
+      setStatus('Enter a custom sold-by label.');
+      return;
+    }
+    ensureVariantGroupOption(label);
+    variantGroupSelect.value = label;
+    previousVariantGroupValue = label;
+    hideCustomSoldByCreate(false);
+    maybeSyncDefaultVariantLabel();
+    markDraftFormDirty();
+    setStatus('Custom sold-by label added.');
   };
 
   const maybeSyncDefaultVariantLabel = () => {
@@ -582,6 +754,7 @@
     syncDraftSectionSelectDisabled();
     updateRemoveButtons();
     updateCategoryActionButtons();
+    setProductBadgesDisabled(isDisabled);
   };
 
   const renderProductOptionEmpty = (title, message) => {
@@ -1281,7 +1454,7 @@
 
   const resetDraftProductForm = () => {
     if (draftForm) draftForm.reset();
-    if (variantGroupSelect) variantGroupSelect.value = 'Each';
+    resetVariantGroupOptions('Each');
     if (customVariantInput) customVariantInput.value = '';
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
@@ -1289,6 +1462,7 @@
     setCreateMode();
     syncVariantGroupFields();
     maybeSyncDefaultVariantLabel();
+    setProductBadges([]);
     if (draftCategorySelect) {
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
@@ -2986,18 +3160,14 @@
     draftForm.elements.image_url.value = product.image_url || '';
     draftForm.elements.description.value = product.description || '';
     draftForm.elements.notes.value = product.notes || '';
+    setProductBadges(product.badge_labels);
     draftForm.elements.is_available.checked = Boolean(product.is_available);
     draftForm.elements.is_curv_pick.checked = Boolean(product.is_curv_pick);
     draftForm.elements.is_seasonal.checked = Boolean(product.is_seasonal);
 
-    const knownGroups = ['Each', 'Size', 'Pieces', 'Weight / Volume', 'Pack / Box'];
     const groupName = product.variant_group_name || 'Each';
-    if (variantGroupSelect) {
-      variantGroupSelect.value = knownGroups.includes(groupName) ? groupName : 'Custom';
-    }
-    if (customVariantInput) {
-      customVariantInput.value = knownGroups.includes(groupName) ? '' : groupName;
-    }
+    resetVariantGroupOptions(groupName);
+    if (customVariantInput) customVariantInput.value = '';
     syncVariantGroupFields();
 
     const variants = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
@@ -3769,7 +3939,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,category_section_id,name,description,image_url,notes,is_available,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -3860,6 +4030,14 @@
       sizeRows.push({ label, price, cost, sort_order: index });
     }
 
+    if (productBadgeLabels.length > PRODUCT_BADGE_MAX_COUNT) {
+      return { error: 'Use up to 3 badges per product.' };
+    }
+
+    if (productBadgeLabels.some((label) => label.length > PRODUCT_BADGE_MAX_LENGTH)) {
+      return { error: 'Keep badges to 24 characters or fewer.' };
+    }
+
     return {
       value: {
         category_id: categoryId,
@@ -3870,6 +4048,7 @@
         description: String(formData.get('description') || '').trim() || null,
         image_url: String(formData.get('image_url') || '').trim() || null,
         notes: String(formData.get('notes') || '').trim() || null,
+        badge_labels: productBadgeLabels.slice(),
         is_available: formData.get('is_available') === 'on',
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
@@ -3921,6 +4100,7 @@
       description: draft.description,
       image_url: draft.image_url,
       notes: draft.notes,
+      badge_labels: draft.badge_labels,
       is_available: draft.is_available,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
@@ -4187,14 +4367,47 @@
   };
 
   if (variantGroupSelect) {
+    variantGroupSelect.addEventListener('focus', () => {
+      if (variantGroupSelect.value !== '__add_custom_sold_by__') {
+        previousVariantGroupValue = variantGroupSelect.value || 'Each';
+      }
+    });
+
     variantGroupSelect.addEventListener('change', () => {
+      if (variantGroupSelect.value === '__add_custom_sold_by__') {
+        if (customVariantInput) customVariantInput.value = '';
+        syncVariantGroupFields();
+        if (customVariantInput) customVariantInput.focus();
+        return;
+      }
+      previousVariantGroupValue = variantGroupSelect.value || 'Each';
       syncVariantGroupFields();
       maybeSyncDefaultVariantLabel();
     });
   }
 
   if (customVariantInput) {
-    customVariantInput.addEventListener('input', maybeSyncDefaultVariantLabel);
+    customVariantInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addCustomSoldByLabel();
+      }
+      if (event.key === 'Escape') {
+        hideCustomSoldByCreate(true);
+        setStatus('Custom sold-by cancelled.');
+      }
+    });
+  }
+
+  if (saveCustomSoldByButton) {
+    saveCustomSoldByButton.addEventListener('click', addCustomSoldByLabel);
+  }
+
+  if (cancelCustomSoldByButton) {
+    cancelCustomSoldByButton.addEventListener('click', () => {
+      hideCustomSoldByCreate(true);
+      setStatus('Custom sold-by cancelled.');
+    });
   }
 
   if (addVariantButton && variantList) {
@@ -4503,6 +4716,23 @@
     draftForm.addEventListener('submit', saveDraftProduct);
     draftForm.addEventListener('input', markDraftFormDirty);
     draftForm.addEventListener('change', markDraftFormDirty);
+  }
+
+  if (productBadgeInput) {
+    productBadgeInput.addEventListener('input', (event) => {
+      event.stopPropagation();
+    });
+
+    productBadgeInput.addEventListener('change', (event) => {
+      event.stopPropagation();
+    });
+
+    productBadgeInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        addProductBadgeFromInput();
+      }
+    });
   }
 
   if (editorPublishActionButton) {
