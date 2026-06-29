@@ -14,6 +14,22 @@
     });
   }
 
+  const currentAdminPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const currentNavItem = currentAdminPage === 'incoming-orders.html'
+    ? 'incoming-orders'
+    : currentAdminPage === 'menu-manager.html'
+      ? 'menu-manager'
+      : 'dashboard';
+
+  document.querySelectorAll('[data-nav-item]').forEach((item) => {
+    const isCurrent = item.dataset.navItem === currentNavItem;
+    item.classList.toggle('is-active', isCurrent);
+    if (isCurrent) {
+      item.setAttribute('aria-current', 'page');
+    } else {
+      item.removeAttribute('aria-current');
+    }
+  });
   const moreButton = document.querySelector('.mobile-more-button');
   const moreDrawer = document.getElementById('mobile-more-drawer');
   const moreOverlay = document.querySelector('.mobile-more-overlay');
@@ -482,7 +498,7 @@
 
       const removeButton = document.createElement('button');
       removeButton.type = 'button';
-      removeButton.textContent = '×';
+      removeButton.textContent = 'Ãƒâ€”';
       removeButton.title = 'Remove ' + label + ' badge';
       removeButton.setAttribute('aria-label', 'Remove ' + label + ' badge');
       removeButton.disabled = productBadgesDisabled;
@@ -3138,7 +3154,7 @@
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
         deleteButton.className = 'product-action-button is-danger';
-        deleteButton.textContent = '🗑️';
+        deleteButton.textContent = 'Ã°Å¸â€”â€˜Ã¯Â¸Â';
         deleteButton.title = 'Delete draft product';
         deleteButton.setAttribute('aria-label', 'Delete draft product');
         deleteButton.addEventListener('click', () => deleteDraftProduct(product.id));
@@ -4927,5 +4943,504 @@
     });
   }
 
+  refreshSession();
+})();
+(() => {
+  const ordersRoot = document.querySelector('[data-supabase-incoming-orders]');
+  if (!ordersRoot) return;
+
+  const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+
+  const STATUS_LABELS = {
+    submitted: 'New',
+    accepted: 'Accepted',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+
+  const authForm = ordersRoot.querySelector('[data-auth-form]');
+  const emailInput = document.getElementById('owner-email');
+  const passwordInput = document.getElementById('owner-password');
+  const signInButton = ordersRoot.querySelector('[data-sign-in]');
+  const signOutButton = ordersRoot.querySelector('[data-sign-out]');
+  const authStatus = ordersRoot.querySelector('[data-orders-auth-status]');
+  const ownerAccount = ordersRoot.querySelector('[data-owner-account]');
+  const ownerAccountToggle = ordersRoot.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = ordersRoot.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = ordersRoot.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = ordersRoot.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = ordersRoot.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = ordersRoot.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = ordersRoot.querySelector('[data-owner-account-initials]');
+  const orderList = ordersRoot.querySelector('[data-order-list]');
+  const orderDetail = ordersRoot.querySelector('[data-order-detail]');
+  const orderStatusLabel = ordersRoot.querySelector('[data-order-status-label]');
+  const filterButtons = Array.from(ordersRoot.querySelectorAll('[data-order-status-filter]'));
+  const submittedCount = ordersRoot.querySelector('[data-orders-count-submitted]');
+  const preparingCount = ordersRoot.querySelector('[data-orders-count-preparing]');
+  const readyCount = ordersRoot.querySelector('[data-orders-count-ready]');
+  const todayTotal = ordersRoot.querySelector('[data-orders-today-total]');
+
+  let activeStatus = 'submitted';
+  let isOwnerSignedIn = false;
+  let signedInOwnerEmail = '';
+  let latestOrders = [];
+  let itemCountByOrderId = new Map();
+  let selectedOrderId = '';
+  let ordersLoading = false;
+
+  const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
+    && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
+    && SUPABASE_URL.startsWith('https://')
+    && SUPABASE_PUBLISHABLE_KEY.length > 20;
+
+  const setStatus = (message) => {
+    if (authStatus) authStatus.textContent = message;
+  };
+
+  const setFormDisabled = (isDisabled) => {
+    if (emailInput) emailInput.disabled = isDisabled;
+    if (passwordInput) passwordInput.disabled = isDisabled;
+    if (signInButton) signInButton.disabled = isDisabled;
+  };
+
+  const getOwnerInitials = (email) => {
+    const cleanEmail = String(email || '').trim();
+    if (!cleanEmail) return 'CO';
+    const localPart = cleanEmail.split('@')[0] || cleanEmail;
+    return localPart
+      .split(/[._\-\s]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part.charAt(0).toUpperCase())
+      .join('') || 'CO';
+  };
+
+  const closeOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    ownerAccountMenu.hidden = true;
+    ownerAccountToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const toggleOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    const shouldOpen = ownerAccountMenu.hidden;
+    ownerAccountMenu.hidden = !shouldOpen;
+    ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    if (shouldOpen) {
+      const firstTarget = ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)');
+      if (firstTarget && typeof firstTarget.focus === 'function') firstTarget.focus();
+    }
+  };
+
+  const updateOwnerAccountUi = () => {
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
+    if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
+    if (signInButton) signInButton.disabled = isOwnerSignedIn;
+    if (signOutButton) signOutButton.disabled = !isOwnerSignedIn;
+  };
+
+  const setSignedInState = (isSignedIn, email = '') => {
+    isOwnerSignedIn = isSignedIn;
+    signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
+    updateOwnerAccountUi();
+  };
+
+  const formatCurrency = (value, currency = 'PHP') => {
+    const amount = Number(value || 0);
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: currency || 'PHP',
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      return 'PHP ' + amount.toFixed(2);
+    }
+  };
+
+  const formatOrderDate = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const makeElement = (tagName, className, text) => {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
+  };
+
+  const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, pickup, payment, and total details will appear here after selecting an order.') => {
+    if (!orderDetail) return;
+    orderDetail.innerHTML = '';
+    const placeholder = makeElement('div', 'order-detail-placeholder');
+    placeholder.append(makeElement('h3', '', title), makeElement('p', '', message));
+    orderDetail.appendChild(placeholder);
+  };
+
+  const renderOrderEmptyState = (title, message, tone = '') => {
+    if (!orderList) return;
+    orderList.innerHTML = '';
+    const empty = makeElement('div', 'order-empty-state' + (tone ? ' ' + tone : ''));
+    empty.dataset.orderEmpty = '';
+    empty.append(makeElement('h3', '', title), makeElement('p', '', message));
+    orderList.appendChild(empty);
+  };
+
+  const renderOrderDetail = (order) => {
+    if (!orderDetail) return;
+    if (!order) {
+      renderOrderDetailPlaceholder();
+      return;
+    }
+
+    orderDetail.innerHTML = '';
+    const heading = makeElement('div', 'order-detail-heading');
+    heading.append(
+      makeElement('p', 'eyebrow', STATUS_LABELS[order.status] || order.status || 'Order'),
+      makeElement('h3', '', order.order_number || 'Order'),
+    );
+
+    const grid = makeElement('dl', 'order-detail-grid');
+    const details = [
+      ['Customer', order.customer_name || '-'],
+      ['Phone', order.customer_phone || '-'],
+      ['Created', formatOrderDate(order.created_at)],
+      ['Pickup', order.pickup_time || 'Pickup'],
+      ['Payment', order.payment_status || 'unpaid'],
+      ['Total', formatCurrency(order.total, order.currency)],
+    ];
+
+    details.forEach(([label, value]) => {
+      const row = document.createElement('div');
+      row.append(makeElement('dt', '', label), makeElement('dd', '', value));
+      grid.appendChild(row);
+    });
+
+    if (order.customer_email || order.customer_notes) {
+      const notes = makeElement('div', 'order-detail-notes');
+      if (order.customer_email) notes.appendChild(makeElement('p', '', 'Email: ' + order.customer_email));
+      if (order.customer_notes) notes.appendChild(makeElement('p', '', 'Notes: ' + order.customer_notes));
+      orderDetail.append(heading, grid, notes);
+      return;
+    }
+
+    orderDetail.append(heading, grid);
+  };
+
+  const renderOrders = () => {
+    if (!orderList) return;
+    if (!isOwnerSignedIn) {
+      renderOrderEmptyState('Owner sign-in required', 'Sign in with owner access to load incoming pickup orders.');
+      renderOrderDetailPlaceholder('Select an order', 'Sign in to load order details.');
+      return;
+    }
+
+    if (ordersLoading) {
+      renderOrderEmptyState('Loading orders...', 'Fetching the latest pickup orders from Supabase.');
+      return;
+    }
+
+    if (!latestOrders.length) {
+      const label = STATUS_LABELS[activeStatus] || 'selected';
+      renderOrderEmptyState('No ' + label.toLowerCase() + ' orders', 'There are no pickup orders in this status yet.');
+      renderOrderDetailPlaceholder();
+      return;
+    }
+
+    orderList.innerHTML = '';
+    latestOrders.forEach((order) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'order-card' + (order.id === selectedOrderId ? ' is-selected' : '');
+      card.dataset.orderId = order.id || '';
+
+      const head = makeElement('div', 'order-card-head');
+      head.append(
+        makeElement('span', 'order-number', order.order_number || 'Order'),
+        makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
+      );
+
+      const meta = makeElement('div', 'order-card-meta');
+      meta.append(
+        makeElement('span', '', formatOrderDate(order.created_at)),
+        makeElement('span', '', formatCurrency(order.total, order.currency)),
+      );
+
+      const customer = makeElement('div', 'order-card-customer');
+      customer.append(
+        makeElement('strong', '', order.customer_name || 'Guest'),
+        makeElement('span', '', order.customer_phone || 'No phone'),
+      );
+
+      const itemCount = itemCountByOrderId.get(order.id);
+      if (typeof itemCount === 'number') {
+        meta.appendChild(makeElement('span', '', itemCount + (itemCount === 1 ? ' item' : ' items')));
+      }
+
+      card.append(head, customer, meta);
+      card.addEventListener('click', () => {
+        selectedOrderId = order.id || '';
+        renderOrders();
+        renderOrderDetail(order);
+      });
+      orderList.appendChild(card);
+    });
+
+    const selectedOrder = latestOrders.find(order => order.id === selectedOrderId) || latestOrders[0];
+    if (selectedOrder) {
+      selectedOrderId = selectedOrder.id || '';
+      renderOrderDetail(selectedOrder);
+      const selectedCard = orderList.querySelector('[data-order-id="' + CSS.escape(selectedOrderId) + '"]');
+      if (selectedCard) selectedCard.classList.add('is-selected');
+    }
+  };
+
+  const updateFilterUi = () => {
+    filterButtons.forEach((button) => {
+      const isActive = button.dataset.orderStatusFilter === activeStatus;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    if (orderStatusLabel) orderStatusLabel.textContent = STATUS_LABELS[activeStatus] || 'Orders';
+  };
+
+  const getStatusName = () => String(STATUS_LABELS[activeStatus] || 'selected').toLowerCase();
+
+  const getLoadedStatusMessage = (count) => {
+    const statusName = getStatusName();
+    if (count === 0) return 'No ' + statusName + ' orders loaded.';
+    return 'Loaded ' + count + ' ' + statusName + ' order' + (count === 1 ? '.' : 's.');
+  };
+  const resetSummary = () => {
+    if (submittedCount) submittedCount.textContent = '0';
+    if (preparingCount) preparingCount.textContent = '0';
+    if (readyCount) readyCount.textContent = '0';
+    if (todayTotal) todayTotal.textContent = formatCurrency(0, 'PHP');
+  };
+
+  const loadOrderSummary = async () => {
+    resetSummary();
+    if (!isOwnerSignedIn) return;
+
+    const { data, error } = await client
+      .from('orders')
+      .select('status,total,currency,created_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) return;
+
+    const counts = { submitted: 0, preparing: 0, ready: 0 };
+    const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+    let todayAmount = 0;
+    let todayCurrency = 'PHP';
+
+    (data || []).forEach((order) => {
+      if (Object.prototype.hasOwnProperty.call(counts, order.status)) counts[order.status] += 1;
+      const createdKey = order.created_at
+        ? new Date(order.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+        : '';
+      if (createdKey === todayKey) {
+        todayAmount += Number(order.total || 0);
+        todayCurrency = order.currency || todayCurrency;
+      }
+    });
+
+    if (submittedCount) submittedCount.textContent = String(counts.submitted);
+    if (preparingCount) preparingCount.textContent = String(counts.preparing);
+    if (readyCount) readyCount.textContent = String(counts.ready);
+    if (todayTotal) todayTotal.textContent = formatCurrency(todayAmount, todayCurrency);
+  };
+
+  const loadItemCounts = async (orders) => {
+    itemCountByOrderId = new Map();
+    const orderIds = orders.map(order => order.id).filter(Boolean);
+    if (!orderIds.length) return;
+
+    const { data, error } = await client
+      .from('order_items')
+      .select('order_id')
+      .in('order_id', orderIds);
+
+    if (error) return;
+
+    (data || []).forEach((item) => {
+      const currentCount = itemCountByOrderId.get(item.order_id) || 0;
+      itemCountByOrderId.set(item.order_id, currentCount + 1);
+    });
+  };
+
+  const loadOrders = async () => {
+    if (!isOwnerSignedIn) {
+      latestOrders = [];
+      itemCountByOrderId = new Map();
+      selectedOrderId = '';
+      renderOrders();
+      setStatus('Ready for owner sign in.');
+      return;
+    }
+
+    ordersLoading = true;
+    selectedOrderId = '';
+    updateFilterUi();
+    setStatus('Loading ' + getStatusName() + ' orders...');
+    renderOrders();
+
+    const { data, error } = await client
+      .from('orders')
+      .select('id,order_number,status,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,total,currency,payment_status,created_at')
+      .eq('status', activeStatus)
+      .order('created_at', { ascending: false });
+
+    ordersLoading = false;
+
+    if (error) {
+      latestOrders = [];
+      itemCountByOrderId = new Map();
+      renderOrderEmptyState('Unable to load orders', error.message, 'is-error');
+      renderOrderDetailPlaceholder('Unable to load order details', 'Resolve the Supabase error, then try again.');
+      setStatus('Unable to load orders. ' + error.message);
+      return;
+    }
+
+    latestOrders = data || [];
+    await loadItemCounts(latestOrders);
+    renderOrders();
+    setStatus(getLoadedStatusMessage(latestOrders.length));
+
+  };
+
+  if (!hasSupabaseConfig) {
+    setStatus('Supabase config missing. Add project URL and publishable key before connecting.');
+    setFormDisabled(true);
+    if (signOutButton) signOutButton.disabled = true;
+    return;
+  }
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    setStatus('Supabase client could not load. Check the admin page script connection.');
+    setFormDisabled(true);
+    return;
+  }
+
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const refreshSession = async () => {
+    const { data } = await client.auth.getSession();
+    const isSignedIn = Boolean(data && data.session && data.session.user);
+    setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
+    if (isSignedIn) {
+      await loadOrderSummary();
+      await loadOrders();
+    } else {
+      latestOrders = [];
+      itemCountByOrderId = new Map();
+      selectedOrderId = '';
+      resetSummary();
+      renderOrders();
+      setStatus('Ready for owner sign in.');
+    }
+  };
+
+  if (ownerAccountToggle) {
+    ownerAccountToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleOwnerAccountMenu();
+    });
+  }
+
+  if (ownerAccountMenu) {
+    ownerAccountMenu.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!ownerAccount || ownerAccount.contains(event.target)) return;
+    closeOwnerAccountMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeOwnerAccountMenu();
+  });
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      const nextStatus = button.dataset.orderStatusFilter || 'submitted';
+      if (nextStatus === activeStatus || ordersLoading) return;
+      activeStatus = nextStatus;
+      updateFilterUi();
+      await loadOrders();
+    });
+  });
+
+  if (authForm) {
+    authForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = emailInput ? emailInput.value.trim() : '';
+      const password = passwordInput ? passwordInput.value : '';
+
+      if (!email || !password) {
+        setStatus('Enter the owner email and password.');
+        return;
+      }
+
+      setStatus('Signing in...');
+      setFormDisabled(true);
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      setFormDisabled(false);
+      if (error) {
+        setSignedInState(false);
+        resetSummary();
+        renderOrders();
+        setStatus('Sign in failed. ' + error.message);
+        return;
+      }
+
+      if (passwordInput) passwordInput.value = '';
+      setSignedInState(true, email);
+      closeOwnerAccountMenu();
+      await loadOrderSummary();
+      await loadOrders();
+    });
+  }
+
+  if (signOutButton) {
+    signOutButton.addEventListener('click', async () => {
+      setStatus('Signing out...');
+      const { error } = await client.auth.signOut();
+      if (error) {
+        setStatus('Sign out failed. ' + error.message);
+        return;
+      }
+      setSignedInState(false);
+      closeOwnerAccountMenu();
+      latestOrders = [];
+      itemCountByOrderId = new Map();
+      selectedOrderId = '';
+      resetSummary();
+      renderOrders();
+      setStatus('Signed out.');
+    });
+  }
+
+  updateFilterUi();
+  renderOrders();
   refreshSession();
 })();

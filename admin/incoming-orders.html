@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js" defer></script>
 </head>
 <body>
@@ -82,46 +83,78 @@
       </div>
     </aside>
 
-    <main class="control-main incoming-orders-main" id="main-content">
+    <main class="control-main incoming-orders-main" id="main-content" data-supabase-incoming-orders>
       <section class="menu-manager-header incoming-orders-header" aria-labelledby="incoming-orders-title">
         <div>
           <p class="eyebrow">CURV Control</p>
           <h1 id="incoming-orders-title" class="dashboard-title">Incoming Orders</h1>
           <p class="page-helper">Guest pickup orders from the public menu will land here after the submission RPC is connected.</p>
-          <p class="menu-connection-status" role="status">Admin shell ready &middot; Awaiting order feed</p>
+          <p class="menu-connection-status" data-orders-auth-status role="status">Ready for owner sign in.</p>
+        </div>
+        <div class="owner-account" data-owner-account>
+          <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
+            <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
+            <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
+            <span class="owner-account-caret" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
+            <div class="owner-account-panel" data-owner-signed-out>
+              <p class="eyebrow">Owner Access</p>
+              <h2>Owner Login</h2>
+              <form class="owner-account-form" data-auth-form>
+                <label class="admin-field" for="owner-email">
+                  <span>Email</span>
+                  <input id="owner-email" name="email" type="email" autocomplete="email" required>
+                </label>
+                <label class="admin-field" for="owner-password">
+                  <span>Password</span>
+                  <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+              </form>
+            </div>
+            <div class="owner-account-panel" data-owner-signed-in hidden>
+              <p class="eyebrow">Owner Account</p>
+              <h2>Signed In</h2>
+              <p class="owner-account-email" data-owner-account-email>Owner access active.</p>
+              <button type="button" class="owner-menu-action" disabled>Profile Settings <span>Soon</span></button>
+              <button type="button" class="owner-menu-action" disabled>Account Settings <span>Soon</span></button>
+              <button type="button" class="auth-button auth-button-secondary" data-sign-out disabled>Sign Out</button>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="incoming-order-summary" aria-label="Incoming order summary">
         <article class="metric-card">
           <p class="metric-label">Submitted</p>
-          <p class="metric-value">0</p>
+          <p class="metric-value" data-orders-count-submitted>0</p>
           <p class="metric-subtext">Waiting for pickup orders</p>
         </article>
         <article class="metric-card">
           <p class="metric-label">Preparing</p>
-          <p class="metric-value">0</p>
+          <p class="metric-value" data-orders-count-preparing>0</p>
           <p class="metric-subtext">No active tickets</p>
         </article>
         <article class="metric-card">
           <p class="metric-label">Ready</p>
-          <p class="metric-value">0</p>
+          <p class="metric-value" data-orders-count-ready>0</p>
           <p class="metric-subtext">No orders ready</p>
         </article>
         <article class="metric-card">
           <p class="metric-label">Today</p>
-          <p class="metric-value">PHP 0</p>
+          <p class="metric-value" data-orders-today-total>PHP 0</p>
           <p class="metric-subtext">Unpaid pickup flow</p>
         </article>
       </section>
 
       <section class="incoming-orders-toolbar" aria-label="Order queue filters">
-        <button type="button" class="order-filter-button is-active" aria-pressed="true">New</button>
-        <button type="button" class="order-filter-button" disabled>Accepted</button>
-        <button type="button" class="order-filter-button" disabled>Preparing</button>
-        <button type="button" class="order-filter-button" disabled>Ready</button>
-        <button type="button" class="order-filter-button" disabled>Completed</button>
-        <button type="button" class="order-filter-button" disabled>Cancelled</button>
+        <button type="button" class="order-filter-button is-active" data-order-status-filter="submitted" aria-pressed="true">New</button>
+        <button type="button" class="order-filter-button" data-order-status-filter="accepted" aria-pressed="false">Accepted</button>
+        <button type="button" class="order-filter-button" data-order-status-filter="preparing" aria-pressed="false">Preparing</button>
+        <button type="button" class="order-filter-button" data-order-status-filter="ready" aria-pressed="false">Ready</button>
+        <button type="button" class="order-filter-button" data-order-status-filter="completed" aria-pressed="false">Completed</button>
+        <button type="button" class="order-filter-button" data-order-status-filter="cancelled" aria-pressed="false">Cancelled</button>
       </section>
 
       <section class="incoming-orders-workspace" aria-label="Incoming orders workspace">
@@ -131,11 +164,13 @@
               <p class="eyebrow">Queue</p>
               <h2 id="order-queue-title">Pickup Orders</h2>
             </div>
-            <span class="static-status">No orders</span>
+            <span class="static-status" data-order-status-label>New</span>
           </div>
-          <div class="order-empty-state">
-            <h3>Waiting for guest pickup orders</h3>
-            <p>Orders will display here after public submission is wired through the controlled Supabase RPC.</p>
+          <div class="order-list" data-order-list aria-live="polite">
+            <div class="order-empty-state" data-order-empty>
+              <h3>Owner sign-in required</h3>
+              <p>Sign in with owner access to load incoming pickup orders.</p>
+            </div>
           </div>
         </section>
 
@@ -147,29 +182,10 @@
             </div>
             <span class="static-status">Select order</span>
           </div>
-          <div class="order-detail-empty">
-            <dl class="order-detail-grid">
-              <div>
-                <dt>Customer</dt>
-                <dd>-</dd>
-              </div>
-              <div>
-                <dt>Pickup</dt>
-                <dd>-</dd>
-              </div>
-              <div>
-                <dt>Payment</dt>
-                <dd>Unpaid</dd>
-              </div>
-              <div>
-                <dt>Total</dt>
-                <dd>PHP 0.00</dd>
-              </div>
-            </dl>
-            <div class="order-action-row" aria-label="Order actions">
-              <button type="button" class="auth-button" disabled>Accept</button>
-              <button type="button" class="auth-button auth-button-secondary" disabled>Mark Ready</button>
-              <button type="button" class="auth-button auth-button-secondary" disabled>Complete</button>
+          <div class="order-detail-empty" data-order-detail>
+            <div class="order-detail-placeholder">
+              <h3>Select an order</h3>
+              <p>Order contact, pickup, payment, and total details will appear here after selecting an order.</p>
             </div>
           </div>
         </aside>
@@ -234,4 +250,3 @@
   </div>
 </body>
 </html>
-
