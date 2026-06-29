@@ -4961,6 +4961,27 @@
     cancelled: 'Cancelled',
   };
 
+  const ORDER_STATUS_ACTIONS = {
+    submitted: [
+      { label: 'Accept', nextStatus: 'accepted', timestampField: 'accepted_at' },
+      { label: 'Cancel', nextStatus: 'cancelled', timestampField: 'cancelled_at', tone: 'cancel' },
+    ],
+    accepted: [
+      { label: 'Mark Preparing', nextStatus: 'preparing', timestampField: 'preparing_at' },
+      { label: 'Cancel', nextStatus: 'cancelled', timestampField: 'cancelled_at', tone: 'cancel' },
+    ],
+    preparing: [
+      { label: 'Mark Ready', nextStatus: 'ready', timestampField: 'ready_at' },
+      { label: 'Cancel', nextStatus: 'cancelled', timestampField: 'cancelled_at', tone: 'cancel' },
+    ],
+    ready: [
+      { label: 'Complete', nextStatus: 'completed', timestampField: 'completed_at' },
+      { label: 'Cancel', nextStatus: 'cancelled', timestampField: 'cancelled_at', tone: 'cancel' },
+    ],
+    completed: [],
+    cancelled: [],
+  };
+
   const authForm = ordersRoot.querySelector('[data-auth-form]');
   const emailInput = document.getElementById('owner-email');
   const passwordInput = document.getElementById('owner-password');
@@ -4991,6 +5012,7 @@
   let itemCountByOrderId = new Map();
   let selectedOrderId = '';
   let ordersLoading = false;
+  let activeOrderAction = null;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -5132,15 +5154,35 @@
       grid.appendChild(row);
     });
 
+    const detailNodes = [heading, grid];
+
     if (order.customer_email || order.customer_notes) {
       const notes = makeElement('div', 'order-detail-notes');
       if (order.customer_email) notes.appendChild(makeElement('p', '', 'Email: ' + order.customer_email));
       if (order.customer_notes) notes.appendChild(makeElement('p', '', 'Notes: ' + order.customer_notes));
-      orderDetail.append(heading, grid, notes);
-      return;
+      detailNodes.push(notes);
     }
 
-    orderDetail.append(heading, grid);
+    const actions = ORDER_STATUS_ACTIONS[order.status] || [];
+    if (actions.length) {
+      const actionRow = makeElement('div', 'order-action-row');
+      actions.forEach((action) => {
+        const isSaving = activeOrderAction
+          && activeOrderAction.orderId === order.id
+          && activeOrderAction.nextStatus === action.nextStatus;
+        const buttonClass = 'auth-button order-action-button'
+          + (action.tone === 'cancel' ? ' auth-button-secondary is-cancel' : '');
+        const button = makeElement('button', buttonClass, isSaving ? 'Saving...' : action.label);
+        button.type = 'button';
+        button.disabled = Boolean(activeOrderAction) || ordersLoading;
+        button.dataset.orderAction = action.nextStatus;
+        button.addEventListener('click', () => handleOrderStatusAction(order, action));
+        actionRow.appendChild(button);
+      });
+      detailNodes.push(actionRow);
+    }
+
+    orderDetail.append(...detailNodes);
   };
 
   const renderOrders = () => {
@@ -5286,6 +5328,40 @@
     });
   };
 
+  const handleOrderStatusAction = async (order, action) => {
+    if (!order || !order.id || !action || !action.nextStatus || !action.timestampField) return;
+    if (activeOrderAction || ordersLoading) return;
+
+    if (action.nextStatus === 'cancelled') {
+      const shouldCancel = window.confirm('Cancel ' + (order.order_number || 'this order') + '?');
+      if (!shouldCancel) return;
+    }
+
+    activeOrderAction = { orderId: order.id, nextStatus: action.nextStatus };
+    renderOrderDetail(order);
+    setStatus(action.label + ' in progress...');
+
+    const payload = { status: action.nextStatus };
+    payload[action.timestampField] = new Date().toISOString();
+
+    const { error } = await client
+      .from('orders')
+      .update(payload)
+      .eq('id', order.id);
+
+    if (error) {
+      activeOrderAction = null;
+      renderOrderDetail(order);
+      setStatus('Unable to update ' + (order.order_number || 'order') + '. ' + error.message);
+      return;
+    }
+
+    activeOrderAction = null;
+    await loadOrderSummary();
+    await loadOrders();
+    setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
+  };
+
   const loadOrders = async () => {
     if (!isOwnerSignedIn) {
       latestOrders = [];
@@ -5383,7 +5459,7 @@
   filterButtons.forEach((button) => {
     button.addEventListener('click', async () => {
       const nextStatus = button.dataset.orderStatusFilter || 'submitted';
-      if (nextStatus === activeStatus || ordersLoading) return;
+      if (nextStatus === activeStatus || ordersLoading || activeOrderAction) return;
       activeStatus = nextStatus;
       updateFilterUi();
       await loadOrders();
