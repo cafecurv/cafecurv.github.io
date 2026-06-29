@@ -5107,6 +5107,8 @@
     return element;
   };
 
+  const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
+
   const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, pickup, payment, and total details will appear here after selecting an order.') => {
     if (!orderDetail) return;
     orderDetail.innerHTML = '';
@@ -5131,10 +5133,11 @@
       return;
     }
 
+    const statusKey = normalizeOrderStatus(order.status);
     orderDetail.innerHTML = '';
     const heading = makeElement('div', 'order-detail-heading');
     heading.append(
-      makeElement('p', 'eyebrow', STATUS_LABELS[order.status] || order.status || 'Order'),
+      makeElement('p', 'eyebrow', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('h3', '', order.order_number || 'Order'),
     );
 
@@ -5163,7 +5166,7 @@
       detailNodes.push(notes);
     }
 
-    const actions = ORDER_STATUS_ACTIONS[order.status] || [];
+    const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
     if (actions.length) {
       const actionRow = makeElement('div', 'order-action-row');
       actions.forEach((action) => {
@@ -5357,6 +5360,8 @@
     }
 
     activeOrderAction = null;
+    activeStatus = action.nextStatus;
+    updateFilterUi();
     await loadOrderSummary();
     await loadOrders();
     setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
