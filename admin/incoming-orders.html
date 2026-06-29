@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CURV Control</title>
-  <meta name="description" content="Static foundation shell for CURV Control.">
+  <title>Incoming Orders | CURV Control</title>
+  <meta name="description" content="Incoming Orders shell for CURV Control.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
@@ -39,11 +39,11 @@
 
     <aside class="sidebar" aria-label="Admin navigation">
       <nav class="admin-nav" id="admin-navigation">
-        <a href="index.html" class="admin-nav-link is-active" data-nav-item="dashboard" aria-label="Dashboard" aria-current="page">
+        <a href="index.html" class="admin-nav-link" data-nav-item="dashboard" aria-label="Dashboard">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
           <span class="nav-label">Dashboard</span>
         </a>
-        <a href="incoming-orders.html" class="admin-nav-link" data-nav-item="incoming-orders" aria-label="Incoming Orders">
+        <a href="incoming-orders.html" class="admin-nav-link is-active" data-nav-item="incoming-orders" aria-label="Incoming Orders" aria-current="page">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
           <span class="nav-label">Incoming Orders</span>
           <span class="nav-badge" hidden aria-hidden="true"></span>
@@ -69,7 +69,7 @@
           <span class="nav-label">Sales</span>
         </button>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-label="Settings" aria-disabled="true">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.1.5.5.9 1 .9H21a2 2 0 0 1 0 4h-.09c-.5 0-.9.4-1.51 1.1z"/></svg>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 0 1 22.62 8l-.06.06A1.65 1.65 0 0 0 22.4 10c.1.5.5.9 1 .9H24a2 2 0 0 1 0 4h-.09c-.5 0-.9.4-1.51 1.1z"/></svg>
           <span class="nav-label">Settings</span>
         </button>
       </nav>
@@ -82,57 +82,106 @@
       </div>
     </aside>
 
-    <main class="control-main" id="main-content">
-      <section class="dashboard-header" id="dashboard" aria-labelledby="dashboard-title">
+    <main class="control-main incoming-orders-main" id="main-content">
+      <section class="menu-manager-header incoming-orders-header" aria-labelledby="incoming-orders-title">
         <div>
           <p class="eyebrow">CURV Control</p>
-          <h1 id="dashboard-title" class="dashboard-title">Dashboard</h1>
+          <h1 id="incoming-orders-title" class="dashboard-title">Incoming Orders</h1>
+          <p class="page-helper">Guest pickup orders from the public menu will land here after the submission RPC is connected.</p>
+          <p class="menu-connection-status" role="status">Admin shell ready &middot; Awaiting order feed</p>
         </div>
-        <p class="dashboard-date" id="dashboard-date" aria-label="Today's date"></p>
       </section>
 
-      <section class="metric-grid" aria-label="Dashboard status overview">
+      <section class="incoming-order-summary" aria-label="Incoming order summary">
         <article class="metric-card">
-          <p class="metric-label">Incoming Orders</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
+          <p class="metric-label">Submitted</p>
+          <p class="metric-value">0</p>
+          <p class="metric-subtext">Waiting for pickup orders</p>
         </article>
         <article class="metric-card">
-          <p class="metric-label">Today&rsquo;s Revenue</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
+          <p class="metric-label">Preparing</p>
+          <p class="metric-value">0</p>
+          <p class="metric-subtext">No active tickets</p>
         </article>
         <article class="metric-card">
-          <p class="metric-label">Low Stock</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
+          <p class="metric-label">Ready</p>
+          <p class="metric-value">0</p>
+          <p class="metric-subtext">No orders ready</p>
         </article>
         <article class="metric-card">
-          <p class="metric-label">Unavailable Products</p>
-          <p class="metric-value">&mdash;</p>
-          <p class="metric-subtext">Not connected</p>
+          <p class="metric-label">Today</p>
+          <p class="metric-value">PHP 0</p>
+          <p class="metric-subtext">Unpaid pickup flow</p>
         </article>
       </section>
 
-      <section class="recent-orders-panel" aria-labelledby="recent-orders-title">
-        <p class="eyebrow">Recent Activity</p>
-        <h2 id="recent-orders-title">Recent Orders</h2>
-        <p class="empty-message">No orders yet. Connect the backend to see recent activity.</p>
+      <section class="incoming-orders-toolbar" aria-label="Order queue filters">
+        <button type="button" class="order-filter-button is-active" aria-pressed="true">New</button>
+        <button type="button" class="order-filter-button" disabled>Accepted</button>
+        <button type="button" class="order-filter-button" disabled>Preparing</button>
+        <button type="button" class="order-filter-button" disabled>Ready</button>
+        <button type="button" class="order-filter-button" disabled>Completed</button>
+        <button type="button" class="order-filter-button" disabled>Cancelled</button>
       </section>
 
-      <section class="quick-actions" aria-label="Quick actions">
-        <button type="button" disabled>New Manual Order</button>
-        <button type="button" disabled>View All Orders</button>
-        <button type="button" disabled>Check Inventory</button>
+      <section class="incoming-orders-workspace" aria-label="Incoming orders workspace">
+        <section class="order-queue-panel" aria-labelledby="order-queue-title">
+          <div class="panel-heading-row">
+            <div>
+              <p class="eyebrow">Queue</p>
+              <h2 id="order-queue-title">Pickup Orders</h2>
+            </div>
+            <span class="static-status">No orders</span>
+          </div>
+          <div class="order-empty-state">
+            <h3>Waiting for guest pickup orders</h3>
+            <p>Orders will display here after public submission is wired through the controlled Supabase RPC.</p>
+          </div>
+        </section>
+
+        <aside class="order-detail-panel" aria-labelledby="order-detail-title">
+          <div class="panel-heading-row">
+            <div>
+              <p class="eyebrow">Details</p>
+              <h2 id="order-detail-title">Order Details</h2>
+            </div>
+            <span class="static-status">Select order</span>
+          </div>
+          <div class="order-detail-empty">
+            <dl class="order-detail-grid">
+              <div>
+                <dt>Customer</dt>
+                <dd>-</dd>
+              </div>
+              <div>
+                <dt>Pickup</dt>
+                <dd>-</dd>
+              </div>
+              <div>
+                <dt>Payment</dt>
+                <dd>Unpaid</dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd>PHP 0.00</dd>
+              </div>
+            </dl>
+            <div class="order-action-row" aria-label="Order actions">
+              <button type="button" class="auth-button" disabled>Accept</button>
+              <button type="button" class="auth-button auth-button-secondary" disabled>Mark Ready</button>
+              <button type="button" class="auth-button auth-button-secondary" disabled>Complete</button>
+            </div>
+          </div>
+        </aside>
       </section>
     </main>
 
     <nav class="mobile-bottom-nav" aria-label="Mobile admin navigation">
-      <a href="index.html" class="mobile-nav-item is-active" aria-label="Dashboard" aria-current="page">
+      <a href="index.html" class="mobile-nav-item" aria-label="Dashboard">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
         <span>Dashboard</span>
       </a>
-      <a href="incoming-orders.html" class="mobile-nav-item" aria-label="Orders">
+      <a href="incoming-orders.html" class="mobile-nav-item is-active" aria-label="Orders" aria-current="page">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
         <span>Orders</span>
         <span class="mobile-nav-badge" hidden aria-hidden="true"></span>
@@ -185,3 +234,4 @@
   </div>
 </body>
 </html>
+

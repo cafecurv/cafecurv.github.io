@@ -3079,3 +3079,183 @@ body.more-drawer-open {
     grid-template-columns: 1fr;
   }
 }
+
+.incoming-orders-main {
+  width: min(100%, 1240px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.incoming-orders-header {
+  margin-bottom: 0.25rem;
+}
+
+.incoming-order-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.incoming-orders-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(28, 34, 53, 0.58);
+  padding: 0.72rem;
+}
+
+.order-filter-button {
+  min-height: 38px;
+  border: 1px solid rgba(189, 196, 212, 0.16);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--slate);
+  padding: 0.5rem 0.75rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 1.45px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.order-filter-button.is-active,
+.order-filter-button:hover,
+.order-filter-button:focus-visible {
+  border-color: rgba(200, 184, 154, 0.36);
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--accent);
+}
+
+.order-filter-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.incoming-orders-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.46fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.order-queue-panel,
+.order-detail-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.order-queue-panel h2,
+.order-detail-panel h2 {
+  margin: 0.1rem 0 0;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.order-empty-state,
+.order-detail-empty {
+  margin-top: 1rem;
+  border: 1px dashed rgba(189, 196, 212, 0.18);
+  border-radius: 8px;
+  background: rgba(36, 44, 66, 0.3);
+  padding: 1.2rem;
+}
+
+.order-empty-state {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.order-empty-state h3 {
+  margin: 0 0 0.45rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.order-empty-state p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--slate);
+  font-size: 0.84rem;
+}
+
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin: 0;
+}
+
+.order-detail-grid div {
+  min-height: 74px;
+  border: 1px solid rgba(189, 196, 212, 0.12);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+  padding: 0.75rem;
+}
+
+.order-detail-grid dt {
+  color: var(--accent);
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 1.45px;
+  text-transform: uppercase;
+}
+
+.order-detail-grid dd {
+  margin: 0.25rem 0 0;
+  color: var(--cream);
+  font-size: 0.82rem;
+}
+
+.order-action-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.order-action-row .auth-button {
+  width: 100%;
+}
+
+@media (max-width: 980px) {
+  .incoming-order-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .incoming-orders-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .incoming-order-summary,
+  .order-detail-grid,
+  .order-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .incoming-orders-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-filter-button {
+    width: 100%;
+  }
+}

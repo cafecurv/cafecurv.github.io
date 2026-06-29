@@ -44,11 +44,11 @@
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
           <span class="nav-label">Dashboard</span>
         </a>
-        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="incoming-orders" aria-label="Incoming Orders" aria-disabled="true">
+        <a href="incoming-orders.html" class="admin-nav-link" data-nav-item="incoming-orders" aria-label="Incoming Orders">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
           <span class="nav-label">Incoming Orders</span>
           <span class="nav-badge" hidden aria-hidden="true"></span>
-        </button>
+        </a>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="pos" aria-label="POS" aria-disabled="true">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
           <span class="nav-label">POS</span>
@@ -100,7 +100,7 @@
           <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
             <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
             <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
-            <span class="owner-account-caret" aria-hidden="true">▾</span>
+            <span class="owner-account-caret" aria-hidden="true">&#9662;</span>
           </button>
           <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
             <div class="owner-account-panel" data-owner-signed-out>
@@ -509,8 +509,8 @@
                 <span class="category-select-row">
                   <select id="product-category-filter" data-product-filter-list aria-label="Filter products by category"></select>
                   <span class="category-inline-actions">
-                    <button type="button" class="category-icon-button" data-rename-selected-category title="Rename selected category" aria-label="Rename selected category" disabled>✎</button>
-                    <button type="button" class="category-icon-button is-danger" data-delete-selected-category title="Delete selected category" aria-label="Delete selected category" disabled>🗑️</button>
+                    <button type="button" class="category-icon-button" data-rename-selected-category title="Rename selected category" aria-label="Rename selected category" disabled>&#9998;</button>
+                    <button type="button" class="category-icon-button is-danger" data-delete-selected-category title="Delete selected category" aria-label="Delete selected category" disabled>&#128465;</button>
                   </span>
                 </span>
               </label>
@@ -607,11 +607,11 @@
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
         <span>Dashboard</span>
       </a>
-      <button type="button" class="mobile-nav-item" aria-label="Orders">
+      <a href="incoming-orders.html" class="mobile-nav-item" aria-label="Orders">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
         <span>Orders</span>
         <span class="mobile-nav-badge" hidden aria-hidden="true"></span>
-      </button>
+      </a>
       <button type="button" class="mobile-nav-item" aria-label="POS">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
         <span>POS</span>
@@ -659,7 +659,7 @@
 
     <footer class="admin-footer">
       <span>CURV Control</span>
-      <span aria-hidden="true">Â·</span>
+      <span aria-hidden="true">&middot;</span>
       <span>&copy; <span id="current-year"></span></span>
     </footer>
   </div>
