@@ -83,6 +83,18 @@
   const signInButton = menuManagerRoot.querySelector('[data-sign-in]');
   const signOutButton = menuManagerRoot.querySelector('[data-sign-out]');
   const authStatus = menuManagerRoot.querySelector('[data-auth-status]');
+  const ownerAccount = document.querySelector('[data-owner-account]');
+  const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = document.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = document.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
+  const menuManagerSubnavToggle = document.querySelector('[data-menu-manager-subnav-toggle]');
+  const menuManagerSubnav = document.querySelector('[data-menu-manager-subnav]');
+  const mobileMenuManagerSubnavToggle = document.querySelector('[data-mobile-menu-manager-subnav-toggle]');
+  const mobileMenuManagerSubnav = document.querySelector('[data-mobile-menu-manager-subnav]');
   const categoryList = document.querySelector('[data-category-list]');
   const categoryStatus = document.querySelector('[data-category-status]');
   const productList = document.querySelector('[data-product-list]');
@@ -220,6 +232,7 @@
   let editingOptionGroupId = null;
   let editingOptionChoiceId = null;
   let isOwnerSignedIn = false;
+  let signedInOwnerEmail = '';
   let optionGroupsLoaded = false;
   let optionGroupsLoading = false;
   let optionGroupSaving = false;
@@ -258,11 +271,56 @@
     if (signInButton) signInButton.disabled = isDisabled;
   };
 
-  const setSignedInState = (isSignedIn) => {
+  const getOwnerInitials = (email) => {
+    const cleanEmail = String(email || '').trim();
+    if (!cleanEmail) return 'CO';
+    const localPart = cleanEmail.split('@')[0] || cleanEmail;
+    return localPart
+      .split(/[._\-\s]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part.charAt(0).toUpperCase())
+      .join('') || 'CO';
+  };
+
+  const closeOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    ownerAccountMenu.hidden = true;
+    ownerAccountToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const toggleOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    const shouldOpen = ownerAccountMenu.hidden;
+    ownerAccountMenu.hidden = !shouldOpen;
+    ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    if (shouldOpen) {
+      const firstTarget = ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)');
+      if (firstTarget && typeof firstTarget.focus === 'function') firstTarget.focus();
+    }
+  };
+
+  const updateOwnerAccountUi = () => {
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
+    if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
+  };
+
+  const setSubnavExpanded = (toggle, subnav, shouldExpand) => {
+    if (!toggle || !subnav) return;
+    toggle.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+    subnav.hidden = !shouldExpand;
+  };
+
+  const setSignedInState = (isSignedIn, email = '') => {
     isOwnerSignedIn = isSignedIn;
+    signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
     if (signInButton) signInButton.disabled = isSignedIn;
     if (signOutButton) signOutButton.disabled = !isSignedIn;
     if (openProductEditorButton) openProductEditorButton.disabled = !isSignedIn;
+    updateOwnerAccountUi();
     updateEditorPublishAction();
     updateUndoChangesAction();
     updateBulkPublishControls();
@@ -301,6 +359,11 @@
       const isActive = tab.dataset.menuManagerViewTab === nextView;
       tab.classList.toggle('is-active', isActive);
       tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      if (isActive) {
+        tab.setAttribute('aria-current', 'page');
+      } else {
+        tab.removeAttribute('aria-current');
+      }
     });
 
     menuManagerViewSections.forEach((section) => {
@@ -3953,7 +4016,7 @@
   const refreshSession = async () => {
     const { data } = await client.auth.getSession();
     const isSignedIn = Boolean(data && data.session && data.session.user);
-    setSignedInState(isSignedIn);
+    setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
     if (isSignedIn) {
       await loadCategories();
       await loadProducts();
@@ -4649,6 +4712,42 @@
     });
   }
 
+  if (ownerAccountToggle) {
+    ownerAccountToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleOwnerAccountMenu();
+    });
+  }
+
+  if (ownerAccountMenu) {
+    ownerAccountMenu.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!ownerAccount || ownerAccount.contains(event.target)) return;
+    closeOwnerAccountMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeOwnerAccountMenu();
+  });
+
+  if (menuManagerSubnavToggle) {
+    menuManagerSubnavToggle.addEventListener('click', () => {
+      const isExpanded = menuManagerSubnavToggle.getAttribute('aria-expanded') === 'true';
+      setSubnavExpanded(menuManagerSubnavToggle, menuManagerSubnav, !isExpanded);
+    });
+  }
+
+  if (mobileMenuManagerSubnavToggle) {
+    mobileMenuManagerSubnavToggle.addEventListener('click', () => {
+      const isExpanded = mobileMenuManagerSubnavToggle.getAttribute('aria-expanded') === 'true';
+      setSubnavExpanded(mobileMenuManagerSubnavToggle, mobileMenuManagerSubnav, !isExpanded);
+    });
+  }
+
   menuManagerViewTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       const nextView = tab.dataset.menuManagerViewTab || 'products';
@@ -4656,6 +4755,10 @@
         showProductListView();
       } else {
         setMenuManagerView(nextView);
+      }
+      if (tab.closest('.mobile-more-drawer')) {
+        const mobileMoreClose = document.querySelector('.mobile-more-close[data-more-close]');
+        if (mobileMoreClose) mobileMoreClose.click();
       }
     });
   });
@@ -4799,7 +4902,8 @@
       }
 
       if (passwordInput) passwordInput.value = '';
-      setSignedInState(true);
+      setSignedInState(true, email);
+      closeOwnerAccountMenu();
       await loadCategories();
       await loadProducts();
     });
@@ -4815,6 +4919,7 @@
       }
       latestCategories = [];
       setSignedInState(false);
+      closeOwnerAccountMenu();
       restoreStaticCategories();
       resetProductPreview();
       resetDraftProductForm();

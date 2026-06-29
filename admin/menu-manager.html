@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menu Manager | CURV Control</title>
-  <meta name="description" content="Static Menu Manager shell for CURV Control.">
+  <meta name="description" content="Menu Manager for CURV Control.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
@@ -53,10 +53,15 @@
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
           <span class="nav-label">POS</span>
         </button>
-        <a href="menu-manager.html" class="admin-nav-link is-active" data-nav-item="menu-manager" aria-label="Menu Manager" aria-current="page">
+        <button type="button" class="admin-nav-link admin-nav-button is-active" data-nav-item="menu-manager" data-menu-manager-subnav-toggle aria-label="Menu Manager" aria-current="page" aria-expanded="true" aria-controls="menu-manager-sidebar-subnav">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
           <span class="nav-label">Menu Manager</span>
-        </a>
+        </button>
+        <div class="admin-nav-sublist" id="menu-manager-sidebar-subnav" data-menu-manager-subnav aria-label="Menu Manager sections">
+          <button type="button" class="admin-nav-subitem is-active" data-menu-manager-view-tab="products" data-short-label="P" aria-pressed="true">Products</button>
+          <button type="button" class="admin-nav-subitem" data-menu-manager-view-tab="option-library" data-short-label="O" aria-pressed="false">Option Library</button>
+          <button type="button" class="admin-nav-subitem" data-menu-manager-view-tab="display-order" data-short-label="D" aria-pressed="false">Display Order</button>
+        </div>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="inventory" aria-label="Inventory" aria-disabled="true">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Inventory</span>
@@ -83,49 +88,47 @@
       </div>
     </aside>
 
-    <main class="control-main menu-manager-main" id="main-content">
+    <main class="control-main menu-manager-main" id="main-content" data-supabase-menu-manager>
       <section class="menu-manager-header" aria-labelledby="menu-manager-title">
         <div>
           <p class="eyebrow">CURV Control</p>
           <h1 id="menu-manager-title" class="dashboard-title">Menu Manager</h1>
-          <p class="page-helper">Prepare and organize menu data before connecting it to the live customer menu.</p>
+          <p class="page-helper">Prepare and organize menu data for the live customer menu.</p>
+          <p class="menu-connection-status" data-auth-status role="status">Connected to Supabase &middot; Published items update the live menu.</p>
         </div>
-        <button type="button" class="publish-button" disabled>Publish Changes</button>
-      </section>
-
-      <section class="admin-notice" aria-labelledby="menu-manager-notice-title">
-        <h2 id="menu-manager-notice-title">Not connected to the live menu yet</h2>
-        <p>Changes made here will not affect the customer website until Supabase integration is built and approved.</p>
-      </section>
-
-      <section class="admin-auth-panel" data-supabase-menu-manager aria-labelledby="owner-login-title">
-        <div>
-          <p class="eyebrow">Owner Access</p>
-          <h2 id="owner-login-title">Owner Menu Access</h2>
-          <p>Sign in with the owner account to manage draft products in Supabase.</p>
-        </div>
-        <form class="admin-login-form" data-auth-form>
-          <label class="admin-field" for="owner-email">
-            <span>Email</span>
-            <input id="owner-email" name="email" type="email" autocomplete="email" required>
-          </label>
-          <label class="admin-field" for="owner-password">
-            <span>Password</span>
-            <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
-          </label>
-          <div class="auth-actions">
-            <button type="submit" class="auth-button" data-sign-in>Sign In</button>
-            <button type="button" class="auth-button auth-button-secondary" data-sign-out disabled>Sign Out</button>
+        <div class="owner-account" data-owner-account>
+          <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
+            <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
+            <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
+            <span class="owner-account-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
+            <div class="owner-account-panel" data-owner-signed-out>
+              <p class="eyebrow">Owner Access</p>
+              <h2>Owner Login</h2>
+              <form class="owner-account-form" data-auth-form>
+                <label class="admin-field" for="owner-email">
+                  <span>Email</span>
+                  <input id="owner-email" name="email" type="email" autocomplete="email" required>
+                </label>
+                <label class="admin-field" for="owner-password">
+                  <span>Password</span>
+                  <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+              </form>
+            </div>
+            <div class="owner-account-panel" data-owner-signed-in hidden>
+              <p class="eyebrow">Owner Account</p>
+              <h2>Signed In</h2>
+              <p class="owner-account-email" data-owner-account-email>Owner access active.</p>
+              <button type="button" class="owner-menu-action" disabled>Profile Settings <span>Soon</span></button>
+              <button type="button" class="owner-menu-action" disabled>Account Settings <span>Soon</span></button>
+              <button type="button" class="auth-button auth-button-secondary" data-sign-out disabled>Sign Out</button>
+            </div>
           </div>
-        </form>
-        <p class="auth-status" data-auth-status role="status">Supabase config missing. Add project URL and publishable key before connecting.</p>
+        </div>
       </section>
-
-      <nav class="menu-manager-view-tabs" aria-label="Menu Manager areas">
-        <button type="button" class="menu-manager-view-tab is-active" data-menu-manager-view-tab="products" aria-pressed="true">Products</button>
-        <button type="button" class="menu-manager-view-tab" data-menu-manager-view-tab="option-library" aria-pressed="false">Option Library</button>
-        <button type="button" class="menu-manager-view-tab" data-menu-manager-view-tab="display-order" aria-pressed="false">Display Order</button>
-      </nav>
 
       <section class="draft-product-panel product-editor-panel admin-collapsible-panel menu-manager-view-section" data-menu-view-section="products" data-product-subview="editor" data-draft-product-panel aria-labelledby="draft-product-section-title" hidden>
         <div class="admin-collapsible-head">
@@ -486,42 +489,8 @@
         </div>
       </section>
 
-      <section class="menu-manager-shell menu-manager-view-section" data-menu-view-section="products" data-product-subview="list" aria-label="Static Menu Manager shell">
-        <aside class="menu-manager-panel category-panel" aria-labelledby="category-panel-title">
-          <div class="panel-heading-row">
-            <p class="eyebrow">Categories</p>
-            <span class="static-status" data-category-status>Static shell</span>
-          </div>
-          <h2 id="category-panel-title">Menu Groups</h2>
-          <div class="category-list" data-category-list aria-label="Menu categories">
-            <button type="button" class="category-item is-selected">CURV Picks</button>
-            <button type="button" class="category-item">Matcha &amp; Hojicha</button>
-            <button type="button" class="category-item">Espresso</button>
-            <button type="button" class="category-item">Curvccino</button>
-            <button type="button" class="category-item">Refreshers</button>
-            <button type="button" class="category-item">Bites</button>
-            <button type="button" class="category-item">Salad Bar</button>
-            <button type="button" class="category-item">Pastries &amp; Desserts</button>
-          </div>
-
-          <div class="placeholder-products" aria-label="Sample placeholder products">
-            <p class="eyebrow">Sample Products</p>
-            <button type="button" class="product-row">Kagoshima Matcha Cream</button>
-            <button type="button" class="product-row">Strawberry Matcha Latte</button>
-            <button type="button" class="product-row">Spanish Latte</button>
-            <button type="button" class="product-row">Cloud Spanish Oat Latte</button>
-            <button type="button" class="product-row">OG Takoyaki</button>
-            <button type="button" class="product-row">Chicken Karaage</button>
-          </div>
-        </aside>
-
-        <section class="menu-manager-panel editor-panel" aria-labelledby="editor-panel-title">
-          <div class="editor-empty-state">
-            <p class="eyebrow">Product Editor</p>
-            <h2 id="editor-panel-title">Select a product to begin editing</h2>
-            <p>Product details, variants, availability, and publishing controls will appear here once the Menu Manager is connected.</p>
-          </div>
-
+      <section class="menu-manager-shell menu-manager-view-section" data-menu-view-section="products" data-product-subview="list" aria-label="Menu Manager product list">
+        <section class="menu-manager-panel editor-panel" aria-labelledby="product-preview-title">
           <section class="product-preview" data-product-preview aria-labelledby="product-preview-title">
             <div class="panel-heading-row">
               <p class="eyebrow">Products</p>
@@ -629,17 +598,6 @@
               </div>
             </div>
           </section>
-
-          <div class="editor-section-grid" aria-label="Disabled editor sections">
-            <button type="button" class="editor-section-card" disabled>Basic Info</button>
-            <button type="button" class="editor-section-card" disabled>Variants</button>
-            <button type="button" class="editor-section-card" disabled>Photo</button>
-            <button type="button" class="editor-section-card" disabled>Availability</button>
-            <button type="button" class="editor-section-card" disabled>CURV Picks</button>
-            <button type="button" class="editor-section-card" disabled>Draft / Published</button>
-          </div>
-
-          <p class="static-footnote">Draft-only admin &middot; No live menu connection</p>
         </section>
       </section>
     </main>
@@ -671,10 +629,15 @@
         <button type="button" class="mobile-more-close" data-more-close aria-label="Close more navigation">Close</button>
       </div>
       <div class="mobile-more-list">
-        <a href="menu-manager.html" class="mobile-more-item is-active" aria-label="Menu Manager" aria-current="page">
+        <button type="button" class="mobile-more-item is-active" data-mobile-menu-manager-subnav-toggle aria-label="Menu Manager" aria-current="page" aria-expanded="true" aria-controls="menu-manager-mobile-subnav">
           <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
           <span>Menu Manager</span>
-        </a>
+        </button>
+        <div class="mobile-more-sublist" id="menu-manager-mobile-subnav" data-mobile-menu-manager-subnav aria-label="Menu Manager sections">
+          <button type="button" class="mobile-more-subitem is-active" data-menu-manager-view-tab="products" aria-pressed="true">Products</button>
+          <button type="button" class="mobile-more-subitem" data-menu-manager-view-tab="option-library" aria-pressed="false">Option Library</button>
+          <button type="button" class="mobile-more-subitem" data-menu-manager-view-tab="display-order" aria-pressed="false">Display Order</button>
+        </div>
         <button type="button" class="mobile-more-item" aria-label="Inventory">
           <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span>Inventory</span>
