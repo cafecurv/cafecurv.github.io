@@ -5862,7 +5862,7 @@
     { name: 'OG Takoyaki', expectedPublicCategory: 'Bites' },
     { name: 'Oozie Cheese', expectedPublicCategory: 'Bites' },
     { name: 'Chicken Karaage', expectedPublicCategory: 'Savory' },
-    { name: 'Spring Rolls', expectedPublicCategory: 'Salad Bar', quickAddOnly: true }
+    { name: 'Spring Rolls', expectedPublicCategory: 'Salad Bar', quickAddOnly: true, variantMode: 'pieces', categoryLabel: 'Bites & Light Meals' }
   ];
 
   function mapCurvPickVariants(product, panelInfo) {
@@ -5905,6 +5905,27 @@
 
       if (pieceRows.some(row => !row) || pieceRows.length !== expectedPieces.length) {
         return { ok: false, reason: `${product.name || 'CURV Pick'} has piece labels that do not match its hardcoded Takoyaki panel.` };
+      }
+
+      return { ok: true, variants: pieceRows };
+    }
+
+    if (panelInfo.variantMode === 'pieces') {
+      const seenPieces = new Set();
+      const pieceRows = parsed.map(variant => {
+        const compact = variant.rawLabel.toLowerCase().replace(/\s+/g, '');
+        if (!/^\d+pcs$/.test(compact) || seenPieces.has(compact)) return null;
+        seenPieces.add(compact);
+        return {
+          kind: 'piece',
+          displayLabel: compact.replace('pcs', ' pcs'),
+          cartLabel: compact,
+          price: variant.price
+        };
+      });
+
+      if (pieceRows.some(row => !row)) {
+        return { ok: false, reason: `${product.name || 'CURV Pick'} needs piece-count variants like 4 pcs or 8 pcs.` };
       }
 
       return { ok: true, variants: pieceRows };
@@ -6011,14 +6032,12 @@
         };
       }
 
-      if (expectedPick.quickAddOnly) {
-        return {
-          ok: false,
-          reason: `Expected CURV Pick "${expectedPick.name}" is quick-add-only in the hardcoded section and has no safe Supabase panel mapping yet.`
-        };
-      }
-
-      const panelInfo = panelIndex[expectedNameKey];
+      const panelInfo = expectedPick.quickAddOnly
+        ? {
+            variantMode: expectedPick.variantMode || 'pieces',
+            categoryLabel: expectedPick.categoryLabel || categoryName
+          }
+        : panelIndex[expectedNameKey];
       if (!panelInfo) {
         return {
           ok: false,
@@ -6026,11 +6045,13 @@
         };
       }
 
-      const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
-      if (usedPanels.has(panelKey)) {
-        return { ok: false, reason: `Duplicate Supabase CURV Pick panel target: ${panelKey}` };
+      if (panelInfo.sectionId && panelInfo.panelId) {
+        const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
+        if (usedPanels.has(panelKey)) {
+          return { ok: false, reason: `Duplicate Supabase CURV Pick panel target: ${panelKey}` };
+        }
+        usedPanels.add(panelKey);
       }
-      usedPanels.add(panelKey);
 
       const variantMap = mapCurvPickVariants(product, panelInfo);
       if (!variantMap.ok) return variantMap;
@@ -6080,9 +6101,14 @@
             `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
           ).join('');
 
+    const canOpenPanel = item.sectionId && item.panelId;
+    const itemInfoAttrs = canOpenPanel
+      ? ` onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')" style="cursor:pointer"`
+      : '';
+
     return `
       <div class="menu-item">
-        <div class="item-info" onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')" style="cursor:pointer">
+        <div class="item-info"${itemInfoAttrs}>
           <div class="item-name">${escapeMenuHtml(item.name)}</div>
           <div class="item-desc">${escapeMenuHtml(item.desc)}</div>
         </div>
