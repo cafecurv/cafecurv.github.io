@@ -2462,16 +2462,6 @@ body.more-drawer-open {
   cursor: not-allowed;
 }
 
-.product-badge-helper {
-  margin: 0;
-  color: var(--slate);
-  font-family: 'Jost', sans-serif;
-  font-size: 0.66rem;
-  font-weight: 400;
-  letter-spacing: 0.1px;
-  text-transform: none;
-}
-
 .draft-checkbox-row {
   display: flex;
   flex-wrap: wrap;

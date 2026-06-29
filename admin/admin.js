@@ -132,7 +132,6 @@
   const productEditorViewTitle = document.querySelector('[data-product-editor-view-title]');
   const productBadgeChipList = document.querySelector('[data-product-badge-chip-list]');
   const productBadgeInput = document.querySelector('[data-product-badge-input]');
-  const productBadgeStatus = document.querySelector('[data-product-badge-status]');
   const openProductEditorButton = document.querySelector('[data-open-product-editor]');
   const backToProductsButton = document.querySelector('[data-back-to-products]');
   const productOptionAttachmentList = document.querySelector('[data-product-option-attachments]');
@@ -405,13 +404,6 @@
 
   const hasUnsavedDraftFormChanges = () => isDraftFormDirty();
 
-  const setProductBadgeStatus = (message) => {
-    if (!productBadgeStatus) return;
-    const nextMessage = String(message || '');
-    productBadgeStatus.textContent = nextMessage;
-    productBadgeStatus.hidden = !nextMessage;
-  };
-
   const normalizeProductBadgeLabel = (label) => String(label || '').trim().replace(/\s+/g, ' ');
 
   const renderProductBadges = () => {
@@ -435,7 +427,6 @@
         productBadgeLabels = productBadgeLabels.filter((item) => item !== label);
         renderProductBadges();
         markDraftFormDirty();
-        setProductBadgeStatus('Badge removed.');
       });
 
       chip.append(text, removeButton);
@@ -449,9 +440,6 @@
         : 'type badge here...';
     }
 
-    if (!productBadgeLabels.length) {
-      setProductBadgeStatus('');
-    }
   };
 
   const setProductBadges = (labels = []) => {
@@ -482,16 +470,13 @@
       return;
     }
     if (label.length > PRODUCT_BADGE_MAX_LENGTH) {
-      setProductBadgeStatus('Keep badges to 24 characters or fewer.');
       return;
     }
     if (productBadgeLabels.length >= PRODUCT_BADGE_MAX_COUNT) {
-      setProductBadgeStatus('Use up to 3 badges per product.');
       return;
     }
     if (productBadgeLabels.some((item) => item.toLowerCase() === label.toLowerCase())) {
       productBadgeInput.value = '';
-      setProductBadgeStatus('That badge is already added.');
       return;
     }
 
@@ -499,7 +484,6 @@
     productBadgeInput.value = '';
     renderProductBadges();
     markDraftFormDirty();
-    setProductBadgeStatus('Badge added.');
   };
 
   const updateEditorPublishAction = () => {
