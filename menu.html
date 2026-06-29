@@ -571,6 +571,34 @@
     background: var(--bg3);
   }
 
+  .menu-item-badges {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .menu-item-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 17px;
+    padding: 2px 7px;
+    border: 0.5px solid var(--accent);
+    border-radius: 999px;
+    background: rgba(196, 170, 118, 0.1);
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   /* ── ORDER BAR ── */
   .order-bar {
     position: fixed;
@@ -3126,7 +3154,7 @@
   // ── ESPRESSO PANEL RENDERER ──
   function renderEspressoPanel(item) {
     const { id, name, badge, desc, reg, lrg, img, has_milk, has_syrup, has_sauce } = item;
-    const badgeHtml = badge ? ` <span class="seasonal-badge">${badge}</span>` : '';
+    const badgeHtml = `${badge ? ` <span class="seasonal-badge">${escapeMenuHtml(badge)}</span>` : ''}${renderProductBadges(item)}`;
 
     const imgHtml = img
       ? `<div class="panel-img"><img src="${img}" alt="${name}" loading="lazy"></div>`
@@ -3201,7 +3229,7 @@
       ${renderProductCard(item, 'espresso')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}${badgeHtml}</div>
+          <div class="item-name">${escapeMenuHtml(name)}${badgeHtml}</div>
           <div class="item-desc">${desc}</div>
         </div>
         <span class="expand-arrow">▼</span>
@@ -3542,6 +3570,7 @@
           img: product.image_url || null,
           variants: variantMap.variants,
           type: variantMap.type,
+          badge_labels: getPublicProductBadgeLabels(product),
           menu_group: product.menu_group,
           sort_order: Number(product.sort_order) || 0
         });
@@ -3565,6 +3594,7 @@
         id: safeId,
         name,
         badge: product.is_seasonal ? 'Seasonal' : (product.is_curv_pick ? 'CURV Pick' : null),
+        badge_labels: getPublicProductBadgeLabels(product),
         desc: product.description || '',
         reg: priceMap.reg,
         lrg: priceMap.lrg,
@@ -3606,6 +3636,7 @@
         name: item.name,
         desc: item.desc,
         img: item.img || null,
+        badge_labels: getPublicProductBadgeLabels(item),
         reg: item.variants[0] && item.variants[0].price,
         lrg: item.variants[1] && item.variants[1].price
       };
@@ -3619,7 +3650,7 @@
           <div class="panel-inner">
             <div class="menu-item">
               <div class="item-info">
-                <div class="item-name">${name}</div>
+                <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
                 ${desc}
               </div>
               <div class="item-right">
@@ -3640,7 +3671,7 @@
           <div class="panel-inner">
             <div class="menu-item">
               <div class="item-info">
-                <div class="item-name">${name}</div>
+                <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
                 ${desc}
               </div>
               <div class="item-right">
@@ -3891,7 +3922,7 @@
     } = item;
 
     const badgeHtml = badge
-      ? ` <span class="seasonal-badge">${badge}</span>`
+      ? ` <span class="seasonal-badge">${escapeMenuHtml(badge)}</span>${renderProductBadges(item)}`
       : '';
 
     // Image or placeholder
@@ -3974,7 +4005,7 @@
       ${renderProductCard(item, 'matcha')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}${badgeHtml}</div>
+          <div class="item-name">${escapeMenuHtml(name)}${badgeHtml || renderProductBadges(item)}</div>
           <div class="item-desc">${desc}</div>
         </div>
         <span class="expand-arrow">▼</span>
@@ -4149,6 +4180,7 @@
         img: product.image_url || hardcodedItem.img,
         is_curv_pick: !!product.is_curv_pick,
         is_seasonal: !!product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
@@ -4339,7 +4371,7 @@
       ${renderProductCard(item, 'blended')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
         </div>
         <span class="expand-arrow">▼</span>
@@ -4481,6 +4513,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
@@ -4591,7 +4624,7 @@
       <button type="button" class="product-card" data-section="${escapeMenuHtml(sectionId)}" onclick="openProductPanel('${escapeMenuHtml(item.id)}')">
         ${thumbHtml}
         <span class="product-card-info">
-          <span class="item-name">${escapeMenuHtml(item.name)}</span>
+          <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
           ${descHtml}
           <span class="product-card-action product-card-action-closed">Customize ↓</span>
           <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
@@ -4650,7 +4683,7 @@
       ${renderProductCard(item, 'refreshers')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
         </div>
         <span class="expand-arrow">▼</span>
@@ -4789,6 +4822,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
         category_section_id: product.category_section_id || null,
@@ -5007,7 +5041,7 @@
       ${renderProductCard(item, 'bites')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           <div class="item-desc">${desc}</div>
           ${variantHtml}
         </div>
@@ -5184,6 +5218,7 @@
         pieces: pieceMap.pieces,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         has_spicy: expectedItem.has_spicy,
         has_addons: expectedItem.has_addons,
         has_cheese: expectedItem.has_cheese,
@@ -5269,7 +5304,7 @@
       ${renderProductCard(item, 'bites')}
       <button class="expand-trigger" onclick="togglePanel('${id}')">
         <div class="item-info">
-          <div class="item-name">${name}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           <div class="item-desc">${desc}</div>
         </div>
         <span class="expand-arrow">▼</span>
@@ -5418,6 +5453,7 @@
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
@@ -5539,6 +5575,7 @@
         img: product.image_url || meta.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         variants: variantMap.variants,
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -5567,7 +5604,7 @@
       <div class="menu-item salad-product-card">
         ${imgHtml}
         <div class="item-info">
-          <div class="item-name">${item.name}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
         </div>
         <div class="item-right">${priceHtml}</div>
@@ -5629,6 +5666,35 @@
       .replace(/'/g, '&#39;');
   }
 
+  function getPublicProductBadgeLabels(product) {
+    if (!product || !Array.isArray(product.badge_labels)) return [];
+
+    const seen = new Set();
+    return product.badge_labels
+      .map(label => String(label || '').trim().replace(/\s+/g, ' '))
+      .filter(label => {
+        const key = normalizePublicMenuText(label);
+        if (!label || !key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 3);
+  }
+
+  function renderProductBadges(item) {
+    const labels = getPublicProductBadgeLabels(item);
+    if (!labels.length) return '';
+
+    return `<span class="menu-item-badges">${labels
+      .map(label => `<span class="menu-item-badge">${escapeMenuHtml(label)}</span>`)
+      .join('')}</span>`;
+  }
+
+  function renderMenuItemNameWithBadges(item) {
+    const name = item && item.name ? item.name : '';
+    return `${escapeMenuHtml(name)}${renderProductBadges(item)}`;
+  }
+
   function mapPublicPastryVariants(product) {
     const variants = [...(product.variants || [])].sort((a, b) => {
       const sortA = Number(a.sort_order) || 0;
@@ -5684,6 +5750,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        badge_labels: getPublicProductBadgeLabels(product),
         variant_group_name: product.variant_group_name,
         variants: variantMap.variants
       });
@@ -5708,7 +5775,7 @@
       <div class="menu-item">
         ${imgHtml}
         <div class="item-info">
-          <div class="item-name">${safeName}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
         </div>
         <div class="item-right">${priceHtml}</div>
@@ -6904,6 +6971,7 @@
       image_url: product.image_url,
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
+      badge_labels: getPublicProductBadgeLabels(product),
       variant_group_name: product.variant_group_name,
       menu_group: product.menu_group || null,
       category_section_id: product.category_section_id || null,
@@ -7080,7 +7148,7 @@
           .order('name', { ascending: true }),
         client
           .from('public_menu_products')
-          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order')
+          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order,badge_labels')
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
         client
