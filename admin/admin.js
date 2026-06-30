@@ -86,6 +86,98 @@
 })();
 
 (() => {
+  const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
+  const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
+  const badges = [...desktopBadges, ...mobileBadges];
+  if (!badges.length) return;
+
+  const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  let badgeClient = null;
+  let badgeRealtimeChannel = null;
+
+  const setIncomingOrderBadge = (count) => {
+    const safeCount = Math.max(0, Number(count || 0));
+    const label = safeCount > 99 ? '99+' : String(safeCount);
+    badges.forEach((badge) => {
+      badge.textContent = label;
+      badge.hidden = safeCount === 0;
+      badge.setAttribute('aria-hidden', safeCount === 0 ? 'true' : 'false');
+    });
+  };
+
+  const hideIncomingOrderBadge = () => {
+    setIncomingOrderBadge(0);
+  };
+
+  const refreshIncomingOrderBadge = async () => {
+    if (!badgeClient) return false;
+    try {
+      const { data: sessionData } = await badgeClient.auth.getSession();
+      const isSignedIn = Boolean(sessionData && sessionData.session && sessionData.session.user);
+      if (!isSignedIn) {
+        hideIncomingOrderBadge();
+        return false;
+      }
+
+      const { count, error } = await badgeClient
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'submitted');
+
+      if (!error) setIncomingOrderBadge(count || 0);
+      return !error;
+    } catch (error) {
+      hideIncomingOrderBadge();
+      return false;
+    }
+  };
+
+  const unsubscribeFromBadgeRealtime = () => {
+    if (!badgeRealtimeChannel || !badgeClient) return;
+    const channel = badgeRealtimeChannel;
+    badgeRealtimeChannel = null;
+    badgeClient.removeChannel(channel);
+  };
+
+  const subscribeToBadgeRealtime = () => {
+    if (!badgeClient || badgeRealtimeChannel) return;
+    badgeRealtimeChannel = badgeClient
+      .channel('incoming-orders-nav-badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          refreshIncomingOrderBadge();
+        },
+      )
+      .subscribe();
+  };
+
+  window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
+  window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    hideIncomingOrderBadge();
+    return;
+  }
+
+  badgeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  badgeClient.auth.onAuthStateChange((_event, session) => {
+    if (session && session.user) {
+      refreshIncomingOrderBadge();
+      subscribeToBadgeRealtime();
+    } else {
+      unsubscribeFromBadgeRealtime();
+      hideIncomingOrderBadge();
+    }
+  });
+  refreshIncomingOrderBadge().then((isSignedIn) => {
+    if (isSignedIn) subscribeToBadgeRealtime();
+  });
+  window.addEventListener('pagehide', unsubscribeFromBadgeRealtime);
+})();
+(() => {
   const menuManagerRoot = document.querySelector('[data-supabase-menu-manager]');
   if (!menuManagerRoot) return;
 
@@ -5366,6 +5458,7 @@
     activeStatus = action.nextStatus;
     updateFilterUi();
     await loadOrderSummary();
+    if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
     await loadOrders();
     setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
   };
@@ -5436,6 +5529,7 @@
     const incomingStatus = normalizeOrderStatus(incomingOrder && incomingOrder.status);
     try {
       await loadOrderSummary();
+      if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
       if (!incomingStatus || incomingStatus === activeStatus) {
         await loadOrders({ preserveSelection: true });
       }
@@ -5574,6 +5668,7 @@
       itemCountByOrderId = new Map();
       selectedOrderId = '';
       resetSummary();
+      if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
       renderOrders();
       setStatus('Signed out.');
     });
