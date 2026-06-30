@@ -95,6 +95,8 @@
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
   let badgeClient = null;
   let badgeRealtimeChannel = null;
+  let orderToast = null;
+  let orderToastTimer = null;
 
   const setIncomingOrderBadge = (count) => {
     const safeCount = Math.max(0, Number(count || 0));
@@ -108,6 +110,81 @@
 
   const hideIncomingOrderBadge = () => {
     setIncomingOrderBadge(0);
+  };
+
+  const dismissOrderToast = () => {
+    if (orderToastTimer) window.clearTimeout(orderToastTimer);
+    orderToastTimer = null;
+    if (!orderToast) return;
+    orderToast.classList.remove('is-open');
+    window.setTimeout(() => {
+      if (orderToast && !orderToast.classList.contains('is-open')) orderToast.hidden = true;
+    }, 180);
+  };
+
+  const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+
+  const ensureOrderToast = () => {
+    if (orderToast) return orderToast;
+    orderToast = document.createElement('div');
+    orderToast.className = 'admin-order-toast';
+    orderToast.hidden = true;
+    orderToast.setAttribute('role', 'status');
+    orderToast.setAttribute('aria-live', 'polite');
+
+    const content = document.createElement('button');
+    content.type = 'button';
+    content.className = 'admin-order-toast-content';
+    content.addEventListener('click', () => {
+      dismissOrderToast();
+      if (getAdminPageName() !== 'incoming-orders.html') {
+        window.location.href = 'incoming-orders.html';
+      }
+    });
+
+    const title = document.createElement('span');
+    title.className = 'admin-order-toast-title';
+    title.dataset.orderToastTitle = '';
+    title.textContent = 'New order received';
+
+    const detail = document.createElement('span');
+    detail.className = 'admin-order-toast-detail';
+    detail.dataset.orderToastDetail = '';
+
+    content.append(title, detail);
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'admin-order-toast-close';
+    closeButton.setAttribute('aria-label', 'Dismiss new order alert');
+    closeButton.textContent = 'Close';
+    closeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      dismissOrderToast();
+    });
+
+    orderToast.append(content, closeButton);
+    document.body.appendChild(orderToast);
+    return orderToast;
+  };
+
+  const showNewOrderToast = (order) => {
+    const status = String(order && order.status || '').toLowerCase();
+    if (status !== 'submitted') return;
+
+    const toast = ensureOrderToast();
+    const title = toast.querySelector('[data-order-toast-title]');
+    const detail = toast.querySelector('[data-order-toast-detail]');
+    const orderNumber = order && order.order_number ? String(order.order_number) : 'New order';
+    const customerName = order && order.customer_name ? String(order.customer_name).trim() : '';
+
+    if (title) title.textContent = 'New order received';
+    if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
+
+    toast.hidden = false;
+    window.requestAnimationFrame(() => toast.classList.add('is-open'));
+    if (orderToastTimer) window.clearTimeout(orderToastTimer);
+    orderToastTimer = window.setTimeout(dismissOrderToast, 6000);
   };
 
   const refreshIncomingOrderBadge = async () => {
@@ -147,8 +224,10 @@
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
-        () => {
+        (payload) => {
           refreshIncomingOrderBadge();
+          const eventType = String(payload && payload.eventType || '').toUpperCase();
+          if (eventType === 'INSERT') showNewOrderToast(payload.new);
         },
       )
       .subscribe();
@@ -156,6 +235,13 @@
 
   window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
   window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
+  window.curvTestNewOrderToast = () => {
+    showNewOrderToast({
+      status: 'submitted',
+      order_number: 'C-TEST',
+      customer_name: 'Test Customer',
+    });
+  };
 
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
     hideIncomingOrderBadge();
@@ -170,12 +256,16 @@
     } else {
       unsubscribeFromBadgeRealtime();
       hideIncomingOrderBadge();
+      dismissOrderToast();
     }
   });
   refreshIncomingOrderBadge().then((isSignedIn) => {
     if (isSignedIn) subscribeToBadgeRealtime();
   });
-  window.addEventListener('pagehide', unsubscribeFromBadgeRealtime);
+  window.addEventListener('pagehide', () => {
+    unsubscribeFromBadgeRealtime();
+    dismissOrderToast();
+  });
 })();
 (() => {
   const menuManagerRoot = document.querySelector('[data-supabase-menu-manager]');
