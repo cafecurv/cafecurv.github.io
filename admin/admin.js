@@ -5013,6 +5013,9 @@
   let selectedOrderId = '';
   let ordersLoading = false;
   let activeOrderAction = null;
+  let ordersRealtimeChannel = null;
+  let realtimeRefreshInFlight = false;
+  let realtimeRefreshQueued = false;
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -5367,7 +5370,7 @@
     setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
   };
 
-  const loadOrders = async () => {
+  const loadOrders = async ({ preserveSelection = false } = {}) => {
     if (!isOwnerSignedIn) {
       latestOrders = [];
       itemCountByOrderId = new Map();
@@ -5378,7 +5381,7 @@
     }
 
     ordersLoading = true;
-    selectedOrderId = '';
+    if (!preserveSelection) selectedOrderId = '';
     updateFilterUi();
     setStatus('Loading ' + getStatusName() + ' orders...');
     renderOrders();
@@ -5422,6 +5425,57 @@
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+  const refreshOrdersFromRealtime = async (incomingOrder) => {
+    if (!isOwnerSignedIn) return;
+    if (realtimeRefreshInFlight) {
+      realtimeRefreshQueued = true;
+      return;
+    }
+
+    realtimeRefreshInFlight = true;
+    const incomingStatus = normalizeOrderStatus(incomingOrder && incomingOrder.status);
+    try {
+      await loadOrderSummary();
+      if (!incomingStatus || incomingStatus === activeStatus) {
+        await loadOrders({ preserveSelection: true });
+      }
+      setStatus(incomingStatus === 'submitted' ? 'New order received.' : 'Order queue refreshed.');
+    } catch (error) {
+      setStatus('Realtime refresh failed. ' + (error && error.message ? error.message : 'Manual refresh still works.'));
+    } finally {
+      realtimeRefreshInFlight = false;
+      if (realtimeRefreshQueued) {
+        realtimeRefreshQueued = false;
+        await refreshOrdersFromRealtime(incomingOrder);
+      }
+    }
+  };
+
+  const unsubscribeFromOrdersRealtime = () => {
+    if (!ordersRealtimeChannel) return;
+    const channel = ordersRealtimeChannel;
+    ordersRealtimeChannel = null;
+    client.removeChannel(channel);
+  };
+
+  const subscribeToOrdersRealtime = () => {
+    if (ordersRealtimeChannel || !isOwnerSignedIn) return;
+    ordersRealtimeChannel = client
+      .channel('incoming-orders-admin')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          refreshOrdersFromRealtime(payload && payload.new);
+        },
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setStatus('Realtime refresh unavailable. Manual refresh still works.');
+        }
+      });
+  };
+
   const refreshSession = async () => {
     const { data } = await client.auth.getSession();
     const isSignedIn = Boolean(data && data.session && data.session.user);
@@ -5429,7 +5483,9 @@
     if (isSignedIn) {
       await loadOrderSummary();
       await loadOrders();
+      subscribeToOrdersRealtime();
     } else {
+      unsubscribeFromOrdersRealtime();
       latestOrders = [];
       itemCountByOrderId = new Map();
       selectedOrderId = '';
@@ -5499,6 +5555,7 @@
       closeOwnerAccountMenu();
       await loadOrderSummary();
       await loadOrders();
+      subscribeToOrdersRealtime();
     });
   }
 
@@ -5511,6 +5568,7 @@
         return;
       }
       setSignedInState(false);
+      unsubscribeFromOrdersRealtime();
       closeOwnerAccountMenu();
       latestOrders = [];
       itemCountByOrderId = new Map();
@@ -5520,6 +5578,8 @@
       setStatus('Signed out.');
     });
   }
+
+  window.addEventListener('pagehide', unsubscribeFromOrdersRealtime);
 
   updateFilterUi();
   renderOrders();
