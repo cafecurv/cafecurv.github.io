@@ -5192,6 +5192,8 @@
   let signedInOwnerEmail = '';
   let latestOrders = [];
   let itemCountByOrderId = new Map();
+  let orderItemsByOrderId = new Map();
+  let orderItemsLoadError = '';
   let selectedOrderId = '';
   let ordersLoading = false;
   let activeOrderAction = null;
@@ -5306,6 +5308,50 @@
     return source || 'website';
   };
 
+  const formatOptionLabel = (value) => String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+
+  const stringifyOptionValue = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    if (Array.isArray(value)) return value.map(stringifyOptionValue).filter(Boolean).join(', ');
+    if (typeof value === 'object') {
+      const preferredValue = value.label || value.name || value.value || value.choice || value.option;
+      if (preferredValue && typeof preferredValue !== 'object') return String(preferredValue).trim();
+      return Object.entries(value)
+        .map(([key, nestedValue]) => {
+          const cleanValue = stringifyOptionValue(nestedValue);
+          return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+        })
+        .filter(Boolean)
+        .join(' / ');
+    }
+    return String(value).trim();
+  };
+
+  const formatOrderItemOptions = (options) => {
+    if (!options) return [];
+    if (typeof options === 'string') {
+      const cleanOptions = options.trim();
+      if (!cleanOptions || cleanOptions === '{}') return [];
+      try {
+        return formatOrderItemOptions(JSON.parse(cleanOptions));
+      } catch (error) {
+        return [cleanOptions];
+      }
+    }
+    if (Array.isArray(options)) return options.map(stringifyOptionValue).filter(Boolean);
+    if (typeof options !== 'object' || !Object.keys(options).length) return [];
+    return Object.entries(options)
+      .map(([key, value]) => {
+        const cleanValue = stringifyOptionValue(value);
+        return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+      })
+      .filter(Boolean);
+  };
+
   const makeElement = (tagName, className, text) => {
     const element = document.createElement(tagName);
     if (className) element.className = className;
@@ -5330,6 +5376,55 @@
     empty.dataset.orderEmpty = '';
     empty.append(makeElement('h3', '', title), makeElement('p', '', message));
     orderList.appendChild(empty);
+  };
+
+  const renderOrderItemsSection = (order) => {
+    const section = makeElement('section', 'order-detail-items');
+    section.appendChild(makeElement('h4', '', 'Items'));
+
+    if (orderItemsLoadError) {
+      section.appendChild(makeElement('p', 'order-detail-items-empty is-error', orderItemsLoadError));
+      return section;
+    }
+
+    const items = orderItemsByOrderId.get(order.id) || [];
+    if (!items.length) {
+      section.appendChild(makeElement('p', 'order-detail-items-empty', 'No item details found for this order.'));
+      return section;
+    }
+
+    const list = makeElement('div', 'order-detail-item-list');
+    items.forEach((item) => {
+      const quantity = Number(item.quantity || 0);
+      const quantityLabel = (quantity > 0 ? quantity : 1) + 'x';
+      const card = makeElement('article', 'order-detail-item');
+      const itemHead = makeElement('div', 'order-detail-item-head');
+      itemHead.append(
+        makeElement('strong', '', quantityLabel + ' ' + (item.product_name || 'Menu item')),
+        makeElement('span', '', formatCurrency(item.line_total, order.currency)),
+      );
+
+      const metaParts = [];
+      if (item.variant_label) metaParts.push(item.variant_label);
+      metaParts.push(formatCurrency(item.unit_price, order.currency));
+      if (item.category_name) metaParts.push(item.category_name);
+
+      card.append(itemHead, makeElement('p', 'order-detail-item-meta', metaParts.filter(Boolean).join(' / ')));
+
+      const optionLines = formatOrderItemOptions(item.options);
+      if (optionLines.length) {
+        card.appendChild(makeElement('p', 'order-detail-item-options', 'Options: ' + optionLines.join(' / ')));
+      }
+
+      if (item.item_note) {
+        card.appendChild(makeElement('p', 'order-detail-item-note', 'Note: ' + item.item_note));
+      }
+
+      list.appendChild(card);
+    });
+
+    section.appendChild(list);
+    return section;
   };
 
   const renderOrderDetail = (order) => {
@@ -5377,6 +5472,8 @@
       if (order.customer_notes) notes.appendChild(makeElement('p', '', 'Notes: ' + order.customer_notes));
       detailNodes.push(notes);
     }
+
+    detailNodes.push(renderOrderItemsSection(order));
 
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
     if (actions.length) {
@@ -5533,19 +5630,28 @@
 
   const loadItemCounts = async (orders) => {
     itemCountByOrderId = new Map();
+    orderItemsByOrderId = new Map();
+    orderItemsLoadError = '';
     const orderIds = orders.map(order => order.id).filter(Boolean);
     if (!orderIds.length) return;
 
     const { data, error } = await client
       .from('order_items')
-      .select('order_id')
-      .in('order_id', orderIds);
+      .select('order_id,product_name,category_name,variant_label,quantity,unit_price,line_total,options,item_note,sort_order')
+      .in('order_id', orderIds)
+      .order('sort_order', { ascending: true });
 
-    if (error) return;
+    if (error) {
+      orderItemsLoadError = 'Unable to load item details. ' + error.message;
+      return;
+    }
 
     (data || []).forEach((item) => {
       const currentCount = itemCountByOrderId.get(item.order_id) || 0;
       itemCountByOrderId.set(item.order_id, currentCount + 1);
+      const items = orderItemsByOrderId.get(item.order_id) || [];
+      items.push(item);
+      orderItemsByOrderId.set(item.order_id, items);
     });
   };
 
@@ -5590,6 +5696,8 @@
     if (!isOwnerSignedIn) {
       latestOrders = [];
       itemCountByOrderId = new Map();
+      orderItemsByOrderId = new Map();
+      orderItemsLoadError = '';
       selectedOrderId = '';
       renderOrders();
       setStatus('Ready for owner sign in.');
@@ -5613,6 +5721,8 @@
     if (error) {
       latestOrders = [];
       itemCountByOrderId = new Map();
+      orderItemsByOrderId = new Map();
+      orderItemsLoadError = '';
       renderOrderEmptyState('Unable to load orders', error.message, 'is-error');
       renderOrderDetailPlaceholder('Unable to load order details', 'Resolve the Supabase error, then try again.');
       setStatus('Unable to load orders. ' + error.message);
@@ -5705,6 +5815,8 @@
       unsubscribeFromOrdersRealtime();
       latestOrders = [];
       itemCountByOrderId = new Map();
+      orderItemsByOrderId = new Map();
+      orderItemsLoadError = '';
       selectedOrderId = '';
       resetSummary();
       renderOrders();
@@ -5789,6 +5901,8 @@
       closeOwnerAccountMenu();
       latestOrders = [];
       itemCountByOrderId = new Map();
+      orderItemsByOrderId = new Map();
+      orderItemsLoadError = '';
       selectedOrderId = '';
       resetSummary();
       if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
