@@ -5285,6 +5285,27 @@
     });
   };
 
+  const formatOrderAge = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return formatOrderDate(value);
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return diffMinutes + ' min ago';
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return diffHours + ' hr' + (diffHours === 1 ? '' : 's') + ' ago';
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return diffDays + ' day' + (diffDays === 1 ? '' : 's') + ' ago';
+    return formatOrderDate(value);
+  };
+
+  const getOrderSource = (order) => {
+    const source = String(order && order.source ? order.source : '').trim().toLowerCase();
+    return source || 'website';
+  };
+
   const makeElement = (tagName, className, text) => {
     const element = document.createElement(tagName);
     if (className) element.className = className;
@@ -5326,12 +5347,18 @@
       makeElement('h3', '', order.order_number || 'Order'),
     );
 
+    const sourceBadge = makeElement('span', 'order-source-badge', getOrderSource(order));
+    heading.appendChild(sourceBadge);
+
+    const createdDisplay = formatOrderDate(order.created_at);
+    const ageDisplay = formatOrderAge(order.created_at);
     const grid = makeElement('dl', 'order-detail-grid');
     const details = [
       ['Customer', order.customer_name || '-'],
       ['Phone', order.customer_phone || '-'],
-      ['Created', formatOrderDate(order.created_at)],
+      ['Created', ageDisplay ? ageDisplay + ' / ' + createdDisplay : createdDisplay],
       ['Pickup', order.pickup_time || 'Pickup'],
+      ['Source', getOrderSource(order)],
       ['Payment', order.payment_status || 'unpaid'],
       ['Total', formatCurrency(order.total, order.currency)],
     ];
@@ -5401,14 +5428,20 @@
       card.dataset.orderId = order.id || '';
 
       const head = makeElement('div', 'order-card-head');
+      const badgeGroup = makeElement('span', 'order-card-badge-group');
+      badgeGroup.append(
+        makeElement('span', 'order-source-badge', getOrderSource(order)),
+        makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
+      );
       head.append(
         makeElement('span', 'order-number', order.order_number || 'Order'),
-        makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
+        badgeGroup,
       );
 
       const meta = makeElement('div', 'order-card-meta');
+      const ageDisplay = formatOrderAge(order.created_at);
       meta.append(
-        makeElement('span', '', formatOrderDate(order.created_at)),
+        makeElement('span', 'order-age', ageDisplay || formatOrderDate(order.created_at)),
         makeElement('span', '', formatCurrency(order.total, order.currency)),
       );
 
@@ -5571,7 +5604,7 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,total,currency,payment_status,created_at')
+      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,total,currency,payment_status,created_at')
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 

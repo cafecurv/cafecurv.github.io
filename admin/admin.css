@@ -3179,6 +3179,30 @@ body.more-drawer-open {
 .incoming-orders-header {
   margin-bottom: 0.25rem;
 }
+.incoming-orders-safety-note {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(200, 184, 154, 0.22);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.07);
+  color: var(--slate);
+  padding: 0.72rem 0.85rem;
+}
+
+.incoming-orders-safety-note p {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.safety-note-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(200, 184, 154, 0.1);
+}
 
 .incoming-order-summary {
   display: grid;
@@ -3404,7 +3428,16 @@ body.more-drawer-open {
   text-transform: uppercase;
 }
 
-.order-status-badge {
+.order-card-badge-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.order-status-badge,
+.order-source-badge {
   border: 1px solid rgba(200, 184, 154, 0.36);
   border-radius: 999px;
   color: var(--accent);
@@ -3414,6 +3447,15 @@ body.more-drawer-open {
   letter-spacing: 1.35px;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.order-source-badge {
+  border-color: rgba(189, 196, 212, 0.22);
+  color: var(--slate);
+}
+
+.order-age {
+  color: var(--accent);
 }
 
 .order-card-customer strong,
@@ -3460,6 +3502,9 @@ body.more-drawer-open {
 
 .order-detail-heading {
   margin-bottom: 1rem;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
 }
 
 .order-detail-notes {
