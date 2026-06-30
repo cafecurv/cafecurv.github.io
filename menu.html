@@ -982,9 +982,25 @@
   }
 
   .submit-btn:hover { background: #2e3a5c; }
+  .submit-btn:disabled { cursor: not-allowed; opacity: 0.62; }
+  .submit-btn.copy-fallback { background: transparent; border: 0.5px solid var(--navy); color: var(--navy); }
+  .submit-btn.copy-fallback:hover { background: var(--bg3); }
   .submit-btn.messenger { background: #1877F2; margin-top: 0.5rem; }
   .submit-btn.messenger:hover { background: #1565d8; }
 
+  .submit-status {
+    min-height: 1.1rem;
+    margin-top: 0.65rem;
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    line-height: 1.5;
+    color: var(--gray-mid);
+  }
+
+  .submit-status.success { color: #4a7c59; }
+  .submit-status.error { color: #b24b4b; }
   /* ── HOW TO ORDER POPUP ── */
   .hto-overlay {
     position: fixed;
@@ -3044,7 +3060,9 @@
         <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
       </div>
 
-      <button class="submit-btn" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
+      <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" hidden>Submit Order</button>
+      <button class="submit-btn copy-fallback" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
+      <div class="submit-status" id="submitOrderStatus" role="status" aria-live="polite"></div>
       <button class="submit-btn messenger" onclick="openMessenger()">Open Messenger →</button>
     </div>
   </div>
@@ -6953,11 +6971,101 @@
     return `${h12}:${String(m).padStart(2, '0')} ${period}`;
   }
 
+  let isSubmittingPublicOrder = false;
+  let lastSubmittedPublicOrderSignature = '';
+
+  // Submit Order is gated until CURV is ready to launch live online ordering.
+  function isPublicOrderSubmitEnabled() {
+    const params = new URLSearchParams(window.location.search);
+    const host = window.location.hostname;
+    return window.location.protocol === 'file:'
+      || host === 'localhost'
+      || host === '127.0.0.1'
+      || host === '::1'
+      || params.get('enableSubmitOrder') === '1';
+  }
+
+  function syncPublicOrderSubmitGate() {
+    const submitButton = document.getElementById('submitOrderBtn');
+    if (!submitButton) return;
+    const enabled = isPublicOrderSubmitEnabled();
+    submitButton.hidden = !enabled;
+    submitButton.disabled = !enabled;
+    if (!enabled) setSubmitOrderStatus('');
+  }
+
+  function setSubmitOrderStatus(message, tone = '') {
+    const statusEl = document.getElementById('submitOrderStatus');
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    statusEl.classList.toggle('success', tone === 'success');
+    statusEl.classList.toggle('error', tone === 'error');
+  }
+
+  function validatePublicOrderPayload(payload) {
+    const deliverySelect = document.getElementById('f-delivery');
+    if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) return 'Please add at least one item to your order.';
+    if (!payload.customer_name) return 'Please fill in your name.';
+    if (!payload.customer_phone) return 'Please fill in your contact number.';
+    if (!deliverySelect || deliverySelect.value !== 'pickup') return 'Online order submission is pickup-only for now. Please choose In-Store Pick-up.';
+    return '';
+  }
+
+  async function submitPublicOrder() {
+    if (!isPublicOrderSubmitEnabled()) return;
+    if (isSubmittingPublicOrder) return;
+
+    const payload = buildPublicOrderPayload();
+    const validationMessage = validatePublicOrderPayload(payload);
+    if (validationMessage) {
+      setSubmitOrderStatus(validationMessage, 'error');
+      return;
+    }
+
+    const payloadSignature = JSON.stringify(payload);
+    if (payloadSignature === lastSubmittedPublicOrderSignature) {
+      setSubmitOrderStatus('This order was already submitted. Please wait for CURV confirmation or change the cart before submitting again.', 'success');
+      return;
+    }
+
+    const client = getPublicSupabaseClient();
+    if (!client) {
+      setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
+      return;
+    }
+
+    const submitButton = document.getElementById('submitOrderBtn');
+    isSubmittingPublicOrder = true;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Submitting...';
+    }
+    setSubmitOrderStatus('Submitting your order...');
+
+    try {
+      const { data, error } = await client.rpc('submit_public_order', { order_payload: payload });
+      if (error) throw error;
+
+      const confirmation = Array.isArray(data) ? data[0] : data;
+      const orderNumber = confirmation && confirmation.order_number ? confirmation.order_number : 'received';
+      lastSubmittedPublicOrderSignature = payloadSignature;
+      setSubmitOrderStatus('Order submitted! Your order number is ' + orderNumber + '. Please wait for CURV confirmation.', 'success');
+    } catch (error) {
+      setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
+    } finally {
+      isSubmittingPublicOrder = false;
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit Order';
+      }
+    }
+  }
+
+  syncPublicOrderSubmitGate();
+
   function copyOrder() {
     const msg = buildMessage();
     if (!msg) return;
-    const payload = buildPublicOrderPayload();
-    console.log('[CURV order payload]', payload);
     const btn = document.getElementById('copyBtn');
     const onCopied = () => {
       btn.textContent = '✓ Copied! Now open Messenger';
@@ -6994,6 +7102,18 @@
   const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
   let publicMenuFetchStarted = false;
   let latestPublicMenuOptions = null;
+  let publicMenuSupabaseClient = null;
+
+  function getPublicSupabaseClient() {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+    if (!publicMenuSupabaseClient) {
+      publicMenuSupabaseClient = window.supabase.createClient(
+        PUBLIC_MENU_SUPABASE_URL,
+        PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
+      );
+    }
+    return publicMenuSupabaseClient;
+  }
 
   function buildCategorySectionsMap(categorySections = []) {
     if (!Array.isArray(categorySections)) {
@@ -7218,10 +7338,11 @@
         return;
       }
 
-      const client = window.supabase.createClient(
-        PUBLIC_MENU_SUPABASE_URL,
-        PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
-      );
+      const client = getPublicSupabaseClient();
+      if (!client) {
+        console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
+        return;
+      }
 
       const [categoryResult, productResult, sizeResult, sectionResult, optionGroupResult, optionChoiceResult, optionDefaultResult] = await Promise.all([
         client
