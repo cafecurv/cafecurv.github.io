@@ -982,6 +982,140 @@
 
   .submit-status.success { color: #4a7c59; }
   .submit-status.error { color: #b24b4b; }
+
+  .recent-order-reminder,
+  .after-submit-status {
+    background: var(--bg2);
+    border: 0.5px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+    color: var(--navy);
+  }
+
+  .after-submit-status {
+    margin: 0.75rem 0 0;
+  }
+
+  .recent-order-reminder strong,
+  .after-submit-status strong {
+    display: block;
+    font-family: 'Jost', sans-serif;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+  }
+
+  .recent-order-reminder p,
+  .after-submit-status p {
+    margin: 0.25rem 0;
+    color: var(--gray-mid);
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  .after-submit-actions {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+  }
+
+  .after-submit-actions .submit-btn {
+    margin-top: 0;
+  }
+
+  .order-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(33,40,66,0.58);
+    backdrop-filter: blur(3px);
+  }
+
+  .order-confirm-overlay[hidden] {
+    display: none;
+  }
+
+  .order-confirm-card {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: 86vh;
+    overflow: auto;
+    background: var(--bg);
+    border: 1px solid rgba(200,184,154,0.45);
+    border-radius: 14px;
+    box-shadow: 0 24px 70px rgba(33,40,66,0.28);
+    padding: 1.35rem;
+  }
+
+  .order-confirm-card h2 {
+    margin: 0 2rem 0.8rem 0;
+    font-family: 'Cinzel', serif;
+    font-size: 1.2rem;
+    color: var(--navy);
+  }
+
+  .order-confirm-body p {
+    margin: 0 0 0.72rem;
+    color: var(--gray-mid);
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  .order-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    justify-items: center;
+    margin-top: 1rem;
+  }
+
+  .order-confirm-actions .submit-btn {
+    margin-top: 0;
+    letter-spacing: 2px;
+    width: auto;
+    min-width: 0;
+    max-width: 260px;
+    padding: 0.72rem 1rem;
+  }
+
+  .order-confirm-actions.is-single-action .submit-btn {
+    grid-column: 1 / -1;
+  }
+
+  .order-confirm-close {
+    position: absolute;
+    top: 0.8rem;
+    right: 0.8rem;
+    width: 28px;
+    height: 28px;
+    border: 0.5px solid var(--bg3);
+    border-radius: 50%;
+    background: var(--bg2);
+    color: var(--navy);
+    cursor: pointer;
+  }
+
+  .form-body.order-submitted .form-input,
+  .form-body.order-submitted .form-select,
+  .form-body.order-submitted .form-textarea {
+    opacity: 0.72;
+  }
+
+  @media (max-width: 520px) {
+    .order-confirm-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .order-confirm-actions .submit-btn {
+      width: 100%;
+      max-width: 300px;
+    }
+  }
   /* ── HOW TO ORDER POPUP ── */
   .hto-overlay {
     position: fixed;
@@ -1381,6 +1515,14 @@
   .temp-tab.active {
     background: var(--navy);
     color: var(--bg);
+  }
+
+  .customer-type-toggle {
+    width: 100%;
+  }
+
+  .customer-type-toggle .temp-tab {
+    flex: 1;
   }
 
   /* ── CART QTY CONTROLS ── */
@@ -2182,21 +2324,21 @@
         <div class="hto-num">2</div>
         <div>
           <div class="hto-step-title">Fill in your details</div>
-          <div class="hto-step-desc">Select <strong>Returning</strong> or <strong>New Customer</strong>. Returning customers only need their name, delivery time, and payment.</div>
+          <div class="hto-step-desc">Choose delivery or pick-up, then fill in your contact and payment details.</div>
         </div>
       </div>
       <div class="hto-step">
         <div class="hto-num">3</div>
         <div>
-          <div class="hto-step-title">Copy your order</div>
-          <div class="hto-step-desc">Tap <strong>Copy Order Message</strong> — your full order is copied!</div>
+          <div class="hto-step-title">Submit your order</div>
+          <div class="hto-step-desc">Tap <strong>Submit Order</strong>, review your details, then continue.</div>
         </div>
       </div>
       <div class="hto-step">
         <div class="hto-num">4</div>
         <div>
-          <div class="hto-step-title">Send via Messenger</div>
-          <div class="hto-step-desc">Tap <strong>Open Messenger</strong> → paste → hit send. Done! 🎉</div>
+          <div class="hto-step-title">Confirm in Messenger</div>
+          <div class="hto-step-desc">Use your order number in Messenger to confirm the final total or check status.</div>
         </div>
       </div>
     </div>
@@ -2221,7 +2363,7 @@
         <span>How do I place an order?</span><span class="faq-arrow">▼</span>
       </div>
       <div class="faq-answer">
-        Browse the menu and tap any item to expand it. Choose your options and tap <strong>Add to Cart</strong>. Fill in your details, tap <strong>Copy Order Message</strong>, then tap <strong>Open Messenger</strong> — paste and send! That's it. 🎉
+        Browse the menu and tap any item to expand it. Choose your options and tap <strong>Add to Cart</strong>. Fill in your details, tap <strong>Submit Order</strong>, then use your order number in Messenger to confirm your final total or check status.
       </div>
     </div>
     <div class="faq-item">
@@ -2967,6 +3109,16 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">Customer Type</label>
+        <div class="temp-toggle-wrap customer-type-toggle" id="customerTypeToggle" role="group" aria-label="Customer Type">
+          <button class="temp-tab active" type="button" data-customer-type="new" onclick="setCustomerType('new')">New customer</button>
+          <button class="temp-tab" type="button" data-customer-type="returning" onclick="setCustomerType('returning')">Returning customer</button>
+        </div>
+      </div>
+
+      <div class="recent-order-reminder" id="recentOrderReminder" hidden></div>
+
+      <div class="form-group">
         <label class="form-label">Name</label>
         <input class="form-input" type="text" id="f-name" placeholder="Wachu want to be called?">
       </div>
@@ -2979,26 +3131,19 @@
       <div class="form-group">
         <label class="form-label">Order Method</label>
         <select class="form-select" id="f-delivery" onchange="syncOrderMethodFields()">
-          <option value="delivery" selected>Delivery</option>
+          <option value="delivery-curv-rider" selected>Delivery — CURV Rider (within Brgy. Santiago/San Francisco)</option>
+          <option value="delivery-lalamove">Delivery — Lalamove</option>
           <option value="pickup">Pick-up</option>
           <option value="dine-in" disabled>Dine-in — Currently not available</option>
         </select>
       </div>
 
       <div id="delivery-fields">
-        <div class="form-group">
-          <label class="form-label">Delivery Option</label>
-          <select class="form-select" id="f-delivery-option" onchange="syncOrderMethodFields()">
-            <option value="">Select delivery option</option>
-            <option value="curv_rider">CURV Rider</option>
-            <option value="lalamove">Lalamove</option>
-          </select>
-          <div class="payment-note" id="delivery-option-note">Choose how CURV should arrange your delivery.</div>
-        </div>
-        <div class="form-group">
+        <div class="form-group" id="delivery-address-field">
           <label class="form-label">Delivery Address</label>
           <input class="form-input" type="text" id="f-address" placeholder="House no. / street / subdivision / landmark">
         </div>
+        <div class="payment-note" id="returning-customer-note" hidden>No need to retype your address if it's the same as before.</div>
       </div>
 
       <div class="form-group">
@@ -3029,7 +3174,7 @@
           <div class="cart-empty" id="cartEmpty">No items yet — tap any item to add</div>
           <div id="cartItems"></div>
           <div class="cart-total" id="cartTotal" style="display:none;">
-            <span class="cart-total-label" id="cartTotalLabel">Food & Drinks Subtotal</span>
+            <span class="cart-total-label" id="cartTotalLabel">Order Subtotal</span>
             <span class="cart-total-amount" id="cartTotalAmount">₱0</span>
           </div>
           <div class="cart-total-note" id="cartTotalNote" style="display:none;"></div>
@@ -3042,10 +3187,20 @@
       </div>
 
       <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" hidden>Submit Order</button>
-      <button class="submit-btn copy-fallback" onclick="copyOrder()" id="copyBtn">Copy Order Message</button>
+      <button class="submit-btn copy-fallback" onclick="copyOrder()" id="copyBtn" hidden>Copy Order Message</button>
       <div class="submit-status" id="submitOrderStatus" role="status" aria-live="polite"></div>
-      <button class="submit-btn messenger" onclick="openMessenger()">Open Messenger →</button>
+      <div class="after-submit-status" id="afterSubmitStatus" hidden></div>
+      <button class="submit-btn messenger" onclick="openMessenger()" id="openMessengerBtn" hidden>Open Messenger →</button>
     </div>
+  </div>
+</div>
+
+<div class="order-confirm-overlay" id="orderConfirmOverlay" hidden>
+  <div class="order-confirm-card" role="dialog" aria-modal="true" aria-labelledby="orderConfirmTitle">
+    <button class="order-confirm-close" type="button" onclick="closeOrderConfirmModal()" aria-label="Close order confirmation">×</button>
+    <h2 id="orderConfirmTitle">Review your order first</h2>
+    <div class="order-confirm-body" id="orderConfirmBody"></div>
+    <div class="order-confirm-actions" id="orderConfirmActions"></div>
   </div>
 </div>
 
@@ -6149,6 +6304,11 @@
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
   const panelState = {};
+  let isOrderSubmittedLocked = false;
+  let latestSubmittedOrder = null;
+  let pendingOrderConfirmResolve = null;
+  const CURV_MESSENGER_URL = 'https://m.me/cafecurv';
+  const RECENT_ORDER_STORAGE_KEY = 'curv-latest-public-order';
 
   function initPanel(id, defaults) {
     if (!panelState[id]) {
@@ -6294,6 +6454,7 @@
   }
 
   function panelAddToCart(id, name) {
+    if (isOrderSubmittedLocked) return;
     if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
     const qty     = panelState[id].qty;
     const options = getPanelOptions(id);
@@ -6373,8 +6534,26 @@
     return select && select.value === 'pickup' ? 'pickup' : 'delivery';
   }
 
+  function getOrderMethodValue() {
+    const select = document.getElementById('f-delivery');
+    return select ? select.value : 'delivery-curv-rider';
+  }
+
   function isDeliveryOrder() {
     return getOrderMethod() === 'delivery';
+  }
+
+  function getCustomerType() {
+    const active = document.querySelector('[data-customer-type].active');
+    return active && active.dataset.customerType === 'returning' ? 'returning' : 'new';
+  }
+
+  function setCustomerType(type) {
+    const safeType = type === 'returning' ? 'returning' : 'new';
+    document.querySelectorAll('[data-customer-type]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.customerType === safeType);
+    });
+    syncOrderMethodFields();
   }
 
   function getDeliveryOptionLabel(value) {
@@ -6383,22 +6562,26 @@
     return '';
   }
 
+  function getDeliveryOptionValue() {
+    const methodValue = getOrderMethodValue();
+    if (methodValue === 'delivery-lalamove') return 'lalamove';
+    if (methodValue === 'delivery-curv-rider') return 'curv_rider';
+    return '';
+  }
+
   function syncOrderMethodFields() {
     const delivery = isDeliveryOrder();
     const deliveryFields = document.getElementById('delivery-fields');
+    const deliveryAddressField = document.getElementById('delivery-address-field');
+    const returningCustomerNote = document.getElementById('returning-customer-note');
     const timeLabel = document.getElementById('preferred-time-label');
-    const deliveryOption = document.getElementById('f-delivery-option');
-    const deliveryNote = document.getElementById('delivery-option-note');
+    const isReturningCustomer = getCustomerType() === 'returning';
+    const shouldShowAddress = delivery && !isReturningCustomer;
 
     if (deliveryFields) deliveryFields.style.display = delivery ? 'block' : 'none';
+    if (deliveryAddressField) deliveryAddressField.style.display = shouldShowAddress ? 'block' : 'none';
+    if (returningCustomerNote) returningCustomerNote.hidden = !(delivery && isReturningCustomer);
     if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
-    if (deliveryNote && deliveryOption) {
-      const notes = {
-        curv_rider: 'Available within Brgy. Santiago and Brgy. San Francisco only. Minimal delivery fee applies.',
-        lalamove: 'For outside our nearby delivery route. Delivery fee is shouldered by the customer.'
-      };
-      deliveryNote.textContent = notes[deliveryOption.value] || 'Choose how CURV should arrange your delivery.';
-    }
 
     renderCart();
   }
@@ -6472,6 +6655,7 @@
   }
 
   function addItem(name, variant, price, btn, options = {}) {
+    if (isOrderSubmittedLocked) return;
     const key = buildCartKey(name, variant, null, options);
     const existing = cart.find(i => i.key === key);
     if (existing) {
@@ -6498,12 +6682,14 @@
   }
 
   function removeItem(key) {
+    if (isOrderSubmittedLocked) return;
     cart = cart.filter(i => i.key !== key);
     renderCart();
     updateBadge();
   }
 
   function updateQty(key, delta) {
+    if (isOrderSubmittedLocked) return;
     const item = cart.find(i => i.key === key);
     if (!item) return;
     item.qty += delta;
@@ -6679,7 +6865,7 @@
     emptyEl.style.display = 'none';
     totalEl.style.display = 'flex';
     const delivery = isDeliveryOrder();
-    if (totalLabelEl) totalLabelEl.textContent = delivery ? 'Food & Drinks Subtotal' : 'Estimated Total';
+    if (totalLabelEl) totalLabelEl.textContent = delivery ? 'Order Subtotal' : 'Estimated Total';
     if (totalNoteEl) {
       totalNoteEl.style.display = delivery ? 'block' : 'none';
       totalNoteEl.innerHTML = delivery
@@ -6714,6 +6900,7 @@
         : '';
 
       const safeKey = item.key.replace(/'/g, "\\'");
+      const lockedAttr = isOrderSubmittedLocked ? ' disabled' : '';
       return `
         <div class="cart-item">
           <div class="cart-item-left">
@@ -6724,12 +6911,12 @@
           </div>
           <div class="cart-item-right">
             <div class="cart-qty-controls">
-              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', -1)">−</button>
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', -1)"${lockedAttr}>−</button>
               <span class="cart-qty-num">${item.qty}</span>
-              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', 1)">+</button>
+              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', 1)"${lockedAttr}>+</button>
             </div>
             <span class="cart-item-price">₱${(item.price * item.qty).toLocaleString()}</span>
-            <button class="cart-remove" onclick="removeItem('${safeKey}')">×</button>
+            <button class="cart-remove" onclick="removeItem('${safeKey}')"${lockedAttr}>×</button>
           </div>
         </div>`;
     }).join('');
@@ -6872,12 +7059,13 @@
     const contact  = document.getElementById('f-contact').value.trim();
     const address  = document.getElementById('f-address').value.trim();
     const dSel        = document.getElementById('f-delivery');
-    const deliveryOptionSelect = document.getElementById('f-delivery-option');
     const pSel        = document.getElementById('f-payment');
     const orderMethod = getOrderMethod();
     const isDelivery  = orderMethod === 'delivery';
-    const orderMethodLabel = isDelivery ? 'Delivery' : 'Pick-up';
-    const deliveryOptionValue = deliveryOptionSelect ? deliveryOptionSelect.value : '';
+    const customerType = getCustomerType();
+    const isReturningCustomer = customerType === 'returning';
+    const orderMethodLabel = dSel && dSel.selectedIndex >= 0 ? dSel.options[dSel.selectedIndex].text : (isDelivery ? 'Delivery' : 'Pick-up');
+    const deliveryOptionValue = getDeliveryOptionValue();
     const deliveryOptionLabel = getDeliveryOptionLabel(deliveryOptionValue);
     const payment  = pSel.options[pSel.selectedIndex].text;
     const notes    = document.getElementById('f-notes').value.trim();
@@ -6891,8 +7079,7 @@
     if (!contact) { alert('Please fill in your contact number.'); return null; }
     if (!dSel.value) { alert('Please select an order method.'); return null; }
     if (dSel.value === 'dine-in') { alert('Dine-in ordering is currently not available.'); return null; }
-    if (isDelivery && !deliveryOptionValue) { alert('Please select a delivery option.'); return null; }
-    if (isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
+    if (isDelivery && !isReturningCustomer && !address) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
     if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
@@ -6915,16 +7102,17 @@
     msg += `\n`;
     msg += `👤 Name: ${name}\n`;
     msg += `📞 Contact: ${contact}\n`;
+    msg += `👥 Customer Type: ${isReturningCustomer ? 'Returning customer' : 'New customer'}\n`;
     msg += `🚗 Order Method: ${orderMethodLabel}\n`;
     if (isDelivery) {
-      msg += `🛵 Delivery Option: ${deliveryOptionLabel}\n`;
-      msg += `📍 Delivery Address: ${address}\n`;
+      msg += `🛵 Delivery Method: ${deliveryOptionLabel}\n`;
+      msg += `📍 Delivery Address: ${isReturningCustomer ? 'Returning customer' : address}\n`;
     }
     msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
     if (isDelivery) {
-      msg += `💰 Food & drinks subtotal: ₱${total.toLocaleString()}\n`;
+      msg += `💰 Order subtotal: ₱${total.toLocaleString()}\n`;
       msg += `Delivery fee: To be confirmed\n`;
       msg += `Final total: Confirm via Messenger`;
     } else {
@@ -6950,8 +7138,8 @@
     const name = document.getElementById('f-name').value.trim();
     const contact = document.getElementById('f-contact').value.trim();
     const method = getOrderMethod();
+    const customerType = getCustomerType();
     const address = document.getElementById('f-address').value.trim();
-    const deliveryOptionSelect = document.getElementById('f-delivery-option');
     const paymentSelect = document.getElementById('f-payment');
     const notes = document.getElementById('f-notes').value.trim();
 
@@ -6992,8 +7180,8 @@
     };
 
     if (method === 'delivery') {
-      payload.delivery_option = deliveryOptionSelect ? deliveryOptionSelect.value : '';
-      payload.delivery_address = address;
+      payload.delivery_option = getDeliveryOptionValue();
+      payload.delivery_address = customerType === 'returning' ? 'Returning customer' : address;
     }
 
     return payload;
@@ -7038,6 +7226,249 @@
     statusEl.classList.toggle('error', tone === 'error');
   }
 
+  function getCartSubtotal() {
+    return cart.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0);
+  }
+
+  function getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal) {
+    return {
+      orderNumber: orderNumber || 'received',
+      fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
+      subtotal: Number(subtotal || getCartSubtotal() || 0),
+      submittedAt: new Date().toISOString()
+    };
+  }
+
+  function saveLatestSubmittedOrder(info) {
+    latestSubmittedOrder = info;
+    try {
+      localStorage.setItem(RECENT_ORDER_STORAGE_KEY, JSON.stringify(info));
+    } catch (error) {}
+  }
+
+  function loadLatestSubmittedOrder() {
+    try {
+      const raw = localStorage.getItem(RECENT_ORDER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function renderRecentOrderReminder() {
+    const reminder = document.getElementById('recentOrderReminder');
+    if (!reminder) return;
+    const recentOrder = loadLatestSubmittedOrder();
+    if (!recentOrder || !recentOrder.orderNumber) {
+      reminder.hidden = true;
+      reminder.innerHTML = '';
+      return;
+    }
+    reminder.hidden = false;
+    reminder.innerHTML = `
+      <strong>Recent order: ${recentOrder.orderNumber}</strong>
+      <p>Need an update? Message us on Messenger with your order number.</p>
+    `;
+  }
+
+  function getStatusMessageForOrder(info) {
+    if (!info || !info.orderNumber) return '';
+    if (info.fulfillmentType === 'pickup') {
+      return `Hi CURV! I would like to check the status of my order #${info.orderNumber}.`;
+    }
+    return `Hi CURV! I would like to confirm the final total for my order #${info.orderNumber}, including delivery fee.`;
+  }
+
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    fallbackCopy(text);
+    return Promise.resolve();
+  }
+
+  function closeOrderConfirmModal() {
+    const overlay = document.getElementById('orderConfirmOverlay');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.dataset.mode = '';
+    if (pendingOrderConfirmResolve) {
+      pendingOrderConfirmResolve(false);
+      pendingOrderConfirmResolve = null;
+    }
+  }
+
+  function setOrderConfirmModal(title, bodyHtml, actions) {
+    const overlay = document.getElementById('orderConfirmOverlay');
+    const titleEl = document.getElementById('orderConfirmTitle');
+    const bodyEl = document.getElementById('orderConfirmBody');
+    const actionsEl = document.getElementById('orderConfirmActions');
+    if (!overlay || !titleEl || !bodyEl || !actionsEl) return null;
+
+    titleEl.textContent = title;
+    bodyEl.innerHTML = bodyHtml;
+    actionsEl.innerHTML = '';
+    actionsEl.classList.toggle('is-single-action', actions.length === 1);
+    actions.forEach((action) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'submit-btn' + (action.secondary ? ' copy-fallback' : '');
+      button.textContent = action.label;
+      button.addEventListener('click', action.onClick);
+      actionsEl.appendChild(button);
+    });
+    overlay.hidden = false;
+    return overlay;
+  }
+
+  const orderConfirmOverlay = document.getElementById('orderConfirmOverlay');
+  if (orderConfirmOverlay) {
+    orderConfirmOverlay.addEventListener('click', (event) => {
+      if (event.target === orderConfirmOverlay) closeOrderConfirmModal();
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    const overlay = document.getElementById('orderConfirmOverlay');
+    if (event.key === 'Escape' && overlay && !overlay.hidden) {
+      closeOrderConfirmModal();
+    }
+  });
+
+  function confirmOrderBeforeSubmit() {
+    return new Promise((resolve) => {
+      pendingOrderConfirmResolve = resolve;
+      setOrderConfirmModal(
+        'Review your order first',
+        `
+          <p>Please double-check your order details before submitting.</p>
+          <p>Once confirmed, you won't be able to edit this order on the website.</p>
+        `,
+        [
+          {
+            label: 'Edit Order',
+            secondary: true,
+            onClick: () => {
+              pendingOrderConfirmResolve = null;
+              closeOrderConfirmModal();
+              resolve(false);
+            }
+          },
+          {
+            label: 'Continue & Submit',
+            onClick: () => {
+              pendingOrderConfirmResolve = null;
+              closeOrderConfirmModal();
+              resolve(true);
+            }
+          }
+        ],
+      );
+    });
+  }
+
+  function showOrderSuccessModal(info) {
+    const isPickup = info && info.fulfillmentType === 'pickup';
+    const subtotal = Number(info.subtotal || 0).toLocaleString();
+    const bodyHtml = isPickup
+      ? `
+          <p>Your order number is ${info.orderNumber}.</p>
+          <p>Please wait for our confirmation before pick-up.</p>
+        `
+      : `
+          <p>Your order number is ${info.orderNumber}.</p>
+          <p>Order subtotal: ₱${subtotal}</p>
+          <p>To check your actual total including delivery fee, message us through Messenger together with your order number.</p>
+        `;
+
+    setOrderConfirmModal(
+      'Order received!',
+      bodyHtml,
+      [{
+        label: isPickup ? 'Check Status via Messenger' : 'Confirm Total via Messenger',
+        onClick: () => {
+          closeOrderConfirmModal();
+          openMessenger();
+        }
+      }],
+    );
+  }
+
+  function renderAfterSubmitStatus(info) {
+    const statusBox = document.getElementById('afterSubmitStatus');
+    if (!statusBox || !info) return;
+    const isPickup = info.fulfillmentType === 'pickup';
+    const subtotal = Number(info.subtotal || 0).toLocaleString();
+    statusBox.hidden = false;
+    statusBox.innerHTML = `
+      <strong>Order submitted</strong>
+      <p>Order #: ${info.orderNumber}</p>
+      ${isPickup ? '' : `<p>Order subtotal: ₱${subtotal}</p>`}
+      <p>${isPickup
+        ? 'Please wait for our confirmation before pick-up.'
+        : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.'}</p>
+      <div class="after-submit-actions">
+        <button type="button" class="submit-btn messenger" onclick="openMessenger()">${isPickup ? 'Check Status via Messenger' : 'Confirm Total via Messenger'}</button>
+      </div>
+    `;
+  }
+
+  function setSubmittedFormLocked(isLocked) {
+    isOrderSubmittedLocked = Boolean(isLocked);
+    const formBody = document.getElementById('formBody');
+    if (formBody) formBody.classList.toggle('order-submitted', isOrderSubmittedLocked);
+    document.querySelectorAll('#formBody input, #formBody select, #formBody textarea').forEach((field) => {
+      field.disabled = isOrderSubmittedLocked;
+    });
+    document.querySelectorAll('.add-btn, .add-btn-pill, .cart-qty-btn, .cart-remove, .temp-tab').forEach((button) => {
+      button.disabled = isOrderSubmittedLocked;
+    });
+    const submitButton = document.getElementById('submitOrderBtn');
+    if (submitButton && isOrderSubmittedLocked) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Order Submitted';
+    }
+    const copyButton = document.getElementById('copyBtn');
+    if (copyButton) {
+      copyButton.hidden = isOrderSubmittedLocked;
+      copyButton.disabled = isOrderSubmittedLocked;
+    }
+    const openMessengerButton = document.getElementById('openMessengerBtn');
+    if (openMessengerButton) {
+      openMessengerButton.hidden = isOrderSubmittedLocked;
+      openMessengerButton.disabled = isOrderSubmittedLocked;
+    }
+    renderCart();
+  }
+
+  function handleSuccessfulPublicOrder(orderNumber, fulfillmentType, subtotal) {
+    const info = getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal);
+    saveLatestSubmittedOrder(info);
+    renderRecentOrderReminder();
+    renderAfterSubmitStatus(info);
+    setSubmittedFormLocked(true);
+    showOrderSuccessModal(info);
+    setSubmitOrderStatus('Order submitted. Message CURV on Messenger with your order number.', 'success');
+    return info;
+  }
+
+  function copySubmittedOrderStatusMessage() {
+    const info = latestSubmittedOrder || loadLatestSubmittedOrder();
+    const message = getStatusMessageForOrder(info);
+    if (!message) {
+      setSubmitOrderStatus('No submitted order found yet.', 'error');
+      return Promise.resolve(false);
+    }
+    return copyTextToClipboard(message).then(() => {
+      setSubmitOrderStatus('Status message copied. Paste and send it in Messenger.', 'success');
+      return true;
+    }).catch(() => {
+      fallbackCopy(message);
+      setSubmitOrderStatus('Status message copied. Paste and send it in Messenger.', 'success');
+      return true;
+    });
+  }
+
   function validatePublicOrderPayload(payload) {
     const deliverySelect = document.getElementById('f-delivery');
     const paymentSelect = document.getElementById('f-payment');
@@ -7048,8 +7479,7 @@
     if (deliverySelect.value === 'dine-in') return 'Dine-in ordering is currently not available.';
     if (!paymentSelect || !paymentSelect.value) return 'Please select a payment method.';
     if (payload.fulfillment_type === 'delivery') {
-      if (!payload.delivery_option) return 'Please select a delivery option.';
-      if (!payload.delivery_address) return 'Please fill in your delivery address.';
+      if (getCustomerType() !== 'returning' && !payload.delivery_address) return 'Please fill in your delivery address.';
     } else if (payload.fulfillment_type !== 'pickup') {
       return 'Please select Delivery or Pick-up.';
     }
@@ -7058,6 +7488,7 @@
 
   async function submitPublicOrder() {
     if (!isPublicOrderSubmitEnabled()) return;
+    if (isOrderSubmittedLocked) return;
     if (isSubmittingPublicOrder) return;
 
     const payload = buildPublicOrderPayload();
@@ -7073,6 +7504,9 @@
       return;
     }
 
+    const shouldSubmit = await confirmOrderBeforeSubmit();
+    if (!shouldSubmit) return;
+
     const client = getPublicSupabaseClient();
     if (!client) {
       setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
@@ -7087,6 +7521,7 @@
     }
     setSubmitOrderStatus('Submitting your order...');
 
+    let submittedSuccessfully = false;
     try {
       const { data, error } = await client.rpc('submit_public_order', { order_payload: payload });
       if (error) throw error;
@@ -7094,20 +7529,22 @@
       const confirmation = Array.isArray(data) ? data[0] : data;
       const orderNumber = confirmation && confirmation.order_number ? confirmation.order_number : 'received';
       lastSubmittedPublicOrderSignature = payloadSignature;
-      setSubmitOrderStatus('Order submitted! Your order number is ' + orderNumber + '. Please wait for CURV confirmation.', 'success');
+      handleSuccessfulPublicOrder(orderNumber, payload.fulfillment_type, payload.subtotal);
+      submittedSuccessfully = true;
     } catch (error) {
       setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
     } finally {
       isSubmittingPublicOrder = false;
       if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Order';
+        submitButton.disabled = submittedSuccessfully || isOrderSubmittedLocked;
+        submitButton.textContent = submittedSuccessfully || isOrderSubmittedLocked ? 'Order Submitted' : 'Submit Order';
       }
     }
   }
 
   syncOrderMethodFields();
   syncPublicOrderSubmitGate();
+  renderRecentOrderReminder();
 
   function copyOrder() {
     const msg = buildMessage();
@@ -7138,7 +7575,22 @@
   }
 
   function openMessenger() {
-    window.open("https://m.me/cafecurv", "_blank");
+    const info = latestSubmittedOrder || loadLatestSubmittedOrder();
+    if (info && info.orderNumber) {
+      copySubmittedOrderStatusMessage().finally(() => {
+        window.open(CURV_MESSENGER_URL, "_blank");
+      });
+      return;
+    }
+    window.open(CURV_MESSENGER_URL, "_blank");
+  }
+
+  if (isPublicOrderSubmitEnabled()) {
+    window.curvPreviewOrderSuccess = function(orderNumber, fulfillmentType) {
+      const safeType = fulfillmentType === 'pickup' ? 'pickup' : 'delivery';
+      const previewNumber = orderNumber || (safeType === 'pickup' ? 'C-1001' : 'C-1000');
+      return handleSuccessfulPublicOrder(previewNumber, safeType, getCartSubtotal());
+    };
   }
 
   // ── DOMContentLoaded ──
