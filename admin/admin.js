@@ -5315,6 +5315,14 @@
 
   const getFulfillmentLabel = (order) => getFulfillmentType(order) === 'delivery' ? 'Delivery' : 'Pick-up';
 
+  const isDeliveryConfirmationComplete = (order) => {
+    const status = normalizeOrderStatus(order && order.status);
+    const feeStatus = String(order && order.delivery_fee_status ? order.delivery_fee_status : '').trim().toLowerCase();
+    return ['accepted', 'preparing', 'ready', 'completed'].includes(status)
+      || feeStatus === 'confirmed'
+      || feeStatus === 'waived';
+  };
+
   const formatDeliveryOption = (value) => {
     const option = String(value || '').trim().toLowerCase();
     if (option === 'curv_rider') return 'CURV Rider';
@@ -5456,15 +5464,21 @@
     const section = makeElement('section', 'order-delivery-details');
     section.appendChild(makeElement('h4', '', 'Delivery Details'));
 
+    const isConfirmed = isDeliveryConfirmationComplete(order);
     const deliveryFee = order.delivery_fee === null || order.delivery_fee === undefined
-      ? 'To be confirmed'
+      ? (isConfirmed ? 'Confirmed manually' : 'To be confirmed')
       : formatCurrency(order.delivery_fee, order.currency);
+    const feeStatus = isConfirmed ? 'Confirmed' : formatDeliveryFeeStatus(order.delivery_fee_status);
+    const finalTotal = isConfirmed ? 'Confirmed via Messenger' : 'Confirm via Messenger';
+    const deliveryNote = isConfirmed
+      ? 'Delivery fee, final total, and payment/COD acknowledgement were confirmed before accepting.'
+      : 'Confirm delivery fee, final total, and payment/COD acknowledgement in Messenger before accepting.';
     const rows = [
       ['Method', formatDeliveryOption(order.delivery_option)],
       ['Address', order.delivery_address || '-'],
       ['Delivery fee', deliveryFee],
-      ['Fee status', formatDeliveryFeeStatus(order.delivery_fee_status)],
-      ['Final total', 'Confirm via Messenger'],
+      ['Fee status', feeStatus],
+      ['Final total', finalTotal],
       ['Payment', formatOptionLabel(order.payment_status || 'unpaid')],
     ];
 
@@ -5476,7 +5490,7 @@
     });
 
     section.append(
-      makeElement('p', 'order-delivery-note', 'Confirm delivery fee, final total, and payment/COD acknowledgement in Messenger before accepting.'),
+      makeElement('p', 'order-delivery-note', deliveryNote),
       grid,
     );
     return section;
@@ -5735,6 +5749,13 @@
 
     const payload = { status: action.nextStatus };
     payload[action.timestampField] = new Date().toISOString();
+    if (
+      action.nextStatus === 'accepted'
+      && getFulfillmentType(order) === 'delivery'
+      && String(order.delivery_fee_status || '').trim().toLowerCase() === 'to_confirm'
+    ) {
+      payload.delivery_fee_status = 'confirmed';
+    }
 
     const { error } = await client
       .from('orders')
