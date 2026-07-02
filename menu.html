@@ -799,35 +799,6 @@
     line-height: 1.5;
   }
 
-  /* ── CUSTOMER TYPE TOGGLE ── */
-  .customer-type-toggle {
-    background: var(--bg2);
-    border: 0.5px solid var(--bg3);
-    border-radius: 10px;
-    padding: 0.9rem 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .customer-type-label {
-    font-family: 'Jost', sans-serif;
-    font-size: 0.58rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--gray-light);
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .customer-type-hint {
-    font-family: 'Raleway', sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 0.63rem;
-    color: var(--gray-mid);
-    margin-top: 6px;
-    line-height: 1.5;
-  }
-
   /* ── DELIVERY TIME ROW ── */
   .delivery-time-row {
     display: flex;
@@ -837,6 +808,16 @@
 
   .delivery-time-row .temp-toggle-wrap { flex-shrink: 0; }
   .delivery-time-row .form-input { flex: 1; }
+
+  .cart-total-note {
+    border-top: 0.5px solid var(--bg3);
+    padding: 0.65rem 0.85rem;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--gray-mid);
+  }
 
   /* ── CART ── */
   .cart-box {
@@ -2985,44 +2966,43 @@
         <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
       </div>
 
-      <div class="customer-type-toggle">
-        <span class="customer-type-label">Customer Type</span>
-        <div class="temp-toggle-wrap" style="width:100%;justify-content:stretch;">
-          <button class="temp-tab active" id="tabNew" onclick="setCustomerType('new')" style="flex:1;">New Customer</button>
-          <button class="temp-tab" id="tabReturning" onclick="setCustomerType('returning')" style="flex:1;">Returning Customer</button>
-        </div>
-        <div class="customer-type-hint" id="customerTypeHint">Please fill in all required details below.</div>
-      </div>
-
       <div class="form-group">
         <label class="form-label">Name</label>
         <input class="form-input" type="text" id="f-name" placeholder="Wachu want to be called?">
       </div>
 
-      <div id="new-customer-fields">
-        <div class="form-group">
-          <label class="form-label">Contact Number</label>
-          <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Complete Address</label>
-          <input class="form-input" type="text" id="f-address" placeholder="House no., street, barangay">
-        </div>
+      <div class="form-group">
+        <label class="form-label">Contact Number</label>
+        <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
       </div>
 
       <div class="form-group">
         <label class="form-label">Order Method</label>
-        <select class="form-select" id="f-delivery">
-          <option value="">Select order method</option>
-          <option value="dine-in" disabled>Dine-in — Currently Unavailable</option>
-          <option value="pickup">In-Store Pick-up</option>
-          <option value="own-rider">Delivery — Brgy. Santiago / Brgy. San Francisco (Own Rider)</option>
-          <option value="lalamove">Delivery — Lalamove (Outside Vicinity)</option>
+        <select class="form-select" id="f-delivery" onchange="syncOrderMethodFields()">
+          <option value="delivery" selected>Delivery</option>
+          <option value="pickup">Pick-up</option>
+          <option value="dine-in" disabled>Dine-in — Currently not available</option>
         </select>
       </div>
 
+      <div id="delivery-fields">
+        <div class="form-group">
+          <label class="form-label">Delivery Option</label>
+          <select class="form-select" id="f-delivery-option" onchange="syncOrderMethodFields()">
+            <option value="">Select delivery option</option>
+            <option value="curv_rider">CURV Rider</option>
+            <option value="lalamove">Lalamove</option>
+          </select>
+          <div class="payment-note" id="delivery-option-note">Choose how CURV should arrange your delivery.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delivery Address</label>
+          <input class="form-input" type="text" id="f-address" placeholder="House no. / street / subdivision / landmark">
+        </div>
+      </div>
+
       <div class="form-group">
-        <label class="form-label">Time of Delivery</label>
+        <label class="form-label" id="preferred-time-label">Preferred Delivery Time</label>
         <div class="delivery-time-row">
           <div class="temp-toggle-wrap">
             <button class="temp-tab active" id="tabAsap" onclick="setDeliveryTime('asap')">ASAP</button>
@@ -3049,9 +3029,10 @@
           <div class="cart-empty" id="cartEmpty">No items yet — tap any item to add</div>
           <div id="cartItems"></div>
           <div class="cart-total" id="cartTotal" style="display:none;">
-            <span class="cart-total-label">Estimated Total</span>
+            <span class="cart-total-label" id="cartTotalLabel">Food & Drinks Subtotal</span>
             <span class="cart-total-amount" id="cartTotalAmount">₱0</span>
           </div>
+          <div class="cart-total-note" id="cartTotalNote" style="display:none;"></div>
         </div>
       </div>
 
@@ -6386,18 +6367,40 @@
     activePanel = null;
   }
 
-  // ── CUSTOMER TYPE ──
-  let customerType = 'new';
+  // ── ORDER METHOD ──
+  function getOrderMethod() {
+    const select = document.getElementById('f-delivery');
+    return select && select.value === 'pickup' ? 'pickup' : 'delivery';
+  }
 
-  function setCustomerType(type) {
-    customerType = type;
-    const isNew = type === 'new';
-    document.getElementById('tabNew').classList.toggle('active', isNew);
-    document.getElementById('tabReturning').classList.toggle('active', !isNew);
-    document.getElementById('new-customer-fields').style.display = isNew ? 'block' : 'none';
-    document.getElementById('customerTypeHint').textContent = isNew
-      ? 'Please fill in all required details below.'
-      : 'Welcome back! Just your name, delivery time, payment, and order.';
+  function isDeliveryOrder() {
+    return getOrderMethod() === 'delivery';
+  }
+
+  function getDeliveryOptionLabel(value) {
+    if (value === 'curv_rider') return 'CURV Rider';
+    if (value === 'lalamove') return 'Lalamove';
+    return '';
+  }
+
+  function syncOrderMethodFields() {
+    const delivery = isDeliveryOrder();
+    const deliveryFields = document.getElementById('delivery-fields');
+    const timeLabel = document.getElementById('preferred-time-label');
+    const deliveryOption = document.getElementById('f-delivery-option');
+    const deliveryNote = document.getElementById('delivery-option-note');
+
+    if (deliveryFields) deliveryFields.style.display = delivery ? 'block' : 'none';
+    if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
+    if (deliveryNote && deliveryOption) {
+      const notes = {
+        curv_rider: 'Available within Brgy. Santiago and Brgy. San Francisco only. Minimal delivery fee applies.',
+        lalamove: 'For outside our nearby delivery route. Delivery fee is shouldered by the customer.'
+      };
+      deliveryNote.textContent = notes[deliveryOption.value] || 'Choose how CURV should arrange your delivery.';
+    }
+
+    renderCart();
   }
 
   // ── DELIVERY TIME ──
@@ -6659,16 +6662,30 @@
     const emptyEl   = document.getElementById('cartEmpty');
     const totalEl   = document.getElementById('cartTotal');
     const totalAmtEl = document.getElementById('cartTotalAmount');
+    const totalLabelEl = document.getElementById('cartTotalLabel');
+    const totalNoteEl = document.getElementById('cartTotalNote');
 
     if (cart.length === 0) {
       emptyEl.style.display = 'block';
       itemsEl.innerHTML = '';
       totalEl.style.display = 'none';
+      if (totalNoteEl) {
+        totalNoteEl.style.display = 'none';
+        totalNoteEl.innerHTML = '';
+      }
       return;
     }
 
     emptyEl.style.display = 'none';
     totalEl.style.display = 'flex';
+    const delivery = isDeliveryOrder();
+    if (totalLabelEl) totalLabelEl.textContent = delivery ? 'Food & Drinks Subtotal' : 'Estimated Total';
+    if (totalNoteEl) {
+      totalNoteEl.style.display = delivery ? 'block' : 'none';
+      totalNoteEl.innerHTML = delivery
+        ? '<div>Delivery fee: To be confirmed</div><div>Final total: Confirm via Messenger</div>'
+        : '';
+    }
 
     let total = 0;
     itemsEl.innerHTML = cart.map(item => {
@@ -6851,28 +6868,31 @@
 
   // ── ORDER ──
   function buildMessage() {
-    const isNew    = customerType === 'new';
     const name     = document.getElementById('f-name').value.trim();
-    const contact  = isNew ? document.getElementById('f-contact').value.trim() : '';
-    const address  = isNew ? document.getElementById('f-address').value.trim() : '';
+    const contact  = document.getElementById('f-contact').value.trim();
+    const address  = document.getElementById('f-address').value.trim();
     const dSel        = document.getElementById('f-delivery');
+    const deliveryOptionSelect = document.getElementById('f-delivery-option');
     const pSel        = document.getElementById('f-payment');
-    const orderMethod = dSel.options[dSel.selectedIndex].text;
-    const isPickup    = dSel.value === 'pickup';
-    const isDelivery  = dSel.value === 'own-rider' || dSel.value === 'lalamove';
-    const delivery    = isNew ? orderMethod : '';
+    const orderMethod = getOrderMethod();
+    const isDelivery  = orderMethod === 'delivery';
+    const orderMethodLabel = isDelivery ? 'Delivery' : 'Pick-up';
+    const deliveryOptionValue = deliveryOptionSelect ? deliveryOptionSelect.value : '';
+    const deliveryOptionLabel = getDeliveryOptionLabel(deliveryOptionValue);
     const payment  = pSel.options[pSel.selectedIndex].text;
     const notes    = document.getElementById('f-notes').value.trim();
 
     const specificTime = document.getElementById('f-delivery-time').value;
-    const deliveryTime = deliveryTimeMode === 'asap'
+    const preferredTime = deliveryTimeMode === 'asap'
       ? 'ASAP'
       : (specificTime ? formatTime12h(specificTime) : 'Not specified');
 
     if (!name) { alert('Please fill in your name.'); return null; }
-    if (isNew && !contact) { alert('Please fill in your contact number.'); return null; }
-    if (isNew && isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
+    if (!contact) { alert('Please fill in your contact number.'); return null; }
     if (!dSel.value) { alert('Please select an order method.'); return null; }
+    if (dSel.value === 'dine-in') { alert('Dine-in ordering is currently not available.'); return null; }
+    if (isDelivery && !deliveryOptionValue) { alert('Please select a delivery option.'); return null; }
+    if (isDelivery && !address) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
     if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
@@ -6892,18 +6912,24 @@
     const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
 
     let msg = `Hi Curv! I'd like to place an order 🍵\n`;
-    msg += isNew ? `` : `[Returning Customer]\n`;
     msg += `\n`;
     msg += `👤 Name: ${name}\n`;
-    if (isNew) {
-      msg += `📞 Contact: ${contact}\n`;
-      if (isDelivery) msg += `📍 Address: ${address}\n`;
+    msg += `📞 Contact: ${contact}\n`;
+    msg += `🚗 Order Method: ${orderMethodLabel}\n`;
+    if (isDelivery) {
+      msg += `🛵 Delivery Option: ${deliveryOptionLabel}\n`;
+      msg += `📍 Delivery Address: ${address}\n`;
     }
-    msg += `🚗 Order Method: ${orderMethod}\n`;
-    msg += `⏰ Time of Delivery: ${deliveryTime}\n`;
+    msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
-    msg += `💰 Estimated Total: ₱${total.toLocaleString()}`;
+    if (isDelivery) {
+      msg += `💰 Food & drinks subtotal: ₱${total.toLocaleString()}\n`;
+      msg += `Delivery fee: To be confirmed\n`;
+      msg += `Final total: Confirm via Messenger`;
+    } else {
+      msg += `💰 Estimated Total: ₱${total.toLocaleString()}`;
+    }
     if (notes) msg += `\n\n📝 Notes: ${notes}`;
 
     return msg;
@@ -6914,7 +6940,7 @@
     return selectEl.options[selectEl.selectedIndex].text || '';
   }
 
-  function getPublicOrderPickupTime() {
+  function getPublicOrderPreferredTime() {
     const specificTime = document.getElementById('f-delivery-time').value;
     if (deliveryTimeMode === 'specific') return specificTime ? formatTime12h(specificTime) : null;
     return 'ASAP';
@@ -6923,6 +6949,9 @@
   function buildPublicOrderPayload() {
     const name = document.getElementById('f-name').value.trim();
     const contact = document.getElementById('f-contact').value.trim();
+    const method = getOrderMethod();
+    const address = document.getElementById('f-address').value.trim();
+    const deliveryOptionSelect = document.getElementById('f-delivery-option');
     const paymentSelect = document.getElementById('f-payment');
     const notes = document.getElementById('f-notes').value.trim();
 
@@ -6950,17 +6979,24 @@
 
     const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
 
-    return {
+    const payload = {
       customer_name: name,
       customer_phone: contact,
-      fulfillment_type: 'pickup',
-      pickup_time: getPublicOrderPickupTime(),
+      fulfillment_type: method,
+      pickup_time: getPublicOrderPreferredTime(),
       customer_notes: notes || null,
       subtotal,
       total: subtotal,
       payment_method: paymentSelect ? (paymentSelect.value || getSelectedOptionText(paymentSelect) || 'cash') : 'cash',
       items
     };
+
+    if (method === 'delivery') {
+      payload.delivery_option = deliveryOptionSelect ? deliveryOptionSelect.value : '';
+      payload.delivery_address = address;
+    }
+
+    return payload;
   }
 
   window.curvBuildPublicOrderPayload = buildPublicOrderPayload;
@@ -7004,10 +7040,19 @@
 
   function validatePublicOrderPayload(payload) {
     const deliverySelect = document.getElementById('f-delivery');
+    const paymentSelect = document.getElementById('f-payment');
     if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) return 'Please add at least one item to your order.';
     if (!payload.customer_name) return 'Please fill in your name.';
     if (!payload.customer_phone) return 'Please fill in your contact number.';
-    if (!deliverySelect || deliverySelect.value !== 'pickup') return 'Online order submission is pickup-only for now. Please choose In-Store Pick-up.';
+    if (!deliverySelect || !deliverySelect.value) return 'Please select an order method.';
+    if (deliverySelect.value === 'dine-in') return 'Dine-in ordering is currently not available.';
+    if (!paymentSelect || !paymentSelect.value) return 'Please select a payment method.';
+    if (payload.fulfillment_type === 'delivery') {
+      if (!payload.delivery_option) return 'Please select a delivery option.';
+      if (!payload.delivery_address) return 'Please fill in your delivery address.';
+    } else if (payload.fulfillment_type !== 'pickup') {
+      return 'Please select Delivery or Pick-up.';
+    }
     return '';
   }
 
@@ -7061,6 +7106,7 @@
     }
   }
 
+  syncOrderMethodFields();
   syncPublicOrderSubmitGate();
 
   function copyOrder() {
