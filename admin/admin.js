@@ -5308,6 +5308,29 @@
     return source || 'website';
   };
 
+  const getFulfillmentType = (order) => {
+    const type = String(order && order.fulfillment_type ? order.fulfillment_type : '').trim().toLowerCase();
+    return type === 'delivery' ? 'delivery' : 'pickup';
+  };
+
+  const getFulfillmentLabel = (order) => getFulfillmentType(order) === 'delivery' ? 'Delivery' : 'Pick-up';
+
+  const formatDeliveryOption = (value) => {
+    const option = String(value || '').trim().toLowerCase();
+    if (option === 'curv_rider') return 'CURV Rider';
+    if (option === 'lalamove') return 'Lalamove';
+    return option ? formatOptionLabel(option) : '-';
+  };
+
+  const formatDeliveryFeeStatus = (value) => {
+    const status = String(value || '').trim().toLowerCase();
+    if (status === 'to_confirm') return 'To confirm';
+    if (status === 'confirmed') return 'Confirmed';
+    if (status === 'waived') return 'Waived';
+    if (status === 'not_applicable') return 'Not applicable';
+    return status ? formatOptionLabel(status) : 'Not applicable';
+  };
+
   const formatOptionLabel = (value) => String(value || '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -5361,7 +5384,7 @@
 
   const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
 
-  const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, pickup, payment, and total details will appear here after selecting an order.') => {
+  const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, fulfillment, payment, and total details will appear here after selecting an order.') => {
     if (!orderDetail) return;
     orderDetail.innerHTML = '';
     const placeholder = makeElement('div', 'order-detail-placeholder');
@@ -5427,6 +5450,38 @@
     return section;
   };
 
+  const renderDeliveryDetailsSection = (order) => {
+    if (getFulfillmentType(order) !== 'delivery') return null;
+
+    const section = makeElement('section', 'order-delivery-details');
+    section.appendChild(makeElement('h4', '', 'Delivery Details'));
+
+    const deliveryFee = order.delivery_fee === null || order.delivery_fee === undefined
+      ? 'To be confirmed'
+      : formatCurrency(order.delivery_fee, order.currency);
+    const rows = [
+      ['Method', formatDeliveryOption(order.delivery_option)],
+      ['Address', order.delivery_address || '-'],
+      ['Delivery fee', deliveryFee],
+      ['Fee status', formatDeliveryFeeStatus(order.delivery_fee_status)],
+      ['Final total', 'Confirm via Messenger'],
+      ['Payment', formatOptionLabel(order.payment_status || 'unpaid')],
+    ];
+
+    const grid = makeElement('dl', 'order-delivery-grid');
+    rows.forEach(([label, value]) => {
+      const row = document.createElement('div');
+      row.append(makeElement('dt', '', label), makeElement('dd', '', value));
+      grid.appendChild(row);
+    });
+
+    section.append(
+      makeElement('p', 'order-delivery-note', 'Confirm delivery fee, final total, and payment/COD acknowledgement in Messenger before accepting.'),
+      grid,
+    );
+    return section;
+  };
+
   const renderOrderDetail = (order) => {
     if (!orderDetail) return;
     if (!order) {
@@ -5442,20 +5497,26 @@
       makeElement('h3', '', order.order_number || 'Order'),
     );
 
-    const sourceBadge = makeElement('span', 'order-source-badge', getOrderSource(order));
-    heading.appendChild(sourceBadge);
+    const headingBadges = makeElement('div', 'order-detail-badges');
+    headingBadges.append(
+      makeElement('span', 'order-fulfillment-badge', getFulfillmentLabel(order)),
+      makeElement('span', 'order-source-badge', getOrderSource(order)),
+    );
+    heading.appendChild(headingBadges);
 
     const createdDisplay = formatOrderDate(order.created_at);
     const ageDisplay = formatOrderAge(order.created_at);
+    const isDelivery = getFulfillmentType(order) === 'delivery';
     const grid = makeElement('dl', 'order-detail-grid');
     const details = [
       ['Customer', order.customer_name || '-'],
       ['Phone', order.customer_phone || '-'],
       ['Created', ageDisplay ? ageDisplay + ' / ' + createdDisplay : createdDisplay],
-      ['Pickup', order.pickup_time || 'Pickup'],
+      ['Fulfillment', getFulfillmentLabel(order)],
+      [isDelivery ? 'Preferred time' : 'Pickup', order.pickup_time || (isDelivery ? '-' : 'Pickup')],
       ['Source', getOrderSource(order)],
-      ['Payment', order.payment_status || 'unpaid'],
-      ['Total', formatCurrency(order.total, order.currency)],
+      ['Payment', formatOptionLabel(order.payment_status || 'unpaid')],
+      [isDelivery ? 'Food & drinks subtotal' : 'Total', formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)],
     ];
 
     details.forEach(([label, value]) => {
@@ -5473,6 +5534,8 @@
       detailNodes.push(notes);
     }
 
+    const deliveryDetails = renderDeliveryDetailsSection(order);
+    if (deliveryDetails) detailNodes.push(deliveryDetails);
     detailNodes.push(renderOrderItemsSection(order));
 
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
@@ -5500,19 +5563,19 @@
   const renderOrders = () => {
     if (!orderList) return;
     if (!isOwnerSignedIn) {
-      renderOrderEmptyState('Owner sign-in required', 'Sign in with owner access to load incoming pickup orders.');
+      renderOrderEmptyState('Owner sign-in required', 'Sign in with owner access to load incoming orders.');
       renderOrderDetailPlaceholder('Select an order', 'Sign in to load order details.');
       return;
     }
 
     if (ordersLoading) {
-      renderOrderEmptyState('Loading orders...', 'Fetching the latest pickup orders from Supabase.');
+      renderOrderEmptyState('Loading orders...', 'Fetching the latest incoming orders from Supabase.');
       return;
     }
 
     if (!latestOrders.length) {
       const label = STATUS_LABELS[activeStatus] || 'selected';
-      renderOrderEmptyState('No ' + label.toLowerCase() + ' orders', 'There are no pickup orders in this status yet.');
+      renderOrderEmptyState('No ' + label.toLowerCase() + ' orders', 'There are no orders in this status yet.');
       renderOrderDetailPlaceholder();
       return;
     }
@@ -5527,6 +5590,7 @@
       const head = makeElement('div', 'order-card-head');
       const badgeGroup = makeElement('span', 'order-card-badge-group');
       badgeGroup.append(
+        makeElement('span', 'order-fulfillment-badge', getFulfillmentLabel(order)),
         makeElement('span', 'order-source-badge', getOrderSource(order)),
         makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
       );
@@ -5537,9 +5601,10 @@
 
       const meta = makeElement('div', 'order-card-meta');
       const ageDisplay = formatOrderAge(order.created_at);
+      const isDelivery = getFulfillmentType(order) === 'delivery';
       meta.append(
         makeElement('span', 'order-age', ageDisplay || formatOrderDate(order.created_at)),
-        makeElement('span', '', formatCurrency(order.total, order.currency)),
+        makeElement('span', '', (isDelivery ? 'Subtotal ' : '') + formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)),
       );
 
       const customer = makeElement('div', 'order-card-customer');
@@ -5712,7 +5777,7 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,total,currency,payment_status,created_at')
+      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,created_at')
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 

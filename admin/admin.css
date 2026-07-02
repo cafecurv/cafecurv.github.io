@@ -3437,6 +3437,7 @@ body.more-drawer-open {
 }
 
 .order-status-badge,
+.order-fulfillment-badge,
 .order-source-badge {
   border: 1px solid rgba(200, 184, 154, 0.36);
   border-radius: 999px;
@@ -3447,6 +3448,11 @@ body.more-drawer-open {
   letter-spacing: 1.35px;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.order-fulfillment-badge {
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
 }
 
 .order-source-badge {
@@ -3507,6 +3513,12 @@ body.more-drawer-open {
   justify-items: start;
 }
 
+.order-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .order-detail-notes {
   display: grid;
   gap: 0.35rem;
@@ -3521,6 +3533,62 @@ body.more-drawer-open {
   margin: 0;
   color: var(--slate);
   font-size: 0.78rem;
+}
+
+.order-delivery-details {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(200, 184, 154, 0.2);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.06);
+  padding: 0.85rem;
+}
+
+.order-delivery-details h4 {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.55px;
+  text-transform: uppercase;
+}
+
+.order-delivery-note {
+  margin: 0;
+  color: rgba(246, 239, 226, 0.86);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.order-delivery-grid {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.order-delivery-grid div {
+  min-width: 0;
+  border: 1px solid rgba(189, 196, 212, 0.12);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+  padding: 0.68rem;
+}
+
+.order-delivery-grid dt {
+  color: var(--accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1.35px;
+  text-transform: uppercase;
+}
+
+.order-delivery-grid dd {
+  margin: 0.22rem 0 0;
+  color: var(--cream);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .order-detail-items {
