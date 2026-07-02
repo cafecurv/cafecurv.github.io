@@ -3187,7 +3187,7 @@
         <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
       </div>
 
-      <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" hidden>Submit Order</button>
+      <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" disabled>Submit Order</button>
       <button class="submit-btn copy-fallback" onclick="copyOrder()" id="copyBtn" hidden>Copy Order Message</button>
       <div class="submit-status" id="submitOrderStatus" role="status" aria-live="polite"></div>
       <div class="after-submit-status" id="afterSubmitStatus" hidden></div>
@@ -7214,7 +7214,7 @@
     const submitButton = document.getElementById('submitOrderBtn');
     if (!submitButton) return;
     const enabled = isPublicOrderSubmitEnabled();
-    submitButton.hidden = !enabled;
+    submitButton.hidden = false;
     submitButton.disabled = !enabled;
     if (!enabled) setSubmitOrderStatus('');
   }
