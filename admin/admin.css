@@ -3591,6 +3591,53 @@ body.more-drawer-open {
   overflow-wrap: anywhere;
 }
 
+.order-payment-details {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(189, 196, 212, 0.14);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+  padding: 0.85rem;
+}
+
+.order-payment-details h4 {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.55px;
+  text-transform: uppercase;
+}
+
+.order-payment-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.order-payment-status-label,
+.order-payment-note {
+  color: var(--slate);
+  font-size: 0.78rem;
+}
+
+.order-payment-status-value {
+  color: var(--cream);
+  font-size: 0.9rem;
+}
+
+.order-payment-note {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.order-payment-button {
+  width: 100%;
+}
+
 .order-detail-items {
   display: grid;
   gap: 0.7rem;

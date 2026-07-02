@@ -5197,6 +5197,7 @@
   let selectedOrderId = '';
   let ordersLoading = false;
   let activeOrderAction = null;
+  let activePaymentAction = null;
   let ordersRealtimeChannel = null;
   let realtimeRefreshInFlight = false;
   let realtimeRefreshQueued = false;
@@ -5339,6 +5340,20 @@
     return status ? formatOptionLabel(status) : 'Not applicable';
   };
 
+  const normalizePaymentStatus = (status) => {
+    const cleanStatus = String(status || '').trim().toLowerCase();
+    return cleanStatus || 'unpaid';
+  };
+
+  const formatPaymentStatus = (status) => {
+    const cleanStatus = normalizePaymentStatus(status);
+    if (cleanStatus === 'unpaid') return 'Unpaid';
+    if (cleanStatus === 'pending') return 'Pending';
+    if (cleanStatus === 'paid') return 'Paid';
+    if (cleanStatus === 'refunded') return 'Refunded';
+    return formatOptionLabel(cleanStatus);
+  };
+
   const formatOptionLabel = (value) => String(value || '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -5479,7 +5494,6 @@
       ['Delivery fee', deliveryFee],
       ['Fee status', feeStatus],
       ['Final total', finalTotal],
-      ['Payment', formatOptionLabel(order.payment_status || 'unpaid')],
     ];
 
     const grid = makeElement('dl', 'order-delivery-grid');
@@ -5493,6 +5507,37 @@
       makeElement('p', 'order-delivery-note', deliveryNote),
       grid,
     );
+    return section;
+  };
+
+  const renderPaymentDetailsSection = (order) => {
+    const paymentStatus = normalizePaymentStatus(order && order.payment_status);
+    const section = makeElement('section', 'order-payment-details');
+    section.appendChild(makeElement('h4', '', 'Payment'));
+
+    const statusRow = makeElement('div', 'order-payment-status-row');
+    statusRow.append(
+      makeElement('span', 'order-payment-status-label', 'Status'),
+      makeElement('strong', 'order-payment-status-value', formatPaymentStatus(paymentStatus)),
+    );
+
+    const helper = makeElement('p', 'order-payment-note', 'Use only after payment is verified or COD is received.');
+    section.append(statusRow, helper);
+
+    if (paymentStatus === 'unpaid' || paymentStatus === 'pending' || paymentStatus === 'paid') {
+      const nextStatus = paymentStatus === 'paid' ? 'unpaid' : 'paid';
+      const isSaving = activePaymentAction
+        && activePaymentAction.orderId === order.id
+        && activePaymentAction.nextStatus === nextStatus;
+      const buttonClass = 'auth-button order-payment-button'
+        + (nextStatus === 'unpaid' ? ' auth-button-secondary' : '');
+      const button = makeElement('button', buttonClass, isSaving ? 'Saving...' : (nextStatus === 'paid' ? 'Mark Paid' : 'Mark Unpaid'));
+      button.type = 'button';
+      button.disabled = Boolean(activePaymentAction) || Boolean(activeOrderAction) || ordersLoading;
+      button.addEventListener('click', () => handlePaymentStatusAction(order, nextStatus));
+      section.appendChild(button);
+    }
+
     return section;
   };
 
@@ -5529,7 +5574,6 @@
       ['Fulfillment', getFulfillmentLabel(order)],
       [isDelivery ? 'Preferred time' : 'Pickup', order.pickup_time || (isDelivery ? '-' : 'Pickup')],
       ['Source', getOrderSource(order)],
-      ['Payment', formatOptionLabel(order.payment_status || 'unpaid')],
       [isDelivery ? 'Food & drinks subtotal' : 'Total', formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)],
     ];
 
@@ -5550,6 +5594,7 @@
 
     const deliveryDetails = renderDeliveryDetailsSection(order);
     if (deliveryDetails) detailNodes.push(deliveryDetails);
+    detailNodes.push(renderPaymentDetailsSection(order));
     detailNodes.push(renderOrderItemsSection(order));
 
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
@@ -5563,7 +5608,7 @@
           + (action.tone === 'cancel' ? ' auth-button-secondary is-cancel' : '');
         const button = makeElement('button', buttonClass, isSaving ? 'Saving...' : action.label);
         button.type = 'button';
-        button.disabled = Boolean(activeOrderAction) || ordersLoading;
+        button.disabled = Boolean(activeOrderAction) || Boolean(activePaymentAction) || ordersLoading;
         button.dataset.orderAction = action.nextStatus;
         button.addEventListener('click', () => handleOrderStatusAction(order, action));
         actionRow.appendChild(button);
@@ -5736,7 +5781,7 @@
 
   const handleOrderStatusAction = async (order, action) => {
     if (!order || !order.id || !action || !action.nextStatus || !action.timestampField) return;
-    if (activeOrderAction || ordersLoading) return;
+    if (activeOrderAction || activePaymentAction || ordersLoading) return;
 
     if (action.nextStatus === 'cancelled') {
       const shouldCancel = window.confirm('Cancel ' + (order.order_number || 'this order') + '?');
@@ -5778,6 +5823,31 @@
     setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
   };
 
+  const handlePaymentStatusAction = async (order, nextStatus) => {
+    if (!order || !order.id || !nextStatus) return;
+    if (activePaymentAction || activeOrderAction || ordersLoading) return;
+
+    activePaymentAction = { orderId: order.id, nextStatus };
+    renderOrderDetail(order);
+    setStatus((nextStatus === 'paid' ? 'Marking payment paid' : 'Marking payment unpaid') + '...');
+
+    const { error } = await client
+      .from('orders')
+      .update({ payment_status: nextStatus })
+      .eq('id', order.id);
+
+    if (error) {
+      activePaymentAction = null;
+      renderOrderDetail(order);
+      setStatus('Unable to update payment for ' + (order.order_number || 'order') + '. ' + error.message);
+      return;
+    }
+
+    activePaymentAction = null;
+    await loadOrders({ preserveSelection: true });
+    setStatus((order.order_number || 'Order') + ' payment marked ' + formatPaymentStatus(nextStatus).toLowerCase() + '.');
+  };
+
   const loadOrders = async ({ preserveSelection = false } = {}) => {
     if (!isOwnerSignedIn) {
       latestOrders = [];
@@ -5785,6 +5855,7 @@
       orderItemsByOrderId = new Map();
       orderItemsLoadError = '';
       selectedOrderId = '';
+      activePaymentAction = null;
       renderOrders();
       setStatus('Ready for owner sign in.');
       return;
