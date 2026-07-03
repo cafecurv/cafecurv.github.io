@@ -97,6 +97,36 @@
   let badgeRealtimeChannel = null;
   let orderToast = null;
   let orderToastTimer = null;
+  const unseenOrderStorageKey = 'curvIncomingOrdersUnseen';
+  let alertAudioUnlocked = false;
+  let alertAudioContext = null;
+
+  const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+
+  const readUnseenOrderKeys = () => {
+    try {
+      const stored = window.sessionStorage.getItem(unseenOrderStorageKey);
+      const keys = stored ? JSON.parse(stored) : [];
+      return new Set(Array.isArray(keys) ? keys.filter(Boolean) : []);
+    } catch (error) {
+      return new Set();
+    }
+  };
+
+  let unseenOrderKeys = readUnseenOrderKeys();
+
+  const persistUnseenOrderKeys = () => {
+    try {
+      window.sessionStorage.setItem(unseenOrderStorageKey, JSON.stringify(Array.from(unseenOrderKeys)));
+    } catch (error) {
+      // Session-only badge state is best-effort.
+    }
+  };
+
+  const getOrderAlertKey = (order) => {
+    if (!order) return '';
+    return String(order.id || order.order_number || order.created_at || '').trim();
+  };
 
   const setIncomingOrderBadge = (count) => {
     const safeCount = Math.max(0, Number(count || 0));
@@ -109,7 +139,56 @@
   };
 
   const hideIncomingOrderBadge = () => {
+    unseenOrderKeys.clear();
+    persistUnseenOrderKeys();
     setIncomingOrderBadge(0);
+  };
+
+  const noteUnseenIncomingOrder = (order) => {
+    const status = String(order && order.status || '').toLowerCase();
+    const key = getOrderAlertKey(order);
+    if (status !== 'submitted' || !key || getAdminPageName() === 'incoming-orders.html') {
+      hideIncomingOrderBadge();
+      return;
+    }
+    unseenOrderKeys.add(key);
+    persistUnseenOrderKeys();
+    setIncomingOrderBadge(unseenOrderKeys.size);
+  };
+
+  const unlockOrderAlertAudio = () => {
+    alertAudioUnlocked = true;
+  };
+
+  document.addEventListener('pointerdown', unlockOrderAlertAudio, { once: true, passive: true });
+  document.addEventListener('keydown', unlockOrderAlertAudio, { once: true });
+
+  const playNewOrderChime = () => {
+    if (!alertAudioUnlocked) return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      alertAudioContext = alertAudioContext || new AudioContext();
+      const context = alertAudioContext;
+      if (context.state === 'suspended') context.resume().catch(() => {});
+
+      const startAt = context.currentTime + 0.02;
+      [660, 880].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startAt + index * 0.11);
+        gain.gain.setValueAtTime(0.0001, startAt + index * 0.11);
+        gain.gain.exponentialRampToValueAtTime(0.055, startAt + index * 0.11 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + index * 0.11 + 0.18);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(startAt + index * 0.11);
+        oscillator.stop(startAt + index * 0.11 + 0.2);
+      });
+    } catch (error) {
+      // Browsers can block audio; visual alerts still carry the notification.
+    }
   };
 
   const dismissOrderToast = () => {
@@ -121,8 +200,6 @@
       if (orderToast && !orderToast.classList.contains('is-open')) orderToast.hidden = true;
     }, 180);
   };
-
-  const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
   const ensureOrderToast = () => {
     if (orderToast) return orderToast;
@@ -181,10 +258,11 @@
     if (title) title.textContent = 'New order received';
     if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
 
+    playNewOrderChime();
     toast.hidden = false;
     window.requestAnimationFrame(() => toast.classList.add('is-open'));
     if (orderToastTimer) window.clearTimeout(orderToastTimer);
-    orderToastTimer = window.setTimeout(dismissOrderToast, 6000);
+    orderToastTimer = window.setTimeout(dismissOrderToast, 8000);
   };
 
   const refreshIncomingOrderBadge = async () => {
@@ -192,22 +270,16 @@
     try {
       const { data: sessionData } = await badgeClient.auth.getSession();
       const isSignedIn = Boolean(sessionData && sessionData.session && sessionData.session.user);
-      if (!isSignedIn) {
+      if (!isSignedIn || getAdminPageName() === 'incoming-orders.html') {
         hideIncomingOrderBadge();
-        return false;
+        return isSignedIn;
       }
-
-      const { count, error } = await badgeClient
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'submitted');
-
-      if (!error) setIncomingOrderBadge(count || 0);
-      return !error;
     } catch (error) {
       hideIncomingOrderBadge();
       return false;
     }
+    setIncomingOrderBadge(unseenOrderKeys.size);
+    return true;
   };
 
   const unsubscribeFromBadgeRealtime = () => {
@@ -225,9 +297,13 @@
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
-          refreshIncomingOrderBadge();
           const eventType = String(payload && payload.eventType || '').toUpperCase();
-          if (eventType === 'INSERT') showNewOrderToast(payload.new);
+          if (eventType === 'INSERT') {
+            noteUnseenIncomingOrder(payload.new);
+            showNewOrderToast(payload.new);
+          } else {
+            refreshIncomingOrderBadge();
+          }
         },
       )
       .subscribe();
@@ -5201,6 +5277,8 @@
   let ordersRealtimeChannel = null;
   let realtimeRefreshInFlight = false;
   let realtimeRefreshQueued = false;
+  const recentlyReceivedOrderIds = new Set();
+  const recentlyReceivedOrderTimers = new Map();
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -5643,7 +5721,9 @@
     latestOrders.forEach((order) => {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'order-card' + (order.id === selectedOrderId ? ' is-selected' : '');
+      let cardClass = 'order-card' + (order.id === selectedOrderId ? ' is-selected' : '');
+      if (recentlyReceivedOrderIds.has(order.id)) cardClass += ' is-new-arrival';
+      card.className = cardClass;
       card.dataset.orderId = order.id || '';
 
       const head = makeElement('div', 'order-card-head');
@@ -5680,6 +5760,14 @@
       card.append(head, customer, meta);
       card.addEventListener('click', () => {
         selectedOrderId = order.id || '';
+        if (recentlyReceivedOrderIds.has(order.id)) {
+          recentlyReceivedOrderIds.delete(order.id);
+          if (recentlyReceivedOrderTimers.has(order.id)) {
+            window.clearTimeout(recentlyReceivedOrderTimers.get(order.id));
+            recentlyReceivedOrderTimers.delete(order.id);
+          }
+        }
+        if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
         renderOrders();
         renderOrderDetail(order);
       });
@@ -5908,6 +5996,21 @@
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+  const markRecentlyReceivedOrder = (order) => {
+    const orderId = order && order.id ? String(order.id) : '';
+    const incomingStatus = normalizeOrderStatus(order && order.status);
+    if (!orderId || incomingStatus !== 'submitted') return;
+    recentlyReceivedOrderIds.add(orderId);
+    if (recentlyReceivedOrderTimers.has(orderId)) {
+      window.clearTimeout(recentlyReceivedOrderTimers.get(orderId));
+    }
+    recentlyReceivedOrderTimers.set(orderId, window.setTimeout(() => {
+      recentlyReceivedOrderIds.delete(orderId);
+      recentlyReceivedOrderTimers.delete(orderId);
+      renderOrders();
+    }, 10000));
+  };
+
   const refreshOrdersFromRealtime = async (incomingOrder) => {
     if (!isOwnerSignedIn) return;
     if (realtimeRefreshInFlight) {
@@ -5918,6 +6021,7 @@
     realtimeRefreshInFlight = true;
     const incomingStatus = normalizeOrderStatus(incomingOrder && incomingOrder.status);
     try {
+      markRecentlyReceivedOrder(incomingOrder);
       await loadOrderSummary();
       if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
       if (!incomingStatus || incomingStatus === activeStatus) {
@@ -6056,6 +6160,9 @@
       setSignedInState(false);
       unsubscribeFromOrdersRealtime();
       closeOwnerAccountMenu();
+      recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
+      recentlyReceivedOrderTimers.clear();
+      recentlyReceivedOrderIds.clear();
       latestOrders = [];
       itemCountByOrderId = new Map();
       orderItemsByOrderId = new Map();
