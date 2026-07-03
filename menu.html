@@ -7425,19 +7425,20 @@
       button.disabled = isOrderSubmittedLocked;
     });
     const submitButton = document.getElementById('submitOrderBtn');
-    if (submitButton && isOrderSubmittedLocked) {
-      submitButton.disabled = true;
-      submitButton.textContent = 'Order Submitted';
+    if (submitButton) {
+      submitButton.hidden = false;
+      submitButton.disabled = isOrderSubmittedLocked || !isPublicOrderSubmitEnabled();
+      submitButton.textContent = isOrderSubmittedLocked ? 'Order Submitted' : 'Submit Order';
     }
     const copyButton = document.getElementById('copyBtn');
     if (copyButton) {
-      copyButton.hidden = isOrderSubmittedLocked;
-      copyButton.disabled = isOrderSubmittedLocked;
+      copyButton.hidden = true;
+      copyButton.disabled = true;
     }
     const openMessengerButton = document.getElementById('openMessengerBtn');
     if (openMessengerButton) {
-      openMessengerButton.hidden = isOrderSubmittedLocked;
-      openMessengerButton.disabled = isOrderSubmittedLocked;
+      openMessengerButton.hidden = true;
+      openMessengerButton.disabled = true;
     }
     renderCart();
   }
