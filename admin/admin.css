@@ -3375,6 +3375,9 @@ body.more-drawer-open {
 @media (max-width: 600px) {
   .incoming-order-summary,
   .order-detail-grid,
+  .order-customer-details .order-detail-section-grid,
+  .order-fulfillment-details .order-detail-section-grid,
+  .order-totals-details .order-detail-section-grid,
   .order-action-row {
     grid-template-columns: 1fr;
   }
@@ -3521,7 +3524,7 @@ body.more-drawer-open {
 }
 
 .order-detail-heading {
-  margin-bottom: 1rem;
+  margin-bottom: 0.9rem;
   display: grid;
   gap: 0.45rem;
   justify-items: start;
@@ -3533,14 +3536,63 @@ body.more-drawer-open {
   gap: 0.35rem;
 }
 
+.order-detail-section,
 .order-detail-notes {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.72rem;
   margin-top: 1rem;
   border: 1px solid rgba(189, 196, 212, 0.12);
   border-radius: 8px;
   background: rgba(20, 24, 36, 0.28);
-  padding: 0.75rem;
+  padding: 0.85rem;
+}
+
+.order-detail-section h4 {
+  margin: 0;
+  color: var(--accent);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.55px;
+  text-transform: uppercase;
+}
+
+.order-detail-section-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.order-detail-section-grid div {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.order-detail-section-grid dt {
+  color: var(--slate);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 1.25px;
+  text-transform: uppercase;
+}
+
+.order-detail-section-grid dd {
+  margin: 0;
+  color: var(--cream);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.order-customer-details .order-detail-section-grid,
+.order-fulfillment-details .order-detail-section-grid,
+.order-totals-details .order-detail-section-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.order-detail-section.order-detail-items {
+  border-color: rgba(200, 184, 154, 0.2);
+  background: rgba(200, 184, 154, 0.055);
 }
 
 .order-detail-notes p {
@@ -3550,23 +3602,8 @@ body.more-drawer-open {
 }
 
 .order-delivery-details {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
   border: 1px solid rgba(200, 184, 154, 0.2);
-  border-radius: 8px;
   background: rgba(200, 184, 154, 0.06);
-  padding: 0.85rem;
-}
-
-.order-delivery-details h4 {
-  margin: 0;
-  color: var(--accent);
-  font-family: 'Jost', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 1.55px;
-  text-transform: uppercase;
 }
 
 .order-delivery-note {
@@ -3605,26 +3642,6 @@ body.more-drawer-open {
   overflow-wrap: anywhere;
 }
 
-.order-payment-details {
-  display: grid;
-  gap: 0.7rem;
-  margin-top: 1rem;
-  border: 1px solid rgba(189, 196, 212, 0.14);
-  border-radius: 8px;
-  background: rgba(20, 24, 36, 0.28);
-  padding: 0.85rem;
-}
-
-.order-payment-details h4 {
-  margin: 0;
-  color: var(--accent);
-  font-family: 'Jost', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 1.55px;
-  text-transform: uppercase;
-}
-
 .order-payment-status-row {
   display: flex;
   align-items: center;
@@ -3652,35 +3669,17 @@ body.more-drawer-open {
   width: 100%;
 }
 
-.order-detail-items {
-  display: grid;
-  gap: 0.7rem;
-  margin-top: 1rem;
-  border-top: 1px solid rgba(189, 196, 212, 0.14);
-  padding-top: 1rem;
-}
-
-.order-detail-items h4 {
-  margin: 0;
-  color: var(--accent);
-  font-family: 'Jost', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 1.55px;
-  text-transform: uppercase;
-}
-
 .order-detail-item-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.72rem;
 }
 
 .order-detail-item {
   min-width: 0;
-  border: 1px solid rgba(189, 196, 212, 0.12);
+  border: 1px solid rgba(200, 184, 154, 0.18);
   border-radius: 8px;
-  background: rgba(20, 24, 36, 0.28);
-  padding: 0.78rem;
+  background: rgba(20, 24, 36, 0.34);
+  padding: 0.86rem;
 }
 
 .order-detail-item-head {
@@ -3690,14 +3689,28 @@ body.more-drawer-open {
   gap: 0.75rem;
 }
 
-.order-detail-item-head strong,
+.order-detail-item-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.order-detail-item-quantity {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.order-detail-item-title strong,
 .order-detail-item-head span {
   min-width: 0;
   color: var(--cream);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
 }
 
-.order-detail-item-head strong {
+.order-detail-item-title strong {
   font-weight: 700;
   overflow-wrap: anywhere;
 }
@@ -3713,7 +3726,7 @@ body.more-drawer-open {
 .order-detail-item-options,
 .order-detail-item-note,
 .order-detail-items-empty {
-  margin: 0.38rem 0 0;
+  margin: 0.45rem 0 0;
   color: var(--slate);
   font-size: 0.78rem;
   line-height: 1.45;

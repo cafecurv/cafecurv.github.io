@@ -5394,6 +5394,27 @@
 
   const getFulfillmentLabel = (order) => getFulfillmentType(order) === 'delivery' ? 'Delivery' : 'Pick-up';
 
+  const getDetailedFulfillmentLabel = (order) => {
+    if (getFulfillmentType(order) !== 'delivery') return 'Pick-up';
+    const deliveryOption = formatDeliveryOption(order && order.delivery_option);
+    return deliveryOption && deliveryOption !== '-' ? 'Delivery - ' + deliveryOption : 'Delivery';
+  };
+
+  const getCustomerTypeLabel = (order) => {
+    const deliveryAddress = String(order && order.delivery_address ? order.delivery_address : '').trim().toLowerCase();
+    if (deliveryAddress === 'returning customer') return 'Returning customer';
+    return 'New customer';
+  };
+
+  const formatPaymentMethod = (value) => {
+    const method = String(value || '').trim();
+    if (!method) return '-';
+    const normalized = method.toLowerCase();
+    if (normalized === 'cod') return 'COD';
+    if (normalized === 'gcash') return 'GCash';
+    return formatOptionLabel(method);
+  };
+
   const isDeliveryConfirmationComplete = (order) => {
     const status = normalizeOrderStatus(order && order.status);
     const feeStatus = String(order && order.delivery_fee_status ? order.delivery_fee_status : '').trim().toLowerCase();
@@ -5483,6 +5504,23 @@
     return element;
   };
 
+  const renderDetailSection = (title, rows, className = '') => {
+    const section = makeElement('section', 'order-detail-section' + (className ? ' ' + className : ''));
+    section.appendChild(makeElement('h4', '', title));
+
+    const grid = makeElement('dl', 'order-detail-section-grid');
+    rows
+      .filter(row => row && row[1] !== null && row[1] !== undefined && row[1] !== '')
+      .forEach(([label, value]) => {
+        const row = document.createElement('div');
+        row.append(makeElement('dt', '', label), makeElement('dd', '', value));
+        grid.appendChild(row);
+      });
+
+    section.appendChild(grid);
+    return section;
+  };
+
   const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
 
   const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, fulfillment, payment, and total details will appear here after selecting an order.') => {
@@ -5503,7 +5541,7 @@
   };
 
   const renderOrderItemsSection = (order) => {
-    const section = makeElement('section', 'order-detail-items');
+    const section = makeElement('section', 'order-detail-section order-detail-items');
     section.appendChild(makeElement('h4', '', 'Items'));
 
     if (orderItemsLoadError) {
@@ -5523,21 +5561,26 @@
       const quantityLabel = (quantity > 0 ? quantity : 1) + 'x';
       const card = makeElement('article', 'order-detail-item');
       const itemHead = makeElement('div', 'order-detail-item-head');
+      const itemTitle = makeElement('div', 'order-detail-item-title');
+      itemTitle.append(
+        makeElement('span', 'order-detail-item-quantity', quantityLabel),
+        makeElement('strong', '', item.product_name || 'Menu item'),
+      );
       itemHead.append(
-        makeElement('strong', '', quantityLabel + ' ' + (item.product_name || 'Menu item')),
+        itemTitle,
         makeElement('span', '', formatCurrency(item.line_total, order.currency)),
       );
 
       const metaParts = [];
       if (item.variant_label) metaParts.push(item.variant_label);
-      metaParts.push(formatCurrency(item.unit_price, order.currency));
+      metaParts.push('Unit ' + formatCurrency(item.unit_price, order.currency));
       if (item.category_name) metaParts.push(item.category_name);
 
-      card.append(itemHead, makeElement('p', 'order-detail-item-meta', metaParts.filter(Boolean).join(' / ')));
+      card.append(itemHead, makeElement('p', 'order-detail-item-meta', metaParts.filter(Boolean).join(' · ')));
 
       const optionLines = formatOrderItemOptions(item.options);
       if (optionLines.length) {
-        card.appendChild(makeElement('p', 'order-detail-item-options', 'Options: ' + optionLines.join(' / ')));
+        card.appendChild(makeElement('p', 'order-detail-item-options', 'Options: ' + optionLines.join(' · ')));
       }
 
       if (item.item_note) {
@@ -5554,43 +5597,48 @@
   const renderDeliveryDetailsSection = (order) => {
     if (getFulfillmentType(order) !== 'delivery') return null;
 
-    const section = makeElement('section', 'order-delivery-details');
-    section.appendChild(makeElement('h4', '', 'Delivery Details'));
-
     const isConfirmed = isDeliveryConfirmationComplete(order);
     const deliveryFee = order.delivery_fee === null || order.delivery_fee === undefined
-      ? (isConfirmed ? 'Confirmed manually' : 'To be confirmed')
+      ? 'To be confirmed'
       : formatCurrency(order.delivery_fee, order.currency);
     const feeStatus = isConfirmed ? 'Confirmed' : formatDeliveryFeeStatus(order.delivery_fee_status);
-    const finalTotal = isConfirmed ? 'Confirmed via Messenger' : 'Confirm via Messenger';
     const deliveryNote = isConfirmed
-      ? 'Delivery fee, final total, and payment/COD acknowledgement were confirmed before accepting.'
-      : 'Confirm delivery fee, final total, and payment/COD acknowledgement in Messenger before accepting.';
+      ? 'Delivery fee and actual total should match the Loyverse receipt preview sent in Messenger.'
+      : 'Confirm delivery fee and actual total in Loyverse/Messenger before accepting.';
     const rows = [
-      ['Method', formatDeliveryOption(order.delivery_option)],
+      ['Delivery method', formatDeliveryOption(order.delivery_option)],
       ['Address', order.delivery_address || '-'],
       ['Delivery fee', deliveryFee],
       ['Fee status', feeStatus],
-      ['Final total', finalTotal],
     ];
 
-    const grid = makeElement('dl', 'order-delivery-grid');
-    rows.forEach(([label, value]) => {
-      const row = document.createElement('div');
-      row.append(makeElement('dt', '', label), makeElement('dd', '', value));
-      grid.appendChild(row);
-    });
-
-    section.append(
-      makeElement('p', 'order-delivery-note', deliveryNote),
-      grid,
-    );
+    const section = renderDetailSection('Delivery Details', rows, 'order-delivery-details');
+    section.insertBefore(makeElement('p', 'order-delivery-note', deliveryNote), section.querySelector('.order-detail-section-grid'));
     return section;
+  };
+
+  const renderTotalsSection = (order) => {
+    const isDelivery = getFulfillmentType(order) === 'delivery';
+    const subtotal = Number(order.subtotal || order.total || 0);
+    const hasDeliveryFee = order.delivery_fee !== null && order.delivery_fee !== undefined;
+    const deliveryFee = hasDeliveryFee ? Number(order.delivery_fee || 0) : 0;
+    const rows = [
+      ['Order subtotal', formatCurrency(subtotal, order.currency)],
+    ];
+
+    if (isDelivery) {
+      rows.push(['Delivery fee', hasDeliveryFee ? formatCurrency(deliveryFee, order.currency) : 'To be confirmed']);
+      rows.push(['Actual total', hasDeliveryFee ? formatCurrency(subtotal + deliveryFee, order.currency) : 'To be confirmed']);
+    } else {
+      rows.push(['Order total', formatCurrency(order.total || subtotal, order.currency)]);
+    }
+
+    return renderDetailSection('Totals', rows, 'order-totals-details');
   };
 
   const renderPaymentDetailsSection = (order) => {
     const paymentStatus = normalizePaymentStatus(order && order.payment_status);
-    const section = makeElement('section', 'order-payment-details');
+    const section = makeElement('section', 'order-detail-section order-payment-details');
     section.appendChild(makeElement('h4', '', 'Payment'));
 
     const statusRow = makeElement('div', 'order-payment-status-row');
@@ -5630,13 +5678,12 @@
     orderDetail.innerHTML = '';
     const heading = makeElement('div', 'order-detail-heading');
     heading.append(
-      makeElement('p', 'eyebrow', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('h3', '', order.order_number || 'Order'),
     );
 
     const headingBadges = makeElement('div', 'order-detail-badges');
     headingBadges.append(
-      makeElement('span', 'order-fulfillment-badge', getFulfillmentLabel(order)),
+      makeElement('span', 'order-status-badge', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('span', 'order-source-badge', getOrderSource(order)),
     );
     heading.appendChild(headingBadges);
@@ -5644,24 +5691,26 @@
     const createdDisplay = formatOrderDate(order.created_at);
     const ageDisplay = formatOrderAge(order.created_at);
     const isDelivery = getFulfillmentType(order) === 'delivery';
-    const grid = makeElement('dl', 'order-detail-grid');
-    const details = [
-      ['Customer', order.customer_name || '-'],
-      ['Phone', order.customer_phone || '-'],
+    const headerSection = renderDetailSection('Order', [
+      ['Status', STATUS_LABELS[statusKey] || order.status || 'Order'],
       ['Created', ageDisplay ? ageDisplay + ' / ' + createdDisplay : createdDisplay],
-      ['Fulfillment', getFulfillmentLabel(order)],
-      [isDelivery ? 'Preferred time' : 'Pickup', order.pickup_time || (isDelivery ? '-' : 'Pickup')],
-      ['Source', getOrderSource(order)],
-      [isDelivery ? 'Food & drinks subtotal' : 'Total', formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)],
+    ], 'order-header-details');
+    const customerSection = renderDetailSection('Customer', [
+      ['Name', order.customer_name || '-'],
+      ['Phone', order.customer_phone || '-'],
+      ['Customer type', isDelivery ? getCustomerTypeLabel(order) : null],
+      ['Payment method', formatPaymentMethod(order.payment_method)],
+      ['Payment status', formatPaymentStatus(order.payment_status)],
+    ], 'order-customer-details');
+    const fulfillmentRows = [
+      ['Method', getDetailedFulfillmentLabel(order)],
+      [isDelivery ? 'Preferred delivery time' : 'Preferred pickup time', order.pickup_time || '-'],
     ];
-
-    details.forEach(([label, value]) => {
-      const row = document.createElement('div');
-      row.append(makeElement('dt', '', label), makeElement('dd', '', value));
-      grid.appendChild(row);
-    });
-
-    const detailNodes = [heading, grid];
+    if (isDelivery) {
+      fulfillmentRows.splice(1, 0, ['Address', order.delivery_address || '-']);
+    }
+    const fulfillmentSection = renderDetailSection('Fulfillment', fulfillmentRows, 'order-fulfillment-details');
+    const detailNodes = [heading, headerSection, customerSection, fulfillmentSection];
 
     if (order.customer_email || order.customer_notes) {
       const notes = makeElement('div', 'order-detail-notes');
@@ -5672,8 +5721,9 @@
 
     const deliveryDetails = renderDeliveryDetailsSection(order);
     if (deliveryDetails) detailNodes.push(deliveryDetails);
-    detailNodes.push(renderPaymentDetailsSection(order));
     detailNodes.push(renderOrderItemsSection(order));
+    detailNodes.push(renderTotalsSection(order));
+    detailNodes.push(renderPaymentDetailsSection(order));
 
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
     if (actions.length) {
@@ -5957,7 +6007,7 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,created_at')
+      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,created_at')
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 
