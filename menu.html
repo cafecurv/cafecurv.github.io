@@ -7199,15 +7199,9 @@
   let isSubmittingPublicOrder = false;
   let lastSubmittedPublicOrderSignature = '';
 
-  // Submit Order is gated until CURV is ready to launch live online ordering.
+  // Public online ordering is intentionally enabled for launch.
   function isPublicOrderSubmitEnabled() {
-    const params = new URLSearchParams(window.location.search);
-    const host = window.location.hostname;
-    return window.location.protocol === 'file:'
-      || host === 'localhost'
-      || host === '127.0.0.1'
-      || host === '::1'
-      || params.get('enableSubmitOrder') === '1';
+    return true;
   }
 
   function syncPublicOrderSubmitGate() {
