@@ -485,6 +485,14 @@
 
   .add-btn:active { transform: scale(0.9); background: #2e3a5c; }
 
+  .add-btn:disabled,
+  .add-btn-pill:disabled,
+  .panel-add-btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   .add-btn-rl {
     display: flex;
     align-items: center;
@@ -597,6 +605,12 @@
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
+  }
+
+  .menu-item-badge.is-sold-out {
+    border-color: rgba(93, 101, 126, 0.35);
+    background: rgba(93, 101, 126, 0.1);
+    color: var(--gray-mid);
   }
 
   /* ── ORDER BAR ── */
@@ -1874,6 +1888,21 @@
     border-color: var(--accent);
   }
 
+  .product-card.is-sold-out,
+  .menu-item.is-sold-out {
+    opacity: 0.62;
+  }
+
+  .product-card.is-sold-out {
+    cursor: not-allowed;
+  }
+
+  .product-card.is-sold-out:hover,
+  .product-card.is-sold-out:focus-visible {
+    border-color: var(--bg3);
+    box-shadow: 0 10px 28px rgba(20, 24, 36, 0.06);
+  }
+
   .product-card:hover .product-card-action,
   .product-card:focus-visible .product-card-action {
     color: var(--navy);
@@ -1944,6 +1973,10 @@
     text-transform: uppercase;
     color: var(--gray-mid);
     transition: color 0.2s ease;
+  }
+
+  .product-card.is-sold-out .product-card-action {
+    color: var(--gray-mid);
   }
 
   .product-card-action-open {
@@ -3760,6 +3793,7 @@
           desc: product.description || '',
           img: product.image_url || null,
           variants: variantMap.variants,
+          is_sold_out: Boolean(product.is_sold_out),
           type: variantMap.type,
           badge_labels: getPublicProductBadgeLabels(product),
           menu_group: product.menu_group,
@@ -3786,6 +3820,7 @@
         name,
         badge: product.is_seasonal ? 'Seasonal' : (product.is_curv_pick ? 'CURV Pick' : null),
         badge_labels: getPublicProductBadgeLabels(product),
+        is_sold_out: Boolean(product.is_sold_out),
         desc: product.description || '',
         reg: priceMap.reg,
         lrg: priceMap.lrg,
@@ -4371,6 +4406,7 @@
         img: product.image_url || hardcodedItem.img,
         is_curv_pick: !!product.is_curv_pick,
         is_seasonal: !!product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -4704,6 +4740,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
@@ -4800,6 +4837,7 @@
   }
 
   function renderProductCard(item, sectionId) {
+    const soldOut = Boolean(item && item.is_sold_out);
     const piecePrices = Array.isArray(item.pieces) ? item.pieces.map(piece => Number(piece.price)) : [];
     const prices = [Number(item.reg), Number(item.lrg), Number(item.price), ...piecePrices].filter(price => Number.isFinite(price) && price >= 0);
     const startingPrice = prices.length ? Math.min(...prices) : null;
@@ -4810,15 +4848,22 @@
     const priceHtml = startingPrice !== null
       ? `<span class="product-card-price">From ₱${startingPrice}</span>`
       : '';
+    const cardClass = soldOut ? 'product-card is-sold-out' : 'product-card';
+    const soldOutAttrs = soldOut ? ' disabled aria-disabled="true" data-sold-out="true"' : '';
+    const actionClosed = soldOut ? 'Currently Sold Out' : 'Customize ↓';
+    const openActionHtml = soldOut
+      ? ''
+      : '<span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>';
+    const clickAttr = soldOut ? '' : ` onclick="openProductPanel('${escapeMenuHtml(item.id)}')"`;
 
     return `
-      <button type="button" class="product-card" data-section="${escapeMenuHtml(sectionId)}" onclick="openProductPanel('${escapeMenuHtml(item.id)}')">
+      <button type="button" class="${cardClass}" data-section="${escapeMenuHtml(sectionId)}"${soldOutAttrs}${clickAttr}>
         ${thumbHtml}
         <span class="product-card-info">
           <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
           ${descHtml}
-          <span class="product-card-action product-card-action-closed">Customize ↓</span>
-          <span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>
+          <span class="product-card-action product-card-action-closed">${actionClosed}</span>
+          ${openActionHtml}
         </span>
         ${priceHtml}
       </button>`;
@@ -5013,6 +5058,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
@@ -5409,6 +5455,7 @@
         pieces: pieceMap.pieces,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         has_spicy: expectedItem.has_spicy,
         has_addons: expectedItem.has_addons,
@@ -5644,6 +5691,7 @@
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -5766,6 +5814,7 @@
         img: product.image_url || meta.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         variants: variantMap.variants,
         category_section_id: product.category_section_id || null,
@@ -5781,18 +5830,20 @@
   }
 
   function renderSaladBarProduct(item) {
+    const soldOut = Boolean(item && item.is_sold_out);
     const imgHtml = item.img
       ? `<img class="salad-row-img" src="${item.img}" alt="" loading="lazy">`
       : '';
     const descHtml = item.desc ? `<div class="item-desc">${item.desc}</div>` : '';
+    const soldOutAttr = soldOut ? ' disabled aria-disabled="true"' : '';
     const priceHtml = item.variants.length === 1
-      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn" onclick="addItem('${item.name}', '', ${item.variants[0].price}, this)">+</button></div>`
+      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${soldOutAttr} onclick="addItem('${item.name}', '', ${item.variants[0].price}, this)">+</button></div>`
       : item.variants.map(variant =>
-          `<div class="price-row"><span class="price-pieces">${variant.label} <strong>₱${variant.price}</strong></span><button class="add-btn-pill" onclick="addItem('${item.name}', '${variant.label}', ${variant.price}, this)">+</button></div>`
+          `<div class="price-row"><span class="price-pieces">${variant.label} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${soldOutAttr} onclick="addItem('${item.name}', '${variant.label}', ${variant.price}, this)">+</button></div>`
         ).join('');
 
     const rowHtml = `
-      <div class="menu-item salad-product-card">
+      <div class="menu-item salad-product-card${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' data-sold-out="true"' : ''}>
         ${imgHtml}
         <div class="item-info">
           <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
@@ -5874,11 +5925,17 @@
 
   function renderProductBadges(item) {
     const labels = getPublicProductBadgeLabels(item);
-    if (!labels.length) return '';
+    const soldOut = Boolean(item && item.is_sold_out);
+    if (!labels.length && !soldOut) return '';
 
-    return `<span class="menu-item-badges">${labels
+    const badgeHtml = labels
       .map(label => `<span class="menu-item-badge">${escapeMenuHtml(label)}</span>`)
-      .join('')}</span>`;
+      .join('');
+    const soldOutHtml = soldOut
+      ? '<span class="menu-item-badge is-sold-out">Currently Sold Out</span>'
+      : '';
+
+    return `<span class="menu-item-badges">${badgeHtml}${soldOutHtml}</span>`;
   }
 
   function renderMenuItemNameWithBadges(item) {
@@ -5941,6 +5998,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_sold_out: Boolean(product.is_sold_out),
         badge_labels: getPublicProductBadgeLabels(product),
         variant_group_name: product.variant_group_name,
         variants: variantMap.variants
@@ -5951,19 +6009,21 @@
   }
 
   function renderPastryProduct(item) {
+    const soldOut = Boolean(item && item.is_sold_out);
     const safeName = escapeMenuHtml(item.name);
     const imgHtml = item.img
       ? `<img class="pastry-row-img" src="${escapeMenuHtml(item.img)}" alt="" loading="lazy">`
       : '';
     const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
+    const soldOutAttr = soldOut ? ' disabled aria-disabled="true"' : '';
     const priceHtml = item.variants.length === 1
-      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn" onclick='addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)'>+</button></div>`
+      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${soldOutAttr} onclick='addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)'>+</button></div>`
       : item.variants.map(variant =>
-          `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill" onclick='addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)'>+</button></div>`
+          `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${soldOutAttr} onclick='addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)'>+</button></div>`
         ).join('');
 
     return `
-      <div class="menu-item">
+      <div class="menu-item${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' data-sold-out="true"' : ''}>
         ${imgHtml}
         <div class="item-info">
           <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
@@ -6257,6 +6317,7 @@
         panelId: panelInfo.panelId,
         defaultOptions: panelInfo.defaultOptions || {},
         variants: variantMap.variants,
+        is_sold_out: Boolean(product.is_sold_out),
         sort_order: Number(product.sort_order) || 0
       });
     }
@@ -6275,15 +6336,17 @@
   }
 
   function renderCurvPickAddButton(item, variant, buttonClass = 'add-btn') {
+    const soldOut = Boolean(item && item.is_sold_out);
     const options = item.defaultOptions && Object.keys(item.defaultOptions).length
       ? `, ${JSON.stringify(item.defaultOptions)}`
       : '';
     const call = `addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.cartLabel)}, ${variant.price}, this${options})`;
-    return `<button class="${buttonClass}" onclick='${escapeMenuHtml(call)}'>+</button>`;
+    return `<button class="${buttonClass}"${soldOut ? ' disabled aria-disabled="true"' : ''} onclick='${escapeMenuHtml(call)}'>+</button>`;
   }
 
   function renderCurvPickItem(item) {
     const canOpenPanel = item.sectionId && item.panelId;
+    const soldOut = Boolean(item && item.is_sold_out);
     const prices = (item.variants || []).map(variant => Number(variant.price)).filter(price => Number.isFinite(price));
     const startingPrice = prices.length ? Math.min(...prices) : null;
     const thumbHtml = item.img
@@ -6291,15 +6354,16 @@
       : `<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>`;
     const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
     const priceText = startingPrice !== null ? `<span class="product-card-price">From ₱${startingPrice}</span>` : '';
+    const soldOutAttrs = soldOut ? ' aria-disabled="true" data-sold-out="true"' : '';
 
     if (canOpenPanel) {
       return `
-      <button type="button" class="product-card curv-pick-card" onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')">
+      <button type="button" class="product-card curv-pick-card${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' disabled' : ''}${soldOutAttrs}${soldOut ? '' : ` onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')"`}>
         ${thumbHtml}
         <span class="product-card-info">
-          <span class="item-name">${escapeMenuHtml(item.name)}</span>
+          <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
           ${descHtml}
-          <span class="product-card-action">Customize</span>
+          <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Customize'}</span>
         </span>
         ${priceText}
       </button>`;
@@ -6313,12 +6377,12 @@
         ).join('');
 
     return `
-      <div class="product-card curv-pick-card curv-pick-quick-card">
+      <div class="product-card curv-pick-card curv-pick-quick-card${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' data-sold-out="true"' : ''}>
         ${thumbHtml}
         <div class="product-card-info">
-          <div class="item-name">${escapeMenuHtml(item.name)}</div>
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
-          <span class="product-card-action">Add</span>
+          <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Add'}</span>
         </div>
         <div class="item-right">${priceHtml}</div>
       </div>`;
@@ -6609,6 +6673,7 @@
 
   function panelAddToCart(id, name) {
     if (isOrderSubmittedLocked) return;
+    if (isSoldOutProductName(name)) return;
     if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
     const qty     = panelState[id].qty;
     const options = getPanelOptions(id);
@@ -6812,6 +6877,7 @@
 
   function addItem(name, variant, price, btn, options = {}) {
     if (isOrderSubmittedLocked) return;
+    if (isSoldOutProductName(name) || isSoldOutAddContext(btn)) return;
     const key = buildCartKey(name, variant, null, options);
     const existing = cart.find(i => i.key === key);
     if (existing) {
@@ -6832,9 +6898,11 @@
       setOrderBar(false);
     }
 
-    btn.classList.remove('pop');
-    void btn.offsetWidth;
-    btn.classList.add('pop');
+    if (btn) {
+      btn.classList.remove('pop');
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+    }
   }
 
   function removeItem(key) {
@@ -7751,6 +7819,30 @@
   let publicMenuFetchStarted = false;
   let latestPublicMenuOptions = null;
   let publicMenuSupabaseClient = null;
+  const soldOutProductNames = new Set();
+
+  function getSoldOutProductKey(name) {
+    return normalizePublicMenuText(name);
+  }
+
+  function registerSoldOutProductName(name, isSoldOut) {
+    const key = getSoldOutProductKey(name);
+    if (!key) return;
+    if (isSoldOut) soldOutProductNames.add(key);
+    else soldOutProductNames.delete(key);
+  }
+
+  function isSoldOutProductName(name) {
+    const key = getSoldOutProductKey(name);
+    return key ? soldOutProductNames.has(key) : false;
+  }
+
+  function isSoldOutAddContext(btn) {
+    return Boolean(btn && (
+      btn.disabled ||
+      btn.closest('[data-sold-out="true"], .is-sold-out')
+    ));
+  }
 
   function getPublicSupabaseClient() {
     if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
@@ -7802,6 +7894,8 @@
   }
 
   function shapePublicMenuData(categories = [], products = [], productSizes = [], categorySections = []) {
+    soldOutProductNames.clear();
+
     const variantsByProduct = productSizes.reduce((map, size) => {
       if (!map[size.product_id]) map[size.product_id] = [];
       map[size.product_id].push({
@@ -7822,6 +7916,7 @@
       image_url: product.image_url,
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
+      is_sold_out: Boolean(product.is_sold_out),
       badge_labels: getPublicProductBadgeLabels(product),
       variant_group_name: product.variant_group_name,
       menu_group: product.menu_group || null,
@@ -7829,6 +7924,8 @@
       sort_order: product.sort_order,
       variants: variantsByProduct[product.id] || []
     }));
+
+    productsWithVariants.forEach(product => registerSoldOutProductName(product.name, product.is_sold_out));
 
     const productsByCategory = productsWithVariants.reduce((map, product) => {
       if (!map[product.category_id]) map[product.category_id] = [];
@@ -8000,7 +8097,7 @@
           .order('name', { ascending: true }),
         client
           .from('public_menu_products')
-          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,variant_group_name,menu_group,sort_order,badge_labels')
+          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,is_sold_out,variant_group_name,menu_group,sort_order,badge_labels')
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
         client

@@ -716,6 +716,7 @@
       description: String(formData.get('description') || '').trim(),
       notes: String(formData.get('notes') || '').trim(),
       is_available: formData.get('is_available') === 'on',
+      is_sold_out: formData.get('is_sold_out') === 'on',
       is_curv_pick: formData.get('is_curv_pick') === 'on',
       is_seasonal: formData.get('is_seasonal') === 'on',
       badge_labels: productBadgeLabels.slice(),
@@ -1786,6 +1787,8 @@
     if (customVariantInput) customVariantInput.value = '';
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
+    const soldOutInput = draftForm ? draftForm.querySelector('[name="is_sold_out"]') : null;
+    if (soldOutInput) soldOutInput.checked = false;
     resetVariantRows();
     setCreateMode();
     syncVariantGroupFields();
@@ -2477,6 +2480,7 @@
       badges.className = 'display-order-badges';
       badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
       badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
+      if (product.is_sold_out) badges.appendChild(makeBadge('Sold Out', 'is-muted'));
 
       const moveControls = document.createElement('div');
       moveControls.className = 'display-order-move-controls';
@@ -3379,6 +3383,7 @@
       badges.className = 'product-badge-row';
       badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
       badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
+      if (product.is_sold_out) badges.appendChild(makeBadge('Sold Out', 'is-muted'));
       if (product.is_curv_pick) badges.appendChild(makeBadge('CURV Pick', 'is-special'));
       if (product.is_seasonal) badges.appendChild(makeBadge('Seasonal', 'is-special'));
       top.append(titleWrap, badges);
@@ -3501,6 +3506,7 @@
     draftForm.elements.notes.value = product.notes || '';
     setProductBadges(product.badge_labels);
     draftForm.elements.is_available.checked = Boolean(product.is_available);
+    draftForm.elements.is_sold_out.checked = Boolean(product.is_sold_out);
     draftForm.elements.is_curv_pick.checked = Boolean(product.is_curv_pick);
     draftForm.elements.is_seasonal.checked = Boolean(product.is_seasonal);
 
@@ -4288,7 +4294,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_sold_out,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -4399,6 +4405,7 @@
         notes: String(formData.get('notes') || '').trim() || null,
         badge_labels: productBadgeLabels.slice(),
         is_available: formData.get('is_available') === 'on',
+        is_sold_out: formData.get('is_sold_out') === 'on',
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
         is_published: false,
@@ -4451,6 +4458,7 @@
       notes: draft.notes,
       badge_labels: draft.badge_labels,
       is_available: draft.is_available,
+      is_sold_out: draft.is_sold_out,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
       is_published: finalPublishedState,
