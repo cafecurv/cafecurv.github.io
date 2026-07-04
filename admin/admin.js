@@ -526,6 +526,13 @@
   const PRODUCT_BADGE_MAX_COUNT = 3;
   const PRODUCT_BADGE_MAX_LENGTH = 24;
 
+  const normalizeCategoryName = (name) => String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const isCurvPicksCategory = (category) => normalizeCategoryName(category && category.name) === 'curv picks';
+
+  const getRealMenuCategories = (categories = latestCategories) => (Array.isArray(categories) ? categories : [])
+    .filter((category) => !isCurvPicksCategory(category));
+
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
     && SUPABASE_URL.startsWith('https://')
@@ -1058,7 +1065,7 @@
   const getDraftCategoryId = () => {
     const categoryId = draftCategorySelect ? draftCategorySelect.value : '';
     if (!categoryId || categoryId === '__create_category__') return '';
-    return latestCategories.some((category) => category.id === categoryId) ? categoryId : '';
+    return getRealMenuCategories().some((category) => category.id === categoryId) ? categoryId : '';
   };
 
   const syncDraftSectionSelectDisabled = () => {
@@ -1799,9 +1806,10 @@
 
   const populateDraftCategorySelect = (categories) => {
     if (!draftCategorySelect) return;
+    const realCategories = getRealMenuCategories(categories);
     const currentValue = draftCategorySelect.value;
     draftCategorySelect.innerHTML = '<option value="">Select a category</option>';
-    categories.forEach((category) => {
+    realCategories.forEach((category) => {
       const option = document.createElement('option');
       option.value = category.id;
       option.textContent = category.name;
@@ -1811,7 +1819,7 @@
     createOption.value = '__create_category__';
     createOption.textContent = '+ Add new category...';
     draftCategorySelect.appendChild(createOption);
-    if (currentValue && categories.some((category) => category.id === currentValue)) {
+    if (currentValue && realCategories.some((category) => category.id === currentValue)) {
       draftCategorySelect.value = currentValue;
     }
     updateCategoryActionButtons();
@@ -1819,7 +1827,7 @@
 
   const getSelectedProductListCategoryId = () => {
     if (!selectedCategoryFilter || selectedCategoryFilter === 'all') return '';
-    return latestCategories.some((category) => category.id === selectedCategoryFilter && category.is_active !== false)
+    return getRealMenuCategories().some((category) => category.id === selectedCategoryFilter && category.is_active !== false)
       ? selectedCategoryFilter
       : '';
   };
@@ -2248,15 +2256,16 @@
 
   const populateDisplayOrderCategorySelect = (categories) => {
     if (!displayOrderCategorySelect) return;
+    const realCategories = getRealMenuCategories(categories);
     displayOrderCategorySelect.innerHTML = '<option value="">Select a category</option>';
-    categories.forEach((category) => {
+    realCategories.forEach((category) => {
       const option = document.createElement('option');
       option.value = category.id;
       option.textContent = category.name;
       displayOrderCategorySelect.appendChild(option);
     });
-    displayOrderCategorySelect.disabled = !categories.length;
-    if (selectedDisplayOrderCategory && categories.some((category) => category.id === selectedDisplayOrderCategory)) {
+    displayOrderCategorySelect.disabled = !realCategories.length;
+    if (selectedDisplayOrderCategory && realCategories.some((category) => category.id === selectedDisplayOrderCategory)) {
       displayOrderCategorySelect.value = selectedDisplayOrderCategory;
     } else {
       selectedDisplayOrderCategory = '';
@@ -2629,7 +2638,7 @@
     displayOrderSaving = false;
     if (displayOrderCategorySelect) {
       displayOrderCategorySelect.value = '';
-      displayOrderCategorySelect.disabled = !latestCategories.length;
+      displayOrderCategorySelect.disabled = !getRealMenuCategories().length;
     }
     renderDisplayOrderSections([]);
     setDisplayOrderDirty(false);
@@ -2701,7 +2710,7 @@
 
       if (error || !data) {
         displayOrderSaving = false;
-        if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !latestCategories.length;
+        if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !getRealMenuCategories().length;
         renderDisplayOrderSections(latestDisplayOrderSections);
         updateDisplayOrderButtons();
         setDisplayOrderStatus('Unable to save display order for ' + product.name + '. Earlier rows may have saved; local order is still visible so you can retry. ' + (error ? error.message : 'No matching product row was updated.'));
@@ -2718,7 +2727,7 @@
     displayOrderOriginalProducts = getDisplayOrderProductsForSelection();
     sortableProducts = displayOrderOriginalProducts.slice();
     displayOrderSaving = false;
-    if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !latestCategories.length;
+    if (displayOrderCategorySelect) displayOrderCategorySelect.disabled = !getRealMenuCategories().length;
     renderDisplayOrderSections(latestDisplayOrderSections);
     setDisplayOrderDirty(false);
     renderDisplayOrderList();
@@ -2728,9 +2737,10 @@
 
   const renderProductFilters = (categories) => {
     if (!productFilterBar || !productFilterList) return;
+    const realCategories = getRealMenuCategories(categories);
     productFilterList.innerHTML = '';
-    productFilterBar.hidden = !categories.length;
-    if (!categories.length) {
+    productFilterBar.hidden = !realCategories.length;
+    if (!realCategories.length) {
       renderProductSections([]);
       return;
     }
@@ -2743,9 +2753,13 @@
     };
 
     productFilterList.appendChild(makeFilterOption('All categories', 'all'));
-    categories.forEach((category) => {
+    realCategories.forEach((category) => {
       productFilterList.appendChild(makeFilterOption(category.name, category.id));
     });
+    if (selectedCategoryFilter !== 'all' && !realCategories.some((category) => category.id === selectedCategoryFilter)) {
+      selectedCategoryFilter = 'all';
+      selectedSectionFilter = 'all';
+    }
     productFilterList.value = selectedCategoryFilter;
     productFilterList.onchange = async () => {
       selectedCategoryFilter = productFilterList.value || 'all';
@@ -2900,14 +2914,15 @@
 
   const renderCategories = (categories) => {
     latestCategories = categories;
-    populateDraftCategorySelect(categories);
-    populateDisplayOrderCategorySelect(categories);
-    renderProductFilters(categories);
-    setDraftFormDisabled(!categories.length);
+    const realCategories = getRealMenuCategories(categories);
+    populateDraftCategorySelect(realCategories);
+    populateDisplayOrderCategorySelect(realCategories);
+    renderProductFilters(realCategories);
+    setDraftFormDisabled(!realCategories.length);
     if (!categoryList) return;
     categoryList.innerHTML = '';
 
-    if (!categories.length) {
+    if (!realCategories.length) {
       const empty = document.createElement('p');
       empty.className = 'empty-message';
       empty.textContent = 'No categories found.';
@@ -2915,7 +2930,7 @@
       return;
     }
 
-    categories.forEach((category, index) => {
+    realCategories.forEach((category, index) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = index === 0 ? 'category-item is-selected' : 'category-item';
@@ -3947,6 +3962,11 @@
       if (inlineCategoryNameInput) inlineCategoryNameInput.focus();
       return;
     }
+    if (normalizeCategoryName(name) === 'curv picks') {
+      setStatus('Use the Feature in CURV Picks product flag instead of adding CURV Picks to the category list.');
+      if (inlineCategoryNameInput) inlineCategoryNameInput.focus();
+      return;
+    }
 
     inlineCategorySaving = true;
     setInlineCategoryDisabled(true);
@@ -3993,6 +4013,11 @@
     }
     if (!name) {
       setStatus('Category name is required.');
+      if (inlineCategoryRenameInput) inlineCategoryRenameInput.focus();
+      return;
+    }
+    if (normalizeCategoryName(name) === 'curv picks') {
+      setStatus('Use the Feature in CURV Picks product flag instead of adding CURV Picks to the category list.');
       if (inlineCategoryRenameInput) inlineCategoryRenameInput.focus();
       return;
     }
@@ -4389,7 +4414,7 @@
       eventOrOptions.preventDefault();
     }
 
-    if (!latestCategories.length) {
+    if (!getRealMenuCategories().length) {
       setStatus('Load categories before saving this item.');
       return;
     }
