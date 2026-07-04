@@ -2405,7 +2405,7 @@
     updateDisplayOrderButtons();
     setDisplayOrderStatus(isDirty
       ? 'Unsaved local changes. Save Display Order to update ' + getDisplayOrderSectionLabel() + '.'
-      : 'Choose a category and section, reorder products, then save.');
+      : 'Ready to sort.');
   };
 
   const renderDisplayOrderEmpty = (title, message) => {
@@ -2415,9 +2415,12 @@
     empty.className = 'display-order-empty';
     const heading = document.createElement('h3');
     heading.textContent = title;
-    const copy = document.createElement('p');
-    copy.textContent = message;
-    empty.append(heading, copy);
+    empty.appendChild(heading);
+    if (message) {
+      const copy = document.createElement('p');
+      copy.textContent = message;
+      empty.appendChild(copy);
+    }
     displayOrderList.appendChild(empty);
   };
 
@@ -2436,17 +2439,17 @@
     displayOrderList.innerHTML = '';
 
     if (!selectedDisplayOrderCategory) {
-      renderDisplayOrderEmpty('Select a category', 'Choose a category and section to reorder products.');
+      renderDisplayOrderEmpty('Select a category to begin.', '');
       return;
     }
 
     if (selectedDisplayOrderSection === 'all') {
-      renderDisplayOrderEmpty('Choose a section to reorder safely.', 'All sections is view-only for now so products do not get mixed across sections.');
+      renderDisplayOrderEmpty('Choose a section to reorder.', 'All sections is view-only.');
       return;
     }
 
     if (!sortableProducts.length) {
-      renderDisplayOrderEmpty('No products in this section yet.', 'Create products or assign products to this section before sorting.');
+      renderDisplayOrderEmpty('No products to reorder yet.', '');
       return;
     }
 
@@ -2642,7 +2645,7 @@
     }
     renderDisplayOrderSections([]);
     setDisplayOrderDirty(false);
-    renderDisplayOrderEmpty('Select a category', 'Sortable products will appear here after owner sign-in.');
+    renderDisplayOrderEmpty('Select a category to begin.', '');
   };
 
   const saveDisplayOrder = async () => {

@@ -1956,25 +1956,44 @@
   }
 
   .curv-pick-card {
-    align-items: stretch;
+    align-items: center;
     background: rgba(255, 255, 255, 0.56);
+    min-height: 104px;
   }
 
   .curv-pick-card .product-card-info {
     align-self: center;
+    display: grid;
+    gap: 0.18rem;
   }
 
   .curv-pick-card .product-card-action {
     color: var(--navy);
   }
 
+  .curv-pick-card .product-card-price {
+    align-self: center;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .curv-pick-quick-card {
+    cursor: default;
+  }
+
   .curv-pick-card .item-right {
     align-self: center;
+    margin-left: auto;
   }
 
   .curv-pick-card .price-row,
   .curv-pick-card .price-btn-row {
     justify-content: flex-end;
+    min-width: 122px;
+  }
+
+  .curv-pick-card .price-row + .price-row {
+    margin-top: 0.18rem;
   }
 
   body.night-mode .curv-pick-card {
@@ -2315,6 +2334,22 @@
     }
     .product-card-price {
       margin-top: 0.15rem;
+    }
+    .curv-pick-card {
+      min-height: 92px;
+    }
+    .curv-pick-quick-card {
+      flex-wrap: wrap;
+    }
+    .curv-pick-card .item-right {
+      flex: 1 1 100%;
+      margin-left: calc(64px + 0.75rem);
+      align-items: flex-start;
+    }
+    .curv-pick-card .price-row,
+    .curv-pick-card .price-btn-row {
+      justify-content: flex-start;
+      min-width: 0;
     }
   }
 
@@ -6270,14 +6305,15 @@
       </button>`;
     }
 
-    const priceHtml = item.variants.length === 1
-      ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span>${renderCurvPickAddButton(item, item.variants[0])}</div>`
-      : item.variants.map(variant =>
+    const variants = item.variants || [];
+    const priceHtml = variants.length === 1
+      ? `<div class="price-btn-row"><span class="price-single">₱${variants[0].price}</span>${renderCurvPickAddButton(item, variants[0])}</div>`
+      : variants.map(variant =>
           `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
         ).join('');
 
     return `
-      <div class="menu-item curv-pick-card">
+      <div class="product-card curv-pick-card curv-pick-quick-card">
         ${thumbHtml}
         <div class="product-card-info">
           <div class="item-name">${escapeMenuHtml(item.name)}</div>
@@ -6403,6 +6439,35 @@
     }
   }
 
+  function isPanelNodeVisible(node) {
+    if (!node || node.closest('[hidden]')) return false;
+    const section = node.closest('.section');
+    if (section && !section.classList.contains('active')) return false;
+    let current = node;
+    while (current && current !== document.body) {
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      current = current.parentElement;
+    }
+    return true;
+  }
+
+  function getPanelRootElement(id) {
+    const panels = [...document.querySelectorAll(`[id="panel-${id}"]`)];
+    return panels.find(isPanelNodeVisible) || panels[0] || null;
+  }
+
+  function getPanelScopedElement(id, selector) {
+    const panel = getPanelRootElement(id);
+    return panel ? panel.querySelector(selector) : document.querySelector(selector);
+  }
+
+  function getPanelOptionGroups(id) {
+    const groups = [...document.querySelectorAll(`[data-panel="${id}"]`)];
+    const visibleGroups = groups.filter(isPanelNodeVisible);
+    return visibleGroups.length ? visibleGroups : groups;
+  }
+
   function togglePanel(id) {
     const wrap = document.getElementById('panel-wrap-' + id);
     if (!wrap) return;
@@ -6420,13 +6485,15 @@
   function panelQty(id, delta) {
     if (!panelState[id]) return;
     panelState[id].qty = Math.max(1, panelState[id].qty + delta);
-    document.getElementById('qty-' + id).textContent = panelState[id].qty;
+    const qtyEl = getPanelScopedElement(id, `[id="qty-${id}"]`);
+    if (qtyEl) qtyEl.textContent = panelState[id].qty;
     updatePanelPrice(id);
   }
 
   function getPanelBasePrice(id) {
-    const sizeGroup   = document.querySelector(`[data-panel="${id}"][data-group="size"]`);
-    const piecesGroup = document.querySelector(`[data-panel="${id}"][data-group="pieces"]`);
+    const groups = getPanelOptionGroups(id);
+    const sizeGroup   = groups.find(group => group.dataset.group === 'size');
+    const piecesGroup = groups.find(group => group.dataset.group === 'pieces');
     const group = sizeGroup || piecesGroup;
     if (group) {
       const sel = group.querySelector('.option-chip.selected');
@@ -6434,14 +6501,14 @@
     }
     // Fallback for fixed-price panels (e.g. Matcha/Hojicha — no size or pieces group).
     // The renderer sets data-base-price on the .expansion-panel element.
-    const panelEl = document.getElementById('panel-' + id);
+    const panelEl = getPanelRootElement(id);
     if (panelEl && panelEl.dataset.basePrice) return parseInt(panelEl.dataset.basePrice) || 0;
     return 0;
   }
 
   function getPanelAddOnsPrice(id) {
     let extra = 0;
-    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+    getPanelOptionGroups(id).forEach(group => {
       const gname = group.dataset.group;
       if (gname === 'size' || gname === 'pieces' || gname === 'temperature') return;
       group.querySelectorAll('.option-chip.selected').forEach(chip => {
@@ -6456,7 +6523,7 @@
     const base   = getPanelBasePrice(id);
     const addons = getPanelAddOnsPrice(id);
     const total  = (base + addons) * panelState[id].qty;
-    const el = document.getElementById('price-' + id);
+    const el = getPanelScopedElement(id, `[id="price-${id}"]`);
     if (el) el.textContent = '₱' + total.toLocaleString();
   }
 
@@ -6477,7 +6544,7 @@
     // Temperature chip → swap size chip visibility
     if (groupName === 'temperature') {
       const tempVal = chip.dataset.value; // 'iced' or 'hot'
-      const panel   = document.getElementById('panel-' + panelId);
+      const panel   = getPanelRootElement(panelId);
       if (panel) {
         const sizeGroup = panel.querySelector('[data-group="size"]');
         if (sizeGroup) {
@@ -6500,7 +6567,7 @@
       const cheeseMap = { '4pcs': 30, '8pcs': 60, '12pcs': 90 };
       const newCheesePrice = cheeseMap[chip.dataset.value];
       if (newCheesePrice !== undefined) {
-        const panel = document.getElementById('panel-' + panelId);
+        const panel = getPanelRootElement(panelId);
         const cheeseGroup = panel && panel.querySelector('[data-group="cheese"]');
         const yesChip = cheeseGroup && cheeseGroup.querySelector('[data-value="yes"]');
         if (yesChip) {
@@ -6524,7 +6591,7 @@
 
   function getPanelOptions(id) {
     const opts = {};
-    document.querySelectorAll(`[data-panel="${id}"]`).forEach(group => {
+    getPanelOptionGroups(id).forEach(group => {
       const gname = group.dataset.group;
       const type  = group.dataset.type;
       if (type === 'single') {
@@ -6548,7 +6615,8 @@
     const base    = getPanelBasePrice(id);
     const addons  = getPanelAddOnsPrice(id);
     const unitPrice = base + addons;
-    const note    = (document.getElementById('note-' + id) || {}).value || '';
+    const noteEl  = getPanelScopedElement(id, `[id="note-${id}"]`);
+    const note    = (noteEl || {}).value || '';
 
     // Derive variant from size/pieces
     const sizeVal = options.size;
@@ -6574,7 +6642,7 @@
     const cleanPrices = {};
     Object.keys(cleanOptions).forEach(k => {
       if (k === 'note') return;
-      const grp = document.querySelector(`[data-panel="${id}"][data-group="${k}"]`);
+      const grp = getPanelOptionGroups(id).find(group => group.dataset.group === k);
       if (grp) {
         // Sum all selected chips to handle multi-select groups (e.g. add-ons).
         // For single-select groups (0 or 1 selected) the result is identical.
@@ -6608,7 +6676,8 @@
 
     // Reset panel qty and close
     panelState[id].qty = 1;
-    document.getElementById('qty-' + id).textContent = '1';
+    const qtyEl = getPanelScopedElement(id, `[id="qty-${id}"]`);
+    if (qtyEl) qtyEl.textContent = '1';
     updatePanelPrice(id);
     const wrap = document.getElementById('panel-wrap-' + id);
     if (wrap) wrap.classList.remove('open');
@@ -6794,12 +6863,12 @@
   function buildSummaryText(panelId, groupName) {
     // Special case: note textarea
     if (groupName === 'note') {
-      const ta = document.getElementById('note-' + panelId);
+      const ta = getPanelScopedElement(panelId, `[id="note-${panelId}"]`);
       const val = ta ? ta.value.trim() : '';
       return val ? (val.length > 24 ? val.slice(0, 24) + '…' : val) : null; // null = placeholder
     }
 
-    const group = document.querySelector(`[data-panel="${panelId}"][data-group="${groupName}"]`);
+    const group = getPanelOptionGroups(panelId).find(item => item.dataset.group === groupName);
     if (!group) return '—';
 
     const type = group.dataset.type;
@@ -6834,9 +6903,8 @@
   // Rewrite the summary span in the accordion header for one group.
   // Called from handleChipClick and note input listeners.
   function updateGroupSummary(panelId, groupName) {
-    const header = document.querySelector(
-      `#panel-${panelId} [data-accordion-group="${groupName}"] .accordion-summary`
-    );
+    const panel = getPanelRootElement(panelId);
+    const header = panel && panel.querySelector(`[data-accordion-group="${groupName}"] .accordion-summary`);
     if (!header) return; // group not yet wrapped — no-op
 
     const text = buildSummaryText(panelId, groupName);
