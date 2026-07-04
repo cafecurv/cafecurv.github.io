@@ -756,7 +756,7 @@
 
       const removeButton = document.createElement('button');
       removeButton.type = 'button';
-      removeButton.textContent = 'Ãƒâ€”';
+      removeButton.textContent = 'x';
       removeButton.title = 'Remove ' + label + ' badge';
       removeButton.setAttribute('aria-label', 'Remove ' + label + ' badge');
       removeButton.disabled = productBadgesDisabled;
@@ -3412,7 +3412,7 @@
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
         deleteButton.className = 'product-action-button is-danger';
-        deleteButton.textContent = 'Ã°Å¸â€”â€˜Ã¯Â¸Â';
+        deleteButton.textContent = 'Delete';
         deleteButton.title = 'Delete draft product';
         deleteButton.setAttribute('aria-label', 'Delete draft product');
         deleteButton.addEventListener('click', () => deleteDraftProduct(product.id));
