@@ -1950,6 +1950,37 @@
     display: none;
   }
 
+  .curv-picks-category {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .curv-pick-card {
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.56);
+  }
+
+  .curv-pick-card .product-card-info {
+    align-self: center;
+  }
+
+  .curv-pick-card .product-card-action {
+    color: var(--navy);
+  }
+
+  .curv-pick-card .item-right {
+    align-self: center;
+  }
+
+  .curv-pick-card .price-row,
+  .curv-pick-card .price-btn-row {
+    justify-content: flex-end;
+  }
+
+  body.night-mode .curv-pick-card {
+    background: rgba(28, 34, 53, 0.52);
+  }
+
   .menu-item-wrap.open > .product-card .product-card-action-closed {
     display: none;
   }
@@ -6184,6 +6215,7 @@
       mapped.push({
         name,
         desc: product.description || '',
+        img: product.image_url || (panelInfo.hardcodedItem && panelInfo.hardcodedItem.img) || null,
         categoryName,
         categoryLabel: panelInfo.categoryLabel,
         sectionId: panelInfo.sectionId,
@@ -6216,26 +6248,41 @@
   }
 
   function renderCurvPickItem(item) {
+    const canOpenPanel = item.sectionId && item.panelId;
+    const prices = (item.variants || []).map(variant => Number(variant.price)).filter(price => Number.isFinite(price));
+    const startingPrice = prices.length ? Math.min(...prices) : null;
+    const thumbHtml = item.img
+      ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
+      : `<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>`;
+    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
+    const priceText = startingPrice !== null ? `<span class="product-card-price">From ₱${startingPrice}</span>` : '';
+
+    if (canOpenPanel) {
+      return `
+      <button type="button" class="product-card curv-pick-card" onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')">
+        ${thumbHtml}
+        <span class="product-card-info">
+          <span class="item-name">${escapeMenuHtml(item.name)}</span>
+          ${descHtml}
+          <span class="product-card-action">Customize</span>
+        </span>
+        ${priceText}
+      </button>`;
+    }
+
     const priceHtml = item.variants.length === 1
       ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span>${renderCurvPickAddButton(item, item.variants[0])}</div>`
-      : item.variants[0].kind === 'size'
-        ? `<div class="add-btn-rl">${item.variants.map((variant, index) =>
-            `<span class="add-btn-rl-label">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant)}${index === 0 ? '<span class="add-btn-rl-divider">|</span>' : ''}`
-          ).join('')}</div>`
-        : item.variants.map(variant =>
-            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
-          ).join('');
-
-    const canOpenPanel = item.sectionId && item.panelId;
-    const itemInfoAttrs = canOpenPanel
-      ? ` onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')" style="cursor:pointer"`
-      : '';
+      : item.variants.map(variant =>
+          `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
+        ).join('');
 
     return `
-      <div class="menu-item">
-        <div class="item-info"${itemInfoAttrs}>
+      <div class="menu-item curv-pick-card">
+        ${thumbHtml}
+        <div class="product-card-info">
           <div class="item-name">${escapeMenuHtml(item.name)}</div>
-          <div class="item-desc">${escapeMenuHtml(item.desc)}</div>
+          ${descHtml}
+          <span class="product-card-action">Add</span>
         </div>
         <div class="item-right">${priceHtml}</div>
       </div>`;
@@ -6245,8 +6292,77 @@
     return `
       <div class="category">
         <span class="category-label">${escapeMenuHtml(label)}</span>
-        ${items.map(renderCurvPickItem).join('')}
+        <div class="curv-picks-category">
+          ${items.map(renderCurvPickItem).join('')}
+        </div>
       </div>`;
+  }
+
+  function mapHardcodedCurvPick(expectedPick, panelIndex) {
+    if (expectedPick.quickAddOnly && expectedPick.name === 'Spring Rolls') {
+      return {
+        name: 'Spring Rolls',
+        desc: 'crab mix · lettuce · cucumber · carrots · sesame sauce · Japanese mayo',
+        img: 'images/menu/salads/spring-rolls.jpg',
+        categoryLabel: expectedPick.categoryLabel || 'Bites & Light Meals',
+        variants: [
+          { kind: 'piece', displayLabel: '4 pcs', cartLabel: '4 pcs', price: 150 },
+          { kind: 'piece', displayLabel: '8 pcs', cartLabel: '8 pcs', price: 298 },
+        ],
+        defaultOptions: {},
+        sort_order: 999,
+      };
+    }
+
+    const panelInfo = panelIndex[normalizePublicMenuText(expectedPick.name)];
+    const hardcodedItem = panelInfo && panelInfo.hardcodedItem;
+    if (!panelInfo || !hardcodedItem) return null;
+
+    let variants = [];
+    if (panelInfo.variantMode === 'single') {
+      variants = [{ kind: 'single', displayLabel: '', cartLabel: '', price: Number(hardcodedItem.price) }];
+    } else if (panelInfo.variantMode === 'regularLarge') {
+      variants = [
+        { kind: 'size', displayLabel: 'R', cartLabel: 'Regular', price: Number(hardcodedItem.reg) },
+        { kind: 'size', displayLabel: 'L', cartLabel: 'Large', price: Number(hardcodedItem.lrg) },
+      ];
+    } else if (panelInfo.variantMode === 'takoyakiPieces' && Array.isArray(hardcodedItem.pieces)) {
+      variants = hardcodedItem.pieces.map(piece => ({
+        kind: 'piece',
+        displayLabel: String(piece.value || '').replace('pcs', ' pcs'),
+        cartLabel: piece.value,
+        price: Number(piece.price),
+      }));
+    }
+
+    return {
+      name: hardcodedItem.name,
+      desc: hardcodedItem.desc || '',
+      img: hardcodedItem.img || null,
+      categoryLabel: panelInfo.categoryLabel,
+      sectionId: panelInfo.sectionId,
+      panelId: panelInfo.panelId,
+      defaultOptions: panelInfo.defaultOptions || {},
+      variants: variants.filter(variant => Number.isFinite(variant.price)),
+      sort_order: Number(hardcodedItem.sort_order) || 0,
+    };
+  }
+
+  function renderHardcodedCurvPicksFallback() {
+    const fallback = document.getElementById('curv-picks-hardcoded-fallback');
+    if (!fallback) return;
+    const panelIndex = buildCurvPicksPanelIndex();
+    const items = EXPECTED_PUBLIC_CURV_PICKS
+      .map(expectedPick => mapHardcodedCurvPick(expectedPick, panelIndex))
+      .filter(Boolean);
+    const groups = items.reduce((map, item) => {
+      if (!map[item.categoryLabel]) map[item.categoryLabel] = [];
+      map[item.categoryLabel].push(item);
+      return map;
+    }, {});
+    fallback.innerHTML = Object.keys(groups)
+      .map(label => renderCurvPicksCategory(label, groups[label]))
+      .join('');
   }
 
   function renderSupabaseCurvPicksOrFallback(shapedPublicMenu) {
@@ -7917,6 +8033,7 @@
     renderAllRefresherPanels();
     renderAllTakoyakiPanels();
     renderAllSavoryPanels();
+    renderHardcodedCurvPicksFallback();
     try {
       if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
