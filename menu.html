@@ -488,8 +488,20 @@
   .add-btn:disabled,
   .add-btn-pill:disabled,
   .panel-add-btn:disabled {
-    opacity: 0.48;
+    background: rgba(93, 101, 126, 0.18);
+    border: 0.5px solid rgba(93, 101, 126, 0.24);
+    color: var(--gray-mid);
+    box-shadow: none;
+    opacity: 1;
     cursor: not-allowed;
+    transform: none;
+  }
+
+  .add-btn:disabled:active,
+  .add-btn-pill:disabled:active,
+  .panel-add-btn:disabled:hover,
+  .panel-add-btn:disabled:active {
+    background: rgba(93, 101, 126, 0.18);
     transform: none;
   }
 
@@ -1901,6 +1913,11 @@
   .product-card.is-sold-out:focus-visible {
     border-color: var(--bg3);
     box-shadow: 0 10px 28px rgba(20, 24, 36, 0.06);
+  }
+
+  .product-card.is-sold-out:hover .product-card-action,
+  .product-card.is-sold-out:focus-visible .product-card-action {
+    color: var(--gray-mid);
   }
 
   .product-card:hover .product-card-action,
@@ -3499,7 +3516,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${reg}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
@@ -3531,6 +3548,10 @@
 
   function normalizePublicMenuText(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function getSoldOutButtonAttrs(item) {
+    return item && item.is_sold_out ? ' disabled aria-disabled="true" data-sold-out-action="true"' : '';
   }
 
   function compareSectionedMenuItems(a, b) {
@@ -4255,7 +4276,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${price}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
@@ -4630,7 +4651,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${reg}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
@@ -4949,7 +4970,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${reg}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
@@ -5309,7 +5330,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${firstPieces.price}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
@@ -5569,7 +5590,7 @@
               <button class="panel-qty-btn" onclick="panelQty('${id}', 1)">+</button>
             </div>
             <span class="panel-price" id="price-${id}">₱${price}</span>
-            <button class="panel-add-btn" onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
+            <button class="panel-add-btn"${getSoldOutButtonAttrs(item)} onclick="panelAddToCart('${id}', '${name}')">Add to Cart</button>
           </div>
         </div>
       </div>`;
