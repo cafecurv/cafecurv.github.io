@@ -5487,11 +5487,11 @@
     const link = getTrackingLink(order);
     if (!link) return '';
     return [
-      'Hi! You can track your CURV order here:',
+      'Just a quick update \u2014 your order has been placed. You can track your order here:',
       '',
       link,
       '',
-      'We\u2019ll update your order status there as it moves through our queue. \uD83E\uDD0E',
+      'You can view your order status there as it moves through our queue. Thank you very much! \uD83D\uDC99',
     ].join('\n');
   };
 
