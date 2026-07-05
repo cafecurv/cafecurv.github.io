@@ -3335,7 +3335,7 @@
     if (!latestProducts.length) {
       if (productStatus) productStatus.textContent = 'Supabase draft list';
       if (productCount) productCount.textContent = '0 products';
-      renderProductEmptyState('No products in Supabase yet.', 'Create a draft product when you are ready. Drafts stay admin-only until a future approved menu connection.');
+      renderProductEmptyState('No products in Supabase yet.', 'Create a product when you are ready. Publish it when it should appear on the live menu.');
       return;
     }
 
@@ -3447,20 +3447,6 @@
         publishButton.addEventListener('click', () => updateProductPublishedState(product.id, true));
 
         actions.append(editButton);
-      } else if (false) {
-        const lockedButton = document.createElement('button');
-        lockedButton.type = 'button';
-        lockedButton.className = 'product-action-button';
-        lockedButton.textContent = 'Edit';
-        lockedButton.addEventListener('click', () => loadProductIntoForm(product.id));
-
-        const unpublishButton = document.createElement('button');
-        unpublishButton.type = 'button';
-        unpublishButton.className = 'product-action-button is-publish';
-        unpublishButton.textContent = 'Unpublish';
-        unpublishButton.addEventListener('click', () => updateProductPublishedState(product.id, false));
-
-        actions.append(lockedButton, unpublishButton);
       }
       card.appendChild(actions);
       productList.appendChild(card);

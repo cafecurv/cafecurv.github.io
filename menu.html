@@ -3950,7 +3950,7 @@
   function renderSupabaseEspressoOrFallback(shapedPublicMenu) {
     const mapped = mapPublicEspressoItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2C] Espresso using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Espresso using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -4456,7 +4456,7 @@
   function renderSupabaseMatchaOrFallback(shapedPublicMenu) {
     const mapped = mapPublicMatchaItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2D.7] Matcha & Hojicha using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Matcha & Hojicha using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -4795,7 +4795,7 @@
   function renderSupabaseCurvccinoOrFallback(shapedPublicMenu) {
     const mapped = mapPublicCurvccinoItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2D.2] Curvccino using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Curvccino using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -5110,7 +5110,7 @@
   function renderSupabaseRefreshersOrFallback(shapedPublicMenu) {
     const mapped = mapPublicRefresherItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2D.1] Refreshers using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Refreshers using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -5513,7 +5513,7 @@
   function renderSupabaseTakoyakiOrFallback(shapedPublicMenu) {
     const mapped = mapPublicTakoyakiItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2D.3] Bites/Takoyaki using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Bites/Takoyaki using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -5624,7 +5624,7 @@
         panelState[item.id].options = { ...panelState[item.id].options, ...defaults };
       }
       if (supabaseSauceDefault) {
-        console.log(`[CURV Phase D.2] Using Supabase sauce default for ${item.name}: ${supabaseSauceDefault}`);
+        console.log(`[CURV menu] Using Supabase sauce default for ${item.name}: ${supabaseSauceDefault}`);
       }
     };
 
@@ -5746,7 +5746,7 @@
   function renderSupabaseSavoryOrFallback(shapedPublicMenu) {
     const mapped = mapPublicSavoryItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV Phase 2D.4] Savory using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Savory using hardcoded fallback.', mapped.reason);
       return false;
     }
 
@@ -5922,7 +5922,7 @@
     const fallback = document.getElementById('saladbar-hardcoded-fallback');
 
     if (!mapped.ok || !mount || !fallback) {
-      console.warn('[CURV Phase 2D.5] Salad Bar using hardcoded fallback.', mapped.reason || 'Salad Bar mount unavailable.');
+      console.warn('[CURV menu] Salad Bar using hardcoded fallback.', mapped.reason || 'Salad Bar mount unavailable.');
       return false;
     }
 
@@ -6080,7 +6080,7 @@
     const fallback = document.getElementById('pastries-hardcoded-fallback');
 
     if (!mapped.ok || !mount || !fallback) {
-      console.warn('[CURV Phase 2D.6] Pastries & Desserts using hardcoded fallback.', mapped.reason || 'Pastries & Desserts mount unavailable.');
+      console.warn('[CURV menu] Pastries & Desserts using hardcoded fallback.', mapped.reason || 'Pastries & Desserts mount unavailable.');
       return false;
     }
 
@@ -6504,7 +6504,7 @@
     const fallback = document.getElementById('curv-picks-hardcoded-fallback');
 
     if (!mapped.ok || !mount || !fallback) {
-      console.warn('[CURV Phase 2D.8] CURV Picks using hardcoded fallback.', mapped.reason || 'CURV Picks mount unavailable.');
+      console.warn('[CURV menu] CURV Picks using hardcoded fallback.', mapped.reason || 'CURV Picks mount unavailable.');
       return false;
     }
 
@@ -8112,13 +8112,13 @@
 
     try {
       if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
+        console.warn('[CURV menu] Supabase client did not load. Hardcoded menu remains active.');
         return;
       }
 
       const client = getPublicSupabaseClient();
       if (!client) {
-        console.warn('[CURV Phase 2B] Supabase client did not load. Hardcoded menu remains active.');
+        console.warn('[CURV menu] Supabase client did not load. Hardcoded menu remains active.');
         return;
       }
 
@@ -8164,7 +8164,7 @@
 
       const errors = [categoryResult.error, productResult.error, sizeResult.error].filter(Boolean);
       if (errors.length) {
-        console.warn('[CURV Phase 2B] Supabase public menu fetch failed. Hardcoded menu remains active.', errors);
+        console.warn('[CURV menu] Supabase public menu fetch failed. Hardcoded menu remains active.', errors);
         return;
       }
 
@@ -8173,18 +8173,18 @@
       const rawProductSizes = sizeResult.data || [];
       const rawCategorySections = sectionResult.error ? [] : (sectionResult.data || []);
       if (sectionResult.error) {
-        console.warn('[CURV Phase S5B] Category section fetch failed. Menu rendering continues without section data.', sectionResult.error);
+        console.warn('[CURV menu] Category section fetch failed. Menu rendering continues without section data.', sectionResult.error);
       }
       const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes, rawCategorySections);
       if (!sectionResult.error) {
-        console.log('[CURV Phase S5B] Category sections fetched:', shapedPublicMenu.categorySections);
+        console.log('[CURV menu] Category sections fetched:', shapedPublicMenu.categorySections);
       }
       const optionErrors = [optionGroupResult.error, optionChoiceResult.error, optionDefaultResult.error].filter(Boolean);
       shapedPublicMenu.options = null;
       latestPublicMenuOptions = null;
 
       if (optionErrors.length) {
-        console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionErrors);
+        console.warn('[CURV menu] Option fetch failed, all products use hardcoded options', optionErrors);
       } else {
         try {
           shapedPublicMenu.options = buildSupabaseOptionsMap(
@@ -8194,16 +8194,16 @@
             rawProducts
           );
           latestPublicMenuOptions = shapedPublicMenu.options;
-          console.log('[CURV Phase D.1] Option data fetched:', shapedPublicMenu.options);
+          console.log('[CURV menu] Option data fetched:', shapedPublicMenu.options);
         } catch (optionError) {
           shapedPublicMenu.options = null;
           latestPublicMenuOptions = null;
-          console.warn('[CURV Phase D.1] Option fetch failed, all products use hardcoded options', optionError);
+          console.warn('[CURV menu] Option fetch failed, all products use hardcoded options', optionError);
         }
       }
 
       if (!rawCategories.length || !rawProducts.length || !rawProductSizes.length) {
-        console.warn('[CURV Phase 2B] Supabase public menu returned empty data. Hardcoded menu remains active.', {
+        console.warn('[CURV menu] Supabase public menu returned empty data. Hardcoded menu remains active.', {
           categoryCount: rawCategories.length,
           productCount: rawProducts.length,
           variantCount: rawProductSizes.length
@@ -8220,7 +8220,7 @@
       renderSupabaseMatchaOrFallback(shapedPublicMenu);
       renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
     } catch (error) {
-      console.warn('[CURV Phase 2B] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
+      console.warn('[CURV menu] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
     }
   }
 
