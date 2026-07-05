@@ -3406,6 +3406,7 @@ body.more-drawer-open {
   .order-customer-details .order-detail-section-grid,
   .order-fulfillment-details .order-detail-section-grid,
   .order-totals-details .order-detail-section-grid,
+  .order-tracking-button-row,
   .order-action-row {
     grid-template-columns: 1fr;
   }
@@ -3694,6 +3695,23 @@ body.more-drawer-open {
 }
 
 .order-payment-button {
+  width: 100%;
+}
+
+.order-tracking-actions {
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px solid rgba(189, 196, 212, 0.12);
+  padding-top: 0.65rem;
+}
+
+.order-tracking-button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.order-tracking-button {
   width: 100%;
 }
 

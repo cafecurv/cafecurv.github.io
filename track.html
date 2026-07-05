@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="favicon1.png">
+<link rel="apple-touch-icon" href="favicon1.png">
+<title>Track Your Order | CURV</title>
+<meta name="description" content="Track your CURV order status with your private order tracking link.">
+<meta property="og:title" content="Track Your CURV Order">
+<meta property="og:description" content="See the latest status for your CURV order.">
+<meta property="og:image" content="https://cafecurv.github.io/preview1.png">
+<meta property="og:url" content="https://www.thecurv.cafe/track.html">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --bg2: #EEECEA;
+    --bg3: #E5E2DC;
+    --navy: #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid: #6B6760;
+    --gray-light: #8A8680;
+    --accent: #C8B89A;
+    --price: #212842;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(200, 184, 154, 0.18), transparent 34rem),
+      var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+  }
+
+  header {
+    padding: 2.7rem 1.4rem 1.3rem;
+    text-align: center;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .logo {
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    line-height: 1;
+  }
+
+  .logo-line {
+    width: 60px;
+    height: 1px;
+    margin: 10px auto;
+    background: var(--accent);
+  }
+
+  .header-tagline {
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.75rem;
+    font-style: italic;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  main {
+    width: min(100%, 680px);
+    margin: 0 auto;
+    padding: 1.2rem 1.1rem 3rem;
+  }
+
+  .track-hero {
+    padding: 1.6rem 0 1.1rem;
+    text-align: center;
+  }
+
+  .track-kicker {
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin-top: 0.35rem;
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.65rem, 7vw, 2.45rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .track-subtitle {
+    max-width: 32rem;
+    margin: 0.65rem auto 0;
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.88rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.65;
+  }
+
+  .track-shell {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .track-card {
+    border: 0.5px solid var(--bg3);
+    border-radius: 14px;
+    background: rgba(247, 245, 240, 0.92);
+    box-shadow: 0 12px 34px rgba(33, 40, 66, 0.07);
+    padding: 1.05rem;
+  }
+
+  .track-card.is-centered {
+    padding: 1.4rem 1.05rem;
+    text-align: center;
+  }
+
+  .state-title {
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 1.15rem;
+    letter-spacing: 1px;
+  }
+
+  .state-copy {
+    margin-top: 0.45rem;
+    color: var(--gray-mid);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .track-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.9rem;
+    min-height: 42px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--navy);
+    color: var(--bg);
+    cursor: pointer;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 0.72rem 1.2rem;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .order-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .order-number-label {
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .order-number {
+    margin-top: 0.1rem;
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .status-pill {
+    flex-shrink: 0;
+    border: 0.5px solid rgba(200, 184, 154, 0.9);
+    border-radius: 999px;
+    background: rgba(200, 184, 154, 0.18);
+    color: var(--navy);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    padding: 0.38rem 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .status-title {
+    margin-top: 0.9rem;
+    color: var(--navy);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .status-description {
+    margin-top: 0.4rem;
+    color: var(--gray-mid);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .timeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+
+  .timeline-step {
+    min-width: 0;
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .timeline-step::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 4px;
+    margin-bottom: 0.38rem;
+    border-radius: 99px;
+    background: var(--bg3);
+  }
+
+  .timeline-step.is-complete,
+  .timeline-step.is-current {
+    color: var(--navy);
+  }
+
+  .timeline-step.is-complete::before,
+  .timeline-step.is-current::before {
+    background: var(--accent);
+  }
+
+  .timeline-step.is-cancelled {
+    color: var(--gray-mid);
+  }
+
+  .timeline-step.is-cancelled::before {
+    background: var(--gray-light);
+  }
+
+  .last-updated {
+    margin-top: 1rem;
+    color: var(--gray-light);
+    font-size: 0.76rem;
+  }
+
+  .detail-card-title {
+    color: var(--navy);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .detail-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+  }
+
+  .detail-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 0.5px solid rgba(229, 226, 220, 0.9);
+    padding-bottom: 0.55rem;
+  }
+
+  .detail-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .detail-label {
+    color: var(--gray-mid);
+    font-size: 0.82rem;
+  }
+
+  .detail-value {
+    color: var(--price);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .messenger-note {
+    border-left: 2px solid var(--accent);
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.6;
+    padding-left: 0.8rem;
+  }
+
+  .messenger-note a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 520px) {
+    header { padding-top: 2.25rem; }
+    main { padding-inline: 0.9rem; }
+    .track-card { border-radius: 12px; padding: 0.95rem; }
+    .order-heading { display: grid; }
+    .status-pill { justify-self: start; }
+    .timeline { gap: 0.25rem; }
+    .timeline-step { font-size: 0.5rem; letter-spacing: 0.7px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">CURV</div>
+  <div class="logo-line"></div>
+  <div class="header-tagline">Track your order</div>
+</header>
+
+<main>
+  <section class="track-hero">
+    <p class="track-kicker">Order Tracking</p>
+    <h1>Your CURV Order</h1>
+    <p class="track-subtitle">Use your private tracking link to see the latest status. For changes, message CURV directly.</p>
+  </section>
+
+  <section class="track-shell" data-track-root>
+    <article class="track-card is-centered" data-state-card>
+      <h2 class="state-title" data-state-title>Loading your order...</h2>
+      <p class="state-copy" data-state-copy>Please wait while we check the latest CURV update.</p>
+      <button class="track-button" type="button" data-retry-button hidden>Try Again</button>
+    </article>
+
+    <article class="track-card" data-main-card hidden>
+      <div class="order-heading">
+        <div>
+          <p class="order-number-label">Order Number</p>
+          <p class="order-number" data-order-number>-</p>
+        </div>
+        <span class="status-pill" data-status-pill>Order</span>
+      </div>
+      <h2 class="status-title" data-status-title>Order received</h2>
+      <p class="status-description" data-status-description>We've received your order.</p>
+      <div class="timeline" data-timeline aria-label="Order progress"></div>
+      <p class="last-updated" data-last-updated>Updated just now</p>
+    </article>
+
+    <article class="track-card" data-total-card hidden>
+      <h2 class="detail-card-title">Payment & Total</h2>
+      <div class="detail-list" data-total-list></div>
+    </article>
+
+    <article class="track-card messenger-note" data-note-card hidden>
+      For changes or urgent concerns, message CURV directly on
+      <a href="https://m.me/cafecurv" target="_blank" rel="noopener">Messenger</a>.
+    </article>
+  </section>
+</main>
+
+<script>
+(() => {
+  const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  const POLL_INTERVAL_MS = 15000;
+  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  const stateCard = document.querySelector('[data-state-card]');
+  const stateTitle = document.querySelector('[data-state-title]');
+  const stateCopy = document.querySelector('[data-state-copy]');
+  const retryButton = document.querySelector('[data-retry-button]');
+  const mainCard = document.querySelector('[data-main-card]');
+  const totalCard = document.querySelector('[data-total-card]');
+  const noteCard = document.querySelector('[data-note-card]');
+  const orderNumberEl = document.querySelector('[data-order-number]');
+  const statusPill = document.querySelector('[data-status-pill]');
+  const statusTitle = document.querySelector('[data-status-title]');
+  const statusDescription = document.querySelector('[data-status-description]');
+  const timeline = document.querySelector('[data-timeline]');
+  const lastUpdated = document.querySelector('[data-last-updated]');
+  const totalList = document.querySelector('[data-total-list]');
+
+  let client = null;
+  let pollTimer = null;
+  let currentToken = '';
+  let lastFetchTime = null;
+
+  const STATUS_META = {
+    submitted: {
+      label: 'Order received',
+      description: "We've received your order. Please wait for CURV to confirm your total and payment details.",
+      step: 0,
+    },
+    new: {
+      label: 'Order received',
+      description: "We've received your order. Please wait for CURV to confirm your total and payment details.",
+      step: 0,
+    },
+    accepted: {
+      label: 'Order accepted',
+      description: 'Your order has been accepted and queued.',
+      step: 1,
+    },
+    preparing: {
+      label: 'Preparing your order',
+      description: "We're preparing your order.",
+      step: 2,
+    },
+    ready: {
+      label: 'Ready',
+      description: 'Your order is ready.',
+      step: 3,
+    },
+    completed: {
+      label: 'Completed',
+      description: 'Your order has been completed. Thank you!',
+      step: 4,
+      terminal: true,
+    },
+    cancelled: {
+      label: 'Cancelled',
+      description: 'This order has been cancelled. Please message CURV if you need help.',
+      step: -1,
+      terminal: true,
+    },
+  };
+
+  const getStatusMeta = (status, fulfillmentType) => {
+    const key = String(status || '').trim().toLowerCase();
+    const fallback = STATUS_META[key] || STATUS_META.submitted;
+    if (key === 'ready') {
+      return {
+        ...fallback,
+        description: fulfillmentType === 'delivery'
+          ? 'Your order is ready and waiting for delivery arrangement.'
+          : 'Your order is ready for pick-up.',
+      };
+    }
+    return fallback;
+  };
+
+  const setState = (title, copy, showRetry = false) => {
+    if (stateTitle) stateTitle.textContent = title;
+    if (stateCopy) stateCopy.textContent = copy;
+    if (retryButton) retryButton.hidden = !showRetry;
+    if (stateCard) stateCard.hidden = false;
+    if (mainCard) mainCard.hidden = true;
+    if (totalCard) totalCard.hidden = true;
+    if (noteCard) noteCard.hidden = true;
+  };
+
+  const showTrackingCards = () => {
+    if (stateCard) stateCard.hidden = true;
+    if (mainCard) mainCard.hidden = false;
+    if (totalCard) totalCard.hidden = false;
+    if (noteCard) noteCard.hidden = false;
+  };
+
+  const getTrackingToken = () => {
+    const params = new URLSearchParams(window.location.search);
+    return String(params.get('t') || '').trim();
+  };
+
+  const getSupabaseClient = () => {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+    if (!client) {
+      client = window.supabase.createClient(
+        PUBLIC_MENU_SUPABASE_URL,
+        PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
+      );
+    }
+    return client;
+  };
+
+  const formatCurrency = (value, currency = 'PHP') => {
+    const amount = Number(value || 0);
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: currency || 'PHP',
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      return 'PHP ' + amount.toFixed(2);
+    }
+  };
+
+  const formatUpdatedTime = (date) => {
+    if (!date) return 'Updated just now';
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return 'Updated just now';
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Updated just now';
+    if (minutes < 60) return 'Updated ' + minutes + ' min ago';
+    return 'Last updated ' + date.toLocaleString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const formatPaymentStatus = (status) => {
+    const cleanStatus = String(status || '').trim().toLowerCase();
+    if (cleanStatus === 'paid') return 'Paid';
+    if (cleanStatus === 'pending') return 'Payment pending';
+    if (cleanStatus === 'refunded') return 'Refunded';
+    return 'Payment pending';
+  };
+
+  const formatDeliveryMethod = (option) => {
+    const cleanOption = String(option || '').trim().toLowerCase();
+    if (cleanOption === 'curv_rider') return 'CURV Rider';
+    if (cleanOption === 'lalamove') return 'Lalamove';
+    return 'Delivery';
+  };
+
+  const addDetailRow = (label, value) => {
+    const row = document.createElement('div');
+    row.className = 'detail-row';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'detail-label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('strong');
+    valueEl.className = 'detail-value';
+    valueEl.textContent = value;
+
+    row.append(labelEl, valueEl);
+    totalList.appendChild(row);
+  };
+
+  const renderTimeline = (order, meta) => {
+    if (!timeline) return;
+    timeline.innerHTML = '';
+
+    const steps = [
+      { label: 'Received', index: 0 },
+      { label: 'Accepted', index: 1 },
+      { label: 'Preparing', index: 2 },
+      { label: order.fulfillment_type === 'delivery' ? 'Delivery' : 'Ready', index: 3 },
+    ];
+
+    steps.forEach((step) => {
+      const item = document.createElement('span');
+      item.className = 'timeline-step';
+      if (order.status === 'cancelled') {
+        item.classList.add('is-cancelled');
+      } else if (meta.step >= step.index) {
+        item.classList.add(meta.step === step.index ? 'is-current' : 'is-complete');
+      }
+      item.textContent = step.label;
+      timeline.appendChild(item);
+    });
+  };
+
+  const renderTotals = (order) => {
+    if (!totalList) return;
+    totalList.innerHTML = '';
+
+    const isDelivery = order.fulfillment_type === 'delivery';
+    const currency = order.currency || 'PHP';
+    const subtotal = Number(order.subtotal || order.total || 0);
+    const deliveryFeeStatus = String(order.delivery_fee_status || '').trim().toLowerCase();
+    const deliveryFee = order.delivery_fee === null || order.delivery_fee === undefined
+      ? null
+      : Number(order.delivery_fee || 0);
+
+    addDetailRow('Order method', isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pick-up');
+    addDetailRow('Order subtotal', formatCurrency(subtotal, currency));
+
+    if (isDelivery) {
+      if (deliveryFeeStatus === 'waived') {
+        addDetailRow('Delivery fee', 'Waived');
+        addDetailRow('Final total', formatCurrency(subtotal, currency));
+      } else if (deliveryFeeStatus === 'confirmed' && deliveryFee !== null) {
+        addDetailRow('Delivery fee', formatCurrency(deliveryFee, currency));
+        addDetailRow('Final total', formatCurrency(subtotal + deliveryFee, currency));
+      } else {
+        addDetailRow('Delivery fee', 'To be confirmed');
+        addDetailRow('Final total', 'To be confirmed');
+      }
+    } else {
+      addDetailRow('Order total', formatCurrency(order.total || subtotal, currency));
+    }
+
+    addDetailRow('Payment status', formatPaymentStatus(order.payment_status));
+  };
+
+  const renderOrder = (order) => {
+    const status = String(order.status || 'submitted').trim().toLowerCase();
+    const fulfillmentType = String(order.fulfillment_type || 'pickup').trim().toLowerCase() === 'delivery'
+      ? 'delivery'
+      : 'pickup';
+    const meta = getStatusMeta(status, fulfillmentType);
+
+    if (orderNumberEl) orderNumberEl.textContent = order.order_number || 'CURV order';
+    if (statusPill) statusPill.textContent = meta.label;
+    if (statusTitle) statusTitle.textContent = meta.label;
+    if (statusDescription) statusDescription.textContent = meta.description;
+
+    renderTimeline({ ...order, status, fulfillment_type: fulfillmentType }, meta);
+    renderTotals({ ...order, status, fulfillment_type: fulfillmentType });
+
+    lastFetchTime = new Date();
+    if (lastUpdated) lastUpdated.textContent = formatUpdatedTime(lastFetchTime);
+    showTrackingCards();
+
+    if (meta.terminal) {
+      stopPolling();
+    } else {
+      schedulePolling();
+    }
+  };
+
+  const stopPolling = () => {
+    if (pollTimer) window.clearTimeout(pollTimer);
+    pollTimer = null;
+  };
+
+  const schedulePolling = () => {
+    stopPolling();
+    pollTimer = window.setTimeout(fetchTracking, POLL_INTERVAL_MS);
+  };
+
+  const fetchTracking = async () => {
+    if (!currentToken) return;
+
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) {
+      setState('Tracking is unavailable', 'We could not load the tracking connection. Please refresh or message CURV directly.', true);
+      return;
+    }
+
+    const { data, error } = await supabaseClient.rpc('get_public_order_tracking', {
+      p_tracking_token: currentToken,
+    });
+
+    if (error) {
+      setState('Unable to refresh tracking', 'Please try again in a moment. You can also message CURV directly on Messenger.', true);
+      return;
+    }
+
+    const order = Array.isArray(data) ? data[0] : data;
+    if (!order) {
+      setState('Tracking link not found', 'This link may be incorrect or unavailable. Please check your order message or contact CURV on Messenger.', false);
+      stopPolling();
+      return;
+    }
+
+    renderOrder(order);
+  };
+
+  const init = () => {
+    currentToken = getTrackingToken();
+    if (!currentToken) {
+      setState('Missing tracking link', 'Open the private tracking link sent with your CURV order confirmation.', false);
+      return;
+    }
+
+    if (!UUID_PATTERN.test(currentToken)) {
+      setState('Invalid tracking link', 'This tracking link does not look right. Please check the link or message CURV directly.', false);
+      return;
+    }
+
+    setState('Loading your order...', 'Please wait while we check the latest CURV update.', false);
+    fetchTracking();
+  };
+
+  if (retryButton) {
+    retryButton.addEventListener('click', () => {
+      setState('Checking again...', 'Please wait while we refresh your order status.', false);
+      fetchTracking();
+    });
+  }
+
+  window.addEventListener('beforeunload', stopPolling);
+  init();
+})();
+</script>
+</body>
+</html>

@@ -5240,6 +5240,7 @@
     completed: 'Completed',
     cancelled: 'Cancelled',
   };
+  const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track.html';
 
   const ORDER_STATUS_ACTIONS = {
     submitted: [
@@ -5475,6 +5476,60 @@
     return formatOptionLabel(cleanStatus);
   };
 
+  const getTrackingToken = (order) => String(order && order.tracking_token ? order.tracking_token : '').trim();
+
+  const getTrackingLink = (order) => {
+    const token = getTrackingToken(order);
+    return token ? PUBLIC_TRACKING_BASE_URL + '?t=' + encodeURIComponent(token) : '';
+  };
+
+  const getTrackingMessage = (order) => {
+    const link = getTrackingLink(order);
+    if (!link) return '';
+    return [
+      'Hi! You can track your CURV order here:',
+      '',
+      link,
+      '',
+      'We\u2019ll update your order status there as it moves through our queue. \uD83E\uDD0E',
+    ].join('\n');
+  };
+
+  const copyTextToClipboard = async (text) => {
+    if (!text) throw new Error('Nothing to copy.');
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    if (!copied) throw new Error('Clipboard copy failed.');
+  };
+
+  const handleTrackingCopy = async (order, mode) => {
+    const text = mode === 'message' ? getTrackingMessage(order) : getTrackingLink(order);
+    if (!text) {
+      setStatus('Tracking link unavailable for this order.');
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(text);
+      setStatus(mode === 'message' ? 'Tracking message copied.' : 'Tracking link copied.');
+    } catch (error) {
+      setStatus('Unable to copy tracking ' + (mode === 'message' ? 'message' : 'link') + '.');
+    }
+  };
+
   const formatOptionLabel = (value) => String(value || '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -5660,6 +5715,7 @@
 
   const renderPaymentDetailsSection = (order) => {
     const paymentStatus = normalizePaymentStatus(order && order.payment_status);
+    const trackingLink = getTrackingLink(order);
     const section = makeElement('section', 'order-detail-section order-payment-details');
     section.appendChild(makeElement('h4', '', 'Payment'));
 
@@ -5685,6 +5741,29 @@
       button.addEventListener('click', () => handlePaymentStatusAction(order, nextStatus));
       section.appendChild(button);
     }
+
+    const trackingGroup = makeElement('div', 'order-tracking-actions');
+    const trackingNote = makeElement(
+      'p',
+      'order-payment-note',
+      trackingLink ? 'Share this private tracking link in Messenger.' : 'Tracking link unavailable for this order.'
+    );
+    trackingGroup.appendChild(trackingNote);
+
+    const trackingButtonRow = makeElement('div', 'order-tracking-button-row');
+    const linkButton = makeElement('button', 'auth-button auth-button-secondary order-tracking-button', 'Copy Tracking Link');
+    linkButton.type = 'button';
+    linkButton.disabled = !trackingLink;
+    linkButton.addEventListener('click', () => handleTrackingCopy(order, 'link'));
+
+    const messageButton = makeElement('button', 'auth-button auth-button-secondary order-tracking-button', 'Copy Tracking Message');
+    messageButton.type = 'button';
+    messageButton.disabled = !trackingLink;
+    messageButton.addEventListener('click', () => handleTrackingCopy(order, 'message'));
+
+    trackingButtonRow.append(linkButton, messageButton);
+    trackingGroup.appendChild(trackingButtonRow);
+    section.appendChild(trackingGroup);
 
     return section;
   };
@@ -6029,7 +6108,7 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,created_at')
+      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,created_at')
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 
