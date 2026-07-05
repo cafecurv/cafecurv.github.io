@@ -226,10 +226,10 @@ a {
   align-items: stretch;
   gap: 0.6rem;
   padding: 0.78rem;
-  border: 1px solid rgba(200, 184, 154, 0.68);
+  border: 1px solid rgba(200, 184, 154, 0.48);
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(31, 37, 54, 0.98), rgba(20, 24, 36, 0.98));
-  box-shadow: 0 20px 52px rgba(5, 8, 16, 0.48), 0 0 0 1px rgba(200, 184, 154, 0.08), 0 0 28px rgba(200, 184, 154, 0.16);
+  box-shadow: 0 14px 34px rgba(5, 8, 16, 0.34), 0 0 0 1px rgba(200, 184, 154, 0.06);
   opacity: 0;
   transform: translateY(12px);
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -240,7 +240,7 @@ a {
   width: 4px;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 18px rgba(200, 184, 154, 0.54);
+  box-shadow: 0 0 10px rgba(200, 184, 154, 0.28);
 }
 
 .admin-order-toast[hidden] {
@@ -1850,8 +1850,8 @@ body.more-drawer-open {
 }
 
 .display-order-panel {
-  gap: 0.75rem;
-  padding: 0.9rem;
+  gap: 0.6rem;
+  padding: 0.78rem;
 }
 
 .admin-collapsible-head,
@@ -1880,8 +1880,8 @@ body.more-drawer-open {
 .admin-collapsible-head p {
   margin: 0;
   color: var(--slate);
-  font-size: 0.78rem;
-  line-height: 1.6;
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .admin-collapsible-toggle {
@@ -1917,13 +1917,13 @@ body.more-drawer-open {
 
 .admin-collapsible-content {
   border-top: 1px solid rgba(189, 196, 212, 0.12);
-  padding-top: 1rem;
+  padding-top: 0.75rem;
 }
 
 #display-order-content:not([hidden]) {
   display: grid;
-  gap: 0.75rem;
-  padding-top: 0.75rem;
+  gap: 0.55rem;
+  padding-top: 0.6rem;
 }
 
 .admin-collapsible-content[hidden] {
@@ -1943,17 +1943,17 @@ body.more-drawer-open {
 .display-order-empty p {
   margin: 0;
   color: var(--slate);
-  font-size: 0.78rem;
-  line-height: 1.6;
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .display-order-category-field {
-  flex: 1 1 260px;
+  flex: 1 1 220px;
 }
 
 .display-order-controls {
   align-items: flex-end;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .display-order-unsaved {
@@ -1972,7 +1972,7 @@ body.more-drawer-open {
 
 .display-order-list {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .display-order-empty,
@@ -1980,11 +1980,11 @@ body.more-drawer-open {
   border: 1px solid rgba(189, 196, 212, 0.14);
   border-radius: 8px;
   background: rgba(36, 44, 66, 0.36);
-  padding: 0.72rem;
+  padding: 0.62rem;
 }
 
 .display-order-empty h3 {
-  margin: 0 0 0.28rem;
+  margin: 0 0 0.18rem;
   color: var(--cream);
   font-family: 'Jost', sans-serif;
   font-size: 0.82rem;
@@ -2001,7 +2001,7 @@ body.more-drawer-open {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.58rem;
   cursor: grab;
   overflow: visible;
 }
@@ -2053,7 +2053,7 @@ body.more-drawer-open {
 
 .display-order-actions {
   justify-content: flex-end;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 .display-order-move-button {
@@ -2083,7 +2083,7 @@ body.more-drawer-open {
 
 .display-order-move-button:disabled {
   border-color: rgba(189, 196, 212, 0.12);
-  background: rgba(36, 44, 66, 0.22);
+  background: rgba(36, 44, 66, 0.16);
   color: rgba(189, 196, 212, 0.42);
   cursor: not-allowed;
 }
@@ -2695,24 +2695,25 @@ body.more-drawer-open {
 }
 
 .draft-checkbox-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
 .draft-checkbox {
-  min-height: 42px;
+  min-height: 40px;
   border: 1px solid rgba(189, 196, 212, 0.18);
   border-radius: 8px;
   background: rgba(36, 44, 66, 0.34);
   color: var(--slate);
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.62rem;
+  padding: 0.52rem 0.62rem;
+  font-size: 0.58rem;
   font-weight: 500;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
 }
 
@@ -2723,6 +2724,12 @@ body.more-drawer-open {
 .draft-checkbox:has(input:disabled) {
   opacity: 0.58;
   cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .draft-checkbox-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .draft-actions {
@@ -3230,13 +3237,13 @@ body.more-drawer-open {
   flex: 0 0 0.5rem;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(200, 184, 154, 0.1);
+  box-shadow: 0 0 0 3px rgba(200, 184, 154, 0.08);
 }
 
 .incoming-order-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.82rem;
 }
 
 .incoming-orders-toolbar {
@@ -3246,7 +3253,7 @@ body.more-drawer-open {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: rgba(28, 34, 53, 0.58);
-  padding: 0.72rem;
+  padding: 0.62rem;
 }
 
 .order-filter-button {
@@ -3280,7 +3287,7 @@ body.more-drawer-open {
 .incoming-orders-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.46fr);
-  gap: 1rem;
+  gap: 0.82rem;
   align-items: start;
 }
 
@@ -3289,10 +3296,10 @@ body.more-drawer-open {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: 0 12px 28px rgba(5, 8, 16, 0.18);
   max-height: calc(100vh - 170px);
   overflow-y: auto;
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .order-queue-panel h2,
@@ -3307,15 +3314,15 @@ body.more-drawer-open {
 
 .order-empty-state,
 .order-detail-empty {
-  margin-top: 1rem;
+  margin-top: 0.82rem;
   border: 1px dashed rgba(189, 196, 212, 0.18);
   border-radius: 8px;
   background: rgba(36, 44, 66, 0.3);
-  padding: 1.2rem;
+  padding: 1rem;
 }
 
 .order-empty-state {
-  min-height: 260px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -3340,16 +3347,16 @@ body.more-drawer-open {
 .order-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  gap: 0.72rem;
   margin: 0;
 }
 
 .order-detail-grid div {
-  min-height: 74px;
+  min-height: 66px;
   border: 1px solid rgba(189, 196, 212, 0.12);
   border-radius: 8px;
   background: rgba(20, 24, 36, 0.28);
-  padding: 0.75rem;
+  padding: 0.66rem;
 }
 
 .order-detail-grid dt {
@@ -3370,11 +3377,11 @@ body.more-drawer-open {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-  margin-top: 1rem;
+  margin-top: 0.82rem;
   border-top: 1px solid rgba(189, 196, 212, 0.14);
-  background: linear-gradient(180deg, rgba(28, 34, 53, 0), var(--surface) 34%);
+  background: linear-gradient(180deg, rgba(28, 34, 53, 0), var(--surface) 42%);
   bottom: 0;
-  padding-top: 1rem;
+  padding-top: 0.82rem;
   position: sticky;
   z-index: 1;
 }
@@ -3414,8 +3421,8 @@ body.more-drawer-open {
 }
 .order-list {
   display: grid;
-  gap: 0.72rem;
-  margin-top: 1rem;
+  gap: 0.58rem;
+  margin-top: 0.82rem;
 }
 
 .order-card {
@@ -3425,12 +3432,12 @@ body.more-drawer-open {
   background: rgba(20, 24, 36, 0.28);
   color: var(--cream);
   display: grid;
-  gap: 0.65rem;
-  padding: 0.9rem;
+  gap: 0.55rem;
+  padding: 0.78rem;
   font-family: 'Jost', sans-serif;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.16s ease, background 0.16s ease;
 }
 
 .order-card:hover,
@@ -3441,13 +3448,13 @@ body.more-drawer-open {
 }
 
 .order-card.is-selected {
-  transform: translateY(-1px);
+  border-color: rgba(200, 184, 154, 0.46);
 }
 
 .order-card.is-new-arrival {
-  border-color: rgba(200, 184, 154, 0.72);
-  background: rgba(200, 184, 154, 0.13);
-  box-shadow: 0 0 0 1px rgba(200, 184, 154, 0.18), 0 12px 34px rgba(200, 184, 154, 0.12);
+  border-color: rgba(200, 184, 154, 0.52);
+  background: rgba(200, 184, 154, 0.09);
+  box-shadow: inset 3px 0 0 rgba(200, 184, 154, 0.46);
 }
 
 .order-card-head,
@@ -3545,9 +3552,9 @@ body.more-drawer-open {
 }
 
 .order-detail-heading {
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.72rem;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.36rem;
   justify-items: start;
 }
 
@@ -3560,12 +3567,12 @@ body.more-drawer-open {
 .order-detail-section,
 .order-detail-notes {
   display: grid;
-  gap: 0.72rem;
-  margin-top: 1rem;
+  gap: 0.58rem;
+  margin-top: 0.82rem;
   border: 1px solid rgba(189, 196, 212, 0.12);
   border-radius: 8px;
   background: rgba(20, 24, 36, 0.28);
-  padding: 0.85rem;
+  padding: 0.72rem;
 }
 
 .order-detail-section h4 {
@@ -3580,7 +3587,7 @@ body.more-drawer-open {
 
 .order-detail-section-grid {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin: 0;
 }
 
@@ -3636,7 +3643,7 @@ body.more-drawer-open {
 
 .order-delivery-grid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.46rem;
   margin: 0;
 }
 
@@ -3645,7 +3652,7 @@ body.more-drawer-open {
   border: 1px solid rgba(189, 196, 212, 0.12);
   border-radius: 8px;
   background: rgba(20, 24, 36, 0.28);
-  padding: 0.68rem;
+  padding: 0.58rem;
 }
 
 .order-delivery-grid dt {
@@ -3692,7 +3699,7 @@ body.more-drawer-open {
 
 .order-detail-item-list {
   display: grid;
-  gap: 0.72rem;
+  gap: 0.58rem;
 }
 
 .order-detail-item {
@@ -3700,7 +3707,7 @@ body.more-drawer-open {
   border: 1px solid rgba(200, 184, 154, 0.18);
   border-radius: 8px;
   background: rgba(20, 24, 36, 0.34);
-  padding: 0.86rem;
+  padding: 0.72rem;
 }
 
 .order-detail-item-head {

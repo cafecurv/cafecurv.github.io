@@ -2447,7 +2447,7 @@
     }
 
     if (selectedDisplayOrderSection === 'all') {
-      renderDisplayOrderEmpty('Choose a section to reorder.', 'All sections is view-only.');
+      renderDisplayOrderEmpty('Select a section to reorder.', '');
       return;
     }
 
