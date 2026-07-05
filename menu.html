@@ -2006,7 +2006,10 @@
   }
 
   .curv-pick-card {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(112px, auto);
     align-items: center;
+    gap: 0.9rem;
     background: rgba(255, 255, 255, 0.56);
     min-height: 104px;
   }
@@ -2022,8 +2025,6 @@
   }
 
   .curv-pick-card .product-card-price {
-    align-self: center;
-    margin-left: auto;
     text-align: right;
   }
 
@@ -2031,15 +2032,19 @@
     cursor: default;
   }
 
-  .curv-pick-card .item-right {
+  .curv-pick-meta {
     align-self: center;
-    margin-left: auto;
+    justify-self: end;
+    display: grid;
+    gap: 0.18rem;
+    min-width: 112px;
+    text-align: right;
   }
 
   .curv-pick-card .price-row,
   .curv-pick-card .price-btn-row {
     justify-content: flex-end;
-    min-width: 122px;
+    min-width: 0;
   }
 
   .curv-pick-card .price-row + .price-row {
@@ -2386,20 +2391,23 @@
       margin-top: 0.15rem;
     }
     .curv-pick-card {
+      grid-template-columns: 64px minmax(0, 1fr);
       min-height: 92px;
     }
-    .curv-pick-quick-card {
-      flex-wrap: wrap;
-    }
-    .curv-pick-card .item-right {
-      flex: 1 1 100%;
-      margin-left: calc(64px + 0.75rem);
-      align-items: flex-start;
+    .curv-pick-meta {
+      grid-column: 2;
+      justify-self: start;
+      min-width: 0;
+      width: 100%;
+      text-align: left;
     }
     .curv-pick-card .price-row,
     .curv-pick-card .price-btn-row {
       justify-content: flex-start;
       min-width: 0;
+    }
+    .curv-pick-card .product-card-price {
+      text-align: left;
     }
   }
 
@@ -2413,6 +2421,10 @@
     .product-card-price {
       width: 100%;
       padding-left: 80px;
+    }
+    .curv-pick-card .product-card-price {
+      width: auto;
+      padding-left: 0;
     }
   }
 </style>
@@ -6386,7 +6398,7 @@
           ${descHtml}
           <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Customize'}</span>
         </span>
-        ${priceText}
+        ${priceText ? `<span class="curv-pick-meta">${priceText}</span>` : ''}
       </button>`;
     }
 
@@ -6405,7 +6417,7 @@
           ${descHtml}
           <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Add'}</span>
         </div>
-        <div class="item-right">${priceHtml}</div>
+        <div class="curv-pick-meta">${priceHtml}</div>
       </div>`;
   }
 
