@@ -523,7 +523,8 @@
     });
   };
 
-  const formatPaymentStatus = (status) => {
+  const formatPaymentStatus = (status, isAwaitingFinalConfirmation = false) => {
+    if (isAwaitingFinalConfirmation) return 'Awaiting final confirmation';
     const cleanStatus = String(status || '').trim().toLowerCase();
     if (cleanStatus === 'paid') return 'Paid';
     if (cleanStatus === 'pending') return 'Payment pending';
@@ -608,7 +609,10 @@
       addDetailRow('Order total', formatCurrency(order.total || subtotal, currency));
     }
 
-    addDetailRow('Payment status', formatPaymentStatus(order.payment_status));
+    addDetailRow('Payment status', formatPaymentStatus(
+      order.payment_status,
+      isDelivery && deliveryFeeStatus === 'to_confirm'
+    ));
   };
 
   const renderOrder = (order) => {
