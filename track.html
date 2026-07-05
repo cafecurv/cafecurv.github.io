@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="favicon1.png">
 <link rel="apple-touch-icon" href="favicon1.png">
-<title>Track Your Order | CURV</title>
-<meta name="description" content="Track your CURV order status with your private order tracking link.">
-<meta property="og:title" content="Track Your CURV Order">
+<title>Order Tracking | CURV</title>
+<meta name="description" content="Check the latest CURV order status.">
+<meta property="og:title" content="CURV Order Tracking">
 <meta property="og:description" content="See the latest status for your CURV order.">
 <meta property="og:image" content="https://cafecurv.github.io/preview1.png">
 <meta property="og:url" content="https://www.thecurv.cafe/track.html">
@@ -272,7 +272,8 @@
     text-transform: uppercase;
   }
 
-  .detail-list {
+  .detail-list,
+  .order-item-list {
     display: grid;
     gap: 0.65rem;
     margin-top: 0.8rem;
@@ -302,6 +303,61 @@
     font-size: 0.92rem;
     font-weight: 600;
     text-align: right;
+  }
+
+  .order-items-heading {
+    margin-top: 0.95rem;
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .order-item {
+    border: 0.5px solid rgba(229, 226, 220, 0.95);
+    border-radius: 10px;
+    background: rgba(238, 236, 234, 0.45);
+    padding: 0.72rem;
+  }
+
+  .order-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+  }
+
+  .order-item-title {
+    min-width: 0;
+    color: var(--navy);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .order-item-price {
+    flex-shrink: 0;
+    color: var(--price);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .order-item-meta {
+    margin-top: 0.35rem;
+    color: var(--gray-mid);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .order-items-empty {
+    margin-top: 0.8rem;
+    color: var(--gray-light);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 600;
   }
 
   .messenger-note {
@@ -338,14 +394,12 @@
 <header>
   <div class="logo">CURV</div>
   <div class="logo-line"></div>
-  <div class="header-tagline">Track your order</div>
+  <div class="header-tagline">Order updates</div>
 </header>
 
 <main>
   <section class="track-hero">
-    <p class="track-kicker">Order Tracking</p>
-    <h1>Your CURV Order</h1>
-    <p class="track-subtitle">Use your private tracking link to see the latest status. For changes, message CURV directly.</p>
+    <h1>Order Tracking</h1>
   </section>
 
   <section class="track-shell" data-track-root>
@@ -370,7 +424,7 @@
     </article>
 
     <article class="track-card" data-total-card hidden>
-      <h2 class="detail-card-title">Payment & Total</h2>
+      <h2 class="detail-card-title">Order Details</h2>
       <div class="detail-list" data-total-list></div>
     </article>
 
@@ -411,22 +465,22 @@
   const STATUS_META = {
     submitted: {
       label: 'Order received',
-      description: "We've received your order. Please wait for CURV to confirm your total and payment details.",
+      description: "We've received your order. Please wait while CURV confirms your total and payment details.",
       step: 0,
     },
     new: {
       label: 'Order received',
-      description: "We've received your order. Please wait for CURV to confirm your total and payment details.",
+      description: "We've received your order. Please wait while CURV confirms your total and payment details.",
       step: 0,
     },
     accepted: {
       label: 'Order accepted',
-      description: 'Your order has been accepted and queued.',
+      description: 'Your order has been accepted and placed in our queue. Kindly wait while our peeps prepare it for you.',
       step: 1,
     },
     preparing: {
       label: 'Preparing your order',
-      description: "We're preparing your order.",
+      description: 'Your order is now being prepared. Prep time usually takes around 15\u201330 minutes depending on order load, so please bear with us a little. \uD83E\uDD0E',
       step: 2,
     },
     ready: {
@@ -436,13 +490,13 @@
     },
     completed: {
       label: 'Completed',
-      description: 'Your order has been completed. Thank you!',
+      description: 'Your order has been completed. Thank you for ordering from CURV. \uD83E\uDD0E',
       step: 4,
       terminal: true,
     },
     cancelled: {
       label: 'Cancelled',
-      description: 'This order has been cancelled. Please message CURV if you need help.',
+      description: 'This order has been cancelled. Please message CURV directly if you need help.',
       step: -1,
       terminal: true,
     },
@@ -455,8 +509,8 @@
       return {
         ...fallback,
         description: fulfillmentType === 'delivery'
-          ? 'Your order is ready and waiting for delivery arrangement.'
-          : 'Your order is ready for pick-up.',
+          ? "Your order is ready and waiting for delivery arrangement. We'll update you once it's on the way."
+          : "Your order is ready for pick-up. You may drop by CURV when you're ready.",
       };
     }
     return fallback;
@@ -523,12 +577,11 @@
     });
   };
 
-  const formatPaymentStatus = (status, isAwaitingFinalConfirmation = false) => {
-    if (isAwaitingFinalConfirmation) return 'Awaiting final confirmation';
+  const formatPaymentStatus = (status) => {
     const cleanStatus = String(status || '').trim().toLowerCase();
     if (cleanStatus === 'paid') return 'Paid';
-    if (cleanStatus === 'pending') return 'Payment pending';
-    if (cleanStatus === 'refunded') return 'Refunded';
+    if (cleanStatus === 'unpaid' || cleanStatus === 'pending') return 'Payment pending';
+    if (cleanStatus) return formatOptionLabel(cleanStatus);
     return 'Payment pending';
   };
 
@@ -537,6 +590,50 @@
     if (cleanOption === 'curv_rider') return 'CURV Rider';
     if (cleanOption === 'lalamove') return 'Lalamove';
     return 'Delivery';
+  };
+
+  const formatOptionLabel = (value) => String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+
+  const stringifyOptionValue = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    if (Array.isArray(value)) return value.map(stringifyOptionValue).filter(Boolean).join(', ');
+    if (typeof value === 'object') {
+      const preferredValue = value.label || value.name || value.value || value.choice || value.option;
+      if (preferredValue && typeof preferredValue !== 'object') return String(preferredValue).trim();
+      return Object.entries(value)
+        .map(([key, nestedValue]) => {
+          const cleanValue = stringifyOptionValue(nestedValue);
+          return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+        })
+        .filter(Boolean)
+        .join(' / ');
+    }
+    return String(value).trim();
+  };
+
+  const formatOrderItemOptions = (options) => {
+    if (!options) return [];
+    if (typeof options === 'string') {
+      const cleanOptions = options.trim();
+      if (!cleanOptions || cleanOptions === '{}') return [];
+      try {
+        return formatOrderItemOptions(JSON.parse(cleanOptions));
+      } catch (error) {
+        return [cleanOptions];
+      }
+    }
+    if (Array.isArray(options)) return options.map(stringifyOptionValue).filter(Boolean);
+    if (typeof options !== 'object' || !Object.keys(options).length) return [];
+    return Object.entries(options)
+      .map(([key, value]) => {
+        const cleanValue = stringifyOptionValue(value);
+        return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+      })
+      .filter(Boolean);
   };
 
   const addDetailRow = (label, value) => {
@@ -579,6 +676,63 @@
     });
   };
 
+  const addOrderItems = (items, currency) => {
+    const heading = document.createElement('h3');
+    heading.className = 'order-items-heading';
+    heading.textContent = 'Order items';
+    totalList.appendChild(heading);
+
+    if (!Array.isArray(items) || !items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'order-items-empty';
+      empty.textContent = 'Order items unavailable.';
+      totalList.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'order-item-list';
+
+    items
+      .slice()
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+      .forEach((item) => {
+        const quantity = Number(item.quantity || 0);
+        const quantityLabel = (quantity > 0 ? quantity : 1) + 'x';
+        const card = document.createElement('article');
+        card.className = 'order-item';
+
+        const head = document.createElement('div');
+        head.className = 'order-item-head';
+
+        const title = document.createElement('p');
+        title.className = 'order-item-title';
+        title.textContent = quantityLabel + ' ' + (item.product_name || 'Menu item');
+
+        const price = document.createElement('p');
+        price.className = 'order-item-price';
+        price.textContent = formatCurrency(item.line_total, currency);
+
+        head.append(title, price);
+        card.appendChild(head);
+
+        const metaParts = [];
+        if (item.variant_label) metaParts.push(item.variant_label);
+        const optionLines = formatOrderItemOptions(item.options);
+        if (optionLines.length) metaParts.push(optionLines.join(' / '));
+        if (metaParts.length) {
+          const meta = document.createElement('p');
+          meta.className = 'order-item-meta';
+          meta.textContent = metaParts.join(' - ');
+          card.appendChild(meta);
+        }
+
+        list.appendChild(card);
+      });
+
+    totalList.appendChild(list);
+  };
+
   const renderTotals = (order) => {
     if (!totalList) return;
     totalList.innerHTML = '';
@@ -586,33 +740,14 @@
     const isDelivery = order.fulfillment_type === 'delivery';
     const currency = order.currency || 'PHP';
     const subtotal = Number(order.subtotal || order.total || 0);
-    const deliveryFeeStatus = String(order.delivery_fee_status || '').trim().toLowerCase();
-    const deliveryFee = order.delivery_fee === null || order.delivery_fee === undefined
-      ? null
-      : Number(order.delivery_fee || 0);
 
-    addDetailRow('Order method', isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pick-up');
-    addDetailRow('Order subtotal', formatCurrency(subtotal, currency));
-
-    if (isDelivery) {
-      if (deliveryFeeStatus === 'waived') {
-        addDetailRow('Delivery fee', 'Waived');
-        addDetailRow('Final total', formatCurrency(subtotal, currency));
-      } else if (deliveryFeeStatus === 'confirmed' && deliveryFee !== null) {
-        addDetailRow('Delivery fee', formatCurrency(deliveryFee, currency));
-        addDetailRow('Final total', formatCurrency(subtotal + deliveryFee, currency));
-      } else {
-        addDetailRow('Delivery fee', 'To be confirmed');
-        addDetailRow('Final total', 'To be confirmed');
-      }
-    } else {
-      addDetailRow('Order total', formatCurrency(order.total || subtotal, currency));
+    addDetailRow('Order method', isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pickup');
+    if (isDelivery && order.delivery_address) {
+      addDetailRow('Delivery address', order.delivery_address);
     }
-
-    addDetailRow('Payment status', formatPaymentStatus(
-      order.payment_status,
-      isDelivery && deliveryFeeStatus === 'to_confirm'
-    ));
+    addOrderItems(order.items, currency);
+    addDetailRow('Order subtotal', formatCurrency(subtotal, currency));
+    addDetailRow('Payment status', formatPaymentStatus(order.payment_status));
   };
 
   const renderOrder = (order) => {
