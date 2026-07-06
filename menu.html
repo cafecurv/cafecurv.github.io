@@ -833,7 +833,34 @@
   }
 
   .delivery-time-row .temp-toggle-wrap { flex-shrink: 0; }
-  .delivery-time-row .form-input { flex: 1; }
+  .delivery-time-row .form-input {
+    flex: 0 0 160px;
+    width: 160px;
+    max-width: 170px;
+  }
+
+  @media (max-width: 420px) {
+    .delivery-time-row { flex-wrap: wrap; }
+
+    .delivery-time-row .form-input {
+      flex: 1 1 150px;
+      width: auto;
+      max-width: none;
+    }
+  }
+
+  .store-hours-note {
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--gray-mid);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  .store-hours-note.error { color: #9b5b4d; }
+  .store-hours-note.success { color: #4a7c59; }
 
   .cart-total-note {
     border-top: 0.5px solid var(--bg3);
@@ -1542,6 +1569,16 @@
   .temp-tab.active {
     background: var(--navy);
     color: var(--bg);
+  }
+
+  .temp-tab:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .temp-tab:disabled.active {
+    background: transparent;
+    color: var(--gray-light);
   }
 
   .customer-type-toggle {
@@ -3252,8 +3289,9 @@
             <button class="temp-tab active" id="tabAsap" onclick="setDeliveryTime('asap')">ASAP</button>
             <button class="temp-tab" id="tabSpecific" onclick="setDeliveryTime('specific')">Specific Time</button>
           </div>
-          <input class="form-input" type="time" id="f-delivery-time" style="display:none;flex:1;">
+          <input class="form-input" type="time" id="f-delivery-time" min="15:00" max="23:59" style="display:none;">
         </div>
+        <div class="store-hours-note" id="store-hours-note"></div>
       </div>
 
       <div class="form-group">
@@ -6838,18 +6876,155 @@
     if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
 
     renderCart();
+    syncStoreHoursOrderState();
   }
 
   // ── DELIVERY TIME ──
   let deliveryTimeMode = 'asap';
 
-  function setDeliveryTime(mode) {
-    deliveryTimeMode = mode;
-    document.getElementById('tabAsap').classList.toggle('active', mode === 'asap');
-    document.getElementById('tabSpecific').classList.toggle('active', mode === 'specific');
+  function getManilaNow() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila',
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).formatToParts(new Date()).reduce((acc, part) => {
+      if (part.type !== 'literal') acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+    return {
+      year: Number(parts.year),
+      month: Number(parts.month),
+      day: Number(parts.day),
+      hour: Number(parts.hour),
+      minute: Number(parts.minute),
+      second: Number(parts.second)
+    };
+  }
+
+  function getTimeMinutes(time24) {
+    const match = String(time24 || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return (hour * 60) + minute;
+  }
+
+  function isCurvOpenNow(now = getManilaNow()) {
+    const minutes = (Number(now.hour) * 60) + Number(now.minute);
+    return minutes >= 15 * 60 && minutes < 24 * 60;
+  }
+
+  function isValidOperatingTime(time24) {
+    const minutes = getTimeMinutes(time24);
+    return minutes !== null && minutes >= 15 * 60 && minutes < 24 * 60;
+  }
+
+  function getStoreHoursMessage() {
+    const open = isCurvOpenNow();
+    const specificTime = document.getElementById('f-delivery-time')?.value || '';
+    if (open) {
+      if (deliveryTimeMode === 'specific' && specificTime && !isValidOperatingTime(specificTime)) {
+        return { message: 'Please choose 3:00 PM onwards for advance orders.', tone: 'error' };
+      }
+      return { message: '', tone: '' };
+    }
+    if (deliveryTimeMode === 'asap') {
+      return { message: 'ASAP is available only during store hours.', tone: 'error' };
+    }
+    if (!specificTime) {
+      return { message: 'CURV is closed right now. Advance orders start at 3:00 PM. Please choose a specific time for your advance order.', tone: '' };
+    }
+    if (!isValidOperatingTime(specificTime)) {
+      return { message: 'Please choose 3:00 PM onwards for advance orders.', tone: 'error' };
+    }
+    return { message: 'Advance order selected.', tone: 'success' };
+  }
+
+  function getStoreHoursValidationMessage() {
+    const open = isCurvOpenNow();
+    const specificTime = document.getElementById('f-delivery-time')?.value || '';
+    if (deliveryTimeMode === 'specific' && specificTime && !isValidOperatingTime(specificTime)) {
+      return 'Please choose 3:00 PM onwards for advance orders.';
+    }
+    if (!open && deliveryTimeMode === 'asap') {
+      return 'ASAP is available only during store hours.';
+    }
+    if (!open && deliveryTimeMode !== 'specific') {
+      return 'Please choose a specific time for your advance order.';
+    }
+    if (!open && !specificTime) {
+      return 'Please choose a specific time for your advance order.';
+    }
+    if (!open && !isValidOperatingTime(specificTime)) {
+      return 'Please choose 3:00 PM onwards for advance orders.';
+    }
+    return '';
+  }
+
+  function syncStoreHoursOrderState() {
+    const submitButton = document.getElementById('submitOrderBtn');
+    const asapButton = document.getElementById('tabAsap');
+    const specificButton = document.getElementById('tabSpecific');
     const timeInput = document.getElementById('f-delivery-time');
-    timeInput.style.display = mode === 'specific' ? 'block' : 'none';
-    if (mode === 'specific') timeInput.focus();
+    const note = document.getElementById('store-hours-note');
+    const open = isCurvOpenNow();
+
+    if (!open && deliveryTimeMode === 'asap' && !isOrderSubmittedLocked) {
+      deliveryTimeMode = 'specific';
+      if (timeInput) timeInput.style.display = 'block';
+    }
+
+    if (asapButton) {
+      asapButton.disabled = !open || isOrderSubmittedLocked;
+      asapButton.classList.toggle('active', deliveryTimeMode === 'asap' && open);
+    }
+    if (specificButton) {
+      specificButton.disabled = isOrderSubmittedLocked;
+      specificButton.classList.toggle('active', deliveryTimeMode === 'specific');
+    }
+    if (timeInput) {
+      timeInput.style.display = deliveryTimeMode === 'specific' ? 'block' : 'none';
+    }
+
+    const validationMessage = getStoreHoursValidationMessage();
+    const hoursMessage = getStoreHoursMessage();
+    if (note) {
+      note.textContent = hoursMessage.message || '';
+      note.classList.toggle('error', hoursMessage.tone === 'error');
+      note.classList.toggle('success', hoursMessage.tone === 'success');
+    }
+
+    if (submitButton) {
+      submitButton.hidden = false;
+      if (isOrderSubmittedLocked) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Order Submitted';
+      } else if (isSubmittingPublicOrder) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submitting...';
+      } else {
+        submitButton.disabled = !isPublicOrderSubmitEnabled() || Boolean(validationMessage);
+        submitButton.textContent = !open && !validationMessage ? 'Place Advance Order' : 'Submit Order';
+      }
+    }
+  }
+
+  function setDeliveryTime(mode) {
+    const open = isCurvOpenNow();
+    deliveryTimeMode = mode === 'asap' && !open ? 'specific' : mode;
+    document.getElementById('tabAsap').classList.toggle('active', deliveryTimeMode === 'asap' && open);
+    document.getElementById('tabSpecific').classList.toggle('active', deliveryTimeMode === 'specific');
+    const timeInput = document.getElementById('f-delivery-time');
+    timeInput.style.display = deliveryTimeMode === 'specific' ? 'block' : 'none';
+    if (deliveryTimeMode === 'specific') timeInput.focus();
+    syncStoreHoursOrderState();
   }
 
   // ── SCROLL NAV MERGE ──
@@ -7338,6 +7513,8 @@
     if (isDelivery && !isReturningCustomer && !address) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
     if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
+    const storeHoursValidation = getStoreHoursValidationMessage();
+    if (storeHoursValidation) { alert(storeHoursValidation); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
 
     const orderLines = cart.map(i => {
@@ -7462,10 +7639,9 @@
   function syncPublicOrderSubmitGate() {
     const submitButton = document.getElementById('submitOrderBtn');
     if (!submitButton) return;
-    const enabled = isPublicOrderSubmitEnabled();
     submitButton.hidden = false;
-    submitButton.disabled = !enabled;
-    if (!enabled) setSubmitOrderStatus('');
+    syncStoreHoursOrderState();
+    if (!isPublicOrderSubmitEnabled()) setSubmitOrderStatus('');
   }
 
   function setSubmitOrderStatus(message, tone = '') {
@@ -7676,8 +7852,7 @@
     const submitButton = document.getElementById('submitOrderBtn');
     if (submitButton) {
       submitButton.hidden = false;
-      submitButton.disabled = isOrderSubmittedLocked || !isPublicOrderSubmitEnabled();
-      submitButton.textContent = isOrderSubmittedLocked ? 'Order Submitted' : 'Submit Order';
+      syncStoreHoursOrderState();
     }
     const copyButton = document.getElementById('copyBtn');
     if (copyButton) {
@@ -7723,6 +7898,7 @@
   function validatePublicOrderPayload(payload) {
     const deliverySelect = document.getElementById('f-delivery');
     const paymentSelect = document.getElementById('f-payment');
+    const storeHoursValidation = getStoreHoursValidationMessage();
     if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) return 'Please add at least one item to your order.';
     if (!payload.customer_name) return 'Please fill in your name.';
     if (!payload.customer_phone) return 'Please fill in your contact number.';
@@ -7734,6 +7910,7 @@
     } else if (payload.fulfillment_type !== 'pickup') {
       return 'Please select Delivery or Pick-up.';
     }
+    if (storeHoursValidation) return storeHoursValidation;
     return '';
   }
 
@@ -7786,16 +7963,20 @@
       setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
     } finally {
       isSubmittingPublicOrder = false;
-      if (submitButton) {
-        submitButton.disabled = submittedSuccessfully || isOrderSubmittedLocked;
-        submitButton.textContent = submittedSuccessfully || isOrderSubmittedLocked ? 'Order Submitted' : 'Submit Order';
-      }
+      syncStoreHoursOrderState();
     }
   }
 
   syncOrderMethodFields();
   syncPublicOrderSubmitGate();
   renderRecentOrderReminder();
+
+  const preferredTimeInput = document.getElementById('f-delivery-time');
+  if (preferredTimeInput) {
+    preferredTimeInput.addEventListener('input', syncStoreHoursOrderState);
+    preferredTimeInput.addEventListener('change', syncStoreHoursOrderState);
+  }
+  window.setInterval(syncStoreHoursOrderState, 60000);
 
   function copyOrder() {
     const msg = buildMessage();
