@@ -5599,6 +5599,7 @@
   };
 
   const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
+  const hasCustomerCancelRequest = (order) => String(order && order.customer_cancel_status || '').trim().toLowerCase() === 'requested';
 
   const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, fulfillment, payment, and total details will appear here after selecting an order.') => {
     if (!orderDetail) return;
@@ -5615,6 +5616,31 @@
     empty.dataset.orderEmpty = '';
     empty.append(makeElement('h3', '', title), makeElement('p', '', message));
     orderList.appendChild(empty);
+  };
+
+  const renderCancellationRequestNotice = (order) => {
+    if (!hasCustomerCancelRequest(order)) return null;
+
+    const section = makeElement('section', 'order-cancel-request-notice');
+    section.appendChild(makeElement('h4', '', 'Cancellation requested'));
+    section.appendChild(makeElement('p', '', 'Customer requested to cancel this order. Please review before preparing or completing.'));
+
+    const details = makeElement('dl', 'order-cancel-request-details');
+    const requestedRow = document.createElement('div');
+    requestedRow.append(
+      makeElement('dt', '', 'Requested'),
+      makeElement('dd', '', order.customer_cancel_requested_at ? formatOrderDate(order.customer_cancel_requested_at) : '-'),
+    );
+
+    const reasonRow = document.createElement('div');
+    reasonRow.append(
+      makeElement('dt', '', 'Reason'),
+      makeElement('dd', order.customer_cancel_reason ? '' : 'is-muted', order.customer_cancel_reason || 'No reason provided.'),
+    );
+
+    details.append(requestedRow, reasonRow);
+    section.appendChild(details);
+    return section;
   };
 
   const renderOrderItemsSection = (order) => {
@@ -5787,6 +5813,9 @@
       makeElement('span', 'order-status-badge', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('span', 'order-source-badge', getOrderSource(order)),
     );
+    if (hasCustomerCancelRequest(order)) {
+      headingBadges.appendChild(makeElement('span', 'order-cancel-request-badge', 'Cancellation requested'));
+    }
     heading.appendChild(headingBadges);
 
     const createdDisplay = formatOrderDate(order.created_at);
@@ -5812,6 +5841,8 @@
     }
     const fulfillmentSection = renderDetailSection('Fulfillment', fulfillmentRows, 'order-fulfillment-details');
     const detailNodes = [heading, headerSection, customerSection, fulfillmentSection];
+    const cancelRequestNotice = renderCancellationRequestNotice(order);
+    if (cancelRequestNotice) detailNodes.splice(1, 0, cancelRequestNotice);
 
     if (order.customer_email || order.customer_notes) {
       const notes = makeElement('div', 'order-detail-notes');
@@ -5884,6 +5915,9 @@
         makeElement('span', 'order-source-badge', getOrderSource(order)),
         makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
       );
+      if (hasCustomerCancelRequest(order)) {
+        badgeGroup.appendChild(makeElement('span', 'order-cancel-request-badge', 'Cancellation requested'));
+      }
       head.append(
         makeElement('span', 'order-number', order.order_number || 'Order'),
         badgeGroup,
@@ -6108,7 +6142,7 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,created_at')
+      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at')
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 

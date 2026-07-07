@@ -3484,7 +3484,8 @@ body.more-drawer-open {
 
 .order-status-badge,
 .order-fulfillment-badge,
-.order-source-badge {
+.order-source-badge,
+.order-cancel-request-badge {
   border: 1px solid rgba(200, 184, 154, 0.36);
   border-radius: 999px;
   color: var(--accent);
@@ -3504,6 +3505,12 @@ body.more-drawer-open {
 .order-source-badge {
   border-color: rgba(189, 196, 212, 0.22);
   color: var(--slate);
+}
+
+.order-cancel-request-badge {
+  border-color: rgba(242, 184, 120, 0.48);
+  background: rgba(242, 184, 120, 0.1);
+  color: #f0c894;
 }
 
 .order-age {
@@ -3584,6 +3591,68 @@ body.more-drawer-open {
   font-weight: 700;
   letter-spacing: 1.55px;
   text-transform: uppercase;
+}
+
+.order-cancel-request-notice {
+  display: grid;
+  gap: 0.58rem;
+  margin-top: 0.82rem;
+  border: 1px solid rgba(242, 184, 120, 0.24);
+  border-radius: 8px;
+  background: rgba(242, 184, 120, 0.08);
+  padding: 0.72rem;
+}
+
+.order-cancel-request-notice h4 {
+  margin: 0;
+  color: #f0c894;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.55px;
+  text-transform: uppercase;
+}
+
+.order-cancel-request-notice p,
+.order-cancel-request-details {
+  margin: 0;
+}
+
+.order-cancel-request-notice p {
+  color: var(--cream);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.order-cancel-request-details {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.order-cancel-request-details div {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.order-cancel-request-details dt {
+  color: var(--slate);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 1.25px;
+  text-transform: uppercase;
+}
+
+.order-cancel-request-details dd {
+  margin: 0;
+  color: var(--cream);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.order-cancel-request-details dd.is-muted {
+  color: var(--slate);
+  font-style: italic;
 }
 
 .order-detail-section-grid {

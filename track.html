@@ -361,6 +361,73 @@
     font-weight: 600;
   }
 
+  .cancel-card-copy {
+    margin-top: 0.55rem;
+    color: var(--gray-mid);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+
+  .cancel-reason-field {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+  }
+
+  .cancel-reason-field label {
+    color: var(--gray-mid);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+  }
+
+  .cancel-reason-field textarea {
+    min-height: 78px;
+    resize: vertical;
+    border: 0.5px solid var(--bg3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.38);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    padding: 0.72rem 0.78rem;
+  }
+
+  .cancel-reason-field textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  .cancel-status {
+    min-height: 1.2rem;
+    margin-top: 0.62rem;
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.78rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .cancel-status.is-error {
+    color: #9b5b4d;
+  }
+
+  .cancel-status.is-success {
+    color: #4a7c59;
+  }
+
+  .cancel-request-button {
+    margin-top: 0.8rem;
+  }
+
+  .cancel-request-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+
   .messenger-note {
     border-left: 2px solid var(--accent);
     color: var(--gray-mid);
@@ -429,6 +496,17 @@
       <div class="detail-list" data-total-list></div>
     </article>
 
+    <article class="track-card" data-cancel-card hidden>
+      <h2 class="detail-card-title">Need to cancel your order?</h2>
+      <p class="cancel-card-copy" data-cancel-copy>You can request cancellation while your order hasn't started preparation yet.</p>
+      <div class="cancel-reason-field" data-cancel-reason-field>
+        <label for="cancel-reason">Reason (optional)</label>
+        <textarea id="cancel-reason" maxlength="500" placeholder="Tell us why you need to cancel." data-cancel-reason></textarea>
+      </div>
+      <button class="track-button cancel-request-button" type="button" data-cancel-button>Request Cancellation</button>
+      <p class="cancel-status" data-cancel-status></p>
+    </article>
+
     <article class="track-card messenger-note" data-note-card hidden>
       For changes or urgent concerns, message CURV directly on
       <a href="https://m.me/cafecurv" target="_blank" rel="noopener">Messenger</a>.
@@ -449,6 +527,12 @@
   const retryButton = document.querySelector('[data-retry-button]');
   const mainCard = document.querySelector('[data-main-card]');
   const totalCard = document.querySelector('[data-total-card]');
+  const cancelCard = document.querySelector('[data-cancel-card]');
+  const cancelCopy = document.querySelector('[data-cancel-copy]');
+  const cancelReasonField = document.querySelector('[data-cancel-reason-field]');
+  const cancelReasonInput = document.querySelector('[data-cancel-reason]');
+  const cancelButton = document.querySelector('[data-cancel-button]');
+  const cancelStatus = document.querySelector('[data-cancel-status]');
   const noteCard = document.querySelector('[data-note-card]');
   const orderNumberEl = document.querySelector('[data-order-number]');
   const statusPill = document.querySelector('[data-status-pill]');
@@ -462,6 +546,8 @@
   let pollTimer = null;
   let currentToken = '';
   let lastFetchTime = null;
+  let latestOrderNumber = '';
+  let isSubmittingCancelRequest = false;
 
   const STATUS_META = {
     submitted: {
@@ -524,6 +610,7 @@
     if (stateCard) stateCard.hidden = false;
     if (mainCard) mainCard.hidden = true;
     if (totalCard) totalCard.hidden = true;
+    if (cancelCard) cancelCard.hidden = true;
     if (noteCard) noteCard.hidden = true;
   };
 
@@ -531,6 +618,7 @@
     if (stateCard) stateCard.hidden = true;
     if (mainCard) mainCard.hidden = false;
     if (totalCard) totalCard.hidden = false;
+    if (cancelCard) cancelCard.hidden = false;
     if (noteCard) noteCard.hidden = false;
   };
 
@@ -751,12 +839,56 @@
     addDetailRow('Payment status', formatPaymentStatus(order.payment_status));
   };
 
+  const isCancellationRequestAllowed = (status) => ['submitted', 'new', 'accepted'].includes(status);
+
+  const setCancelMessage = (message, tone = '') => {
+    if (!cancelStatus) return;
+    cancelStatus.textContent = message || '';
+    cancelStatus.classList.toggle('is-error', tone === 'error');
+    cancelStatus.classList.toggle('is-success', tone === 'success');
+  };
+
+  const renderCancellationSection = (order, status) => {
+    if (!cancelCard) return;
+
+    const cancelState = String(order.customer_cancel_status || 'none').trim().toLowerCase();
+    const alreadyRequested = cancelState === 'requested';
+    const isCancelled = status === 'cancelled';
+    const canRequest = isCancellationRequestAllowed(status) && !alreadyRequested;
+
+    if (cancelCopy) {
+      if (alreadyRequested) {
+        cancelCopy.textContent = 'Cancellation request sent. Please wait for CURV to confirm.';
+      } else if (isCancelled) {
+        cancelCopy.textContent = 'This order has already been cancelled.';
+      } else if (!isCancellationRequestAllowed(status)) {
+        cancelCopy.textContent = 'This order is already being prepared. Please message CURV directly for urgent concerns.';
+      } else {
+        cancelCopy.textContent = "You can request cancellation while your order hasn't started preparation yet.";
+      }
+    }
+
+    if (cancelReasonField) cancelReasonField.hidden = !canRequest;
+    if (cancelButton) {
+      cancelButton.hidden = !canRequest;
+      cancelButton.disabled = isSubmittingCancelRequest;
+      cancelButton.textContent = isSubmittingCancelRequest ? 'Sending...' : 'Request Cancellation';
+    }
+
+    if (alreadyRequested) {
+      setCancelMessage('Cancellation request sent. Please wait for CURV to confirm.', 'success');
+    } else {
+      setCancelMessage('');
+    }
+  };
+
   const renderOrder = (order) => {
     const status = String(order.status || 'submitted').trim().toLowerCase();
     const fulfillmentType = String(order.fulfillment_type || 'pickup').trim().toLowerCase() === 'delivery'
       ? 'delivery'
       : 'pickup';
     const meta = getStatusMeta(status, fulfillmentType);
+    latestOrderNumber = order.order_number || '';
 
     if (orderNumberEl) orderNumberEl.textContent = order.order_number || 'CURV order';
     if (statusPill) statusPill.textContent = meta.label;
@@ -765,6 +897,7 @@
 
     renderTimeline({ ...order, status, fulfillment_type: fulfillmentType }, meta);
     renderTotals({ ...order, status, fulfillment_type: fulfillmentType });
+    renderCancellationSection(order, status);
 
     lastFetchTime = new Date();
     if (lastUpdated) lastUpdated.textContent = formatUpdatedTime(lastFetchTime);
@@ -815,6 +948,56 @@
     renderOrder(order);
   };
 
+  const requestCancellation = async () => {
+    if (!currentToken || isSubmittingCancelRequest) return;
+
+    const shouldRequest = window.confirm('Request cancellation for order ' + (latestOrderNumber || 'this order') + '?');
+    if (!shouldRequest) return;
+
+    const reason = cancelReasonInput && cancelReasonInput.value.trim()
+      ? cancelReasonInput.value.trim()
+      : null;
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) {
+      setCancelMessage('Cancellation request is unavailable right now. Please message CURV directly.', 'error');
+      return;
+    }
+
+    isSubmittingCancelRequest = true;
+    if (cancelButton) {
+      cancelButton.disabled = true;
+      cancelButton.textContent = 'Sending...';
+    }
+    setCancelMessage('');
+
+    const { data, error } = await supabaseClient.rpc('request_public_order_cancellation', {
+      p_tracking_token: currentToken,
+      p_reason: reason,
+    });
+
+    isSubmittingCancelRequest = false;
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = 'Request Cancellation';
+    }
+
+    if (error) {
+      setCancelMessage(error.message || 'Unable to send cancellation request. Please message CURV directly.', 'error');
+      return;
+    }
+
+    const response = data && typeof data === 'object' ? data : {};
+    const ok = response.ok === true;
+    const fallbackMessage = ok
+      ? 'Cancellation request sent. Please wait for CURV to confirm.'
+      : 'This order is already being prepared. Please message CURV directly for urgent concerns.';
+    setCancelMessage(response.message || fallbackMessage, ok ? 'success' : 'error');
+
+    if (ok) {
+      await fetchTracking();
+    }
+  };
+
   const init = () => {
     currentToken = getTrackingToken();
     if (!currentToken) {
@@ -836,6 +1019,10 @@
       setState('Checking again...', 'Please wait while we refresh your order status.', false);
       fetchTracking();
     });
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener('click', requestCancellation);
   }
 
   window.addEventListener('beforeunload', stopPolling);
