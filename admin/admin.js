@@ -87,8 +87,9 @@
 
 (() => {
   const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
+  const notificationBadges = Array.from(document.querySelectorAll('.notification-badge'));
   const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
-  const badges = [...desktopBadges, ...mobileBadges];
+  const badges = [...desktopBadges, ...notificationBadges, ...mobileBadges];
   if (!badges.length) return;
 
   const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
@@ -98,8 +99,12 @@
   let orderToast = null;
   let orderToastTimer = null;
   const unseenOrderStorageKey = 'curvIncomingOrdersUnseen';
+  const orderSoundStorageKey = 'curvIncomingOrdersSoundEnabled';
+  let orderSoundEnabled = false;
   let alertAudioUnlocked = false;
   let alertAudioContext = null;
+  let newOrderAlertInterval = null;
+  let newOrderAlertTimeout = null;
 
   const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
@@ -114,6 +119,13 @@
   };
 
   let unseenOrderKeys = readUnseenOrderKeys();
+
+  try {
+    orderSoundEnabled = window.localStorage.getItem(orderSoundStorageKey) === 'true';
+  } catch (error) {
+    orderSoundEnabled = false;
+  }
+  alertAudioUnlocked = orderSoundEnabled;
 
   const persistUnseenOrderKeys = () => {
     try {
@@ -156,15 +168,33 @@
     setIncomingOrderBadge(unseenOrderKeys.size);
   };
 
-  const unlockOrderAlertAudio = () => {
-    alertAudioUnlocked = true;
+  const setOrderSoundEnabled = (isEnabled) => {
+    orderSoundEnabled = Boolean(isEnabled);
+    alertAudioUnlocked = orderSoundEnabled;
+    try {
+      window.localStorage.setItem(orderSoundStorageKey, orderSoundEnabled ? 'true' : 'false');
+    } catch (error) {
+      // Sound preference is nice-to-have.
+    }
+    if (!orderSoundEnabled) {
+      stopNewOrderAlert();
+      return orderSoundEnabled;
+    }
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return orderSoundEnabled;
+      alertAudioContext = alertAudioContext || new AudioContext();
+      if (alertAudioContext.state === 'suspended') alertAudioContext.resume().catch(() => {});
+    } catch (error) {
+      // Browsers can block audio until a direct user action.
+    }
+    return orderSoundEnabled;
   };
 
-  document.addEventListener('pointerdown', unlockOrderAlertAudio, { once: true, passive: true });
-  document.addEventListener('keydown', unlockOrderAlertAudio, { once: true });
+  const getOrderSoundEnabled = () => orderSoundEnabled;
 
-  const playNewOrderChime = () => {
-    if (!alertAudioUnlocked) return;
+  const playNewOrderAlertPattern = () => {
+    if (!orderSoundEnabled || !alertAudioUnlocked) return;
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
@@ -173,22 +203,44 @@
       if (context.state === 'suspended') context.resume().catch(() => {});
 
       const startAt = context.currentTime + 0.02;
-      [660, 880].forEach((frequency, index) => {
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, startAt + index * 0.11);
-        gain.gain.setValueAtTime(0.0001, startAt + index * 0.11);
-        gain.gain.exponentialRampToValueAtTime(0.055, startAt + index * 0.11 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + index * 0.11 + 0.18);
-        oscillator.connect(gain);
-        gain.connect(context.destination);
-        oscillator.start(startAt + index * 0.11);
-        oscillator.stop(startAt + index * 0.11 + 0.2);
+      [0, 0.22, 0.44, 0.66].forEach((offset) => {
+        const dingStart = startAt + offset;
+        [
+          { frequency: 1380, endFrequency: 1240, gain: 0.115, type: 'triangle', duration: 0.38 },
+          { frequency: 2480, endFrequency: 2240, gain: 0.039, type: 'sine', duration: 0.28 },
+        ].forEach((tone) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = tone.type;
+          oscillator.frequency.setValueAtTime(tone.frequency, dingStart);
+          oscillator.frequency.exponentialRampToValueAtTime(tone.endFrequency, dingStart + tone.duration);
+          gain.gain.setValueAtTime(0.0001, dingStart);
+          gain.gain.exponentialRampToValueAtTime(tone.gain, dingStart + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, dingStart + tone.duration);
+          oscillator.connect(gain);
+          gain.connect(context.destination);
+          oscillator.start(dingStart);
+          oscillator.stop(dingStart + tone.duration + 0.03);
+        });
       });
     } catch (error) {
       // Browsers can block audio; visual alerts still carry the notification.
     }
+  };
+
+  const stopNewOrderAlert = () => {
+    if (newOrderAlertInterval) window.clearInterval(newOrderAlertInterval);
+    if (newOrderAlertTimeout) window.clearTimeout(newOrderAlertTimeout);
+    newOrderAlertInterval = null;
+    newOrderAlertTimeout = null;
+  };
+
+  const startNewOrderAlert = () => {
+    if (!orderSoundEnabled || !alertAudioUnlocked) return;
+    stopNewOrderAlert();
+    playNewOrderAlertPattern();
+    newOrderAlertInterval = window.setInterval(playNewOrderAlertPattern, 3000);
+    newOrderAlertTimeout = window.setTimeout(stopNewOrderAlert, 60000);
   };
 
   const dismissOrderToast = () => {
@@ -213,6 +265,7 @@
     content.type = 'button';
     content.className = 'admin-order-toast-content';
     content.addEventListener('click', () => {
+      stopNewOrderAlert();
       dismissOrderToast();
       if (getAdminPageName() !== 'incoming-orders.html') {
         window.location.href = 'incoming-orders.html';
@@ -237,6 +290,7 @@
     closeButton.textContent = 'Close';
     closeButton.addEventListener('click', (event) => {
       event.stopPropagation();
+      stopNewOrderAlert();
       dismissOrderToast();
     });
 
@@ -258,7 +312,7 @@
     if (title) title.textContent = 'New order received';
     if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
 
-    playNewOrderChime();
+    startNewOrderAlert();
     toast.hidden = false;
     window.requestAnimationFrame(() => toast.classList.add('is-open'));
     if (orderToastTimer) window.clearTimeout(orderToastTimer);
@@ -311,6 +365,9 @@
 
   window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
   window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
+  window.curvSetIncomingOrderSoundEnabled = setOrderSoundEnabled;
+  window.curvGetIncomingOrderSoundEnabled = getOrderSoundEnabled;
+  window.curvStopIncomingOrderAlert = stopNewOrderAlert;
   window.curvTestNewOrderToast = () => {
     showNewOrderToast({
       status: 'submitted',
@@ -340,6 +397,7 @@
   });
   window.addEventListener('pagehide', () => {
     unsubscribeFromBadgeRealtime();
+    stopNewOrderAlert();
     dismissOrderToast();
   });
 })();
@@ -5281,10 +5339,17 @@
   const orderDetail = ordersRoot.querySelector('[data-order-detail]');
   const orderStatusLabel = ordersRoot.querySelector('[data-order-status-label]');
   const filterButtons = Array.from(ordersRoot.querySelectorAll('[data-order-status-filter]'));
-  const submittedCount = ordersRoot.querySelector('[data-orders-count-submitted]');
-  const preparingCount = ordersRoot.querySelector('[data-orders-count-preparing]');
-  const readyCount = ordersRoot.querySelector('[data-orders-count-ready]');
+  const filterCountBadges = Array.from(ordersRoot.querySelectorAll('[data-order-filter-count]'));
   const todayTotal = ordersRoot.querySelector('[data-orders-today-total]');
+  const orderSoundToggle = ordersRoot.querySelector('[data-order-sound-toggle]');
+  const orderStatusCounts = {
+    submitted: 0,
+    accepted: 0,
+    preparing: 0,
+    ready: 0,
+    completed: 0,
+    cancelled: 0,
+  };
 
   let activeStatus = 'submitted';
   let isOwnerSignedIn = false;
@@ -5310,6 +5375,20 @@
 
   const setStatus = (message) => {
     if (authStatus) authStatus.textContent = message;
+  };
+
+  const syncOrderSoundToggle = () => {
+    if (!orderSoundToggle) return;
+    const isEnabled = typeof window.curvGetIncomingOrderSoundEnabled === 'function'
+      ? window.curvGetIncomingOrderSoundEnabled()
+      : false;
+    orderSoundToggle.textContent = isEnabled ? 'Sound on' : 'Sound off';
+    orderSoundToggle.classList.toggle('is-on', Boolean(isEnabled));
+    orderSoundToggle.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+  };
+
+  const stopIncomingOrderAlert = () => {
+    if (typeof window.curvStopIncomingOrderAlert === 'function') window.curvStopIncomingOrderAlert();
   };
 
   const setFormDisabled = (isDisabled) => {
@@ -5794,20 +5873,33 @@
     return section;
   };
 
-  const renderOrderDetail = (order) => {
-    if (!orderDetail) return;
-    if (!order) {
-      renderOrderDetailPlaceholder();
-      return;
-    }
-
+  const renderOrderStatusActions = (order) => {
     const statusKey = normalizeOrderStatus(order.status);
-    orderDetail.innerHTML = '';
-    const heading = makeElement('div', 'order-detail-heading');
-    heading.append(
-      makeElement('h3', '', order.order_number || 'Order'),
-    );
+    const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
+    if (!actions.length) return null;
 
+    const actionRow = makeElement('div', 'order-action-row');
+    actions.forEach((action) => {
+      const isSaving = activeOrderAction
+        && activeOrderAction.orderId === order.id
+        && activeOrderAction.nextStatus === action.nextStatus;
+      const buttonClass = 'auth-button order-action-button'
+        + (action.tone === 'cancel' ? ' auth-button-secondary is-cancel' : '');
+      const button = makeElement('button', buttonClass, isSaving ? 'Saving...' : action.label);
+      button.type = 'button';
+      button.disabled = Boolean(activeOrderAction) || Boolean(activePaymentAction) || ordersLoading;
+      button.dataset.orderAction = action.nextStatus;
+      button.addEventListener('click', () => handleOrderStatusAction(order, action));
+      actionRow.appendChild(button);
+    });
+
+    return actionRow;
+  };
+
+  const renderOrderHeading = (order) => {
+    const statusKey = normalizeOrderStatus(order.status);
+    const heading = makeElement('div', 'order-detail-heading');
+    heading.append(makeElement('h3', '', order.order_number || 'Order'));
     const headingBadges = makeElement('div', 'order-detail-badges');
     headingBadges.append(
       makeElement('span', 'order-status-badge', STATUS_LABELS[statusKey] || order.status || 'Order'),
@@ -5817,7 +5909,20 @@
       headingBadges.appendChild(makeElement('span', 'order-cancel-request-badge', 'Cancellation requested'));
     }
     heading.appendChild(headingBadges);
+    return heading;
+  };
 
+  const renderOrderNotes = (order) => {
+    if (!order.customer_email && !order.customer_notes) return null;
+
+    const notes = makeElement('div', 'order-detail-notes');
+    if (order.customer_email) notes.appendChild(makeElement('p', '', 'Email: ' + order.customer_email));
+    if (order.customer_notes) notes.appendChild(makeElement('p', '', 'Notes: ' + order.customer_notes));
+    return notes;
+  };
+
+  const buildOrderDetailNodes = (order, { inline = false } = {}) => {
+    const statusKey = normalizeOrderStatus(order.status);
     const createdDisplay = formatOrderDate(order.created_at);
     const ageDisplay = formatOrderAge(order.created_at);
     const isDelivery = getFulfillmentType(order) === 'delivery';
@@ -5840,43 +5945,38 @@
       fulfillmentRows.splice(1, 0, ['Address', order.delivery_address || '-']);
     }
     const fulfillmentSection = renderDetailSection('Fulfillment', fulfillmentRows, 'order-fulfillment-details');
-    const detailNodes = [heading, headerSection, customerSection, fulfillmentSection];
-    const cancelRequestNotice = renderCancellationRequestNotice(order);
-    if (cancelRequestNotice) detailNodes.splice(1, 0, cancelRequestNotice);
+    const detailNodes = inline ? [] : [renderOrderHeading(order), headerSection];
+    const actionRow = renderOrderStatusActions(order);
+    if (inline && actionRow) detailNodes.push(actionRow);
 
-    if (order.customer_email || order.customer_notes) {
-      const notes = makeElement('div', 'order-detail-notes');
-      if (order.customer_email) notes.appendChild(makeElement('p', '', 'Email: ' + order.customer_email));
-      if (order.customer_notes) notes.appendChild(makeElement('p', '', 'Notes: ' + order.customer_notes));
-      detailNodes.push(notes);
-    }
+    const cancelRequestNotice = renderCancellationRequestNotice(order);
+    if (cancelRequestNotice) detailNodes.push(cancelRequestNotice);
+
+    if (inline) detailNodes.push(renderOrderItemsSection(order));
+    detailNodes.push(customerSection, fulfillmentSection);
 
     const deliveryDetails = renderDeliveryDetailsSection(order);
     if (deliveryDetails) detailNodes.push(deliveryDetails);
-    detailNodes.push(renderOrderItemsSection(order));
+    if (!inline) detailNodes.push(renderOrderItemsSection(order));
     detailNodes.push(renderTotalsSection(order));
     detailNodes.push(renderPaymentDetailsSection(order));
 
-    const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
-    if (actions.length) {
-      const actionRow = makeElement('div', 'order-action-row');
-      actions.forEach((action) => {
-        const isSaving = activeOrderAction
-          && activeOrderAction.orderId === order.id
-          && activeOrderAction.nextStatus === action.nextStatus;
-        const buttonClass = 'auth-button order-action-button'
-          + (action.tone === 'cancel' ? ' auth-button-secondary is-cancel' : '');
-        const button = makeElement('button', buttonClass, isSaving ? 'Saving...' : action.label);
-        button.type = 'button';
-        button.disabled = Boolean(activeOrderAction) || Boolean(activePaymentAction) || ordersLoading;
-        button.dataset.orderAction = action.nextStatus;
-        button.addEventListener('click', () => handleOrderStatusAction(order, action));
-        actionRow.appendChild(button);
-      });
-      detailNodes.push(actionRow);
+    const notes = renderOrderNotes(order);
+    if (notes) detailNodes.push(notes);
+    if (!inline && actionRow) detailNodes.push(actionRow);
+
+    return detailNodes;
+  };
+
+  const renderOrderDetail = (order) => {
+    if (!orderDetail) return;
+    if (!order) {
+      renderOrderDetailPlaceholder();
+      return;
     }
 
-    orderDetail.append(...detailNodes);
+    orderDetail.innerHTML = '';
+    orderDetail.append(...buildOrderDetailNodes(order));
   };
 
   const renderOrders = () => {
@@ -5899,14 +5999,23 @@
       return;
     }
 
+    if (!latestOrders.some(order => order.id === selectedOrderId)) {
+      selectedOrderId = '';
+      renderOrderDetailPlaceholder();
+    }
+
     orderList.innerHTML = '';
     latestOrders.forEach((order) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      let cardClass = 'order-card' + (order.id === selectedOrderId ? ' is-selected' : '');
+      const isSelected = order.id === selectedOrderId;
+      const card = document.createElement('article');
+      let cardClass = 'order-card order-ticket' + (isSelected ? ' is-selected' : '');
       if (recentlyReceivedOrderIds.has(order.id)) cardClass += ' is-new-arrival';
       card.className = cardClass;
       card.dataset.orderId = order.id || '';
+
+      const summaryButton = makeElement('button', 'order-ticket-summary');
+      summaryButton.type = 'button';
+      summaryButton.setAttribute('aria-expanded', isSelected ? 'true' : 'false');
 
       const head = makeElement('div', 'order-card-head');
       const badgeGroup = makeElement('span', 'order-card-badge-group');
@@ -5942,36 +6051,39 @@
         meta.appendChild(makeElement('span', '', itemCount + (itemCount === 1 ? ' item' : ' items')));
       }
 
-      card.append(head, customer, meta);
-      card.addEventListener('click', () => {
-        selectedOrderId = order.id || '';
+      summaryButton.append(head, customer, meta);
+      summaryButton.addEventListener('click', () => {
+        stopIncomingOrderAlert();
+        selectedOrderId = isSelected ? '' : (order.id || '');
         if (recentlyReceivedOrderIds.has(order.id)) {
           recentlyReceivedOrderIds.delete(order.id);
           if (recentlyReceivedOrderTimers.has(order.id)) {
             window.clearTimeout(recentlyReceivedOrderTimers.get(order.id));
             recentlyReceivedOrderTimers.delete(order.id);
           }
+          updateFilterUi();
         }
         if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
         renderOrders();
-        renderOrderDetail(order);
       });
+
+      card.appendChild(summaryButton);
+      if (isSelected) {
+        const expanded = makeElement('div', 'order-ticket-expanded');
+        expanded.append(...buildOrderDetailNodes(order, { inline: true }));
+        card.appendChild(expanded);
+        renderOrderDetail(order);
+      }
       orderList.appendChild(card);
     });
-
-    const selectedOrder = latestOrders.find(order => order.id === selectedOrderId) || latestOrders[0];
-    if (selectedOrder) {
-      selectedOrderId = selectedOrder.id || '';
-      renderOrderDetail(selectedOrder);
-      const selectedCard = orderList.querySelector('[data-order-id="' + CSS.escape(selectedOrderId) + '"]');
-      if (selectedCard) selectedCard.classList.add('is-selected');
-    }
   };
 
   const updateFilterUi = () => {
     filterButtons.forEach((button) => {
       const isActive = button.dataset.orderStatusFilter === activeStatus;
+      const isNewFilter = button.dataset.orderStatusFilter === 'submitted';
       button.classList.toggle('is-active', isActive);
+      button.classList.toggle('has-new-attention', isNewFilter && recentlyReceivedOrderIds.size > 0);
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
     if (orderStatusLabel) orderStatusLabel.textContent = STATUS_LABELS[activeStatus] || 'Orders';
@@ -5985,9 +6097,13 @@
     return 'Loaded ' + count + ' ' + statusName + ' order' + (count === 1 ? '.' : 's.');
   };
   const resetSummary = () => {
-    if (submittedCount) submittedCount.textContent = '0';
-    if (preparingCount) preparingCount.textContent = '0';
-    if (readyCount) readyCount.textContent = '0';
+    Object.keys(orderStatusCounts).forEach((status) => {
+      orderStatusCounts[status] = 0;
+    });
+    filterCountBadges.forEach((badge) => {
+      const status = badge.dataset.orderFilterCount || '';
+      badge.textContent = String(orderStatusCounts[status] || 0);
+    });
     if (todayTotal) todayTotal.textContent = formatCurrency(0, 'PHP');
   };
 
@@ -6003,13 +6119,12 @@
 
     if (error) return;
 
-    const counts = { submitted: 0, preparing: 0, ready: 0 };
     const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
     let todayAmount = 0;
     let todayCurrency = 'PHP';
 
     (data || []).forEach((order) => {
-      if (Object.prototype.hasOwnProperty.call(counts, order.status)) counts[order.status] += 1;
+      if (Object.prototype.hasOwnProperty.call(orderStatusCounts, order.status)) orderStatusCounts[order.status] += 1;
       const createdKey = order.created_at
         ? new Date(order.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
         : '';
@@ -6019,9 +6134,10 @@
       }
     });
 
-    if (submittedCount) submittedCount.textContent = String(counts.submitted);
-    if (preparingCount) preparingCount.textContent = String(counts.preparing);
-    if (readyCount) readyCount.textContent = String(counts.ready);
+    filterCountBadges.forEach((badge) => {
+      const status = badge.dataset.orderFilterCount || '';
+      badge.textContent = String(orderStatusCounts[status] || 0);
+    });
     if (todayTotal) todayTotal.textContent = formatCurrency(todayAmount, todayCurrency);
   };
 
@@ -6062,6 +6178,7 @@
     }
 
     activeOrderAction = { orderId: order.id, nextStatus: action.nextStatus };
+    renderOrders();
     renderOrderDetail(order);
     setStatus(action.label + ' in progress...');
 
@@ -6082,6 +6199,7 @@
 
     if (error) {
       activeOrderAction = null;
+      renderOrders();
       renderOrderDetail(order);
       setStatus('Unable to update ' + (order.order_number || 'order') + '. ' + error.message);
       return;
@@ -6101,6 +6219,7 @@
     if (activePaymentAction || activeOrderAction || ordersLoading) return;
 
     activePaymentAction = { orderId: order.id, nextStatus };
+    renderOrders();
     renderOrderDetail(order);
     setStatus((nextStatus === 'paid' ? 'Marking payment paid' : 'Marking payment unpaid') + '...');
 
@@ -6111,6 +6230,7 @@
 
     if (error) {
       activePaymentAction = null;
+      renderOrders();
       renderOrderDetail(order);
       setStatus('Unable to update payment for ' + (order.order_number || 'order') + '. ' + error.message);
       return;
@@ -6192,8 +6312,10 @@
     recentlyReceivedOrderTimers.set(orderId, window.setTimeout(() => {
       recentlyReceivedOrderIds.delete(orderId);
       recentlyReceivedOrderTimers.delete(orderId);
+      updateFilterUi();
       renderOrders();
     }, 10000));
+    updateFilterUi();
   };
 
   const refreshOrdersFromRealtime = async (incomingOrder) => {
@@ -6265,6 +6387,7 @@
       orderItemsLoadError = '';
       selectedOrderId = '';
       resetSummary();
+      updateFilterUi();
       renderOrders();
       setStatus('Ready for owner sign in.');
     }
@@ -6294,13 +6417,40 @@
 
   filterButtons.forEach((button) => {
     button.addEventListener('click', async () => {
+      stopIncomingOrderAlert();
       const nextStatus = button.dataset.orderStatusFilter || 'submitted';
+      if (nextStatus === 'submitted') {
+        recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
+        recentlyReceivedOrderTimers.clear();
+        recentlyReceivedOrderIds.clear();
+        if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
+        updateFilterUi();
+      }
       if (nextStatus === activeStatus || ordersLoading || activeOrderAction) return;
       activeStatus = nextStatus;
       updateFilterUi();
       await loadOrders();
     });
   });
+
+  if (orderSoundToggle) {
+    orderSoundToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const currentState = typeof window.curvGetIncomingOrderSoundEnabled === 'function'
+        ? window.curvGetIncomingOrderSoundEnabled()
+        : false;
+      if (currentState) stopIncomingOrderAlert();
+      if (typeof window.curvSetIncomingOrderSoundEnabled === 'function') {
+        window.curvSetIncomingOrderSoundEnabled(!currentState);
+      }
+      syncOrderSoundToggle();
+      setStatus('New order sound ' + (currentState ? 'off.' : 'on.'));
+    });
+    syncOrderSoundToggle();
+  }
+
+  ordersRoot.addEventListener('click', stopIncomingOrderAlert);
+  document.addEventListener('keydown', stopIncomingOrderAlert);
 
   if (authForm) {
     authForm.addEventListener('submit', async (event) => {
@@ -6354,6 +6504,7 @@
       orderItemsLoadError = '';
       selectedOrderId = '';
       resetSummary();
+      updateFilterUi();
       if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
       renderOrders();
       setStatus('Signed out.');
@@ -6363,6 +6514,7 @@
   window.addEventListener('pagehide', unsubscribeFromOrdersRealtime);
 
   updateFilterUi();
+  syncOrderSoundToggle();
   renderOrders();
   refreshSession();
 })();

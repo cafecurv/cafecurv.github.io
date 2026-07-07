@@ -3246,6 +3246,57 @@ body.more-drawer-open {
   gap: 0.82rem;
 }
 
+.incoming-order-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: -0.2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.incoming-order-today-pill,
+.order-sound-toggle {
+  min-height: 32px;
+  border: 1px solid rgba(189, 196, 212, 0.16);
+  border-radius: 999px;
+  background: rgba(28, 34, 53, 0.46);
+  color: var(--slate);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.34rem 0.7rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 1.05px;
+  text-transform: uppercase;
+}
+
+.incoming-order-today-pill strong {
+  color: var(--cream);
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+}
+
+.order-sound-toggle {
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.order-sound-toggle:hover,
+.order-sound-toggle:focus-visible,
+.order-sound-toggle.is-on {
+  border-color: rgba(200, 184, 154, 0.36);
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--accent);
+}
+
 .incoming-orders-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -3262,6 +3313,10 @@ body.more-drawer-open {
   border-radius: 8px;
   background: transparent;
   color: var(--slate);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   padding: 0.5rem 0.75rem;
   font-family: 'Jost', sans-serif;
   font-size: 0.58rem;
@@ -3269,6 +3324,19 @@ body.more-drawer-open {
   letter-spacing: 1.45px;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.order-filter-count {
+  min-width: 1.35rem;
+  border-radius: 999px;
+  background: rgba(189, 196, 212, 0.11);
+  color: var(--cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12rem 0.36rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.6px;
 }
 
 .order-filter-button.is-active,
@@ -3279,6 +3347,17 @@ body.more-drawer-open {
   color: var(--accent);
 }
 
+.order-filter-button.has-new-attention {
+  border-color: rgba(242, 184, 120, 0.42);
+  background: rgba(242, 184, 120, 0.1);
+  color: #f0c894;
+}
+
+.order-filter-button.has-new-attention .order-filter-count {
+  background: rgba(242, 184, 120, 0.2);
+  color: #f7d6aa;
+}
+
 .order-filter-button:disabled {
   cursor: not-allowed;
   opacity: 0.52;
@@ -3286,9 +3365,18 @@ body.more-drawer-open {
 
 .incoming-orders-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.46fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.82rem;
   align-items: start;
+}
+
+.incoming-orders-workspace .order-queue-panel {
+  max-height: none;
+  overflow: visible;
+}
+
+.incoming-orders-workspace .order-detail-panel {
+  display: none;
 }
 
 .order-queue-panel,
@@ -3443,6 +3531,7 @@ body.more-drawer-open {
 
 .order-card:hover,
 .order-card:focus-visible,
+.order-ticket:focus-within,
 .order-card.is-selected {
   border-color: rgba(200, 184, 154, 0.38);
   background: rgba(200, 184, 154, 0.08);
@@ -3456,6 +3545,51 @@ body.more-drawer-open {
   border-color: rgba(200, 184, 154, 0.52);
   background: rgba(200, 184, 154, 0.09);
   box-shadow: inset 3px 0 0 rgba(200, 184, 154, 0.46);
+}
+
+.order-ticket {
+  cursor: default;
+}
+
+.order-ticket-summary {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  gap: 0.55rem;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.order-ticket-summary:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid rgba(200, 184, 154, 0.5);
+  outline-offset: 4px;
+}
+
+.order-ticket-expanded {
+  display: grid;
+  gap: 0.68rem;
+  margin-top: 0.72rem;
+  border-top: 1px solid rgba(189, 196, 212, 0.14);
+  padding-top: 0.72rem;
+}
+
+.order-ticket-expanded .order-action-row {
+  margin-top: 0;
+  border-top: 0;
+  background: transparent;
+  padding-top: 0;
+  position: static;
+}
+
+.order-ticket-expanded .order-detail-section,
+.order-ticket-expanded .order-detail-notes,
+.order-ticket-expanded .order-cancel-request-notice {
+  margin-top: 0;
 }
 
 .order-card-head,

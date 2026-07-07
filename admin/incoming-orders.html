@@ -127,36 +127,18 @@
         <p>Online ordering is live. Confirm delivery fees and actual totals in Messenger before accepting delivery orders.</p>
       </aside>
 
-      <section class="incoming-order-summary" aria-label="Incoming order summary">
-        <article class="metric-card">
-          <p class="metric-label">Submitted</p>
-          <p class="metric-value" data-orders-count-submitted>0</p>
-          <p class="metric-subtext">Waiting for confirmation</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Preparing</p>
-          <p class="metric-value" data-orders-count-preparing>0</p>
-          <p class="metric-subtext">No active tickets</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Ready</p>
-          <p class="metric-value" data-orders-count-ready>0</p>
-          <p class="metric-subtext">No orders ready</p>
-        </article>
-        <article class="metric-card">
-          <p class="metric-label">Today</p>
-          <p class="metric-value" data-orders-today-total>PHP 0</p>
-          <p class="metric-subtext">Orders received today</p>
-        </article>
+      <section class="incoming-order-meta-row" aria-label="Incoming order quick controls">
+        <span class="incoming-order-today-pill">Today: <strong data-orders-today-total>PHP 0</strong></span>
+        <button type="button" class="order-sound-toggle" data-order-sound-toggle aria-pressed="false">Sound off</button>
       </section>
 
       <section class="incoming-orders-toolbar" aria-label="Order queue filters">
-        <button type="button" class="order-filter-button is-active" data-order-status-filter="submitted" aria-pressed="true">New</button>
-        <button type="button" class="order-filter-button" data-order-status-filter="accepted" aria-pressed="false">Accepted</button>
-        <button type="button" class="order-filter-button" data-order-status-filter="preparing" aria-pressed="false">Preparing</button>
-        <button type="button" class="order-filter-button" data-order-status-filter="ready" aria-pressed="false">Ready</button>
-        <button type="button" class="order-filter-button" data-order-status-filter="completed" aria-pressed="false">Completed</button>
-        <button type="button" class="order-filter-button" data-order-status-filter="cancelled" aria-pressed="false">Cancelled</button>
+        <button type="button" class="order-filter-button is-active" data-order-status-filter="submitted" aria-pressed="true"><span>New</span><span class="order-filter-count" data-order-filter-count="submitted">0</span></button>
+        <button type="button" class="order-filter-button" data-order-status-filter="accepted" aria-pressed="false"><span>Accepted</span><span class="order-filter-count" data-order-filter-count="accepted">0</span></button>
+        <button type="button" class="order-filter-button" data-order-status-filter="preparing" aria-pressed="false"><span>Preparing</span><span class="order-filter-count" data-order-filter-count="preparing">0</span></button>
+        <button type="button" class="order-filter-button" data-order-status-filter="ready" aria-pressed="false"><span>Ready</span><span class="order-filter-count" data-order-filter-count="ready">0</span></button>
+        <button type="button" class="order-filter-button" data-order-status-filter="completed" aria-pressed="false"><span>Completed</span><span class="order-filter-count" data-order-filter-count="completed">0</span></button>
+        <button type="button" class="order-filter-button" data-order-status-filter="cancelled" aria-pressed="false"><span>Cancelled</span><span class="order-filter-count" data-order-filter-count="cancelled">0</span></button>
       </section>
 
       <section class="incoming-orders-workspace" aria-label="Incoming orders workspace">
