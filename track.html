@@ -603,6 +603,19 @@
     return fallback;
   };
 
+  const getDisplayStatusMeta = (order, status, fulfillmentType) => {
+    const meta = getStatusMeta(status, fulfillmentType);
+    const cancelState = String(order.customer_cancel_status || 'none').trim().toLowerCase();
+    if (status !== 'cancelled' && cancelState === 'requested') {
+      return {
+        ...meta,
+        label: 'Cancellation requested',
+        description: 'Your cancellation request has been sent. Please wait for CURV to review and confirm it.',
+      };
+    }
+    return meta;
+  };
+
   const setState = (title, copy, showRetry = false) => {
     if (stateTitle) stateTitle.textContent = title;
     if (stateCopy) stateCopy.textContent = copy;
@@ -858,7 +871,7 @@
 
     if (cancelCopy) {
       if (alreadyRequested) {
-        cancelCopy.textContent = 'Cancellation request sent. Please wait for CURV to confirm.';
+        cancelCopy.textContent = 'Cancellation request sent.\nPlease wait for CURV to review your request.';
       } else if (isCancelled) {
         cancelCopy.textContent = 'This order has already been cancelled.';
       } else if (!isCancellationRequestAllowed(status)) {
@@ -875,11 +888,7 @@
       cancelButton.textContent = isSubmittingCancelRequest ? 'Sending...' : 'Request Cancellation';
     }
 
-    if (alreadyRequested) {
-      setCancelMessage('Cancellation request sent. Please wait for CURV to confirm.', 'success');
-    } else {
-      setCancelMessage('');
-    }
+    setCancelMessage('');
   };
 
   const renderOrder = (order) => {
@@ -888,12 +897,13 @@
       ? 'delivery'
       : 'pickup';
     const meta = getStatusMeta(status, fulfillmentType);
+    const displayMeta = getDisplayStatusMeta(order, status, fulfillmentType);
     latestOrderNumber = order.order_number || '';
 
     if (orderNumberEl) orderNumberEl.textContent = order.order_number || 'CURV order';
-    if (statusPill) statusPill.textContent = meta.label;
-    if (statusTitle) statusTitle.textContent = meta.label;
-    if (statusDescription) statusDescription.textContent = meta.description;
+    if (statusPill) statusPill.textContent = displayMeta.label;
+    if (statusTitle) statusTitle.textContent = displayMeta.label;
+    if (statusDescription) statusDescription.textContent = displayMeta.description;
 
     renderTimeline({ ...order, status, fulfillment_type: fulfillmentType }, meta);
     renderTotals({ ...order, status, fulfillment_type: fulfillmentType });
