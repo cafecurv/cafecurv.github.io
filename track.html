@@ -366,6 +366,17 @@
     color: var(--gray-mid);
     font-size: 0.88rem;
     line-height: 1.55;
+    white-space: pre-line;
+  }
+
+  .cancel-card-copy.is-requested {
+    color: #9b5b4d;
+    font-weight: 500;
+  }
+
+  .track-card.is-cancel-requested {
+    border-color: rgba(155, 91, 77, 0.28);
+    background: rgba(155, 91, 77, 0.07);
   }
 
   .cancel-reason-field {
@@ -497,7 +508,7 @@
     </article>
 
     <article class="track-card" data-cancel-card hidden>
-      <h2 class="detail-card-title">Need to cancel your order?</h2>
+      <h2 class="detail-card-title" data-cancel-title>Need to cancel your order?</h2>
       <p class="cancel-card-copy" data-cancel-copy>You can request cancellation while your order hasn't started preparation yet.</p>
       <div class="cancel-reason-field" data-cancel-reason-field>
         <label for="cancel-reason">Reason (optional)</label>
@@ -528,6 +539,7 @@
   const mainCard = document.querySelector('[data-main-card]');
   const totalCard = document.querySelector('[data-total-card]');
   const cancelCard = document.querySelector('[data-cancel-card]');
+  const cancelTitle = document.querySelector('[data-cancel-title]');
   const cancelCopy = document.querySelector('[data-cancel-copy]');
   const cancelReasonField = document.querySelector('[data-cancel-reason-field]');
   const cancelReasonInput = document.querySelector('[data-cancel-reason]');
@@ -868,6 +880,12 @@
     const alreadyRequested = cancelState === 'requested';
     const isCancelled = status === 'cancelled';
     const canRequest = isCancellationRequestAllowed(status) && !alreadyRequested;
+
+    if (cancelTitle) {
+      cancelTitle.textContent = alreadyRequested ? 'Request status' : 'Need to cancel your order?';
+    }
+    cancelCard.classList.toggle('is-cancel-requested', alreadyRequested);
+    if (cancelCopy) cancelCopy.classList.toggle('is-requested', alreadyRequested);
 
     if (cancelCopy) {
       if (alreadyRequested) {
