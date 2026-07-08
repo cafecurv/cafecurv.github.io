@@ -13,6 +13,19 @@
   --content-max: 1160px;
 }
 
+:root[data-admin-theme="light"] {
+  --navy-950: #F6F1E7;
+  --navy-900: #ECE3D4;
+  --navy-800: #E2D6C2;
+  --slate: #5D6472;
+  --cream: #1F273D;
+  --accent: #8D7655;
+  --surface: rgba(255, 251, 242, 0.92);
+  --surface-soft: rgba(248, 241, 228, 0.88);
+  --border: rgba(87, 74, 55, 0.18);
+  --shadow: 0 20px 55px rgba(56, 45, 30, 0.13);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -183,6 +196,32 @@ a {
   border-color: rgba(222, 150, 126, 0.5);
   background: rgba(130, 55, 48, 0.18);
   color: #ffd6cf;
+}
+
+.theme-toggle-button {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.76rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 1.35px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.theme-toggle-button:hover,
+.theme-toggle-button:focus-visible {
+  border-color: rgba(200, 184, 154, 0.58);
+  background: var(--navy-800);
+  color: var(--accent);
 }
 
 .notification-control {
@@ -1571,6 +1610,12 @@ body.more-drawer-open {
   .topbar-actions .owner-account-avatar {
     width: 32px;
     height: 32px;
+  }
+
+  .theme-toggle-button {
+    min-height: 42px;
+    padding: 0.35rem 0.52rem;
+    font-size: 0.54rem;
   }
 
   .owner-account-menu {
@@ -4253,6 +4298,175 @@ body.more-drawer-open {
 
 .order-empty-state.is-error h3 {
   color: #F2B8B8;
+}
+
+:root[data-admin-theme="light"] body {
+  background: var(--navy-950);
+  color: var(--cream);
+}
+
+:root[data-admin-theme="light"] body::before {
+  background:
+    linear-gradient(135deg, rgba(200, 184, 154, 0.2), transparent 42%),
+    radial-gradient(circle at top right, rgba(143, 118, 85, 0.16), transparent 32%),
+    var(--navy-950);
+}
+
+:root[data-admin-theme="light"] .topbar,
+:root[data-admin-theme="light"] .sidebar,
+:root[data-admin-theme="light"] .mobile-bottom-nav,
+:root[data-admin-theme="light"] .mobile-more-drawer {
+  background: rgba(255, 251, 242, 0.94);
+}
+
+:root[data-admin-theme="light"] .notification-panel,
+:root[data-admin-theme="light"] .notification-panel::before,
+:root[data-admin-theme="light"] .owner-account-menu,
+:root[data-admin-theme="light"] .owner-account-menu::before {
+  background: rgb(255, 251, 242);
+}
+
+:root[data-admin-theme="light"] .notification-button,
+:root[data-admin-theme="light"] .theme-toggle-button,
+:root[data-admin-theme="light"] .owner-account-button,
+:root[data-admin-theme="light"] .nav-toggle,
+:root[data-admin-theme="light"] .metric-card,
+:root[data-admin-theme="light"] .dashboard-panel,
+:root[data-admin-theme="light"] .menu-manager-panel,
+:root[data-admin-theme="light"] .draft-product-panel,
+:root[data-admin-theme="light"] .product-editor-panel,
+:root[data-admin-theme="light"] .product-list-panel,
+:root[data-admin-theme="light"] .category-item,
+:root[data-admin-theme="light"] .product-row,
+:root[data-admin-theme="light"] .product-card,
+:root[data-admin-theme="light"] .editor-empty-state,
+:root[data-admin-theme="light"] .editor-section-card,
+:root[data-admin-theme="light"] .static-preview-card,
+:root[data-admin-theme="light"] .option-group-card,
+:root[data-admin-theme="light"] .option-choice-card,
+:root[data-admin-theme="light"] .product-option-card,
+:root[data-admin-theme="light"] .display-order-item,
+:root[data-admin-theme="light"] .order-queue-panel,
+:root[data-admin-theme="light"] .order-detail-panel,
+:root[data-admin-theme="light"] .order-card,
+:root[data-admin-theme="light"] .order-detail-section,
+:root[data-admin-theme="light"] .order-detail-notes,
+:root[data-admin-theme="light"] .order-detail-item,
+:root[data-admin-theme="light"] .order-detail-grid div,
+:root[data-admin-theme="light"] .order-delivery-grid div,
+:root[data-admin-theme="light"] .incoming-orders-toolbar,
+:root[data-admin-theme="light"] .incoming-order-today-pill,
+:root[data-admin-theme="light"] .order-sound-toggle,
+:root[data-admin-theme="light"] .notification-item,
+:root[data-admin-theme="light"] .owner-menu-action {
+  background: rgba(255, 251, 242, 0.78);
+  border-color: var(--border);
+}
+
+:root[data-admin-theme="light"] .topbar,
+:root[data-admin-theme="light"] .sidebar,
+:root[data-admin-theme="light"] .mobile-bottom-nav {
+  border-color: var(--border);
+  box-shadow: 0 12px 36px rgba(56, 45, 30, 0.08);
+}
+
+:root[data-admin-theme="light"] .owner-account-avatar {
+  background: rgba(143, 118, 85, 0.12);
+}
+
+:root[data-admin-theme="light"] .admin-field input,
+:root[data-admin-theme="light"] .admin-field select,
+:root[data-admin-theme="light"] .admin-field textarea {
+  background: rgba(255, 251, 242, 0.92);
+  color: var(--cream);
+  border-color: rgba(87, 74, 55, 0.22);
+}
+
+:root[data-admin-theme="light"] .admin-nav-link:hover,
+:root[data-admin-theme="light"] .admin-nav-link:focus-visible,
+:root[data-admin-theme="light"] .admin-nav-link.is-active,
+:root[data-admin-theme="light"] .mobile-nav-item:hover,
+:root[data-admin-theme="light"] .mobile-nav-item:focus-visible,
+:root[data-admin-theme="light"] .mobile-nav-item.is-active,
+:root[data-admin-theme="light"] .category-item:hover,
+:root[data-admin-theme="light"] .category-item:focus-visible,
+:root[data-admin-theme="light"] .category-item.is-selected,
+:root[data-admin-theme="light"] .product-row:hover,
+:root[data-admin-theme="light"] .product-row:focus-visible,
+:root[data-admin-theme="light"] .order-filter-button.is-active,
+:root[data-admin-theme="light"] .order-filter-button:hover,
+:root[data-admin-theme="light"] .order-filter-button:focus-visible,
+:root[data-admin-theme="light"] .order-card:hover,
+:root[data-admin-theme="light"] .order-card:focus-visible,
+:root[data-admin-theme="light"] .order-ticket:focus-within,
+:root[data-admin-theme="light"] .order-card.is-selected,
+:root[data-admin-theme="light"] .notification-button:hover,
+:root[data-admin-theme="light"] .notification-button:focus-visible,
+:root[data-admin-theme="light"] .theme-toggle-button:hover,
+:root[data-admin-theme="light"] .theme-toggle-button:focus-visible,
+:root[data-admin-theme="light"] .owner-account-button:hover,
+:root[data-admin-theme="light"] .owner-account-button:focus-visible,
+:root[data-admin-theme="light"] .owner-account-button[aria-expanded="true"] {
+  background: rgba(143, 118, 85, 0.12);
+  border-color: rgba(143, 118, 85, 0.28);
+  color: var(--cream);
+}
+
+:root[data-admin-theme="light"] .auth-button {
+  background: #273149;
+  color: #F8F1E4;
+  border-color: #273149;
+}
+
+:root[data-admin-theme="light"] .auth-button-secondary,
+:root[data-admin-theme="light"] .incoming-orders-main .order-payment-button,
+:root[data-admin-theme="light"] .incoming-orders-main .order-tracking-button {
+  background: rgba(255, 251, 242, 0.64);
+  color: var(--cream);
+  border-color: rgba(87, 74, 55, 0.22);
+}
+
+:root[data-admin-theme="light"] .incoming-orders-main .order-action-button {
+  background: rgba(143, 118, 85, 0.12);
+  color: var(--cream);
+  border-color: rgba(143, 118, 85, 0.32);
+}
+
+:root[data-admin-theme="light"] .notification-badge,
+:root[data-admin-theme="light"] .nav-badge,
+:root[data-admin-theme="light"] .mobile-nav-badge,
+:root[data-admin-theme="light"] .order-filter-count {
+  background: rgba(143, 118, 85, 0.14);
+  color: var(--cream);
+}
+
+:root[data-admin-theme="light"] .notification-button.has-unseen-orders,
+:root[data-admin-theme="light"] .order-filter-button.has-new-attention,
+:root[data-admin-theme="light"] .order-card.is-new-arrival,
+:root[data-admin-theme="light"] .order-cancel-request-notice,
+:root[data-admin-theme="light"] .incoming-orders-main .order-action-button.is-cancel {
+  background: rgba(174, 83, 68, 0.12);
+  border-color: rgba(174, 83, 68, 0.34);
+  color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .order-filter-button.has-new-attention .order-filter-count,
+:root[data-admin-theme="light"] .order-cancel-request-badge {
+  background: rgba(174, 83, 68, 0.14);
+  border-color: rgba(174, 83, 68, 0.34);
+  color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .order-cancel-request-notice h4,
+:root[data-admin-theme="light"] .order-empty-state.is-error h3,
+:root[data-admin-theme="light"] .order-detail-items-empty.is-error {
+  color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .order-delivery-note,
+:root[data-admin-theme="light"] .order-detail-item-options,
+:root[data-admin-theme="light"] .order-detail-item-note {
+  color: rgba(31, 39, 61, 0.84);
 }
 
 @media (max-width: 600px) {

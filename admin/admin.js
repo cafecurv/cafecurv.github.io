@@ -34,7 +34,40 @@
   const moreDrawer = document.getElementById('mobile-more-drawer');
   const moreOverlay = document.querySelector('.mobile-more-overlay');
   const moreCloseTargets = document.querySelectorAll('[data-more-close]');
+  const themeToggle = document.querySelector('[data-admin-theme-toggle]');
+  const themeStorageKey = 'curvControlTheme';
   let lastFocusedElement = null;
+
+  const getStoredTheme = () => {
+    try {
+      return window.localStorage.getItem(themeStorageKey) === 'light' ? 'light' : 'dark';
+    } catch (error) {
+      return 'dark';
+    }
+  };
+
+  const applyAdminTheme = (theme) => {
+    const nextTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.adminTheme = nextTheme;
+    if (themeToggle) {
+      themeToggle.textContent = nextTheme === 'light' ? 'Dark' : 'Light';
+      themeToggle.setAttribute('aria-pressed', nextTheme === 'light' ? 'true' : 'false');
+      themeToggle.setAttribute('aria-label', 'Switch to ' + (nextTheme === 'light' ? 'dark' : 'light') + ' mode');
+    }
+  };
+
+  applyAdminTheme(document.documentElement.dataset.adminTheme || getStoredTheme());
+
+  themeToggle?.addEventListener('click', () => {
+    const currentTheme = document.documentElement.dataset.adminTheme === 'light' ? 'light' : 'dark';
+    const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+    try {
+      window.localStorage.setItem(themeStorageKey, nextTheme);
+    } catch (error) {
+      // Theme persistence is best-effort.
+    }
+    applyAdminTheme(nextTheme);
+  });
 
   const openMoreDrawer = () => {
     if (!moreButton || !moreDrawer || !moreOverlay) return;
@@ -249,14 +282,22 @@
     const status = String(order && order.status || '').toLowerCase();
     const key = getOrderAlertKey(order);
     if (status !== 'submitted' || !key) {
-      return;
+      return false;
     }
+    const isNewUnseen = !unseenOrderKeys.has(key);
     unseenOrderKeys.add(key);
     const summary = getOrderSummary(order);
     if (summary) unseenOrderSummaries[key] = summary;
     persistUnseenOrderKeys();
     persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
+    return isNewUnseen;
+  };
+
+  const handleIncomingOrderDetected = (order) => {
+    if (noteUnseenIncomingOrder(order)) {
+      showNewOrderToast(order);
+    }
   };
 
   const closeNotificationPanel = () => {
@@ -564,8 +605,7 @@
         (payload) => {
           const eventType = String(payload && payload.eventType || '').toUpperCase();
           if (eventType === 'INSERT') {
-            noteUnseenIncomingOrder(payload.new);
-            showNewOrderToast(payload.new);
+            handleIncomingOrderDetected(payload.new);
           } else {
             refreshIncomingOrderBadge();
           }
@@ -577,6 +617,7 @@
   window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
   window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
   window.curvClearIncomingOrderNotification = removeUnseenIncomingOrder;
+  window.curvHandleIncomingOrderDetected = handleIncomingOrderDetected;
   window.curvGetIncomingOrderNotificationTarget = () => {
     try {
       const stored = window.sessionStorage.getItem(notificationTargetStorageKey);
@@ -5766,8 +5807,11 @@
   let ordersRealtimeChannel = null;
   let realtimeRefreshInFlight = false;
   let realtimeRefreshQueued = false;
+  let orderFallbackPollTimer = null;
+  let submittedOrderBaselineReady = false;
   const recentlyReceivedOrderIds = new Set();
   const recentlyReceivedOrderTimers = new Map();
+  const knownSubmittedOrderKeys = new Set();
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -6705,6 +6749,51 @@
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+  const getOrderAlertKey = (order) => String(order && (order.id || order.order_number || order.created_at) || '').trim();
+
+  const addKnownSubmittedOrder = (order) => {
+    const key = getOrderAlertKey(order);
+    if (key) knownSubmittedOrderKeys.add(key);
+    return key;
+  };
+
+  const detectSubmittedOrder = (order, { shouldAlert = true } = {}) => {
+    const incomingStatus = normalizeOrderStatus(order && order.status);
+    const key = getOrderAlertKey(order);
+    if (!key || incomingStatus !== 'submitted') return false;
+    const isNew = !knownSubmittedOrderKeys.has(key);
+    knownSubmittedOrderKeys.add(key);
+    if (!shouldAlert || !isNew || !submittedOrderBaselineReady) return false;
+    markRecentlyReceivedOrder(order);
+    if (typeof window.curvHandleIncomingOrderDetected === 'function') {
+      window.curvHandleIncomingOrderDetected(order);
+    }
+    return true;
+  };
+
+  const fetchRecentSubmittedOrders = async () => {
+    const { data, error } = await client
+      .from('orders')
+      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,customer_cancel_status,created_at')
+      .eq('status', 'submitted')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  const initializeSubmittedOrderBaseline = async () => {
+    if (!isOwnerSignedIn) return;
+    try {
+      const submittedOrders = await fetchRecentSubmittedOrders();
+      submittedOrders.forEach((order) => addKnownSubmittedOrder(order));
+      submittedOrderBaselineReady = true;
+    } catch (error) {
+      submittedOrderBaselineReady = true;
+    }
+  };
+
   const markRecentlyReceivedOrder = (order) => {
     const orderId = order && order.id ? String(order.id) : '';
     const incomingStatus = normalizeOrderStatus(order && order.status);
@@ -6724,6 +6813,7 @@
 
   const refreshOrdersFromRealtime = async (incomingOrder) => {
     if (!isOwnerSignedIn) return;
+    detectSubmittedOrder(incomingOrder);
     if (realtimeRefreshInFlight) {
       realtimeRefreshQueued = true;
       return;
@@ -6812,6 +6902,35 @@
       });
   };
 
+  const stopOrdersFallbackPolling = () => {
+    if (orderFallbackPollTimer) window.clearInterval(orderFallbackPollTimer);
+    orderFallbackPollTimer = null;
+  };
+
+  const pollForNewSubmittedOrders = async () => {
+    if (!isOwnerSignedIn) return;
+    try {
+      const submittedOrders = await fetchRecentSubmittedOrders();
+      const newOrders = [];
+      submittedOrders.forEach((order) => {
+        if (detectSubmittedOrder(order)) newOrders.push(order);
+      });
+      await loadOrderSummary();
+      if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
+      if (activeStatus === 'submitted') await loadOrders({ preserveSelection: true });
+      if (newOrders.length) {
+        setStatus(newOrders.length === 1 ? 'New order received.' : 'New orders received.');
+      }
+    } catch (error) {
+      // Realtime remains primary; polling quietly waits for the next interval.
+    }
+  };
+
+  const startOrdersFallbackPolling = () => {
+    if (orderFallbackPollTimer || !isOwnerSignedIn) return;
+    orderFallbackPollTimer = window.setInterval(pollForNewSubmittedOrders, 25000);
+  };
+
   const refreshSession = async () => {
     const { data } = await client.auth.getSession();
     const isSignedIn = Boolean(data && data.session && data.session.user);
@@ -6819,10 +6938,15 @@
     if (isSignedIn) {
       await loadOrderSummary();
       await loadOrders();
+      await initializeSubmittedOrderBaseline();
       await consumePendingNotificationTarget();
       subscribeToOrdersRealtime();
+      startOrdersFallbackPolling();
     } else {
       unsubscribeFromOrdersRealtime();
+      stopOrdersFallbackPolling();
+      knownSubmittedOrderKeys.clear();
+      submittedOrderBaselineReady = false;
       latestOrders = [];
       itemCountByOrderId = new Map();
       orderItemsByOrderId = new Map();
@@ -6924,7 +7048,9 @@
       closeOwnerAccountMenu();
       await loadOrderSummary();
       await loadOrders();
+      await initializeSubmittedOrderBaseline();
       subscribeToOrdersRealtime();
+      startOrdersFallbackPolling();
     });
   }
 
@@ -6938,6 +7064,9 @@
       }
       setSignedInState(false);
       unsubscribeFromOrdersRealtime();
+      stopOrdersFallbackPolling();
+      knownSubmittedOrderKeys.clear();
+      submittedOrderBaselineReady = false;
       closeOwnerAccountMenu();
       recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
       recentlyReceivedOrderTimers.clear();
@@ -6955,7 +7084,10 @@
     });
   }
 
-  window.addEventListener('pagehide', unsubscribeFromOrdersRealtime);
+  window.addEventListener('pagehide', () => {
+    unsubscribeFromOrdersRealtime();
+    stopOrdersFallbackPolling();
+  });
 
   updateFilterUi();
   syncOrderSoundToggle();
