@@ -86,11 +86,12 @@
 })();
 
 (() => {
+  const notificationButton = document.querySelector('.notification-button');
   const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
   const notificationBadges = Array.from(document.querySelectorAll('.notification-badge'));
   const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
   const badges = [...desktopBadges, ...notificationBadges, ...mobileBadges];
-  if (!badges.length) return;
+  if (!badges.length && !notificationButton) return;
 
   const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
@@ -99,12 +100,17 @@
   let orderToast = null;
   let orderToastTimer = null;
   const unseenOrderStorageKey = 'curvIncomingOrdersUnseen';
+  const unseenOrderSummaryStorageKey = 'curvIncomingOrdersUnseenSummaries';
+  const notificationTargetStorageKey = 'curvIncomingOrdersNotificationTarget';
   const orderSoundStorageKey = 'curvIncomingOrdersSoundEnabled';
   let orderSoundEnabled = false;
   let alertAudioUnlocked = false;
   let alertAudioContext = null;
   let newOrderAlertInterval = null;
   let newOrderAlertTimeout = null;
+  let notificationPanel = null;
+  let notificationList = null;
+  let notificationEmpty = null;
 
   const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
@@ -119,6 +125,18 @@
   };
 
   let unseenOrderKeys = readUnseenOrderKeys();
+
+  const readUnseenOrderSummaries = () => {
+    try {
+      const stored = window.sessionStorage.getItem(unseenOrderSummaryStorageKey);
+      const parsed = stored ? JSON.parse(stored) : {};
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  };
+
+  let unseenOrderSummaries = readUnseenOrderSummaries();
 
   try {
     orderSoundEnabled = window.localStorage.getItem(orderSoundStorageKey) === 'true';
@@ -135,9 +153,65 @@
     }
   };
 
+  const persistUnseenOrderSummaries = () => {
+    try {
+      window.sessionStorage.setItem(unseenOrderSummaryStorageKey, JSON.stringify(unseenOrderSummaries));
+    } catch (error) {
+      // Session-only notification summaries are best-effort.
+    }
+  };
+
   const getOrderAlertKey = (order) => {
     if (!order) return '';
     return String(order.id || order.order_number || order.created_at || '').trim();
+  };
+
+  const formatCurrency = (value, currency = 'PHP') => {
+    const amount = Number(value || 0);
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: currency || 'PHP',
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      return 'PHP ' + amount.toFixed(2);
+    }
+  };
+
+  const formatOrderAge = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return date.toLocaleString('en-PH');
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return diffMinutes + ' min ago';
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return diffHours + ' hr' + (diffHours === 1 ? '' : 's') + ' ago';
+    return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  };
+
+  const getFulfillmentLabel = (order) => String(order && order.fulfillment_type || '').toLowerCase() === 'delivery'
+    ? 'Delivery'
+    : 'Pick-up';
+
+  const getOrderSummary = (order) => {
+    const key = getOrderAlertKey(order);
+    if (!key) return null;
+    return {
+      key,
+      id: String(order.id || ''),
+      orderNumber: String(order.order_number || 'Order'),
+      customerName: String(order.customer_name || 'Guest'),
+      fulfillmentLabel: getFulfillmentLabel(order),
+      subtotal: Number(order.subtotal || order.total || 0),
+      currency: String(order.currency || 'PHP'),
+      createdAt: String(order.created_at || ''),
+      status: String(order.status || 'submitted'),
+      cancelRequested: String(order.customer_cancel_status || '').toLowerCase() === 'requested',
+    };
   };
 
   const setIncomingOrderBadge = (count) => {
@@ -147,26 +221,163 @@
       badge.textContent = label;
       badge.hidden = safeCount === 0;
       badge.setAttribute('aria-hidden', safeCount === 0 ? 'true' : 'false');
+      badge.classList.toggle('has-unseen-orders', safeCount > 0);
     });
+    if (notificationButton) notificationButton.classList.toggle('has-unseen-orders', safeCount > 0);
+    renderNotificationPanel();
   };
 
   const hideIncomingOrderBadge = () => {
     unseenOrderKeys.clear();
+    unseenOrderSummaries = {};
     persistUnseenOrderKeys();
+    persistUnseenOrderSummaries();
     setIncomingOrderBadge(0);
+  };
+
+  const removeUnseenIncomingOrder = (key) => {
+    const cleanKey = String(key || '').trim();
+    if (!cleanKey) return;
+    unseenOrderKeys.delete(cleanKey);
+    delete unseenOrderSummaries[cleanKey];
+    persistUnseenOrderKeys();
+    persistUnseenOrderSummaries();
+    setIncomingOrderBadge(unseenOrderKeys.size);
   };
 
   const noteUnseenIncomingOrder = (order) => {
     const status = String(order && order.status || '').toLowerCase();
     const key = getOrderAlertKey(order);
-    if (status !== 'submitted' || !key || getAdminPageName() === 'incoming-orders.html') {
-      hideIncomingOrderBadge();
+    if (status !== 'submitted' || !key) {
       return;
     }
     unseenOrderKeys.add(key);
+    const summary = getOrderSummary(order);
+    if (summary) unseenOrderSummaries[key] = summary;
     persistUnseenOrderKeys();
+    persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
   };
+
+  const closeNotificationPanel = () => {
+    if (!notificationPanel || !notificationButton) return;
+    notificationPanel.hidden = true;
+    notificationButton.setAttribute('aria-expanded', 'false');
+  };
+
+  const openIncomingOrderNotification = (summary) => {
+    if (!summary) return;
+    stopNewOrderAlert();
+    closeNotificationPanel();
+    removeUnseenIncomingOrder(summary.key);
+    const target = {
+      key: summary.key,
+      id: summary.id || summary.key,
+    };
+    if (getAdminPageName() === 'incoming-orders.html' && typeof window.curvOpenIncomingOrderNotification === 'function') {
+      window.curvOpenIncomingOrderNotification(target);
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(notificationTargetStorageKey, JSON.stringify(target));
+    } catch (error) {
+      // Navigation still works even if the target cannot be stored.
+    }
+    window.location.href = 'incoming-orders.html';
+  };
+
+  const ensureNotificationPanel = () => {
+    if (notificationPanel || !notificationButton) return notificationPanel;
+    let host = notificationButton.closest('.notification-control');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'notification-control';
+      notificationButton.parentNode.insertBefore(host, notificationButton);
+      host.appendChild(notificationButton);
+    }
+    if (!host) return null;
+    notificationButton.setAttribute('aria-expanded', 'false');
+    notificationButton.setAttribute('aria-haspopup', 'menu');
+    notificationButton.setAttribute('aria-controls', 'incoming-order-notification-panel');
+
+    notificationPanel = document.createElement('div');
+    notificationPanel.className = 'notification-panel';
+    notificationPanel.id = 'incoming-order-notification-panel';
+    notificationPanel.hidden = true;
+
+    const title = document.createElement('p');
+    title.className = 'notification-panel-title';
+    title.textContent = 'New orders';
+
+    notificationList = document.createElement('div');
+    notificationList.className = 'notification-list';
+
+    notificationEmpty = document.createElement('p');
+    notificationEmpty.className = 'notification-empty';
+    notificationEmpty.textContent = 'No new order notifications.';
+
+    notificationPanel.append(title, notificationList, notificationEmpty);
+    host.appendChild(notificationPanel);
+    return notificationPanel;
+  };
+
+  function renderNotificationPanel() {
+    if (!notificationButton) return;
+    ensureNotificationPanel();
+    if (!notificationList || !notificationEmpty) return;
+
+    notificationList.innerHTML = '';
+    const summaries = Array.from(unseenOrderKeys)
+      .map(key => unseenOrderSummaries[key])
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    notificationEmpty.hidden = summaries.length > 0;
+    notificationList.hidden = summaries.length === 0;
+
+    summaries.forEach((summary) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'notification-item';
+      item.dataset.notificationOrderKey = summary.key;
+
+      const head = document.createElement('span');
+      head.className = 'notification-item-head';
+
+      const orderNumber = document.createElement('strong');
+      orderNumber.textContent = summary.orderNumber || 'Order';
+
+      const status = document.createElement('span');
+      status.className = 'notification-item-status';
+      status.textContent = summary.status ? String(summary.status).replace(/_/g, ' ') : 'submitted';
+
+      head.append(orderNumber, status);
+
+      const customer = document.createElement('span');
+      customer.className = 'notification-item-customer';
+      customer.textContent = summary.customerName || 'Guest';
+
+      const meta = document.createElement('span');
+      meta.className = 'notification-item-meta';
+      meta.textContent = [
+        summary.fulfillmentLabel || 'Order',
+        formatCurrency(summary.subtotal, summary.currency),
+        formatOrderAge(summary.createdAt),
+      ].filter(Boolean).join(' · ');
+
+      item.append(head, customer, meta);
+
+      if (summary.cancelRequested) {
+        const cancelBadge = document.createElement('span');
+        cancelBadge.className = 'notification-item-warning';
+        cancelBadge.textContent = 'Cancellation requested';
+        item.appendChild(cancelBadge);
+      }
+
+      item.addEventListener('click', () => openIncomingOrderNotification(summary));
+      notificationList.appendChild(item);
+    });
+  }
 
   const setOrderSoundEnabled = (isEnabled) => {
     orderSoundEnabled = Boolean(isEnabled);
@@ -324,7 +535,7 @@
     try {
       const { data: sessionData } = await badgeClient.auth.getSession();
       const isSignedIn = Boolean(sessionData && sessionData.session && sessionData.session.user);
-      if (!isSignedIn || getAdminPageName() === 'incoming-orders.html') {
+      if (!isSignedIn) {
         hideIncomingOrderBadge();
         return isSignedIn;
       }
@@ -365,6 +576,22 @@
 
   window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
   window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
+  window.curvClearIncomingOrderNotification = removeUnseenIncomingOrder;
+  window.curvGetIncomingOrderNotificationTarget = () => {
+    try {
+      const stored = window.sessionStorage.getItem(notificationTargetStorageKey);
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      return null;
+    }
+  };
+  window.curvClearIncomingOrderNotificationTarget = () => {
+    try {
+      window.sessionStorage.removeItem(notificationTargetStorageKey);
+    } catch (error) {
+      // Session-only target state is best-effort.
+    }
+  };
   window.curvSetIncomingOrderSoundEnabled = setOrderSoundEnabled;
   window.curvGetIncomingOrderSoundEnabled = getOrderSoundEnabled;
   window.curvStopIncomingOrderAlert = stopNewOrderAlert;
@@ -375,6 +602,39 @@
       customer_name: 'Test Customer',
     });
   };
+
+  if (notificationButton) {
+    ensureNotificationPanel();
+    renderNotificationPanel();
+    notificationButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const panel = ensureNotificationPanel();
+      if (!panel) return;
+      const shouldOpen = panel.hidden;
+      if (shouldOpen) window.dispatchEvent(new CustomEvent('curv-close-owner-dropdowns'));
+      panel.hidden = !shouldOpen;
+      notificationButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      if (shouldOpen) renderNotificationPanel();
+    });
+  }
+
+  if (notificationPanel) {
+    notificationPanel.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!notificationButton || !notificationPanel) return;
+    if (notificationButton.contains(event.target) || notificationPanel.contains(event.target)) return;
+    closeNotificationPanel();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeNotificationPanel();
+  });
+
+  window.addEventListener('curv-close-notification-panel', closeNotificationPanel);
 
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
     hideIncomingOrderBadge();
@@ -456,6 +716,7 @@
   const toggleOwnerAccountMenu = () => {
     if (!ownerAccountMenu || !ownerAccountToggle) return;
     const shouldOpen = ownerAccountMenu.hidden;
+    if (shouldOpen) window.dispatchEvent(new CustomEvent('curv-close-notification-panel'));
     ownerAccountMenu.hidden = !shouldOpen;
     ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     if (shouldOpen) {
@@ -494,6 +755,8 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeOwnerAccountMenu();
   });
+
+  window.addEventListener('curv-close-owner-dropdowns', closeOwnerAccountMenu);
 
   if (!hasSupabaseConfig || !window.supabase) return;
 
@@ -766,6 +1029,7 @@
   const toggleOwnerAccountMenu = () => {
     if (!ownerAccountMenu || !ownerAccountToggle) return;
     const shouldOpen = ownerAccountMenu.hidden;
+    if (shouldOpen) window.dispatchEvent(new CustomEvent('curv-close-notification-panel'));
     ownerAccountMenu.hidden = !shouldOpen;
     ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     if (shouldOpen) {
@@ -5223,6 +5487,8 @@
     if (event.key === 'Escape') closeOwnerAccountMenu();
   });
 
+  window.addEventListener('curv-close-owner-dropdowns', closeOwnerAccountMenu);
+
   if (menuManagerSubnavToggle) {
     menuManagerSubnavToggle.addEventListener('click', () => {
       const isExpanded = menuManagerSubnavToggle.getAttribute('aria-expanded') === 'true';
@@ -5553,6 +5819,7 @@
   const toggleOwnerAccountMenu = () => {
     if (!ownerAccountMenu || !ownerAccountToggle) return;
     const shouldOpen = ownerAccountMenu.hidden;
+    if (shouldOpen) window.dispatchEvent(new CustomEvent('curv-close-notification-panel'));
     ownerAccountMenu.hidden = !shouldOpen;
     ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     if (shouldOpen) {
@@ -6198,7 +6465,9 @@
           }
           updateFilterUi();
         }
-        if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
+        if (typeof window.curvClearIncomingOrderNotification === 'function') {
+          window.curvClearIncomingOrderNotification(order.id || order.order_number || '');
+        }
         renderOrders();
       });
 
@@ -6481,6 +6750,43 @@
     }
   };
 
+  const openOrderFromNotification = async (target) => {
+    const targetId = String(target && (target.id || target.key) || '').trim();
+    const targetKey = String(target && target.key || targetId).trim();
+    if (!targetId || !isOwnerSignedIn) return;
+    stopIncomingOrderAlert();
+    if (activeStatus !== 'submitted') {
+      activeStatus = 'submitted';
+      updateFilterUi();
+      await loadOrders({ preserveSelection: true });
+    } else if (!latestOrders.length && !ordersLoading) {
+      await loadOrders({ preserveSelection: true });
+    }
+    selectedOrderId = targetId;
+    if (typeof window.curvClearIncomingOrderNotification === 'function') {
+      window.curvClearIncomingOrderNotification(targetKey);
+    }
+    recentlyReceivedOrderIds.delete(targetId);
+    if (recentlyReceivedOrderTimers.has(targetId)) {
+      window.clearTimeout(recentlyReceivedOrderTimers.get(targetId));
+      recentlyReceivedOrderTimers.delete(targetId);
+    }
+    updateFilterUi();
+    renderOrders();
+  };
+
+  window.curvOpenIncomingOrderNotification = openOrderFromNotification;
+
+  const consumePendingNotificationTarget = async () => {
+    if (typeof window.curvGetIncomingOrderNotificationTarget !== 'function') return;
+    const target = window.curvGetIncomingOrderNotificationTarget();
+    if (!target) return;
+    if (typeof window.curvClearIncomingOrderNotificationTarget === 'function') {
+      window.curvClearIncomingOrderNotificationTarget();
+    }
+    await openOrderFromNotification(target);
+  };
+
   const unsubscribeFromOrdersRealtime = () => {
     if (!ordersRealtimeChannel) return;
     const channel = ordersRealtimeChannel;
@@ -6513,6 +6819,7 @@
     if (isSignedIn) {
       await loadOrderSummary();
       await loadOrders();
+      await consumePendingNotificationTarget();
       subscribeToOrdersRealtime();
     } else {
       unsubscribeFromOrdersRealtime();
@@ -6549,6 +6856,8 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeOwnerAccountMenu();
   });
+
+  window.addEventListener('curv-close-owner-dropdowns', closeOwnerAccountMenu);
 
   filterButtons.forEach((button) => {
     button.addEventListener('click', async () => {

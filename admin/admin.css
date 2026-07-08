@@ -99,6 +99,9 @@ a {
 
 .topbar {
   grid-column: 1 / -1;
+  position: sticky;
+  top: 0;
+  z-index: 80;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -150,6 +153,7 @@ a {
 }
 
 .topbar-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -173,6 +177,18 @@ a {
 .notification-button:hover {
   border-color: rgba(200, 184, 154, 0.58);
   background: var(--navy-800);
+}
+
+.notification-button.has-unseen-orders {
+  border-color: rgba(222, 150, 126, 0.5);
+  background: rgba(130, 55, 48, 0.18);
+  color: #ffd6cf;
+}
+
+.notification-control {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
 }
 
 .topbar-icon,
@@ -215,6 +231,140 @@ a {
   position: absolute;
   top: -0.25rem;
   right: -0.25rem;
+}
+
+.notification-badge.has-unseen-orders {
+  background: #e58f7e;
+  color: #1b1112;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 88;
+  width: min(360px, calc(100vw - 2rem));
+  border: 1px solid rgba(200, 184, 154, 0.2);
+  border-radius: 12px;
+  background: rgb(24, 29, 45);
+  box-shadow: var(--shadow);
+  padding: 0.8rem;
+}
+
+.notification-panel::before {
+  content: "";
+  position: absolute;
+  top: -0.42rem;
+  right: 0.95rem;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-top: 1px solid rgba(200, 184, 154, 0.2);
+  border-left: 1px solid rgba(200, 184, 154, 0.2);
+  background: rgb(24, 29, 45);
+  transform: rotate(45deg);
+}
+
+.notification-panel[hidden],
+.notification-list[hidden],
+.notification-empty[hidden] {
+  display: none;
+}
+
+.notification-panel-title {
+  margin: 0 0 0.55rem;
+  color: var(--accent);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+}
+
+.notification-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.notification-item {
+  width: 100%;
+  border: 1px solid rgba(200, 184, 154, 0.12);
+  border-radius: 8px;
+  background: rgba(13, 17, 28, 0.52);
+  color: var(--cream);
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.6rem;
+  font-family: 'Jost', sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item:hover,
+.notification-item:focus-visible {
+  border-color: rgba(200, 184, 154, 0.34);
+  background: rgba(200, 184, 154, 0.075);
+}
+
+.notification-item-head,
+.notification-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.notification-item-head strong {
+  font-size: 0.78rem;
+  letter-spacing: 1.2px;
+}
+
+.notification-item-status,
+.notification-item-meta,
+.notification-item-customer,
+.notification-empty {
+  color: var(--slate);
+  font-size: 0.72rem;
+}
+
+.notification-item-status {
+  text-transform: capitalize;
+}
+
+.notification-item-customer {
+  color: rgba(246, 239, 226, 0.9);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.notification-item-warning {
+  width: fit-content;
+  border: 1px solid rgba(222, 150, 126, 0.36);
+  border-radius: 999px;
+  background: rgba(130, 55, 48, 0.14);
+  color: #f1b5a8;
+  padding: 0.18rem 0.42rem;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.notification-empty {
+  margin: 0;
+  border: 1px dashed rgba(200, 184, 154, 0.14);
+  border-radius: 8px;
+  padding: 0.72rem;
+}
+
+@media (max-width: 600px) {
+  .notification-panel {
+    right: -3.2rem;
+    width: min(360px, calc(100vw - 24px));
+  }
+
+  .notification-panel::before {
+    right: 4.15rem;
+  }
 }
 .admin-order-toast {
   position: fixed;
@@ -359,6 +509,10 @@ a {
 
 .sidebar {
   grid-row: 2 / span 2;
+  position: sticky;
+  top: 72px;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
   padding: 1rem;
   border-right: 1px solid var(--border);
   background: rgba(20, 24, 36, 0.56);
@@ -370,7 +524,7 @@ a {
 
 .admin-nav {
   position: sticky;
-  top: 1.25rem;
+  top: 1rem;
   display: grid;
   gap: 0.35rem;
 }
@@ -695,6 +849,9 @@ body.more-drawer-open {
 
   .sidebar {
     grid-row: 2 / span 2;
+    top: 72px;
+    height: calc(100vh - 72px);
+    overflow-y: auto;
     padding: 0.75rem 0.35rem;
     border-right: 1px solid var(--border);
     border-bottom: 0;
@@ -1132,6 +1289,19 @@ body.more-drawer-open {
   padding: 1rem;
 }
 
+.owner-account-menu::before {
+  content: "";
+  position: absolute;
+  top: -0.42rem;
+  right: 1.05rem;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  background: rgb(24, 29, 45);
+  transform: rotate(45deg);
+}
+
 .owner-account-menu[hidden],
 .owner-account-panel[hidden] {
   display: none;
@@ -1156,10 +1326,17 @@ body.more-drawer-open {
   gap: 0.72rem;
 }
 
+.owner-account-form .admin-field,
+.owner-account-form .auth-button,
+.owner-account-panel .auth-button {
+  width: 100%;
+}
+
 .owner-account-email {
   margin: 0;
   color: var(--slate);
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
 .owner-menu-action {
@@ -1403,9 +1580,37 @@ body.more-drawer-open {
   }
 
   .topbar-actions .owner-account-menu {
-    left: auto;
-    right: 0;
-    width: min(330px, calc(100vw - 2rem));
+    position: fixed;
+    top: 4.45rem;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100vh - 5.25rem);
+    overflow-y: auto;
+    padding: 0.9rem;
+    z-index: 130;
+  }
+
+  .topbar-actions .owner-account-menu::before {
+    display: none;
+  }
+
+  .topbar-actions .owner-account-panel {
+    gap: 0.68rem;
+  }
+
+  .topbar-actions .owner-account-form {
+    gap: 0.65rem;
+  }
+
+  .topbar-actions .owner-account-form .admin-field {
+    min-width: 0;
+  }
+
+  .topbar-actions .owner-account-form .auth-button,
+  .topbar-actions .owner-account-panel .auth-button {
+    min-height: 44px;
+    width: 100%;
   }
 
   .editor-section-grid {
@@ -3326,6 +3531,7 @@ body.more-drawer-open {
 }
 
 .order-filter-button {
+  min-width: 128px;
   min-height: 34px;
   border: 1px solid rgba(189, 196, 212, 0.13);
   border-radius: 999px;
@@ -3333,9 +3539,9 @@ body.more-drawer-open {
   color: var(--slate);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.36rem;
-  padding: 0.4rem 0.64rem;
+  justify-content: space-between;
+  gap: 0.62rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.7rem;
   font-family: 'Jost', sans-serif;
   font-size: 0.58rem;
   font-weight: 600;
@@ -3345,7 +3551,8 @@ body.more-drawer-open {
 }
 
 .order-filter-count {
-  min-width: 1.35rem;
+  min-width: 1.55rem;
+  flex: 0 0 auto;
   border-radius: 999px;
   background: rgba(246, 239, 226, 0.08);
   color: rgba(246, 239, 226, 0.88);
