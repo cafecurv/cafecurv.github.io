@@ -402,6 +402,141 @@
   });
 })();
 (() => {
+  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders])');
+  const ownerAccount = document.querySelector('[data-owner-account]');
+  if (!dashboardRoot || !ownerAccount) return;
+
+  const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+
+  const authForm = document.querySelector('[data-auth-form]');
+  const emailInput = document.getElementById('owner-email');
+  const passwordInput = document.getElementById('owner-password');
+  const signInButton = document.querySelector('[data-sign-in]');
+  const signOutButton = document.querySelector('[data-sign-out]');
+  const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = document.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = document.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
+  let isOwnerSignedIn = false;
+  let signedInOwnerEmail = '';
+
+  const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
+    && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
+    && SUPABASE_URL.startsWith('https://')
+    && SUPABASE_PUBLISHABLE_KEY.length > 20;
+
+  const setFormDisabled = (isDisabled) => {
+    if (emailInput) emailInput.disabled = isDisabled;
+    if (passwordInput) passwordInput.disabled = isDisabled;
+    if (signInButton) signInButton.disabled = isDisabled;
+  };
+
+  const getOwnerInitials = (email) => {
+    const cleanEmail = String(email || '').trim();
+    if (!cleanEmail) return 'CO';
+    const localPart = cleanEmail.split('@')[0] || cleanEmail;
+    return localPart
+      .split(/[._\-\s]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part.charAt(0).toUpperCase())
+      .join('') || 'CO';
+  };
+
+  const closeOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    ownerAccountMenu.hidden = true;
+    ownerAccountToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const toggleOwnerAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    const shouldOpen = ownerAccountMenu.hidden;
+    ownerAccountMenu.hidden = !shouldOpen;
+    ownerAccountToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    if (shouldOpen) {
+      const firstTarget = ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)');
+      if (firstTarget && typeof firstTarget.focus === 'function') firstTarget.focus();
+    }
+  };
+
+  const updateOwnerAccountUi = () => {
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
+    if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
+    if (signInButton) signInButton.disabled = isOwnerSignedIn;
+    if (signOutButton) signOutButton.disabled = !isOwnerSignedIn;
+  };
+
+  const setSignedInState = (isSignedIn, email = '') => {
+    isOwnerSignedIn = isSignedIn;
+    signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
+    updateOwnerAccountUi();
+  };
+
+  updateOwnerAccountUi();
+
+  ownerAccountToggle?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleOwnerAccountMenu();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!ownerAccount.contains(event.target)) closeOwnerAccountMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeOwnerAccountMenu();
+  });
+
+  if (!hasSupabaseConfig || !window.supabase) return;
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  authForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!emailInput || !passwordInput) return;
+    setFormDisabled(true);
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: emailInput.value.trim(),
+        password: passwordInput.value,
+      });
+      if (error) throw error;
+      setSignedInState(true, data && data.user ? data.user.email : emailInput.value.trim());
+      passwordInput.value = '';
+      closeOwnerAccountMenu();
+    } catch (error) {
+      if (ownerAccountEmail) ownerAccountEmail.textContent = error.message || 'Owner sign in failed.';
+    } finally {
+      setFormDisabled(false);
+    }
+  });
+
+  signOutButton?.addEventListener('click', async () => {
+    signOutButton.disabled = true;
+    await supabaseClient.auth.signOut();
+    setSignedInState(false);
+    closeOwnerAccountMenu();
+  });
+
+  supabaseClient.auth.getSession().then(({ data }) => {
+    const user = data && data.session && data.session.user;
+    setSignedInState(Boolean(user), user ? user.email : '');
+  });
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const user = session && session.user;
+    setSignedInState(Boolean(user), user ? user.email : '');
+  });
+})();
+(() => {
   const menuManagerRoot = document.querySelector('[data-supabase-menu-manager]');
   if (!menuManagerRoot) return;
 
@@ -409,11 +544,11 @@
   const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
 
-  const authForm = menuManagerRoot.querySelector('[data-auth-form]');
+  const authForm = document.querySelector('[data-auth-form]');
   const emailInput = document.getElementById('owner-email');
   const passwordInput = document.getElementById('owner-password');
-  const signInButton = menuManagerRoot.querySelector('[data-sign-in]');
-  const signOutButton = menuManagerRoot.querySelector('[data-sign-out]');
+  const signInButton = document.querySelector('[data-sign-in]');
+  const signOutButton = document.querySelector('[data-sign-out]');
   const authStatus = menuManagerRoot.querySelector('[data-auth-status]');
   const ownerAccount = document.querySelector('[data-owner-account]');
   const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
@@ -5321,20 +5456,20 @@
     cancelled: [],
   };
 
-  const authForm = ordersRoot.querySelector('[data-auth-form]');
+  const authForm = document.querySelector('[data-auth-form]');
   const emailInput = document.getElementById('owner-email');
   const passwordInput = document.getElementById('owner-password');
-  const signInButton = ordersRoot.querySelector('[data-sign-in]');
-  const signOutButton = ordersRoot.querySelector('[data-sign-out]');
+  const signInButton = document.querySelector('[data-sign-in]');
+  const signOutButton = document.querySelector('[data-sign-out]');
   const authStatus = ordersRoot.querySelector('[data-orders-auth-status]');
-  const ownerAccount = ordersRoot.querySelector('[data-owner-account]');
-  const ownerAccountToggle = ordersRoot.querySelector('[data-owner-account-toggle]');
-  const ownerAccountMenu = ordersRoot.querySelector('[data-owner-account-menu]');
-  const ownerSignedOutPanel = ordersRoot.querySelector('[data-owner-signed-out]');
-  const ownerSignedInPanel = ordersRoot.querySelector('[data-owner-signed-in]');
-  const ownerAccountLabel = ordersRoot.querySelector('[data-owner-account-label]');
-  const ownerAccountEmail = ordersRoot.querySelector('[data-owner-account-email]');
-  const ownerAccountInitials = ordersRoot.querySelector('[data-owner-account-initials]');
+  const ownerAccount = document.querySelector('[data-owner-account]');
+  const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = document.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = document.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
   const orderList = ordersRoot.querySelector('[data-order-list]');
   const orderDetail = ordersRoot.querySelector('[data-order-detail]');
   const orderStatusLabel = ordersRoot.querySelector('[data-order-status-label]');

@@ -27,7 +27,36 @@
           <svg class="topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
           <span class="notification-badge" hidden aria-hidden="true"></span>
         </button>
-        <div class="topbar-avatar" aria-label="CURV Owner">CO</div>
+        <div class="owner-account owner-account-topbar" data-owner-account>
+          <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
+            <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
+            <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
+            <span class="owner-account-caret" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
+            <div class="owner-account-panel" data-owner-signed-out>
+              <p class="eyebrow">Owner Access</p>
+              <h2>Owner Login</h2>
+              <form class="owner-account-form" data-auth-form>
+                <label class="admin-field" for="owner-email">
+                  <span>Email</span>
+                  <input id="owner-email" name="email" type="email" autocomplete="email" required>
+                </label>
+                <label class="admin-field" for="owner-password">
+                  <span>Password</span>
+                  <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+              </form>
+            </div>
+            <div class="owner-account-panel" data-owner-signed-in hidden>
+              <p class="eyebrow">Owner Account</p>
+              <h2>Signed In</h2>
+              <p class="owner-account-email" data-owner-account-email>Owner access active.</p>
+              <button type="button" class="auth-button auth-button-secondary" data-sign-out>Sign Out</button>
+            </div>
+          </div>
+        </div>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
           <span class="nav-toggle-line" aria-hidden="true"></span>
           <span class="nav-toggle-line" aria-hidden="true"></span>
