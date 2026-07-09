@@ -397,12 +397,16 @@ a {
 
 @media (max-width: 600px) {
   .notification-panel {
-    right: -3.2rem;
+    position: fixed;
+    top: calc(72px + 0.55rem);
+    right: 12px;
     width: min(360px, calc(100vw - 24px));
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
   }
 
   .notification-panel::before {
-    right: 4.15rem;
+    right: clamp(7.35rem, 38vw, 8.75rem);
   }
 }
 .admin-order-toast {
@@ -4430,6 +4434,43 @@ body.more-drawer-open {
   background: rgba(143, 118, 85, 0.12);
   color: var(--cream);
   border-color: rgba(143, 118, 85, 0.32);
+}
+
+:root[data-admin-theme="light"] .order-filter-button {
+  background: rgba(255, 251, 242, 0.94);
+  border-color: rgba(87, 74, 55, 0.26);
+  color: #273149;
+  opacity: 1;
+}
+
+:root[data-admin-theme="light"] .order-filter-button .order-filter-count {
+  background: rgba(143, 118, 85, 0.16);
+  color: #273149;
+}
+
+:root[data-admin-theme="light"] .order-filter-button.is-active {
+  background: #273149;
+  border-color: #273149;
+  color: #F8F1E4;
+}
+
+:root[data-admin-theme="light"] .order-filter-button.is-active .order-filter-count {
+  background: rgba(248, 241, 228, 0.2);
+  color: #F8F1E4;
+}
+
+:root[data-admin-theme="light"] .order-filter-button:hover,
+:root[data-admin-theme="light"] .order-filter-button:focus-visible {
+  background: rgba(143, 118, 85, 0.14);
+  border-color: rgba(143, 118, 85, 0.42);
+  color: #273149;
+}
+
+:root[data-admin-theme="light"] .order-filter-button.is-active:hover,
+:root[data-admin-theme="light"] .order-filter-button.is-active:focus-visible {
+  background: #273149;
+  border-color: #273149;
+  color: #F8F1E4;
 }
 
 :root[data-admin-theme="light"] .notification-badge,
