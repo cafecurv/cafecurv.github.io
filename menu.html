@@ -3864,7 +3864,7 @@
           desc: product.description || '',
           img: product.image_url || null,
           variants: variantMap.variants,
-          is_sold_out: Boolean(product.is_sold_out),
+          is_sold_out: isPublicProductSoldOut(product),
           type: variantMap.type,
           badge_labels: getPublicProductBadgeLabels(product),
           menu_group: product.menu_group,
@@ -3891,7 +3891,7 @@
         name,
         badge: product.is_seasonal ? 'Seasonal' : (product.is_curv_pick ? 'CURV Pick' : null),
         badge_labels: getPublicProductBadgeLabels(product),
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         desc: product.description || '',
         reg: priceMap.reg,
         lrg: priceMap.lrg,
@@ -4477,7 +4477,7 @@
         img: product.image_url || hardcodedItem.img,
         is_curv_pick: !!product.is_curv_pick,
         is_seasonal: !!product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -4811,7 +4811,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
@@ -5129,7 +5129,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
@@ -5526,7 +5526,7 @@
         pieces: pieceMap.pieces,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         has_spicy: expectedItem.has_spicy,
         has_addons: expectedItem.has_addons,
@@ -5762,7 +5762,7 @@
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -5885,7 +5885,7 @@
         img: product.image_url || meta.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         variants: variantMap.variants,
         category_section_id: product.category_section_id || null,
@@ -6069,7 +6069,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         variant_group_name: product.variant_group_name,
         variants: variantMap.variants
@@ -6388,7 +6388,7 @@
         panelId: panelInfo.panelId,
         defaultOptions: panelInfo.defaultOptions || {},
         variants: variantMap.variants,
-        is_sold_out: Boolean(product.is_sold_out),
+        is_sold_out: isPublicProductSoldOut(product),
         sort_order: Number(product.sort_order) || 0
       });
     }
@@ -8046,6 +8046,12 @@
     else soldOutProductNames.delete(key);
   }
 
+  function isPublicProductSoldOut(product) {
+    if (!product) return false;
+    if (Object.prototype.hasOwnProperty.call(product, 'is_available') && product.is_available === false) return true;
+    return Boolean(product.is_sold_out);
+  }
+
   function isSoldOutProductName(name) {
     const key = getSoldOutProductKey(name);
     return key ? soldOutProductNames.has(key) : false;
@@ -8067,6 +8073,28 @@
       );
     }
     return publicMenuSupabaseClient;
+  }
+
+  async function fetchPublicMenuProducts(client) {
+    const baseSelect = 'id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,is_sold_out,variant_group_name,menu_group,sort_order,badge_labels';
+    const availabilitySelect = baseSelect.replace('is_sold_out', 'is_available,is_sold_out');
+    const result = await client
+      .from('public_menu_products')
+      .select(availabilitySelect)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (!result.error) return result;
+
+    const fallback = await client
+      .from('public_menu_products')
+      .select(baseSelect)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (!fallback.error) {
+      console.warn('[CURV menu] public_menu_products does not expose is_available yet. Sold out state falls back to is_sold_out.');
+    }
+    return fallback;
   }
 
   function buildCategorySectionsMap(categorySections = []) {
@@ -8130,7 +8158,7 @@
       image_url: product.image_url,
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
-      is_sold_out: Boolean(product.is_sold_out),
+      is_sold_out: isPublicProductSoldOut(product),
       badge_labels: getPublicProductBadgeLabels(product),
       variant_group_name: product.variant_group_name,
       menu_group: product.menu_group || null,
@@ -8309,11 +8337,7 @@
           .select('id,name,sort_order')
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
-        client
-          .from('public_menu_products')
-          .select('id,category_id,category_section_id,name,description,image_url,is_curv_pick,is_seasonal,is_sold_out,variant_group_name,menu_group,sort_order,badge_labels')
-          .order('sort_order', { ascending: true })
-          .order('name', { ascending: true }),
+        fetchPublicMenuProducts(client),
         client
           .from('public_menu_product_sizes')
           .select('id,product_id,label,price,sort_order')

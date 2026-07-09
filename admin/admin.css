@@ -1406,6 +1406,17 @@ body.more-drawer-open {
   font-size: 0.52rem;
 }
 
+.draft-checkbox-hint {
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--slate);
+  font-size: 0.56rem;
+  font-weight: 400;
+  letter-spacing: 0.6px;
+  line-height: 1.25;
+  text-transform: none;
+}
+
 .menu-manager-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3922,6 +3933,13 @@ body.more-drawer-open {
   color: #f1b5a8;
 }
 
+.order-cancel-request-badge.is-approved,
+.order-cancel-request-badge.is-declined {
+  border-color: rgba(200, 184, 154, 0.32);
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--accent);
+}
+
 .order-age {
   color: var(--accent);
 }
@@ -4020,6 +4038,17 @@ body.more-drawer-open {
   font-weight: 700;
   letter-spacing: 1.55px;
   text-transform: uppercase;
+}
+
+.order-cancel-request-notice.is-approved,
+.order-cancel-request-notice.is-declined {
+  border-color: rgba(200, 184, 154, 0.2);
+  background: rgba(200, 184, 154, 0.06);
+}
+
+.order-cancel-request-notice.is-approved h4,
+.order-cancel-request-notice.is-declined h4 {
+  color: var(--accent);
 }
 
 .order-cancel-request-notice p,
@@ -4498,10 +4527,29 @@ body.more-drawer-open {
   color: #8F342C;
 }
 
+:root[data-admin-theme="light"] .order-cancel-request-badge.is-approved,
+:root[data-admin-theme="light"] .order-cancel-request-badge.is-declined {
+  background: #F3EBDC;
+  border-color: rgba(200, 184, 154, 0.52);
+  color: #8D7655;
+}
+
 :root[data-admin-theme="light"] .order-cancel-request-notice h4,
 :root[data-admin-theme="light"] .order-empty-state.is-error h3,
 :root[data-admin-theme="light"] .order-detail-items-empty.is-error {
   color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .order-cancel-request-notice.is-approved,
+:root[data-admin-theme="light"] .order-cancel-request-notice.is-declined {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.48);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .order-cancel-request-notice.is-approved h4,
+:root[data-admin-theme="light"] .order-cancel-request-notice.is-declined h4 {
+  color: #8D7655;
 }
 
 :root[data-admin-theme="light"] .order-delivery-note,

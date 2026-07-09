@@ -199,6 +199,12 @@
     return String(order.id || order.order_number || order.created_at || '').trim();
   };
 
+  const getCancellationRequestKey = (order) => {
+    const orderKey = getOrderAlertKey(order);
+    const requestedAt = String(order && order.customer_cancel_requested_at || '').trim();
+    return orderKey && requestedAt ? 'cancel:' + orderKey + ':' + requestedAt : '';
+  };
+
   const formatCurrency = (value, currency = 'PHP') => {
     const amount = Number(value || 0);
     try {
@@ -234,6 +240,7 @@
     const key = getOrderAlertKey(order);
     if (!key) return null;
     return {
+      type: 'order',
       key,
       id: String(order.id || ''),
       orderNumber: String(order.order_number || 'Order'),
@@ -244,6 +251,24 @@
       createdAt: String(order.created_at || ''),
       status: String(order.status || 'submitted'),
       cancelRequested: String(order.customer_cancel_status || '').toLowerCase() === 'requested',
+    };
+  };
+
+  const getCancellationRequestSummary = (order) => {
+    const key = getCancellationRequestKey(order);
+    if (!key) return null;
+    return {
+      type: 'cancellation',
+      key,
+      id: String(order.id || ''),
+      orderNumber: String(order.order_number || 'Order'),
+      customerName: String(order.customer_name || 'Guest'),
+      fulfillmentLabel: getFulfillmentLabel(order),
+      subtotal: Number(order.subtotal || order.total || 0),
+      currency: String(order.currency || 'PHP'),
+      createdAt: String(order.customer_cancel_requested_at || order.created_at || ''),
+      status: String(order.status || 'submitted'),
+      cancelRequested: true,
     };
   };
 
@@ -266,6 +291,18 @@
     persistUnseenOrderKeys();
     persistUnseenOrderSummaries();
     setIncomingOrderBadge(0);
+  };
+
+  const clearSubmittedOrderNotifications = () => {
+    Array.from(unseenOrderKeys).forEach((key) => {
+      if (!String(key).startsWith('cancel:')) {
+        unseenOrderKeys.delete(key);
+        delete unseenOrderSummaries[key];
+      }
+    });
+    persistUnseenOrderKeys();
+    persistUnseenOrderSummaries();
+    setIncomingOrderBadge(unseenOrderKeys.size);
   };
 
   const removeUnseenIncomingOrder = (key) => {
@@ -300,6 +337,26 @@
     }
   };
 
+  const noteUnseenCancellationRequest = (order) => {
+    const cancelStatus = String(order && order.customer_cancel_status || '').toLowerCase();
+    const key = getCancellationRequestKey(order);
+    if (cancelStatus !== 'requested' || !key) return false;
+    const isNewUnseen = !unseenOrderKeys.has(key);
+    unseenOrderKeys.add(key);
+    const summary = getCancellationRequestSummary(order);
+    if (summary) unseenOrderSummaries[key] = summary;
+    persistUnseenOrderKeys();
+    persistUnseenOrderSummaries();
+    setIncomingOrderBadge(unseenOrderKeys.size);
+    return isNewUnseen;
+  };
+
+  const handleCancellationRequestDetected = (order) => {
+    if (noteUnseenCancellationRequest(order)) {
+      showCancellationRequestToast(order);
+    }
+  };
+
   const closeNotificationPanel = () => {
     if (!notificationPanel || !notificationButton) return;
     notificationPanel.hidden = true;
@@ -314,6 +371,7 @@
     const target = {
       key: summary.key,
       id: summary.id || summary.key,
+      status: summary.status || 'submitted',
     };
     if (getAdminPageName() === 'incoming-orders.html' && typeof window.curvOpenIncomingOrderNotification === 'function') {
       window.curvOpenIncomingOrderNotification(target);
@@ -390,7 +448,9 @@
 
       const status = document.createElement('span');
       status.className = 'notification-item-status';
-      status.textContent = summary.status ? String(summary.status).replace(/_/g, ' ') : 'submitted';
+      status.textContent = summary.type === 'cancellation'
+        ? 'Cancellation requested'
+        : (summary.status ? String(summary.status).replace(/_/g, ' ') : 'submitted');
 
       head.append(orderNumber, status);
 
@@ -402,7 +462,9 @@
       meta.className = 'notification-item-meta';
       meta.textContent = [
         summary.fulfillmentLabel || 'Order',
-        formatCurrency(summary.subtotal, summary.currency),
+        summary.type === 'cancellation'
+          ? String(summary.status || '').replace(/_/g, ' ')
+          : formatCurrency(summary.subtotal, summary.currency),
         formatOrderAge(summary.createdAt),
       ].filter(Boolean).join(' · ');
 
@@ -571,6 +633,26 @@
     orderToastTimer = window.setTimeout(dismissOrderToast, 8000);
   };
 
+  const showCancellationRequestToast = (order) => {
+    const cancelStatus = String(order && order.customer_cancel_status || '').toLowerCase();
+    if (cancelStatus !== 'requested') return;
+
+    const toast = ensureOrderToast();
+    const title = toast.querySelector('[data-order-toast-title]');
+    const detail = toast.querySelector('[data-order-toast-detail]');
+    const orderNumber = order && order.order_number ? String(order.order_number) : 'Order';
+    const customerName = order && order.customer_name ? String(order.customer_name).trim() : '';
+
+    if (title) title.textContent = 'Cancellation requested';
+    if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
+
+    startNewOrderAlert();
+    toast.hidden = false;
+    window.requestAnimationFrame(() => toast.classList.add('is-open'));
+    if (orderToastTimer) window.clearTimeout(orderToastTimer);
+    orderToastTimer = window.setTimeout(dismissOrderToast, 8000);
+  };
+
   const refreshIncomingOrderBadge = async () => {
     if (!badgeClient) return false;
     try {
@@ -606,6 +688,17 @@
           const eventType = String(payload && payload.eventType || '').toUpperCase();
           if (eventType === 'INSERT') {
             handleIncomingOrderDetected(payload.new);
+            handleCancellationRequestDetected(payload.new);
+          } else if (eventType === 'UPDATE') {
+            const oldStatus = String(payload && payload.old && payload.old.customer_cancel_status || '').toLowerCase();
+            const newStatus = String(payload && payload.new && payload.new.customer_cancel_status || '').toLowerCase();
+            const oldRequestedAt = String(payload && payload.old && payload.old.customer_cancel_requested_at || '');
+            const newRequestedAt = String(payload && payload.new && payload.new.customer_cancel_requested_at || '');
+            if (newStatus === 'requested' && (oldStatus !== 'requested' || oldRequestedAt !== newRequestedAt)) {
+              handleCancellationRequestDetected(payload.new);
+            } else {
+              refreshIncomingOrderBadge();
+            }
           } else {
             refreshIncomingOrderBadge();
           }
@@ -616,8 +709,10 @@
 
   window.curvRefreshIncomingOrderBadge = refreshIncomingOrderBadge;
   window.curvHideIncomingOrderBadge = hideIncomingOrderBadge;
+  window.curvClearSubmittedOrderNotifications = clearSubmittedOrderNotifications;
   window.curvClearIncomingOrderNotification = removeUnseenIncomingOrder;
   window.curvHandleIncomingOrderDetected = handleIncomingOrderDetected;
+  window.curvHandleCancellationRequestDetected = handleCancellationRequestDetected;
   window.curvGetIncomingOrderNotificationTarget = () => {
     try {
       const stored = window.sessionStorage.getItem(notificationTargetStorageKey);
@@ -1214,7 +1309,7 @@
       description: String(formData.get('description') || '').trim(),
       notes: String(formData.get('notes') || '').trim(),
       is_available: formData.get('is_available') === 'on',
-      is_sold_out: formData.get('is_sold_out') === 'on',
+      is_sold_out: false,
       is_curv_pick: formData.get('is_curv_pick') === 'on',
       is_seasonal: formData.get('is_seasonal') === 'on',
       badge_labels: productBadgeLabels.slice(),
@@ -2285,8 +2380,6 @@
     if (customVariantInput) customVariantInput.value = '';
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
-    const soldOutInput = draftForm ? draftForm.querySelector('[name="is_sold_out"]') : null;
-    if (soldOutInput) soldOutInput.checked = false;
     resetVariantRows();
     setCreateMode();
     syncVariantGroupFields();
@@ -2977,8 +3070,7 @@
       const badges = document.createElement('div');
       badges.className = 'display-order-badges';
       badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
-      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
-      if (product.is_sold_out) badges.appendChild(makeBadge('Sold Out', 'is-muted'));
+      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Sold out', product.is_available ? 'is-available' : 'is-muted'));
 
       const moveControls = document.createElement('div');
       moveControls.className = 'display-order-move-controls';
@@ -3880,8 +3972,7 @@
       const badges = document.createElement('div');
       badges.className = 'product-badge-row';
       badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
-      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Unavailable', product.is_available ? 'is-available' : 'is-muted'));
-      if (product.is_sold_out) badges.appendChild(makeBadge('Sold Out', 'is-muted'));
+      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Sold out', product.is_available ? 'is-available' : 'is-muted'));
       if (product.is_curv_pick) badges.appendChild(makeBadge('CURV Pick', 'is-special'));
       if (product.is_seasonal) badges.appendChild(makeBadge('Seasonal', 'is-special'));
       top.append(titleWrap, badges);
@@ -3990,7 +4081,6 @@
     draftForm.elements.notes.value = product.notes || '';
     setProductBadges(product.badge_labels);
     draftForm.elements.is_available.checked = Boolean(product.is_available);
-    draftForm.elements.is_sold_out.checked = Boolean(product.is_sold_out);
     draftForm.elements.is_curv_pick.checked = Boolean(product.is_curv_pick);
     draftForm.elements.is_seasonal.checked = Boolean(product.is_seasonal);
 
@@ -4889,7 +4979,7 @@
         notes: String(formData.get('notes') || '').trim() || null,
         badge_labels: productBadgeLabels.slice(),
         is_available: formData.get('is_available') === 'on',
-        is_sold_out: formData.get('is_sold_out') === 'on',
+        is_sold_out: false,
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
         is_published: false,
@@ -5809,9 +5899,11 @@
   let realtimeRefreshQueued = false;
   let orderFallbackPollTimer = null;
   let submittedOrderBaselineReady = false;
+  let cancellationRequestBaselineReady = false;
   const recentlyReceivedOrderIds = new Set();
   const recentlyReceivedOrderTimers = new Map();
   const knownSubmittedOrderKeys = new Set();
+  const knownCancellationRequestKeys = new Set();
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
@@ -6124,7 +6216,15 @@
   };
 
   const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
-  const hasCustomerCancelRequest = (order) => String(order && order.customer_cancel_status || '').trim().toLowerCase() === 'requested';
+  const getCustomerCancelStatus = (order) => String(order && order.customer_cancel_status || '').trim().toLowerCase();
+  const hasCustomerCancelRequest = (order) => getCustomerCancelStatus(order) === 'requested';
+  const getCustomerCancelBadgeLabel = (order) => {
+    const status = getCustomerCancelStatus(order);
+    if (status === 'requested') return 'Cancellation requested';
+    if (status === 'approved') return 'Cancellation request approved';
+    if (status === 'declined') return 'Cancellation request declined';
+    return '';
+  };
 
   const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, fulfillment, payment, and total details will appear here after selecting an order.') => {
     if (!orderDetail) return;
@@ -6144,11 +6244,25 @@
   };
 
   const renderCancellationRequestNotice = (order) => {
-    if (!hasCustomerCancelRequest(order)) return null;
+    const cancelStatus = getCustomerCancelStatus(order);
+    if (!['requested', 'approved', 'declined'].includes(cancelStatus)) return null;
+    const isRequested = cancelStatus === 'requested';
+    const isApproved = cancelStatus === 'approved';
+    const noticeClass = 'order-cancel-request-notice'
+      + (isApproved ? ' is-approved' : '')
+      + (cancelStatus === 'declined' ? ' is-declined' : '');
 
-    const section = makeElement('section', 'order-cancel-request-notice');
-    section.appendChild(makeElement('h4', '', 'Cancellation requested'));
-    section.appendChild(makeElement('p', '', 'Customer requested to cancel this order. Please review before preparing or completing.'));
+    const section = makeElement('section', noticeClass);
+    section.appendChild(makeElement('h4', '', getCustomerCancelBadgeLabel(order)));
+    section.appendChild(makeElement(
+      'p',
+      '',
+      isRequested
+        ? 'Customer requested to cancel this order. Please review before preparing or completing.'
+        : (isApproved
+          ? 'Staff approved this customer cancellation request.'
+          : 'Staff declined this customer cancellation request by moving the order forward.'),
+    ));
 
     const details = makeElement('dl', 'order-cancel-request-details');
     const requestedRow = document.createElement('div');
@@ -6351,8 +6465,10 @@
       makeElement('span', 'order-status-badge', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('span', 'order-source-badge', getOrderSource(order)),
     );
-    if (hasCustomerCancelRequest(order)) {
-      headingBadges.appendChild(makeElement('span', 'order-cancel-request-badge', 'Cancellation requested'));
+    const cancelBadgeLabel = getCustomerCancelBadgeLabel(order);
+    if (cancelBadgeLabel) {
+      const cancelStatus = getCustomerCancelStatus(order);
+      headingBadges.appendChild(makeElement('span', 'order-cancel-request-badge is-' + cancelStatus, cancelBadgeLabel));
     }
     heading.appendChild(headingBadges);
     return heading;
@@ -6470,8 +6586,10 @@
         makeElement('span', 'order-source-badge', getOrderSource(order)),
         makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
       );
-      if (hasCustomerCancelRequest(order)) {
-        badgeGroup.appendChild(makeElement('span', 'order-cancel-request-badge', 'Cancellation requested'));
+      const cancelBadgeLabel = getCustomerCancelBadgeLabel(order);
+      if (cancelBadgeLabel) {
+        const cancelStatus = getCustomerCancelStatus(order);
+        badgeGroup.appendChild(makeElement('span', 'order-cancel-request-badge is-' + cancelStatus, cancelBadgeLabel));
       }
       head.append(
         makeElement('span', 'order-number', order.order_number || 'Order'),
@@ -6511,6 +6629,9 @@
         }
         if (typeof window.curvClearIncomingOrderNotification === 'function') {
           window.curvClearIncomingOrderNotification(order.id || order.order_number || '');
+          if (hasCustomerCancelRequest(order)) {
+            window.curvClearIncomingOrderNotification(getCancellationRequestKey(order));
+          }
         }
         renderOrders();
       });
@@ -6632,6 +6753,13 @@
 
     const payload = { status: action.nextStatus };
     payload[action.timestampField] = new Date().toISOString();
+    if (hasCustomerCancelRequest(order)) {
+      if (action.nextStatus === 'cancelled') {
+        payload.customer_cancel_status = 'approved';
+      } else if (['preparing', 'ready', 'completed'].includes(action.nextStatus)) {
+        payload.customer_cancel_status = 'declined';
+      }
+    }
     if (
       action.nextStatus === 'accepted'
       && getFulfillmentType(order) === 'delivery'
@@ -6654,6 +6782,9 @@
     }
 
     activeOrderAction = null;
+    if (hasCustomerCancelRequest(order) && payload.customer_cancel_status && typeof window.curvClearIncomingOrderNotification === 'function') {
+      window.curvClearIncomingOrderNotification(getCancellationRequestKey(order));
+    }
     activeStatus = action.nextStatus;
     updateFilterUi();
     await loadOrderSummary();
@@ -6751,9 +6882,21 @@
 
   const getOrderAlertKey = (order) => String(order && (order.id || order.order_number || order.created_at) || '').trim();
 
+  const getCancellationRequestKey = (order) => {
+    const orderKey = getOrderAlertKey(order);
+    const requestedAt = String(order && order.customer_cancel_requested_at || '').trim();
+    return orderKey && requestedAt ? 'cancel:' + orderKey + ':' + requestedAt : '';
+  };
+
   const addKnownSubmittedOrder = (order) => {
     const key = getOrderAlertKey(order);
     if (key) knownSubmittedOrderKeys.add(key);
+    return key;
+  };
+
+  const addKnownCancellationRequest = (order) => {
+    const key = getCancellationRequestKey(order);
+    if (key) knownCancellationRequestKeys.add(key);
     return key;
   };
 
@@ -6771,12 +6914,38 @@
     return true;
   };
 
+  const detectCancellationRequest = (order, { shouldAlert = true } = {}) => {
+    const cancelStatus = String(order && order.customer_cancel_status || '').trim().toLowerCase();
+    const key = getCancellationRequestKey(order);
+    if (!key || cancelStatus !== 'requested') return false;
+    const isNew = !knownCancellationRequestKeys.has(key);
+    knownCancellationRequestKeys.add(key);
+    if (!shouldAlert || !isNew || !cancellationRequestBaselineReady) return false;
+    markRecentlyReceivedOrder(order);
+    if (typeof window.curvHandleCancellationRequestDetected === 'function') {
+      window.curvHandleCancellationRequestDetected(order);
+    }
+    return true;
+  };
+
   const fetchRecentSubmittedOrders = async () => {
     const { data, error } = await client
       .from('orders')
       .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,customer_cancel_status,created_at')
       .eq('status', 'submitted')
       .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchRecentCancellationRequests = async () => {
+    const { data, error } = await client
+      .from('orders')
+      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,customer_cancel_status,customer_cancel_requested_at,created_at')
+      .eq('customer_cancel_status', 'requested')
+      .order('customer_cancel_requested_at', { ascending: false })
       .limit(50);
 
     if (error) throw error;
@@ -6791,6 +6960,13 @@
       submittedOrderBaselineReady = true;
     } catch (error) {
       submittedOrderBaselineReady = true;
+    }
+    try {
+      const cancellationRequests = await fetchRecentCancellationRequests();
+      cancellationRequests.forEach((order) => addKnownCancellationRequest(order));
+      cancellationRequestBaselineReady = true;
+    } catch (error) {
+      cancellationRequestBaselineReady = true;
     }
   };
 
@@ -6814,6 +6990,7 @@
   const refreshOrdersFromRealtime = async (incomingOrder) => {
     if (!isOwnerSignedIn) return;
     detectSubmittedOrder(incomingOrder);
+    detectCancellationRequest(incomingOrder);
     if (realtimeRefreshInFlight) {
       realtimeRefreshQueued = true;
       return;
@@ -6843,10 +7020,12 @@
   const openOrderFromNotification = async (target) => {
     const targetId = String(target && (target.id || target.key) || '').trim();
     const targetKey = String(target && target.key || targetId).trim();
+    const targetStatus = normalizeOrderStatus(target && target.status) || 'submitted';
+    const nextStatus = Object.prototype.hasOwnProperty.call(orderStatusCounts, targetStatus) ? targetStatus : 'submitted';
     if (!targetId || !isOwnerSignedIn) return;
     stopIncomingOrderAlert();
-    if (activeStatus !== 'submitted') {
-      activeStatus = 'submitted';
+    if (activeStatus !== nextStatus) {
+      activeStatus = nextStatus;
       updateFilterUi();
       await loadOrders({ preserveSelection: true });
     } else if (!latestOrders.length && !ordersLoading) {
@@ -6890,7 +7069,7 @@
       .channel('incoming-orders-admin')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
           refreshOrdersFromRealtime(payload && payload.new);
         },
@@ -6911,14 +7090,21 @@
     if (!isOwnerSignedIn) return;
     try {
       const submittedOrders = await fetchRecentSubmittedOrders();
+      const cancellationRequests = await fetchRecentCancellationRequests();
       const newOrders = [];
+      const newCancellationRequests = [];
       submittedOrders.forEach((order) => {
         if (detectSubmittedOrder(order)) newOrders.push(order);
+      });
+      cancellationRequests.forEach((order) => {
+        if (detectCancellationRequest(order)) newCancellationRequests.push(order);
       });
       await loadOrderSummary();
       if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
       if (activeStatus === 'submitted') await loadOrders({ preserveSelection: true });
-      if (newOrders.length) {
+      if (newCancellationRequests.length) {
+        setStatus(newCancellationRequests.length === 1 ? 'Cancellation request received.' : 'Cancellation requests received.');
+      } else if (newOrders.length) {
         setStatus(newOrders.length === 1 ? 'New order received.' : 'New orders received.');
       }
     } catch (error) {
@@ -6946,7 +7132,9 @@
       unsubscribeFromOrdersRealtime();
       stopOrdersFallbackPolling();
       knownSubmittedOrderKeys.clear();
+      knownCancellationRequestKeys.clear();
       submittedOrderBaselineReady = false;
+      cancellationRequestBaselineReady = false;
       latestOrders = [];
       itemCountByOrderId = new Map();
       orderItemsByOrderId = new Map();
@@ -6991,7 +7179,7 @@
         recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
         recentlyReceivedOrderTimers.clear();
         recentlyReceivedOrderIds.clear();
-        if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
+        if (typeof window.curvClearSubmittedOrderNotifications === 'function') window.curvClearSubmittedOrderNotifications();
         updateFilterUi();
       }
       if (nextStatus === activeStatus || ordersLoading || activeOrderAction) return;
@@ -7066,7 +7254,9 @@
       unsubscribeFromOrdersRealtime();
       stopOrdersFallbackPolling();
       knownSubmittedOrderKeys.clear();
+      knownCancellationRequestKeys.clear();
       submittedOrderBaselineReady = false;
+      cancellationRequestBaselineReady = false;
       closeOwnerAccountMenu();
       recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
       recentlyReceivedOrderTimers.clear();
