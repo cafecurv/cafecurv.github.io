@@ -6191,6 +6191,126 @@
       .filter(Boolean);
   };
 
+  const escapeTicketHtml = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const formatKitchenTicketTime = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('en-PH', {
+      timeZone: 'Asia/Manila',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const getKitchenTicketFulfillmentLine = (order) => {
+    const method = getFulfillmentType(order) === 'delivery' ? 'DELIVERY' : 'PICK-UP';
+    const time = String(order && order.pickup_time ? order.pickup_time : '').trim();
+    return time ? method + ' - ' + time : method;
+  };
+
+  const getKitchenTicketItemOptions = (item) => {
+    const parts = [];
+    const variant = String(item && item.variant_label ? item.variant_label : '').trim();
+    if (variant) parts.push(variant);
+    formatOrderItemOptions(item && item.options).forEach((option) => {
+      const cleanOption = String(option || '').trim();
+      if (cleanOption) parts.push(cleanOption);
+    });
+    return parts;
+  };
+
+  const buildKitchenTicketHtml = (order) => {
+    const items = orderItemsByOrderId.get(order.id) || [];
+    const itemHtml = items.length
+      ? items.map((item) => {
+        const quantity = Number(item.quantity || 0);
+        const optionParts = getKitchenTicketItemOptions(item);
+        const note = String(item.item_note || '').trim();
+        const lines = [
+          '<div class="ticket-item">',
+          '<div>' + escapeTicketHtml((quantity > 0 ? quantity : 1) + 'x - ' + (item.product_name || 'Menu item')) + '</div>',
+        ];
+        if (optionParts.length) {
+          lines.push('<div class="ticket-subline">(' + escapeTicketHtml(optionParts.join(', ')) + ')</div>');
+        }
+        if (note) {
+          lines.push('<div class="ticket-note">**' + escapeTicketHtml(note) + '**</div>');
+        }
+        lines.push('</div>');
+        return lines.join('');
+      }).join('')
+      : '<div class="ticket-muted">No item details found.</div>';
+
+    const orderNote = String(order.customer_notes || '').trim();
+    const orderNotesHtml = orderNote
+      ? [
+        '<div class="ticket-separator">------------------------------</div>',
+        '<div class="ticket-section-title">ORDER NOTES:</div>',
+        '<div class="ticket-note">**' + escapeTicketHtml(orderNote) + '**</div>',
+      ].join('')
+      : '';
+
+    return [
+      '<!doctype html>',
+      '<html>',
+      '<head>',
+      '<meta charset="utf-8">',
+      '<title>Kitchen Ticket ' + escapeTicketHtml(order.order_number || 'Order') + '</title>',
+      '<style>',
+      '@page { size: 58mm auto; margin: 3mm; }',
+      'html, body { margin: 0; padding: 0; background: #fff; color: #000; }',
+      'body { width: 52mm; font-family: "Courier New", monospace; font-size: 11px; line-height: 1.28; }',
+      '.ticket { width: 100%; }',
+      '.ticket-header { text-align: center; font-weight: 700; }',
+      '.ticket-separator { margin: 8px 0; text-align: center; white-space: pre; }',
+      '.ticket-section-title { margin: 0 0 6px; font-weight: 700; }',
+      '.ticket-item { margin: 0 0 8px; break-inside: avoid; }',
+      '.ticket-subline, .ticket-note { padding-left: 18px; }',
+      '.ticket-note { font-weight: 700; }',
+      '.ticket-muted { color: #444; font-style: italic; }',
+      '@media screen { body { margin: 12px auto; } }',
+      '</style>',
+      '</head>',
+      '<body>',
+      '<div class="ticket">',
+      '<div class="ticket-header">',
+      '<div>ORDER #: ' + escapeTicketHtml(order.order_number || '-') + '</div>',
+      '<div>' + escapeTicketHtml(order.customer_name || 'Guest') + '</div>',
+      '<div>' + escapeTicketHtml(formatKitchenTicketTime(order.created_at) || '-') + '</div>',
+      '<div>' + escapeTicketHtml(getKitchenTicketFulfillmentLine(order)) + '</div>',
+      '</div>',
+      '<div class="ticket-separator">------------------------------</div>',
+      '<div class="ticket-section-title">ITEMS:</div>',
+      itemHtml,
+      orderNotesHtml,
+      '<div class="ticket-separator">------------------------------</div>',
+      '</div>',
+      '<script>window.addEventListener("load",function(){window.focus();setTimeout(function(){window.print();},120);});<\/script>',
+      '</body>',
+      '</html>',
+    ].join('');
+  };
+
+  const printKitchenTicket = (order) => {
+    if (!order || !order.id) return;
+    const printWindow = window.open('', 'curvKitchenTicket', 'width=360,height=640');
+    if (!printWindow) {
+      setStatus('Unable to open print window. Allow pop-ups, then try Print Ticket again.');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(buildKitchenTicketHtml(order));
+    printWindow.document.close();
+    setStatus('Kitchen ticket ready to print for ' + (order.order_number || 'order') + '.');
+  };
+
   const makeElement = (tagName, className, text) => {
     const element = document.createElement(tagName);
     if (className) element.className = className;
@@ -6436,7 +6556,6 @@
   const renderOrderStatusActions = (order) => {
     const statusKey = normalizeOrderStatus(order.status);
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
-    if (!actions.length) return null;
 
     const actionRow = makeElement('div', 'order-action-row');
     actions.forEach((action) => {
@@ -6452,6 +6571,11 @@
       button.addEventListener('click', () => handleOrderStatusAction(order, action));
       actionRow.appendChild(button);
     });
+
+    const printButton = makeElement('button', 'auth-button auth-button-secondary order-action-button order-print-ticket-button', 'Print Ticket');
+    printButton.type = 'button';
+    printButton.addEventListener('click', () => printKitchenTicket(order));
+    actionRow.appendChild(printButton);
 
     return actionRow;
   };

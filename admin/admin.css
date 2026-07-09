@@ -4219,7 +4219,8 @@ body.more-drawer-open {
 }
 
 .incoming-orders-main .order-payment-button,
-.incoming-orders-main .order-tracking-button {
+.incoming-orders-main .order-tracking-button,
+.incoming-orders-main .order-print-ticket-button {
   border-color: rgba(189, 196, 212, 0.15);
   background: rgba(20, 24, 36, 0.34);
 }
@@ -4453,7 +4454,8 @@ body.more-drawer-open {
 
 :root[data-admin-theme="light"] .auth-button-secondary,
 :root[data-admin-theme="light"] .incoming-orders-main .order-payment-button,
-:root[data-admin-theme="light"] .incoming-orders-main .order-tracking-button {
+:root[data-admin-theme="light"] .incoming-orders-main .order-tracking-button,
+:root[data-admin-theme="light"] .incoming-orders-main .order-print-ticket-button {
   background: rgba(255, 251, 242, 0.64);
   color: var(--cream);
   border-color: rgba(87, 74, 55, 0.22);
@@ -4640,6 +4642,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .auth-button-secondary,
 :root[data-admin-theme="light"] .incoming-orders-main .order-payment-button,
 :root[data-admin-theme="light"] .incoming-orders-main .order-tracking-button,
+:root[data-admin-theme="light"] .incoming-orders-main .order-print-ticket-button,
 :root[data-admin-theme="light"] .owner-menu-action {
   background: #FFFDF7;
   border-color: rgba(200, 184, 154, 0.48);
