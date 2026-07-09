@@ -4510,6 +4510,100 @@ body.more-drawer-open {
   color: rgba(31, 39, 61, 0.84);
 }
 
+:root[data-admin-theme="light"] .metric-card,
+:root[data-admin-theme="light"] .recent-orders-panel,
+:root[data-admin-theme="light"] .menu-manager-panel,
+:root[data-admin-theme="light"] .order-queue-panel,
+:root[data-admin-theme="light"] .order-card,
+:root[data-admin-theme="light"] .order-detail-section,
+:root[data-admin-theme="light"] .order-detail-item,
+:root[data-admin-theme="light"] .notification-item,
+:root[data-admin-theme="light"] .owner-account-menu,
+:root[data-admin-theme="light"] .notification-panel {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.48);
+  box-shadow: 0 14px 36px rgba(56, 45, 30, 0.1);
+}
+
+:root[data-admin-theme="light"] .order-empty-state,
+:root[data-admin-theme="light"] .order-detail-empty,
+:root[data-admin-theme="light"] .editor-empty-state {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.5);
+  color: #1C2235;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+}
+
+:root[data-admin-theme="light"] .order-empty-state h3,
+:root[data-admin-theme="light"] .order-detail-placeholder h3,
+:root[data-admin-theme="light"] .metric-value,
+:root[data-admin-theme="light"] .profile-name {
+  color: #141824;
+}
+
+:root[data-admin-theme="light"] .order-empty-state p,
+:root[data-admin-theme="light"] .order-detail-placeholder p,
+:root[data-admin-theme="light"] .metric-subtext,
+:root[data-admin-theme="light"] .empty-message,
+:root[data-admin-theme="light"] .profile-role {
+  color: #6F7380;
+}
+
+:root[data-admin-theme="light"] .sidebar-profile {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.52);
+  box-shadow: 0 10px 26px rgba(56, 45, 30, 0.08);
+}
+
+:root[data-admin-theme="light"] .profile-avatar {
+  background: #F3EBDC;
+  border-color: rgba(143, 118, 85, 0.34);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .incoming-orders-toolbar,
+:root[data-admin-theme="light"] .incoming-order-today-pill,
+:root[data-admin-theme="light"] .order-sound-toggle {
+  background: #F9F3EA;
+  border-color: rgba(200, 184, 154, 0.42);
+}
+
+:root[data-admin-theme="light"] .order-filter-button {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.5);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .order-filter-button .order-filter-count {
+  background: #F3EBDC;
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .order-filter-button:hover,
+:root[data-admin-theme="light"] .order-filter-button:focus-visible {
+  background: #F3EBDC;
+  border-color: #C8B89A;
+  color: #141824;
+}
+
+:root[data-admin-theme="light"] .admin-field input,
+:root[data-admin-theme="light"] .admin-field select,
+:root[data-admin-theme="light"] .admin-field textarea,
+:root[data-admin-theme="light"] .auth-button-secondary,
+:root[data-admin-theme="light"] .incoming-orders-main .order-payment-button,
+:root[data-admin-theme="light"] .incoming-orders-main .order-tracking-button,
+:root[data-admin-theme="light"] .owner-menu-action {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.48);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .notification-panel::before,
+:root[data-admin-theme="light"] .owner-account-menu::before {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.48);
+}
+
 @media (max-width: 600px) {
   .incoming-order-meta-row {
     align-items: stretch;
