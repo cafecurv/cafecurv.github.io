@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory | CURV Control</title>
+  <meta name="description" content="Inventory shell for CURV Control.">
+  <script>
+    (() => {
+      const theme = localStorage.getItem('curvControlTheme') === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.adminTheme = theme;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css?v=i4-inventory-shell">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js?v=o6c-toast-fix" defer></script>
+  <script src="inventory.js?v=i4-inventory-shell" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="admin-shell">
+    <header class="topbar" aria-label="CURV Control header">
+      <div class="brand-lockup" aria-label="CURV Control">
+        <span class="brand-mark">CURV</span>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-section">Control</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="notification-button" type="button" aria-label="Notifications">
+          <svg class="topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <span class="notification-badge" hidden aria-hidden="true"></span>
+        </button>
+        <button class="theme-toggle-button" type="button" data-admin-theme-toggle aria-pressed="false">Light</button>
+        <div class="owner-account owner-account-topbar" data-owner-account>
+          <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
+            <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
+            <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
+            <span class="owner-account-caret" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
+            <div class="owner-account-panel" data-owner-signed-out>
+              <p class="eyebrow">Owner Access</p>
+              <h2>Owner Login</h2>
+              <form class="owner-account-form" data-auth-form>
+                <label class="admin-field" for="owner-email">
+                  <span>Email</span>
+                  <input id="owner-email" name="email" type="email" autocomplete="email" required>
+                </label>
+                <label class="admin-field" for="owner-password">
+                  <span>Password</span>
+                  <input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+              </form>
+            </div>
+            <div class="owner-account-panel" data-owner-signed-in hidden>
+              <p class="eyebrow">Owner Account</p>
+              <h2>Signed In</h2>
+              <p class="owner-account-email" data-owner-account-email>Owner access active.</p>
+              <button type="button" class="auth-button auth-button-secondary" data-sign-out>Sign Out</button>
+            </div>
+          </div>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="nav-toggle-line" aria-hidden="true"></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="Admin navigation">
+      <nav class="admin-nav" id="admin-navigation">
+        <a href="index.html" class="admin-nav-link" data-nav-item="dashboard" aria-label="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="incoming-orders.html" class="admin-nav-link" data-nav-item="incoming-orders" aria-label="Incoming Orders">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
+          <span class="nav-label">Incoming Orders</span>
+          <span class="nav-badge" hidden aria-hidden="true"></span>
+        </a>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="pos" aria-label="POS" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
+          <span class="nav-label">POS</span>
+        </button>
+        <a href="menu-manager.html" class="admin-nav-link" data-nav-item="menu-manager" aria-label="Menu Manager">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
+          <span class="nav-label">Menu Manager</span>
+        </a>
+        <a href="inventory.html" class="admin-nav-link is-active" data-nav-item="inventory" aria-label="Inventory" aria-current="page">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          <span class="nav-label">Inventory</span>
+        </a>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="recipes" aria-label="Recipes" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg>
+          <span class="nav-label">Recipes</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="sales" aria-label="Sales" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></svg>
+          <span class="nav-label">Sales</span>
+        </button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-label="Settings" aria-disabled="true">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.1.5.5.9 1 .9H21a2 2 0 0 1 0 4h-.09c-.5 0-.9.4-1.51 1.1z"/></svg>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+      <div class="sidebar-profile" aria-label="Current admin profile">
+        <div class="profile-avatar" aria-hidden="true">CO</div>
+        <div class="profile-copy">
+          <p class="profile-name">CURV Owner</p>
+          <p class="profile-role">Owner access</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="control-main inventory-main" id="main-content" data-inventory-page>
+      <section class="inventory-header" aria-labelledby="inventory-title">
+        <div>
+          <p class="eyebrow">CURV Control</p>
+          <h1 id="inventory-title" class="dashboard-title">Inventory</h1>
+          <p class="page-helper">Track ingredients, supplies, expiry dates, and stock changes.</p>
+          <p class="inventory-status-message" data-inventory-status aria-live="polite" hidden></p>
+        </div>
+      </section>
+
+      <section class="inventory-actions" aria-label="Inventory actions">
+        <button type="button" class="inventory-action-button inventory-action-primary" data-inventory-drawer-open="receive-stock">Receive Stock</button>
+        <div class="inventory-secondary-actions">
+          <button type="button" class="inventory-action-button" data-inventory-drawer-open="add-item">Add Item</button>
+          <button type="button" class="inventory-action-button" data-inventory-drawer-open="use-stock">Use Stock</button>
+          <button type="button" class="inventory-action-button" data-inventory-drawer-open="record-waste">Record Waste</button>
+          <button type="button" class="inventory-action-button" data-inventory-drawer-open="count-stock">Count Stock</button>
+        </div>
+      </section>
+
+      <section class="inventory-summary-grid" aria-label="Inventory summary">
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">#</span>
+          <div>
+            <p class="metric-label">Inventory Items</p>
+            <p class="metric-value">&mdash;</p>
+            <p class="metric-subtext">Active ingredients and supplies</p>
+            <p class="metric-subtext">Not connected yet</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">!</span>
+          <div>
+            <p class="metric-label">Low Stock</p>
+            <p class="metric-value">&mdash;</p>
+            <p class="metric-subtext">Needs restocking soon</p>
+            <p class="metric-subtext">Not connected yet</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">7</span>
+          <div>
+            <p class="metric-label">Expiring Soon</p>
+            <p class="metric-value">&mdash;</p>
+            <p class="metric-subtext">Within the next 7 days</p>
+            <p class="metric-subtext">Not connected yet</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">X</span>
+          <div>
+            <p class="metric-label">Expired Stock</p>
+            <p class="metric-value">&mdash;</p>
+            <p class="metric-subtext">Review and record as waste</p>
+            <p class="metric-subtext">Not connected yet</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="inventory-panel" aria-labelledby="needs-attention-title">
+        <div class="inventory-section-head">
+          <div>
+            <p class="eyebrow">Alerts</p>
+            <h2 id="needs-attention-title">Needs Attention</h2>
+          </div>
+        </div>
+        <div class="inventory-attention-state" data-attention-state="empty" aria-live="polite">
+          <h3>Nothing needs attention right now.</h3>
+          <p data-attention-signin hidden>Sign in to view stock alerts.</p>
+          <p data-attention-loading hidden>Checking for items that need attention...</p>
+          <p data-attention-error hidden>Couldn't load alerts.</p>
+        </div>
+      </section>
+
+      <section class="inventory-panel" aria-labelledby="all-inventory-title">
+        <div class="inventory-section-head">
+          <div>
+            <p class="eyebrow">List</p>
+            <h2 id="all-inventory-title">All Inventory</h2>
+          </div>
+        </div>
+        <div class="inventory-toolbar" aria-label="Inventory filters">
+          <label class="admin-field inventory-search-field" for="inventory-search">
+            <span>Search inventory</span>
+            <input id="inventory-search" type="search" autocomplete="off" data-inventory-search>
+          </label>
+          <label class="admin-field" for="inventory-category-filter">
+            <span>Category</span>
+            <select id="inventory-category-filter" data-inventory-category-filter>
+              <option value="all">All Categories</option>
+            </select>
+          </label>
+          <label class="admin-field" for="inventory-status-filter">
+            <span>Status</span>
+            <select id="inventory-status-filter" data-inventory-status-filter>
+              <option value="all">All Items</option>
+              <option value="in-stock">In Stock</option>
+              <option value="low-stock">Low Stock</option>
+              <option value="out-of-stock">Out of Stock</option>
+              <option value="expiring-soon">Expiring Soon</option>
+              <option value="expired">Expired</option>
+            </select>
+          </label>
+          <button type="button" class="inventory-clear-filters" data-inventory-clear-filters hidden>Clear filters</button>
+        </div>
+
+        <div class="inventory-table-shell" data-inventory-table-shell hidden>
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Usable Stock</th>
+                <th scope="col">Status</th>
+                <th scope="col">Next Expiry</th>
+                <th scope="col">Storage</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody data-inventory-list></tbody>
+          </table>
+        </div>
+
+        <div class="inventory-empty-state" data-inventory-empty-state>
+          <h3>No inventory items yet.</h3>
+          <p>Add your first ingredient or supply to get started.</p>
+          <button type="button" class="auth-button" data-inventory-drawer-open="add-item">Add Item</button>
+        </div>
+        <div class="inventory-empty-state" data-inventory-no-search hidden>
+          <h3>No items match your search.</h3>
+          <p>Try a different name or clear the filters.</p>
+        </div>
+        <div class="inventory-empty-state" data-inventory-no-category hidden>
+          <h3>No items in this category.</h3>
+          <p>Choose another category or clear the filter.</p>
+        </div>
+        <div class="inventory-empty-state" data-inventory-no-status hidden>
+          <h3>No items match this status.</h3>
+          <p>Choose another status or clear the filters.</p>
+        </div>
+        <div class="inventory-empty-state is-error" data-inventory-error hidden>
+          <h3>Couldn't load inventory.</h3>
+          <p>Check your connection and try again.</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile admin navigation">
+      <a href="index.html" class="mobile-nav-item" aria-label="Dashboard">
+        <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="incoming-orders.html" class="mobile-nav-item" aria-label="Orders">
+        <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
+        <span>Orders</span>
+        <span class="mobile-nav-badge" hidden aria-hidden="true"></span>
+      </a>
+      <button type="button" class="mobile-nav-item" aria-label="POS">
+        <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
+        <span>POS</span>
+      </button>
+      <button type="button" class="mobile-nav-item mobile-more-button" aria-label="More" aria-expanded="false" aria-controls="mobile-more-drawer">
+        <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01"/><path d="M12 12h.01"/><path d="M19 12h.01"/></svg>
+        <span>More</span>
+      </button>
+    </nav>
+
+    <div class="mobile-more-overlay" data-more-close hidden></div>
+    <section class="mobile-more-drawer" id="mobile-more-drawer" aria-labelledby="mobile-more-title" aria-hidden="true">
+      <div class="mobile-more-header">
+        <h2 id="mobile-more-title">More</h2>
+        <button type="button" class="mobile-more-close" data-more-close aria-label="Close more navigation">Close</button>
+      </div>
+      <div class="mobile-more-list">
+        <a href="menu-manager.html" class="mobile-more-item" aria-label="Menu Manager">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg>
+          <span>Menu Manager</span>
+        </a>
+        <a href="inventory.html" class="mobile-more-item is-active" aria-label="Inventory" aria-current="page">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          <span>Inventory</span>
+        </a>
+        <button type="button" class="mobile-more-item" aria-label="Recipes">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg>
+          <span>Recipes</span>
+        </button>
+        <button type="button" class="mobile-more-item" aria-label="Sales">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></svg>
+          <span>Sales</span>
+        </button>
+        <button type="button" class="mobile-more-item" aria-label="Settings">
+          <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.1 2.1-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-3v-.7a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-2.1-2.1.1-.1A1.7 1.7 0 0 0 5 15a1.7 1.7 0 0 0-1.6-1H3v-3h.4A1.7 1.7 0 0 0 5 10a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2.1-2.1.1.1A1.7 1.7 0 0 0 8.7 6a1.7 1.7 0 0 0 1-1.6V4h3v.4a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.1 2.1-.1.1A1.7 1.7 0 0 0 19 10c.2.6.8 1 1.6 1h.4v3h-.4c-.8 0-1.4.4-1.6 1z"/></svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </section>
+
+    <footer class="admin-footer">
+      <span>CURV Control</span>
+      <span aria-hidden="true">&middot;</span>
+      <span>&copy; <span id="current-year"></span></span>
+    </footer>
+  </div>
+
+  <div class="inventory-drawer-backdrop" data-inventory-drawer-backdrop hidden></div>
+  <div class="inventory-drawer-layer" data-inventory-drawer-layer hidden>
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-add-item-title" data-inventory-drawer="add-item" hidden>
+      <div class="inventory-drawer-head">
+        <div>
+          <p class="eyebrow">Inventory Setup</p>
+          <h2 id="drawer-add-item-title">Add Item</h2>
+        </div>
+        <button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button>
+      </div>
+      <p>Create an ingredient or supply to track in inventory.</p>
+      <form class="inventory-preview-form">
+        <label class="admin-field" for="preview-item-name"><span>Item name</span><input id="preview-item-name" type="text" disabled></label>
+        <label class="admin-field" for="preview-item-category"><span>Category</span><select id="preview-item-category" disabled><option>Choose category</option></select></label>
+        <label class="admin-field" for="preview-item-unit"><span>Usable Stock unit</span><select id="preview-item-unit" disabled><option>Choose unit</option></select></label>
+      </form>
+      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
+    </section>
+
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-receive-stock-title" data-inventory-drawer="receive-stock" hidden>
+      <div class="inventory-drawer-head"><div><p class="eyebrow">Stock In</p><h2 id="drawer-receive-stock-title">Receive Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
+      <p>Record a new delivery or add starting quantities.</p>
+      <form class="inventory-preview-form">
+        <label class="admin-field" for="preview-receive-item"><span>Item</span><select id="preview-receive-item" disabled><option>Choose item</option></select></label>
+        <label class="admin-field" for="preview-receive-quantity"><span>Quantity received</span><input id="preview-receive-quantity" type="number" disabled></label>
+        <label class="admin-field" for="preview-receive-expiry"><span>Expiry date</span><input id="preview-receive-expiry" type="date" disabled></label>
+      </form>
+      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
+    </section>
+
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-use-stock-title" data-inventory-drawer="use-stock" hidden>
+      <div class="inventory-drawer-head"><div><p class="eyebrow">Stock Out</p><h2 id="drawer-use-stock-title">Use Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
+      <p>Record ingredients or supplies used during service.</p>
+      <form class="inventory-preview-form">
+        <label class="admin-field" for="preview-use-item"><span>Item</span><select id="preview-use-item" disabled><option>Choose item</option></select></label>
+        <label class="admin-field" for="preview-use-quantity"><span>Quantity used</span><input id="preview-use-quantity" type="number" disabled></label>
+        <label class="admin-field" for="preview-use-note"><span>Note</span><textarea id="preview-use-note" rows="3" disabled></textarea></label>
+      </form>
+      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
+    </section>
+
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-record-waste-title" data-inventory-drawer="record-waste" hidden>
+      <div class="inventory-drawer-head"><div><p class="eyebrow">Waste</p><h2 id="drawer-record-waste-title">Record Waste</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
+      <p>Record stock that was spilled, expired, or unusable.</p>
+      <form class="inventory-preview-form">
+        <label class="admin-field" for="preview-waste-item"><span>Item</span><select id="preview-waste-item" disabled><option>Choose item</option></select></label>
+        <label class="admin-field" for="preview-waste-reason"><span>Reason</span><select id="preview-waste-reason" disabled><option>Choose reason</option></select></label>
+        <label class="admin-field" for="preview-waste-quantity"><span>Quantity</span><input id="preview-waste-quantity" type="number" disabled></label>
+      </form>
+      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
+    </section>
+
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-count-stock-title" data-inventory-drawer="count-stock" hidden>
+      <div class="inventory-drawer-head"><div><p class="eyebrow">Count</p><h2 id="drawer-count-stock-title">Count Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
+      <p>Count what's physically on hand and let CURV update the difference.</p>
+      <form class="inventory-preview-form">
+        <label class="admin-field" for="preview-count-item"><span>Item</span><select id="preview-count-item" disabled><option>Choose item</option></select></label>
+        <label class="admin-field" for="preview-count-quantity"><span>Physical count</span><input id="preview-count-quantity" type="number" disabled></label>
+        <label class="admin-field" for="preview-count-note"><span>Reason for count</span><textarea id="preview-count-note" rows="3" disabled></textarea></label>
+      </form>
+      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
+    </section>
+  </div>
+</body>
+</html>
