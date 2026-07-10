@@ -6568,13 +6568,21 @@
       button.type = 'button';
       button.disabled = Boolean(activeOrderAction) || Boolean(activePaymentAction) || ordersLoading;
       button.dataset.orderAction = action.nextStatus;
-      button.addEventListener('click', () => handleOrderStatusAction(order, action));
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handleOrderStatusAction(order, action);
+      });
       actionRow.appendChild(button);
     });
 
     const printButton = makeElement('button', 'auth-button auth-button-secondary order-action-button order-print-ticket-button', 'Print Ticket');
     printButton.type = 'button';
-    printButton.addEventListener('click', () => printKitchenTicket(order));
+    printButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      printKitchenTicket(order);
+    });
     actionRow.appendChild(printButton);
 
     return actionRow;
