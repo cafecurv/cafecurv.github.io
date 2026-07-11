@@ -798,7 +798,7 @@
   });
 })();
 (() => {
-  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders])');
+  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page])');
   const ownerAccount = document.querySelector('[data-owner-account]');
   if (!dashboardRoot || !ownerAccount) return;
 

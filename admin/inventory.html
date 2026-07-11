@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i4-inventory-shell">
+  <link rel="stylesheet" href="admin.css?v=i5a-readonly-dashboard">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=o6c-toast-fix" defer></script>
-  <script src="inventory.js?v=i4-inventory-shell" defer></script>
+  <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
+  <script src="inventory.js?v=i5a-readonly-dashboard" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -144,36 +144,36 @@
           <span class="inventory-summary-icon" aria-hidden="true">#</span>
           <div>
             <p class="metric-label">Inventory Items</p>
-            <p class="metric-value">&mdash;</p>
+            <p class="metric-value" data-inventory-metric="items">&mdash;</p>
             <p class="metric-subtext">Active ingredients and supplies</p>
-            <p class="metric-subtext">Not connected yet</p>
+            <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
         <article class="inventory-summary-card">
           <span class="inventory-summary-icon" aria-hidden="true">!</span>
           <div>
             <p class="metric-label">Low Stock</p>
-            <p class="metric-value">&mdash;</p>
+            <p class="metric-value" data-inventory-metric="low-stock">&mdash;</p>
             <p class="metric-subtext">Needs restocking soon</p>
-            <p class="metric-subtext">Not connected yet</p>
+            <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
         <article class="inventory-summary-card">
           <span class="inventory-summary-icon" aria-hidden="true">7</span>
           <div>
             <p class="metric-label">Expiring Soon</p>
-            <p class="metric-value">&mdash;</p>
+            <p class="metric-value" data-inventory-metric="expiring-soon">&mdash;</p>
             <p class="metric-subtext">Within the next 7 days</p>
-            <p class="metric-subtext">Not connected yet</p>
+            <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
         <article class="inventory-summary-card">
           <span class="inventory-summary-icon" aria-hidden="true">X</span>
           <div>
             <p class="metric-label">Expired Stock</p>
-            <p class="metric-value">&mdash;</p>
+            <p class="metric-value" data-inventory-metric="expired-stock">&mdash;</p>
             <p class="metric-subtext">Review and record as waste</p>
-            <p class="metric-subtext">Not connected yet</p>
+            <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
       </section>
@@ -191,6 +191,7 @@
           <p data-attention-loading hidden>Checking for items that need attention...</p>
           <p data-attention-error hidden>Couldn't load alerts.</p>
         </div>
+        <div class="inventory-attention-list" data-attention-list hidden></div>
       </section>
 
       <section class="inventory-panel" aria-labelledby="all-inventory-title">
@@ -219,11 +220,12 @@
               <option value="low-stock">Low Stock</option>
               <option value="out-of-stock">Out of Stock</option>
               <option value="expiring-soon">Expiring Soon</option>
-              <option value="expired">Expired</option>
+              <option value="expired-stock">Expired Stock Recorded</option>
             </select>
           </label>
           <button type="button" class="inventory-clear-filters" data-inventory-clear-filters hidden>Clear filters</button>
         </div>
+        <p class="inventory-result-count" data-inventory-result-count hidden></p>
 
         <div class="inventory-table-shell" data-inventory-table-shell hidden>
           <table class="inventory-table">
@@ -239,6 +241,14 @@
             </thead>
             <tbody data-inventory-list></tbody>
           </table>
+        </div>
+        <div class="inventory-empty-state" data-inventory-loading hidden>
+          <h3>Loading inventory...</h3>
+          <p>Checking current stock, low-stock items, and expiry alerts.</p>
+        </div>
+        <div class="inventory-empty-state" data-inventory-signed-out hidden>
+          <h3>Sign in to view and manage inventory.</h3>
+          <p>Owner access is required before inventory data appears.</p>
         </div>
 
         <div class="inventory-empty-state" data-inventory-empty-state>
@@ -261,6 +271,7 @@
         <div class="inventory-empty-state is-error" data-inventory-error hidden>
           <h3>Couldn't load inventory.</h3>
           <p>Check your connection and try again.</p>
+          <button type="button" class="auth-button" data-inventory-retry>Try Again</button>
         </div>
       </section>
     </main>
