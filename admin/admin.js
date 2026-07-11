@@ -6773,7 +6773,6 @@
         const expanded = makeElement('div', 'order-ticket-expanded');
         expanded.append(...buildOrderDetailNodes(order, { inline: true }));
         card.appendChild(expanded);
-        renderOrderDetail(order);
       }
       orderList.appendChild(card);
     });
