@@ -109,6 +109,22 @@
     useStockNotesInput,
     useStockSubmitButton,
   ].filter(Boolean);
+  const recordWasteForm = document.querySelector('[data-record-waste-form]');
+  const recordWasteItemSelect = document.querySelector('[data-record-waste-item]');
+  const recordWasteQuantityInput = document.querySelector('[data-record-waste-quantity]');
+  const recordWasteUnitHint = document.querySelector('[data-record-waste-unit-hint]');
+  const recordWasteReasonSelect = document.querySelector('[data-record-waste-reason]');
+  const recordWasteReasonHint = document.querySelector('[data-record-waste-reason-hint]');
+  const recordWasteNotesInput = document.querySelector('[data-record-waste-notes]');
+  const recordWasteStatus = document.querySelector('[data-record-waste-status]');
+  const recordWasteSubmitButton = document.querySelector('[data-record-waste-submit]');
+  const recordWasteControls = [
+    recordWasteItemSelect,
+    recordWasteQuantityInput,
+    recordWasteReasonSelect,
+    recordWasteNotesInput,
+    recordWasteSubmitButton,
+  ].filter(Boolean);
 
   let activeDrawer = null;
   let lastFocusedElement = null;
@@ -127,6 +143,7 @@
   let isCreatingItem = false;
   let isReceivingStock = false;
   let isUsingStock = false;
+  let isRecordingWaste = false;
   let summary = {
     items: 0,
     lowStock: 0,
@@ -180,6 +197,32 @@
     INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
     INV_INVALID_QUANTITY: 'Quantity is invalid. Check the value and try again.',
     INV_INSUFFICIENT_USABLE_STOCK: "There isn't enough usable stock for this request. Check the available quantity.",
+  };
+
+  const wasteReasonLabels = {
+    expired: 'Expired',
+    spoiled: 'Spoiled',
+    spilled: 'Spilled',
+    damaged: 'Damaged',
+    preparation_error: 'Preparation Error',
+    overproduction: 'Overproduction',
+    quality_rejection: 'Quality Rejection',
+    staff_use: 'Staff Use',
+    other: 'Other',
+  };
+
+  const recordWasteErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before recording waste.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can record inventory waste.',
+    INV_ITEM_NOT_FOUND: 'That inventory item is no longer available. Refresh inventory and try again.',
+    INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
+    INV_INVALID_QUANTITY: 'Quantity is invalid. Check the value and try again.',
+    INV_WASTE_REASON_INVALID: 'Choose a valid waste reason.',
+    INV_NOTES_REQUIRED: 'Add a note explaining this waste.',
+    INV_BATCH_NOT_FOUND: 'That inventory batch is no longer available. Refresh inventory and try again.',
+    INV_INSUFFICIENT_BATCH_STOCK: "There isn't enough stock in that batch for this request.",
+    INV_INSUFFICIENT_EXPIRED_STOCK: "There isn't enough expired stock recorded for this request.",
+    INV_INSUFFICIENT_USABLE_STOCK: "There isn't enough usable stock for this request.",
   };
 
   const setInventoryNavActive = () => {
@@ -283,6 +326,7 @@
     if (!activeDrawer || !drawerLayer || !backdrop) return;
     if (isReceivingStock && activeDrawer.dataset.inventoryDrawer === 'receive-stock') return;
     if (isUsingStock && activeDrawer.dataset.inventoryDrawer === 'use-stock') return;
+    if (isRecordingWaste && activeDrawer.dataset.inventoryDrawer === 'record-waste') return;
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
     document.body.classList.remove('inventory-drawer-open');
@@ -553,6 +597,121 @@
     });
   };
 
+  const setRecordWasteStatus = (message = '') => {
+    if (!recordWasteStatus) return;
+    recordWasteStatus.textContent = message;
+    recordWasteStatus.hidden = !message;
+  };
+
+  const getSelectedRecordWasteItem = () => {
+    const itemId = recordWasteItemSelect ? recordWasteItemSelect.value : '';
+    if (!itemId) return null;
+    return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const getSelectedWasteReason = () => (recordWasteReasonSelect ? recordWasteReasonSelect.value : '');
+
+  const getWasteReasonLabel = (reasonCode) => wasteReasonLabels[reasonCode] || 'Waste';
+
+  const updateRecordWasteItemUi = () => {
+    const item = getSelectedRecordWasteItem();
+    if (!recordWasteUnitHint) return;
+    if (!item) {
+      recordWasteUnitHint.textContent = '';
+      return;
+    }
+    const hints = [`Available: ${formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)}`];
+    if (item.expiredStock > 0) {
+      hints.push(`Expired: ${formatQuantityWithUnit(item.expiredStock, item.unitAbbreviation)}`);
+    }
+    recordWasteUnitHint.textContent = hints.join('\n');
+  };
+
+  const updateRecordWasteReasonUi = () => {
+    const reasonCode = getSelectedWasteReason();
+    if (recordWasteNotesInput) {
+      recordWasteNotesInput.required = reasonCode === 'other';
+    }
+    if (!recordWasteReasonHint) return;
+    if (reasonCode === 'other') {
+      recordWasteReasonHint.textContent = 'Explain the waste reason.';
+      return;
+    }
+    if (reasonCode === 'expired') {
+      recordWasteReasonHint.textContent = 'Only stock already past its expiry date will be deducted.';
+      return;
+    }
+    recordWasteReasonHint.textContent = '';
+  };
+
+  const updateRecordWasteUi = () => {
+    updateRecordWasteItemUi();
+    updateRecordWasteReasonUi();
+  };
+
+  const setRecordWasteBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    recordWasteControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (recordWasteSubmitButton) {
+      recordWasteSubmitButton.textContent = isBusy ? 'Recording...' : 'Record Waste';
+    }
+  };
+
+  const resetRecordWasteForm = () => {
+    if (recordWasteForm) recordWasteForm.reset();
+    setRecordWasteStatus('');
+    updateRecordWasteUi();
+  };
+
+  const renderRecordWasteOptions = () => {
+    preserveSelectValue(recordWasteItemSelect, () => {
+      while (recordWasteItemSelect.options.length > 1) recordWasteItemSelect.remove(1);
+      inventoryItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.unitAbbreviation
+          ? `${item.itemName} (${item.unitAbbreviation})`
+          : item.itemName;
+        recordWasteItemSelect.appendChild(option);
+      });
+    });
+    updateRecordWasteUi();
+  };
+
+  const selectRecordWasteItem = (itemId) => {
+    if (!itemId || !recordWasteItemSelect) return false;
+    const hasOption = Array.from(recordWasteItemSelect.options)
+      .some((option) => option.value === itemId);
+    if (!hasOption) return false;
+    recordWasteItemSelect.value = itemId;
+    updateRecordWasteItemUi();
+    return true;
+  };
+
+  const selectRecordWasteReason = (reasonCode) => {
+    if (!reasonCode || !recordWasteReasonSelect) return false;
+    const hasOption = Array.from(recordWasteReasonSelect.options)
+      .some((option) => option.value === reasonCode);
+    if (!hasOption) return false;
+    recordWasteReasonSelect.value = reasonCode;
+    updateRecordWasteReasonUi();
+    return true;
+  };
+
+  const focusRecordWasteQuantity = () => {
+    requestAnimationFrame(() => {
+      if (
+        activeDrawer?.dataset.inventoryDrawer === 'record-waste'
+        && recordWasteQuantityInput
+        && !recordWasteQuantityInput.disabled
+      ) {
+        recordWasteQuantityInput.focus();
+      }
+    });
+  };
+
   const extractInventoryErrorCode = (error) => {
     const source = [
       error?.details,
@@ -577,6 +736,11 @@
   const getUseStockErrorMessage = (error) => {
     const code = extractInventoryErrorCode(error);
     return useStockErrorMessages[code] || "Couldn't record this stock use. Check the details and try again.";
+  };
+
+  const getRecordWasteErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return recordWasteErrorMessages[code] || "Couldn't record this waste. Check the details and try again.";
   };
 
   const parseRpcResponse = (data) => {
@@ -870,6 +1034,7 @@
     renderAddItemOptions();
     renderReceiveStockOptions();
     renderUseStockOptions();
+    renderRecordWasteOptions();
   };
 
   const renderStatusChips = (container, item) => {
@@ -880,7 +1045,7 @@
     });
   };
 
-  const createActionButton = (label, drawerName, itemId = '') => {
+  const createActionButton = (label, drawerName, itemId = '', options = {}) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'inventory-row-action';
@@ -893,6 +1058,16 @@
       }
       if (drawerName === 'use-stock' && selectUseStockItem(itemId)) {
         focusUseStockQuantity();
+      }
+      if (drawerName === 'record-waste') {
+        const selected = selectRecordWasteItem(itemId);
+        if (options.reasonCode) {
+          selectRecordWasteReason(options.reasonCode);
+        } else if (recordWasteReasonSelect) {
+          recordWasteReasonSelect.value = '';
+        }
+        updateRecordWasteUi();
+        if (selected) focusRecordWasteQuantity();
       }
     });
     return button;
@@ -941,6 +1116,7 @@
       actionWrap.className = 'inventory-row-actions';
       actionWrap.appendChild(createActionButton('Receive', 'receive-stock', item.itemId));
       actionWrap.appendChild(createActionButton('Use', 'use-stock', item.itemId));
+      actionWrap.appendChild(createActionButton('Waste', 'record-waste', item.itemId));
       actionCell.appendChild(actionWrap);
       row.appendChild(actionCell);
 
@@ -965,10 +1141,17 @@
         copy.appendChild(createTextElement('p', 'inventory-alert-detail', alert.detail));
         row.appendChild(copy);
         if (alert.action) {
+          const actionItemId = alert.action === 'receive-stock' || alert.action === 'record-waste'
+            ? alert.item.itemId
+            : '';
+          const actionOptions = alert.action === 'record-waste'
+            ? { reasonCode: 'expired' }
+            : {};
           const button = createActionButton(
             `${alert.actionLabel} ->`,
             alert.action,
-            alert.action === 'receive-stock' ? alert.item.itemId : ''
+            actionItemId,
+            actionOptions
           );
           button.classList.add('inventory-alert-action');
           row.appendChild(button);
@@ -1236,6 +1419,80 @@
     };
   };
 
+  const validateRecordWasteForm = () => {
+    const item = getSelectedRecordWasteItem();
+    if (!item) {
+      setRecordWasteStatus('Choose an item to record waste.');
+      recordWasteItemSelect?.focus();
+      return null;
+    }
+
+    const quantityRaw = recordWasteQuantityInput ? recordWasteQuantityInput.value.trim() : '';
+    if (!quantityRaw) {
+      setRecordWasteStatus('Enter the quantity wasted.');
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+    const quantity = Number(quantityRaw);
+    if (!Number.isFinite(quantity)) {
+      setRecordWasteStatus('Enter the quantity wasted.');
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+    if (quantity <= 0) {
+      setRecordWasteStatus('Quantity must be greater than zero.');
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+    if (hasMoreThanThreeDecimals(quantityRaw)) {
+      setRecordWasteStatus('Quantity can use up to three decimal places.');
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+
+    const reasonCode = getSelectedWasteReason();
+    if (!wasteReasonLabels[reasonCode]) {
+      setRecordWasteStatus('Choose a valid waste reason.');
+      recordWasteReasonSelect?.focus();
+      return null;
+    }
+
+    if (reasonCode === 'expired' && quantity > item.expiredStock) {
+      setRecordWasteStatus(`Only ${formatQuantityWithUnit(item.expiredStock, item.unitAbbreviation)} is currently recorded as expired.`);
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+    if (reasonCode !== 'expired' && quantity > item.usableStock) {
+      setRecordWasteStatus(`Only ${formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)} is currently available.`);
+      recordWasteQuantityInput?.focus();
+      return null;
+    }
+
+    const notes = recordWasteNotesInput ? recordWasteNotesInput.value.trim() : '';
+    if (reasonCode === 'other' && !notes) {
+      setRecordWasteStatus('Explain the waste reason.');
+      recordWasteNotesInput?.focus();
+      return null;
+    }
+    if (notes.length > 500) {
+      setRecordWasteStatus('Notes must be 500 characters or fewer.');
+      recordWasteNotesInput?.focus();
+      return null;
+    }
+
+    return {
+      item,
+      reasonCode,
+      payload: {
+        p_item_id: item.itemId,
+        p_quantity: quantity,
+        p_reason_code: reasonCode,
+        p_batch_id: null,
+        p_notes: notes || null,
+      },
+    };
+  };
+
   const updateListState = () => {
     const filters = getFilters();
     const searchActive = Boolean(filters.search);
@@ -1301,6 +1558,7 @@
     setAddItemBusy(isCreatingItem);
     setReceiveStockBusy(isReceivingStock);
     setUseStockBusy(isUsingStock);
+    setRecordWasteBusy(isRecordingWaste);
     updateListState();
   };
 
@@ -1454,6 +1712,9 @@
       }
       if (button.dataset.inventoryDrawerOpen === 'use-stock') {
         clearUseStockItem();
+      }
+      if (button.dataset.inventoryDrawerOpen === 'record-waste') {
+        resetRecordWasteForm();
       }
       openDrawer(button.dataset.inventoryDrawerOpen, button);
     });
@@ -1615,6 +1876,46 @@
     } finally {
       isUsingStock = false;
       setUseStockBusy(false);
+    }
+  });
+
+  recordWasteItemSelect?.addEventListener('change', updateRecordWasteItemUi);
+  recordWasteReasonSelect?.addEventListener('change', updateRecordWasteReasonUi);
+
+  recordWasteForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (isRecordingWaste) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setRecordWasteStatus('Sign in with the CURV owner account before recording waste.');
+      return;
+    }
+
+    const validated = validateRecordWasteForm();
+    if (!validated) return;
+
+    const { item, payload, reasonCode } = validated;
+    const wastedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
+    const reasonLabel = getWasteReasonLabel(reasonCode).toLowerCase();
+    isRecordingWaste = true;
+    setRecordWasteStatus('Recording waste...');
+    setRecordWasteBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_record_waste', payload);
+      if (error) throw error;
+      const response = parseRpcResponse(data);
+      const itemName = response.item_name || item.itemName;
+      resetRecordWasteForm();
+      isRecordingWaste = false;
+      setRecordWasteBusy(false);
+      closeDrawer();
+      await loadInventoryData();
+      setStatus(`${wastedText} recorded as ${reasonLabel} waste for ${itemName}.`);
+    } catch (error) {
+      console.error('Inventory waste recording failed:', error);
+      setRecordWasteStatus(getRecordWasteErrorMessage(error));
+    } finally {
+      isRecordingWaste = false;
+      setRecordWasteBusy(false);
     }
   });
 

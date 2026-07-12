@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i7b-use-stock">
+  <link rel="stylesheet" href="admin.css?v=i8b-record-waste">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i7b-use-stock" defer></script>
+  <script src="inventory.js?v=i8b-record-waste" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -393,12 +393,16 @@
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-record-waste-title" data-inventory-drawer="record-waste" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Waste</p><h2 id="drawer-record-waste-title">Record Waste</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
       <p>Record stock that was spilled, expired, or unusable.</p>
-      <form class="inventory-preview-form">
-        <label class="admin-field" for="preview-waste-item"><span>Item</span><select id="preview-waste-item" disabled><option>Choose item</option></select></label>
-        <label class="admin-field" for="preview-waste-reason"><span>Reason</span><select id="preview-waste-reason" disabled><option>Choose reason</option></select></label>
-        <label class="admin-field" for="preview-waste-quantity"><span>Quantity</span><input id="preview-waste-quantity" type="number" disabled></label>
+      <form class="inventory-preview-form" data-record-waste-form>
+        <label class="admin-field" for="record-waste-item"><span>Item</span><select id="record-waste-item" data-record-waste-item required><option value="">Choose item</option></select></label>
+        <label class="admin-field" for="record-waste-quantity"><span>Quantity wasted</span><input id="record-waste-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-record-waste-quantity required><small class="inventory-field-hint" data-record-waste-unit-hint></small></label>
+        <label class="admin-field" for="record-waste-reason"><span>Reason</span><select id="record-waste-reason" data-record-waste-reason required><option value="">Choose reason</option><option value="expired">Expired</option><option value="spoiled">Spoiled</option><option value="spilled">Spilled</option><option value="damaged">Damaged</option><option value="preparation_error">Preparation Error</option><option value="overproduction">Overproduction</option><option value="quality_rejection">Quality Rejection</option><option value="staff_use">Staff Use</option><option value="other">Other</option></select><small class="inventory-field-hint" data-record-waste-reason-hint></small></label>
+        <label class="admin-field" for="record-waste-notes"><span>Notes (optional)</span><textarea id="record-waste-notes" rows="3" maxlength="500" placeholder="Optional waste note" data-record-waste-notes></textarea></label>
+        <p class="inventory-form-status" data-record-waste-status aria-live="polite" hidden></p>
+        <div class="inventory-form-actions">
+          <button type="submit" class="auth-button" data-record-waste-submit>Record Waste</button>
+        </div>
       </form>
-      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
     </section>
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-count-stock-title" data-inventory-drawer="count-stock" hidden>

@@ -435,6 +435,7 @@ body.inventory-drawer-open {
   margin-top: 0.25rem;
   color: var(--slate);
   font-size: 0.82rem;
+  white-space: pre-line;
 }
 
 .inventory-drawer-notice {
