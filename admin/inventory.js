@@ -74,6 +74,26 @@
     addItemTrackExpiryInput,
     addItemSubmitButton,
   ].filter(Boolean);
+  const receiveStockForm = document.querySelector('[data-receive-stock-form]');
+  const receiveStockItemSelect = document.querySelector('[data-receive-stock-item]');
+  const receiveStockQuantityInput = document.querySelector('[data-receive-stock-quantity]');
+  const receiveStockUnitHint = document.querySelector('[data-receive-stock-unit-hint]');
+  const receiveStockExpiryWrap = document.querySelector('[data-receive-stock-expiry-wrap]');
+  const receiveStockExpiryInput = document.querySelector('[data-receive-stock-expiry]');
+  const receiveStockCostInput = document.querySelector('[data-receive-stock-cost]');
+  const receiveStockReferenceInput = document.querySelector('[data-receive-stock-reference]');
+  const receiveStockNotesInput = document.querySelector('[data-receive-stock-notes]');
+  const receiveStockStatus = document.querySelector('[data-receive-stock-status]');
+  const receiveStockSubmitButton = document.querySelector('[data-receive-stock-submit]');
+  const receiveStockControls = [
+    receiveStockItemSelect,
+    receiveStockQuantityInput,
+    receiveStockExpiryInput,
+    receiveStockCostInput,
+    receiveStockReferenceInput,
+    receiveStockNotesInput,
+    receiveStockSubmitButton,
+  ].filter(Boolean);
 
   let activeDrawer = null;
   let lastFocusedElement = null;
@@ -90,6 +110,7 @@
   let alerts = [];
   let filteredItems = [];
   let isCreatingItem = false;
+  let isReceivingStock = false;
   let summary = {
     items: 0,
     lowStock: 0,
@@ -122,6 +143,18 @@
     INV_THRESHOLD_SCALE: 'Low-stock threshold can use up to three decimal places.',
     INV_STORAGE_TOO_LONG: 'Storage location must be 100 characters or fewer.',
     INV_ITEM_NAME_DUPLICATES_EXIST: 'Inventory duplicate names need review before new items can be added.',
+  };
+
+  const receiveStockErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before receiving stock.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can receive inventory stock.',
+    INV_ITEM_NOT_FOUND: 'That inventory item is no longer available. Refresh inventory and try again.',
+    INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
+    INV_INVALID_QUANTITY: 'Quantity or cost is invalid. Check the values and try again.',
+    INV_EXPIRY_REQUIRED: 'Enter an expiry date for this delivery.',
+    INV_EXPIRY_IN_PAST: 'Expiry date must be today or later.',
+    INV_INVALID_BATCH_REF: "Couldn't generate a batch reference. Try again.",
+    INV_DUPLICATE_BATCH_REF: "Couldn't generate a unique batch reference. Try again.",
   };
 
   const setInventoryNavActive = () => {
@@ -223,6 +256,7 @@
 
   const closeDrawer = () => {
     if (!activeDrawer || !drawerLayer || !backdrop) return;
+    if (isReceivingStock && activeDrawer.dataset.inventoryDrawer === 'receive-stock') return;
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
     document.body.classList.remove('inventory-drawer-open');
@@ -326,6 +360,92 @@
     });
   };
 
+  const setReceiveStockStatus = (message = '') => {
+    if (!receiveStockStatus) return;
+    receiveStockStatus.textContent = message;
+    receiveStockStatus.hidden = !message;
+  };
+
+  const getSelectedReceiveStockItem = () => {
+    const itemId = receiveStockItemSelect ? receiveStockItemSelect.value : '';
+    if (!itemId) return null;
+    return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const updateReceiveStockItemUi = () => {
+    const item = getSelectedReceiveStockItem();
+    if (receiveStockUnitHint) {
+      receiveStockUnitHint.textContent = item && item.unitAbbreviation
+        ? `Unit: ${item.unitAbbreviation}`
+        : '';
+    }
+    const tracksExpiry = Boolean(item && item.trackExpiry);
+    if (receiveStockExpiryWrap) receiveStockExpiryWrap.hidden = !tracksExpiry;
+    if (receiveStockExpiryInput) {
+      receiveStockExpiryInput.required = tracksExpiry;
+      if (!tracksExpiry) receiveStockExpiryInput.value = '';
+    }
+  };
+
+  const setReceiveStockBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    receiveStockControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (receiveStockSubmitButton) {
+      receiveStockSubmitButton.textContent = isBusy ? 'Receiving...' : 'Receive Stock';
+    }
+  };
+
+  const resetReceiveStockForm = () => {
+    if (receiveStockForm) receiveStockForm.reset();
+    setReceiveStockStatus('');
+    updateReceiveStockItemUi();
+  };
+
+  const renderReceiveStockOptions = () => {
+    preserveSelectValue(receiveStockItemSelect, () => {
+      while (receiveStockItemSelect.options.length > 1) receiveStockItemSelect.remove(1);
+      inventoryItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.unitAbbreviation
+          ? `${item.itemName} (${item.unitAbbreviation})`
+          : item.itemName;
+        receiveStockItemSelect.appendChild(option);
+      });
+    });
+    updateReceiveStockItemUi();
+  };
+
+  const selectReceiveStockItem = (itemId) => {
+    if (!itemId || !receiveStockItemSelect) return false;
+    const hasOption = Array.from(receiveStockItemSelect.options)
+      .some((option) => option.value === itemId);
+    if (!hasOption) return false;
+    receiveStockItemSelect.value = itemId;
+    updateReceiveStockItemUi();
+    return true;
+  };
+
+  const clearReceiveStockItem = () => {
+    if (!receiveStockItemSelect) return;
+    receiveStockItemSelect.value = '';
+    updateReceiveStockItemUi();
+  };
+
+  const focusReceiveStockQuantity = () => {
+    requestAnimationFrame(() => {
+      if (
+        activeDrawer?.dataset.inventoryDrawer === 'receive-stock'
+        && receiveStockQuantityInput
+        && !receiveStockQuantityInput.disabled
+      ) {
+        receiveStockQuantityInput.focus();
+      }
+    });
+  };
+
   const extractInventoryErrorCode = (error) => {
     const source = [
       error?.details,
@@ -342,6 +462,11 @@
     return addItemErrorMessages[code] || "Couldn't add this item. Check the details and try again.";
   };
 
+  const getReceiveStockErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return receiveStockErrorMessages[code] || "Couldn't receive this stock. Check the details and try again.";
+  };
+
   const parseRpcResponse = (data) => {
     if (!data) return {};
     if (typeof data === 'string') {
@@ -354,12 +479,14 @@
     return data;
   };
 
-  const hasMoreThanThreeDecimals = (value) => {
+  const hasMoreThanDecimals = (value, maxDecimals) => {
     const cleaned = String(value || '').trim();
     if (!cleaned.includes('.')) return false;
     const decimalPart = cleaned.split('.')[1] || '';
-    return decimalPart.replace(/0+$/, '').length > 3;
+    return decimalPart.replace(/0+$/, '').length > maxDecimals;
   };
+
+  const hasMoreThanThreeDecimals = (value) => hasMoreThanDecimals(value, 3);
 
   const formatQuantity = (value) => {
     const number = parseNumber(value);
@@ -629,6 +756,7 @@
         : 'all';
     }
     renderAddItemOptions();
+    renderReceiveStockOptions();
   };
 
   const renderStatusChips = (container, item) => {
@@ -639,13 +767,17 @@
     });
   };
 
-  const createActionButton = (label, drawerName) => {
+  const createActionButton = (label, drawerName, itemId = '') => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'inventory-row-action';
     button.textContent = label;
     button.addEventListener('click', () => {
-      if (drawerName) openDrawer(drawerName, button);
+      if (!drawerName) return;
+      openDrawer(drawerName, button);
+      if (drawerName === 'receive-stock' && selectReceiveStockItem(itemId)) {
+        focusReceiveStockQuantity();
+      }
     });
     return button;
   };
@@ -691,7 +823,7 @@
       actionCell.dataset.label = 'Actions';
       const actionWrap = document.createElement('div');
       actionWrap.className = 'inventory-row-actions';
-      actionWrap.appendChild(createActionButton('Receive', 'receive-stock'));
+      actionWrap.appendChild(createActionButton('Receive', 'receive-stock', item.itemId));
       actionCell.appendChild(actionWrap);
       row.appendChild(actionCell);
 
@@ -716,7 +848,11 @@
         copy.appendChild(createTextElement('p', 'inventory-alert-detail', alert.detail));
         row.appendChild(copy);
         if (alert.action) {
-          const button = createActionButton(`${alert.actionLabel} ->`, alert.action);
+          const button = createActionButton(
+            `${alert.actionLabel} ->`,
+            alert.action,
+            alert.action === 'receive-stock' ? alert.item.itemId : ''
+          );
           button.classList.add('inventory-alert-action');
           row.appendChild(button);
         }
@@ -824,6 +960,104 @@
     };
   };
 
+  const validateReceiveStockForm = () => {
+    const item = getSelectedReceiveStockItem();
+    if (!item) {
+      setReceiveStockStatus('Choose an item to receive.');
+      receiveStockItemSelect?.focus();
+      return null;
+    }
+
+    const quantityRaw = receiveStockQuantityInput ? receiveStockQuantityInput.value.trim() : '';
+    if (!quantityRaw) {
+      setReceiveStockStatus('Enter the quantity received.');
+      receiveStockQuantityInput?.focus();
+      return null;
+    }
+    const quantity = Number(quantityRaw);
+    if (!Number.isFinite(quantity)) {
+      setReceiveStockStatus('Enter the quantity received.');
+      receiveStockQuantityInput?.focus();
+      return null;
+    }
+    if (quantity <= 0) {
+      setReceiveStockStatus('Quantity must be greater than zero.');
+      receiveStockQuantityInput?.focus();
+      return null;
+    }
+    if (hasMoreThanThreeDecimals(quantityRaw)) {
+      setReceiveStockStatus('Quantity can use up to three decimal places.');
+      receiveStockQuantityInput?.focus();
+      return null;
+    }
+
+    let expiryDate = null;
+    if (item.trackExpiry) {
+      expiryDate = receiveStockExpiryInput ? receiveStockExpiryInput.value : '';
+      if (!expiryDate) {
+        setReceiveStockStatus('Enter an expiry date for this delivery.');
+        receiveStockExpiryInput?.focus();
+        return null;
+      }
+      const expiryOffset = getManilaDayOffset(expiryDate);
+      if (expiryOffset === null || expiryOffset < 0) {
+        setReceiveStockStatus('Expiry date must be today or later.');
+        receiveStockExpiryInput?.focus();
+        return null;
+      }
+    } else if (receiveStockExpiryInput) {
+      receiveStockExpiryInput.value = '';
+    }
+
+    const costRaw = receiveStockCostInput ? receiveStockCostInput.value.trim() : '';
+    let costPerUnit = null;
+    if (costRaw) {
+      costPerUnit = Number(costRaw);
+      if (!Number.isFinite(costPerUnit)) {
+        setReceiveStockStatus('Enter a valid cost per unit.');
+        receiveStockCostInput?.focus();
+        return null;
+      }
+      if (costPerUnit < 0) {
+        setReceiveStockStatus('Cost cannot be negative.');
+        receiveStockCostInput?.focus();
+        return null;
+      }
+      if (hasMoreThanDecimals(costRaw, 4)) {
+        setReceiveStockStatus('Cost can use up to four decimal places.');
+        receiveStockCostInput?.focus();
+        return null;
+      }
+    }
+
+    const referenceText = receiveStockReferenceInput ? receiveStockReferenceInput.value.trim() : '';
+    if (referenceText.length > 100) {
+      setReceiveStockStatus('Reference must be 100 characters or fewer.');
+      receiveStockReferenceInput?.focus();
+      return null;
+    }
+
+    const notes = receiveStockNotesInput ? receiveStockNotesInput.value.trim() : '';
+    if (notes.length > 500) {
+      setReceiveStockStatus('Notes must be 500 characters or fewer.');
+      receiveStockNotesInput?.focus();
+      return null;
+    }
+
+    return {
+      item,
+      payload: {
+        p_item_id: item.itemId,
+        p_quantity: quantity,
+        p_expiry_date: expiryDate || null,
+        p_cost_per_unit: costPerUnit,
+        p_reference_text: referenceText || null,
+        p_batch_ref: null,
+        p_notes: notes || null,
+      },
+    };
+  };
+
   const updateListState = () => {
     const filters = getFilters();
     const searchActive = Boolean(filters.search);
@@ -887,6 +1121,7 @@
       filteredItems = [];
     }
     setAddItemBusy(isCreatingItem);
+    setReceiveStockBusy(isReceivingStock);
     updateListState();
   };
 
@@ -1035,6 +1270,9 @@
 
   openButtons.forEach((button) => {
     button.addEventListener('click', () => {
+      if (button.dataset.inventoryDrawerOpen === 'receive-stock') {
+        clearReceiveStockItem();
+      }
       openDrawer(button.dataset.inventoryDrawerOpen, button);
     });
   });
@@ -1119,6 +1357,44 @@
     } finally {
       isCreatingItem = false;
       setAddItemBusy(false);
+    }
+  });
+
+  receiveStockItemSelect?.addEventListener('change', updateReceiveStockItemUi);
+
+  receiveStockForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (isReceivingStock) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setReceiveStockStatus('Sign in with the CURV owner account before receiving stock.');
+      return;
+    }
+
+    const validated = validateReceiveStockForm();
+    if (!validated) return;
+
+    const { item, payload } = validated;
+    const receivedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
+    isReceivingStock = true;
+    setReceiveStockStatus('Receiving stock...');
+    setReceiveStockBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_stock_in', payload);
+      if (error) throw error;
+      const response = parseRpcResponse(data);
+      const itemName = response.item_name || item.itemName;
+      resetReceiveStockForm();
+      isReceivingStock = false;
+      setReceiveStockBusy(false);
+      closeDrawer();
+      await loadInventoryData();
+      setStatus(`${receivedText} received for ${itemName}.`);
+    } catch (error) {
+      console.error('Inventory stock receive failed:', error);
+      setReceiveStockStatus(getReceiveStockErrorMessage(error));
+    } finally {
+      isReceivingStock = false;
+      setReceiveStockBusy(false);
     }
   });
 

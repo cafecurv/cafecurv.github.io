@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i5c-add-item">
+  <link rel="stylesheet" href="admin.css?v=i6b-receive-stock">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i5c-add-item" defer></script>
+  <script src="inventory.js?v=i6b-receive-stock" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -361,12 +361,18 @@
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-receive-stock-title" data-inventory-drawer="receive-stock" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Stock In</p><h2 id="drawer-receive-stock-title">Receive Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
       <p>Record a new delivery or add starting quantities.</p>
-      <form class="inventory-preview-form">
-        <label class="admin-field" for="preview-receive-item"><span>Item</span><select id="preview-receive-item" disabled><option>Choose item</option></select></label>
-        <label class="admin-field" for="preview-receive-quantity"><span>Quantity received</span><input id="preview-receive-quantity" type="number" disabled></label>
-        <label class="admin-field" for="preview-receive-expiry"><span>Expiry date</span><input id="preview-receive-expiry" type="date" disabled></label>
+      <form class="inventory-preview-form" data-receive-stock-form>
+        <label class="admin-field" for="receive-stock-item"><span>Item</span><select id="receive-stock-item" data-receive-stock-item required><option value="">Choose item</option></select></label>
+        <label class="admin-field" for="receive-stock-quantity"><span>Quantity received</span><input id="receive-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-receive-stock-quantity required><small class="inventory-field-hint" data-receive-stock-unit-hint></small></label>
+        <label class="admin-field" for="receive-stock-expiry" data-receive-stock-expiry-wrap hidden><span>Expiry date</span><input id="receive-stock-expiry" type="date" data-receive-stock-expiry></label>
+        <label class="admin-field" for="receive-stock-cost"><span>Cost per unit (optional)</span><input id="receive-stock-cost" type="number" min="0" step="0.0001" inputmode="decimal" data-receive-stock-cost></label>
+        <label class="admin-field" for="receive-stock-reference"><span>Reference (optional)</span><input id="receive-stock-reference" type="text" autocomplete="off" maxlength="100" placeholder="Invoice, delivery note, or supplier reference" data-receive-stock-reference></label>
+        <label class="admin-field" for="receive-stock-notes"><span>Notes (optional)</span><textarea id="receive-stock-notes" rows="3" maxlength="500" placeholder="Optional receiving note" data-receive-stock-notes></textarea></label>
+        <p class="inventory-form-status" data-receive-stock-status aria-live="polite" hidden></p>
+        <div class="inventory-form-actions">
+          <button type="submit" class="auth-button" data-receive-stock-submit>Receive Stock</button>
+        </div>
       </form>
-      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
     </section>
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-use-stock-title" data-inventory-drawer="use-stock" hidden>

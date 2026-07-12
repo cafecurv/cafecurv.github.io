@@ -424,6 +424,14 @@ body.inventory-drawer-open {
   min-width: 132px;
 }
 
+.inventory-field-hint {
+  display: block;
+  min-height: 1rem;
+  margin-top: 0.25rem;
+  color: var(--slate);
+  font-size: 0.82rem;
+}
+
 .inventory-drawer-notice {
   margin: 0;
   padding: 0.85rem;
