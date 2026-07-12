@@ -56,6 +56,24 @@
   const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
   const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
   const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
+  const addItemForm = document.querySelector('[data-add-item-form]');
+  const addItemNameInput = document.querySelector('[data-add-item-name]');
+  const addItemCategorySelect = document.querySelector('[data-add-item-category]');
+  const addItemUnitSelect = document.querySelector('[data-add-item-unit]');
+  const addItemThresholdInput = document.querySelector('[data-add-item-threshold]');
+  const addItemStorageInput = document.querySelector('[data-add-item-storage]');
+  const addItemTrackExpiryInput = document.querySelector('[data-add-item-track-expiry]');
+  const addItemSubmitButton = document.querySelector('[data-add-item-submit]');
+  const addItemStatus = document.querySelector('[data-add-item-status]');
+  const addItemControls = [
+    addItemNameInput,
+    addItemCategorySelect,
+    addItemUnitSelect,
+    addItemThresholdInput,
+    addItemStorageInput,
+    addItemTrackExpiryInput,
+    addItemSubmitButton,
+  ].filter(Boolean);
 
   let activeDrawer = null;
   let lastFocusedElement = null;
@@ -68,8 +86,10 @@
   let searchTimer = 0;
   let inventoryItems = [];
   let categories = [];
+  let units = [];
   let alerts = [];
   let filteredItems = [];
+  let isCreatingItem = false;
   let summary = {
     items: 0,
     lowStock: 0,
@@ -85,6 +105,24 @@
     'textarea:not([disabled])',
     '[tabindex]:not([tabindex="-1"])',
   ].join(',');
+
+  const addItemErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before adding items.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can add inventory items.',
+    INV_NAME_REQUIRED: 'Enter an item name.',
+    INV_NAME_TOO_LONG: 'Item name must be 100 characters or fewer.',
+    INV_DUPLICATE_ITEM_NAME: 'An inventory item with that name already exists.',
+    INV_CATEGORY_REQUIRED: 'Choose a category for this item.',
+    INV_CATEGORY_NOT_FOUND: 'That category is no longer available. Refresh inventory and try again.',
+    INV_CATEGORY_INACTIVE: 'That category is no longer active. Choose another category.',
+    INV_UNIT_REQUIRED: 'Choose a unit for this item.',
+    INV_UNIT_NOT_FOUND: 'That unit is no longer available. Refresh inventory and try again.',
+    INV_UNIT_INACTIVE: 'That unit is no longer active. Choose another unit.',
+    INV_INVALID_THRESHOLD: 'Low-stock threshold must be zero or higher.',
+    INV_THRESHOLD_SCALE: 'Low-stock threshold can use up to three decimal places.',
+    INV_STORAGE_TOO_LONG: 'Storage location must be 100 characters or fewer.',
+    INV_ITEM_NAME_DUPLICATES_EXIST: 'Inventory duplicate names need review before new items can be added.',
+  };
 
   const setInventoryNavActive = () => {
     document.querySelectorAll('[data-nav-item]').forEach((item) => {
@@ -233,6 +271,94 @@
       return Number.isFinite(parsed) ? parsed : 0;
     }
     return 0;
+  };
+
+  const setAddItemStatus = (message = '') => {
+    if (!addItemStatus) return;
+    addItemStatus.textContent = message;
+    addItemStatus.hidden = !message;
+  };
+
+  const setAddItemBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    addItemControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (addItemSubmitButton) {
+      addItemSubmitButton.textContent = isBusy ? 'Adding...' : 'Add Item';
+    }
+  };
+
+  const resetAddItemForm = () => {
+    if (addItemForm) addItemForm.reset();
+    if (addItemThresholdInput) addItemThresholdInput.value = '0';
+    setAddItemStatus('');
+  };
+
+  const preserveSelectValue = (select, renderOptions) => {
+    if (!select) return;
+    const selectedValue = select.value || '';
+    renderOptions();
+    select.value = Array.from(select.options).some((option) => option.value === selectedValue)
+      ? selectedValue
+      : '';
+  };
+
+  const renderAddItemOptions = () => {
+    preserveSelectValue(addItemCategorySelect, () => {
+      while (addItemCategorySelect.options.length > 1) addItemCategorySelect.remove(1);
+      categories.forEach((category) => {
+        const option = document.createElement('option');
+        option.value = category.id || category.name;
+        option.textContent = category.name;
+        addItemCategorySelect.appendChild(option);
+      });
+    });
+
+    preserveSelectValue(addItemUnitSelect, () => {
+      while (addItemUnitSelect.options.length > 1) addItemUnitSelect.remove(1);
+      units.forEach((unit) => {
+        const option = document.createElement('option');
+        option.value = unit.id || unit.name;
+        option.textContent = unit.abbreviation ? `${unit.name} (${unit.abbreviation})` : unit.name;
+        addItemUnitSelect.appendChild(option);
+      });
+    });
+  };
+
+  const extractInventoryErrorCode = (error) => {
+    const source = [
+      error?.details,
+      error?.message,
+      error?.hint,
+      error?.code,
+    ].filter(Boolean).join(' ');
+    const match = source.match(/INV_[A-Z0-9_]+/);
+    return match ? match[0] : '';
+  };
+
+  const getAddItemErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return addItemErrorMessages[code] || "Couldn't add this item. Check the details and try again.";
+  };
+
+  const parseRpcResponse = (data) => {
+    if (!data) return {};
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (_error) {
+        return {};
+      }
+    }
+    return data;
+  };
+
+  const hasMoreThanThreeDecimals = (value) => {
+    const cleaned = String(value || '').trim();
+    if (!cleaned.includes('.')) return false;
+    const decimalPart = cleaned.split('.')[1] || '';
+    return decimalPart.replace(/0+$/, '').length > 3;
   };
 
   const formatQuantity = (value) => {
@@ -489,18 +615,20 @@
   };
 
   const renderCategoryOptions = () => {
-    if (!categoryFilter) return;
-    const selectedValue = categoryFilter.value || 'all';
-    while (categoryFilter.options.length > 1) categoryFilter.remove(1);
-    categories.forEach((category) => {
-      const option = document.createElement('option');
-      option.value = category.id || category.name;
-      option.textContent = category.name;
-      categoryFilter.appendChild(option);
-    });
-    categoryFilter.value = Array.from(categoryFilter.options).some((option) => option.value === selectedValue)
-      ? selectedValue
-      : 'all';
+    if (categoryFilter) {
+      const selectedValue = categoryFilter.value || 'all';
+      while (categoryFilter.options.length > 1) categoryFilter.remove(1);
+      categories.forEach((category) => {
+        const option = document.createElement('option');
+        option.value = category.id || category.name;
+        option.textContent = category.name;
+        categoryFilter.appendChild(option);
+      });
+      categoryFilter.value = Array.from(categoryFilter.options).some((option) => option.value === selectedValue)
+        ? selectedValue
+        : 'all';
+    }
+    renderAddItemOptions();
   };
 
   const renderStatusChips = (container, item) => {
@@ -615,14 +743,85 @@
 
   const applyFilters = () => {
     const filters = getFilters();
-    filteredItems = inventoryItems.filter((item) => {
-      const searchMatch = !filters.search || item.searchName.includes(filters.search);
-      const categoryMatch = filters.category === 'all'
-        || item.categoryId === filters.category
-        || item.categoryName === filters.category;
-      const statusMatch = filters.status === 'all' || Boolean(item.statusFlags[filters.status]);
-      return searchMatch && categoryMatch && statusMatch;
-    });
+    filteredItems = inventoryItems.filter((item) => itemMatchesFilters(item, filters));
+  };
+
+  const itemMatchesFilters = (item, filters) => {
+    const searchMatch = !filters.search || item.searchName.includes(filters.search);
+    const categoryMatch = filters.category === 'all'
+      || item.categoryId === filters.category
+      || item.categoryName === filters.category;
+    const statusMatch = filters.status === 'all' || Boolean(item.statusFlags[filters.status]);
+    return searchMatch && categoryMatch && statusMatch;
+  };
+
+  const revealCreatedItem = (itemId) => {
+    if (!itemId) return;
+    const item = inventoryItems.find((entry) => entry.itemId === itemId);
+    if (!item || itemMatchesFilters(item, getFilters())) return;
+    if (searchInput) searchInput.value = '';
+    if (categoryFilter) categoryFilter.value = 'all';
+    if (statusFilter) statusFilter.value = 'all';
+    applyFilters();
+    renderInventoryRows(filteredItems);
+    updateListState();
+  };
+
+  const validateAddItemForm = () => {
+    const name = addItemNameInput ? addItemNameInput.value.trim() : '';
+    if (!name) {
+      setAddItemStatus('Enter an item name.');
+      addItemNameInput?.focus();
+      return null;
+    }
+    if (name.length > 100) {
+      setAddItemStatus('Item name must be 100 characters or fewer.');
+      addItemNameInput?.focus();
+      return null;
+    }
+
+    const categoryId = addItemCategorySelect ? addItemCategorySelect.value : '';
+    if (!categoryId) {
+      setAddItemStatus('Choose a category for this item.');
+      addItemCategorySelect?.focus();
+      return null;
+    }
+
+    const unitId = addItemUnitSelect ? addItemUnitSelect.value : '';
+    if (!unitId) {
+      setAddItemStatus('Choose a unit for this item.');
+      addItemUnitSelect?.focus();
+      return null;
+    }
+
+    const thresholdRaw = addItemThresholdInput ? addItemThresholdInput.value.trim() : '';
+    const threshold = thresholdRaw ? Number(thresholdRaw) : 0;
+    if (!Number.isFinite(threshold) || threshold < 0) {
+      setAddItemStatus('Low-stock threshold must be zero or higher.');
+      addItemThresholdInput?.focus();
+      return null;
+    }
+    if (hasMoreThanThreeDecimals(thresholdRaw)) {
+      setAddItemStatus('Low-stock threshold can use up to three decimal places.');
+      addItemThresholdInput?.focus();
+      return null;
+    }
+
+    const storageLocation = addItemStorageInput ? addItemStorageInput.value.trim() : '';
+    if (storageLocation.length > 100) {
+      setAddItemStatus('Storage location must be 100 characters or fewer.');
+      addItemStorageInput?.focus();
+      return null;
+    }
+
+    return {
+      p_name: name,
+      p_category_id: categoryId,
+      p_unit_id: unitId,
+      p_low_stock_threshold: threshold,
+      p_track_expiry: Boolean(addItemTrackExpiryInput?.checked),
+      p_storage_location: storageLocation || null,
+    };
   };
 
   const updateListState = () => {
@@ -683,9 +882,11 @@
       applyFilters();
       renderInventoryRows(filteredItems);
     } else {
+      renderCategoryOptions();
       clearElement(listBody);
       filteredItems = [];
     }
+    setAddItemBusy(isCreatingItem);
     updateListState();
   };
 
@@ -702,6 +903,7 @@
   const clearInventoryState = () => {
     inventoryItems = [];
     categories = [];
+    units = [];
     alerts = [];
     filteredItems = [];
     summary = {
@@ -727,6 +929,7 @@
       const [
         stockResult,
         categoryResult,
+        unitResult,
         lowStockResult,
         expiryResult,
       ] = await Promise.all([
@@ -741,6 +944,12 @@
           .order('sort_order', { ascending: true })
           .order('name', { ascending: true }),
         client
+          .from('inventory_units')
+          .select('id,name,abbreviation,sort_order,is_active')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+        client
           .from('inventory_low_stock')
           .select('item_id,item_name'),
         client
@@ -750,7 +959,7 @@
           .order('expiry_date', { ascending: true }),
       ]);
 
-      const failedResult = [stockResult, categoryResult, lowStockResult, expiryResult].find((result) => result.error);
+      const failedResult = [stockResult, categoryResult, unitResult, lowStockResult, expiryResult].find((result) => result.error);
       if (failedResult) throw failedResult.error;
       if (sequence !== loadSequence || !isOwnerSignedIn) return;
 
@@ -764,6 +973,13 @@
         .map((category) => ({
           id: category.id || '',
           name: category.name || 'Uncategorized',
+        }));
+      units = (unitResult.data || [])
+        .filter((unit) => unit.is_active !== false)
+        .map((unit) => ({
+          id: unit.id || '',
+          name: unit.name || 'Unit',
+          abbreviation: unit.abbreviation || '',
         }));
       summary = computeSummary(inventoryItems);
       alerts = computeAlerts(inventoryItems);
@@ -871,6 +1087,38 @@
     } finally {
       setFormDisabled(false);
       updateOwnerAccountUi();
+    }
+  });
+
+  addItemForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (isCreatingItem) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setAddItemStatus('Sign in with the CURV owner account before adding items.');
+      return;
+    }
+
+    const payload = validateAddItemForm();
+    if (!payload) return;
+
+    isCreatingItem = true;
+    setAddItemStatus('Adding item...');
+    setAddItemBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_create_item', payload);
+      if (error) throw error;
+      const response = parseRpcResponse(data);
+      resetAddItemForm();
+      closeDrawer();
+      await loadInventoryData();
+      revealCreatedItem(response.item_id || '');
+      setStatus('Inventory item added.');
+    } catch (error) {
+      console.error('Inventory item creation failed:', error);
+      setAddItemStatus(getAddItemErrorMessage(error));
+    } finally {
+      isCreatingItem = false;
+      setAddItemBusy(false);
     }
   });
 

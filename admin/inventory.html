@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i5a-readonly-dashboard">
+  <link rel="stylesheet" href="admin.css?v=i5c-add-item">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i5a-readonly-dashboard" defer></script>
+  <script src="inventory.js?v=i5c-add-item" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -344,12 +344,18 @@
         <button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button>
       </div>
       <p>Create an ingredient or supply to track in inventory.</p>
-      <form class="inventory-preview-form">
-        <label class="admin-field" for="preview-item-name"><span>Item name</span><input id="preview-item-name" type="text" disabled></label>
-        <label class="admin-field" for="preview-item-category"><span>Category</span><select id="preview-item-category" disabled><option>Choose category</option></select></label>
-        <label class="admin-field" for="preview-item-unit"><span>Usable Stock unit</span><select id="preview-item-unit" disabled><option>Choose unit</option></select></label>
+      <form class="inventory-preview-form" data-add-item-form>
+        <label class="admin-field" for="add-item-name"><span>Item name</span><input id="add-item-name" type="text" autocomplete="off" maxlength="100" data-add-item-name required></label>
+        <label class="admin-field" for="add-item-category"><span>Category</span><select id="add-item-category" data-add-item-category required><option value="">Choose category</option></select></label>
+        <label class="admin-field" for="add-item-unit"><span>Usable stock unit</span><select id="add-item-unit" data-add-item-unit required><option value="">Choose unit</option></select></label>
+        <label class="admin-field" for="add-item-threshold"><span>Low-stock threshold</span><input id="add-item-threshold" type="number" min="0" step="0.001" inputmode="decimal" value="0" data-add-item-threshold></label>
+        <label class="admin-field" for="add-item-storage"><span>Storage location</span><input id="add-item-storage" type="text" autocomplete="off" maxlength="100" data-add-item-storage></label>
+        <label class="inventory-checkbox-field" for="add-item-track-expiry"><input id="add-item-track-expiry" type="checkbox" data-add-item-track-expiry><span>Track expiry dates for this item</span></label>
+        <p class="inventory-form-status" data-add-item-status aria-live="polite" hidden></p>
+        <div class="inventory-form-actions">
+          <button type="submit" class="auth-button" data-add-item-submit>Add Item</button>
+        </div>
       </form>
-      <p class="inventory-drawer-notice">Inventory actions will be available in the next update.</p>
     </section>
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-receive-stock-title" data-inventory-drawer="receive-stock" hidden>
