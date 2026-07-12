@@ -94,6 +94,21 @@
     receiveStockNotesInput,
     receiveStockSubmitButton,
   ].filter(Boolean);
+  const useStockForm = document.querySelector('[data-use-stock-form]');
+  const useStockItemSelect = document.querySelector('[data-use-stock-item]');
+  const useStockQuantityInput = document.querySelector('[data-use-stock-quantity]');
+  const useStockUnitHint = document.querySelector('[data-use-stock-unit-hint]');
+  const useStockReferenceInput = document.querySelector('[data-use-stock-reference]');
+  const useStockNotesInput = document.querySelector('[data-use-stock-notes]');
+  const useStockStatus = document.querySelector('[data-use-stock-status]');
+  const useStockSubmitButton = document.querySelector('[data-use-stock-submit]');
+  const useStockControls = [
+    useStockItemSelect,
+    useStockQuantityInput,
+    useStockReferenceInput,
+    useStockNotesInput,
+    useStockSubmitButton,
+  ].filter(Boolean);
 
   let activeDrawer = null;
   let lastFocusedElement = null;
@@ -111,6 +126,7 @@
   let filteredItems = [];
   let isCreatingItem = false;
   let isReceivingStock = false;
+  let isUsingStock = false;
   let summary = {
     items: 0,
     lowStock: 0,
@@ -155,6 +171,15 @@
     INV_EXPIRY_IN_PAST: 'Expiry date must be today or later.',
     INV_INVALID_BATCH_REF: "Couldn't generate a batch reference. Try again.",
     INV_DUPLICATE_BATCH_REF: "Couldn't generate a unique batch reference. Try again.",
+  };
+
+  const useStockErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before using stock.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can use inventory stock.',
+    INV_ITEM_NOT_FOUND: 'That inventory item is no longer available. Refresh inventory and try again.',
+    INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
+    INV_INVALID_QUANTITY: 'Quantity is invalid. Check the value and try again.',
+    INV_INSUFFICIENT_USABLE_STOCK: "There isn't enough usable stock for this request. Check the available quantity.",
   };
 
   const setInventoryNavActive = () => {
@@ -257,6 +282,7 @@
   const closeDrawer = () => {
     if (!activeDrawer || !drawerLayer || !backdrop) return;
     if (isReceivingStock && activeDrawer.dataset.inventoryDrawer === 'receive-stock') return;
+    if (isUsingStock && activeDrawer.dataset.inventoryDrawer === 'use-stock') return;
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
     document.body.classList.remove('inventory-drawer-open');
@@ -446,6 +472,87 @@
     });
   };
 
+  const setUseStockStatus = (message = '') => {
+    if (!useStockStatus) return;
+    useStockStatus.textContent = message;
+    useStockStatus.hidden = !message;
+  };
+
+  const getSelectedUseStockItem = () => {
+    const itemId = useStockItemSelect ? useStockItemSelect.value : '';
+    if (!itemId) return null;
+    return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const updateUseStockItemUi = () => {
+    const item = getSelectedUseStockItem();
+    if (!useStockUnitHint) return;
+    if (!item) {
+      useStockUnitHint.textContent = '';
+      return;
+    }
+    useStockUnitHint.textContent = `Available: ${formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)}`;
+  };
+
+  const setUseStockBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    useStockControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (useStockSubmitButton) {
+      useStockSubmitButton.textContent = isBusy ? 'Recording...' : 'Use Stock';
+    }
+  };
+
+  const resetUseStockForm = () => {
+    if (useStockForm) useStockForm.reset();
+    setUseStockStatus('');
+    updateUseStockItemUi();
+  };
+
+  const renderUseStockOptions = () => {
+    preserveSelectValue(useStockItemSelect, () => {
+      while (useStockItemSelect.options.length > 1) useStockItemSelect.remove(1);
+      inventoryItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.unitAbbreviation
+          ? `${item.itemName} (${item.unitAbbreviation})`
+          : item.itemName;
+        useStockItemSelect.appendChild(option);
+      });
+    });
+    updateUseStockItemUi();
+  };
+
+  const selectUseStockItem = (itemId) => {
+    if (!itemId || !useStockItemSelect) return false;
+    const hasOption = Array.from(useStockItemSelect.options)
+      .some((option) => option.value === itemId);
+    if (!hasOption) return false;
+    useStockItemSelect.value = itemId;
+    updateUseStockItemUi();
+    return true;
+  };
+
+  const clearUseStockItem = () => {
+    if (!useStockItemSelect) return;
+    useStockItemSelect.value = '';
+    updateUseStockItemUi();
+  };
+
+  const focusUseStockQuantity = () => {
+    requestAnimationFrame(() => {
+      if (
+        activeDrawer?.dataset.inventoryDrawer === 'use-stock'
+        && useStockQuantityInput
+        && !useStockQuantityInput.disabled
+      ) {
+        useStockQuantityInput.focus();
+      }
+    });
+  };
+
   const extractInventoryErrorCode = (error) => {
     const source = [
       error?.details,
@@ -465,6 +572,11 @@
   const getReceiveStockErrorMessage = (error) => {
     const code = extractInventoryErrorCode(error);
     return receiveStockErrorMessages[code] || "Couldn't receive this stock. Check the details and try again.";
+  };
+
+  const getUseStockErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return useStockErrorMessages[code] || "Couldn't record this stock use. Check the details and try again.";
   };
 
   const parseRpcResponse = (data) => {
@@ -757,6 +869,7 @@
     }
     renderAddItemOptions();
     renderReceiveStockOptions();
+    renderUseStockOptions();
   };
 
   const renderStatusChips = (container, item) => {
@@ -777,6 +890,9 @@
       openDrawer(drawerName, button);
       if (drawerName === 'receive-stock' && selectReceiveStockItem(itemId)) {
         focusReceiveStockQuantity();
+      }
+      if (drawerName === 'use-stock' && selectUseStockItem(itemId)) {
+        focusUseStockQuantity();
       }
     });
     return button;
@@ -824,6 +940,7 @@
       const actionWrap = document.createElement('div');
       actionWrap.className = 'inventory-row-actions';
       actionWrap.appendChild(createActionButton('Receive', 'receive-stock', item.itemId));
+      actionWrap.appendChild(createActionButton('Use', 'use-stock', item.itemId));
       actionCell.appendChild(actionWrap);
       row.appendChild(actionCell);
 
@@ -1058,6 +1175,67 @@
     };
   };
 
+  const validateUseStockForm = () => {
+    const item = getSelectedUseStockItem();
+    if (!item) {
+      setUseStockStatus('Choose an item to use.');
+      useStockItemSelect?.focus();
+      return null;
+    }
+
+    const quantityRaw = useStockQuantityInput ? useStockQuantityInput.value.trim() : '';
+    if (!quantityRaw) {
+      setUseStockStatus('Enter the quantity used.');
+      useStockQuantityInput?.focus();
+      return null;
+    }
+    const quantity = Number(quantityRaw);
+    if (!Number.isFinite(quantity)) {
+      setUseStockStatus('Enter the quantity used.');
+      useStockQuantityInput?.focus();
+      return null;
+    }
+    if (quantity <= 0) {
+      setUseStockStatus('Quantity must be greater than zero.');
+      useStockQuantityInput?.focus();
+      return null;
+    }
+    if (hasMoreThanThreeDecimals(quantityRaw)) {
+      setUseStockStatus('Quantity can use up to three decimal places.');
+      useStockQuantityInput?.focus();
+      return null;
+    }
+    if (quantity > item.usableStock) {
+      setUseStockStatus(`Only ${formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)} is currently available.`);
+      useStockQuantityInput?.focus();
+      return null;
+    }
+
+    const referenceText = useStockReferenceInput ? useStockReferenceInput.value.trim() : '';
+    if (referenceText.length > 100) {
+      setUseStockStatus('Reference must be 100 characters or fewer.');
+      useStockReferenceInput?.focus();
+      return null;
+    }
+
+    const notes = useStockNotesInput ? useStockNotesInput.value.trim() : '';
+    if (notes.length > 500) {
+      setUseStockStatus('Notes must be 500 characters or fewer.');
+      useStockNotesInput?.focus();
+      return null;
+    }
+
+    return {
+      item,
+      payload: {
+        p_item_id: item.itemId,
+        p_quantity: quantity,
+        p_reference_text: referenceText || null,
+        p_notes: notes || null,
+      },
+    };
+  };
+
   const updateListState = () => {
     const filters = getFilters();
     const searchActive = Boolean(filters.search);
@@ -1122,6 +1300,7 @@
     }
     setAddItemBusy(isCreatingItem);
     setReceiveStockBusy(isReceivingStock);
+    setUseStockBusy(isUsingStock);
     updateListState();
   };
 
@@ -1273,6 +1452,9 @@
       if (button.dataset.inventoryDrawerOpen === 'receive-stock') {
         clearReceiveStockItem();
       }
+      if (button.dataset.inventoryDrawerOpen === 'use-stock') {
+        clearUseStockItem();
+      }
       openDrawer(button.dataset.inventoryDrawerOpen, button);
     });
   });
@@ -1395,6 +1577,44 @@
     } finally {
       isReceivingStock = false;
       setReceiveStockBusy(false);
+    }
+  });
+
+  useStockItemSelect?.addEventListener('change', updateUseStockItemUi);
+
+  useStockForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (isUsingStock) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setUseStockStatus('Sign in with the CURV owner account before using stock.');
+      return;
+    }
+
+    const validated = validateUseStockForm();
+    if (!validated) return;
+
+    const { item, payload } = validated;
+    const usedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
+    isUsingStock = true;
+    setUseStockStatus('Recording stock use...');
+    setUseStockBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_stock_out', payload);
+      if (error) throw error;
+      const response = parseRpcResponse(data);
+      const itemName = response.item_name || item.itemName;
+      resetUseStockForm();
+      isUsingStock = false;
+      setUseStockBusy(false);
+      closeDrawer();
+      await loadInventoryData();
+      setStatus(`${usedText} used from ${itemName}.`);
+    } catch (error) {
+      console.error('Inventory stock use failed:', error);
+      setUseStockStatus(getUseStockErrorMessage(error));
+    } finally {
+      isUsingStock = false;
+      setUseStockBusy(false);
     }
   });
 

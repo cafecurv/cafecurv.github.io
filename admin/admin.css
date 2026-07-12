@@ -158,6 +158,11 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.inventory-attention-state[hidden],
+.inventory-empty-state[hidden] {
+  display: none !important;
+}
+
 .inventory-attention-state h3,
 .inventory-empty-state h3 {
   margin: 0;
