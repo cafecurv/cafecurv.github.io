@@ -125,6 +125,22 @@
     recordWasteNotesInput,
     recordWasteSubmitButton,
   ].filter(Boolean);
+  const countStockForm = document.querySelector('[data-count-stock-form]');
+  const countStockItemSelect = document.querySelector('[data-count-stock-item]');
+  const countStockQuantityInput = document.querySelector('[data-count-stock-quantity]');
+  const countStockUnitHint = document.querySelector('[data-count-stock-unit-hint]');
+  const countStockExpiryWrap = document.querySelector('[data-count-stock-expiry-wrap]');
+  const countStockExpiryInput = document.querySelector('[data-count-stock-expiry]');
+  const countStockNotesInput = document.querySelector('[data-count-stock-notes]');
+  const countStockStatus = document.querySelector('[data-count-stock-status]');
+  const countStockSubmitButton = document.querySelector('[data-count-stock-submit]');
+  const countStockControls = [
+    countStockItemSelect,
+    countStockQuantityInput,
+    countStockExpiryInput,
+    countStockNotesInput,
+    countStockSubmitButton,
+  ].filter(Boolean);
 
   let activeDrawer = null;
   let lastFocusedElement = null;
@@ -144,6 +160,7 @@
   let isReceivingStock = false;
   let isUsingStock = false;
   let isRecordingWaste = false;
+  let isCountingStock = false;
   let summary = {
     items: 0,
     lowStock: 0,
@@ -223,6 +240,20 @@
     INV_INSUFFICIENT_BATCH_STOCK: "There isn't enough stock in that batch for this request.",
     INV_INSUFFICIENT_EXPIRED_STOCK: "There isn't enough expired stock recorded for this request.",
     INV_INSUFFICIENT_USABLE_STOCK: "There isn't enough usable stock for this request.",
+  };
+
+  const countStockErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before counting stock.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can count inventory stock.',
+    INV_ITEM_NOT_FOUND: 'That inventory item is no longer available. Refresh inventory and try again.',
+    INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
+    INV_INVALID_QUANTITY: 'Physical count is invalid. Check the value and try again.',
+    INV_NOTES_REQUIRED: 'Add a note explaining this count.',
+    INV_INSUFFICIENT_USABLE_STOCK: 'Stock changed before this count finished. Refresh inventory and try again.',
+    INV_BATCH_NOT_FOUND: 'That inventory batch is no longer available. Refresh inventory and try again.',
+    INV_BATCH_EXPIRED: 'Expired batches cannot receive added stock. Choose another option.',
+    INV_EXPIRY_REQUIRED: 'Enter an expiry date for the added stock.',
+    INV_EXPIRY_IN_PAST: 'Expiry date must be today or later.',
   };
 
   const setInventoryNavActive = () => {
@@ -327,6 +358,7 @@
     if (isReceivingStock && activeDrawer.dataset.inventoryDrawer === 'receive-stock') return;
     if (isUsingStock && activeDrawer.dataset.inventoryDrawer === 'use-stock') return;
     if (isRecordingWaste && activeDrawer.dataset.inventoryDrawer === 'record-waste') return;
+    if (isCountingStock && activeDrawer.dataset.inventoryDrawer === 'count-stock') return;
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
     document.body.classList.remove('inventory-drawer-open');
@@ -712,6 +744,110 @@
     });
   };
 
+  const setCountStockStatus = (message = '') => {
+    if (!countStockStatus) return;
+    countStockStatus.textContent = message;
+    countStockStatus.hidden = !message;
+  };
+
+  const getSelectedCountStockItem = () => {
+    const itemId = countStockItemSelect ? countStockItemSelect.value : '';
+    if (!itemId) return null;
+    return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const getCountStockQuantityValue = () => {
+    const rawValue = countStockQuantityInput ? countStockQuantityInput.value.trim() : '';
+    const quantity = rawValue ? Number(rawValue) : null;
+    return Number.isFinite(quantity) ? quantity : null;
+  };
+
+  const needsCountStockExpiry = () => {
+    const item = getSelectedCountStockItem();
+    const quantity = getCountStockQuantityValue();
+    return Boolean(item?.trackExpiry && quantity !== null && quantity > item.usableStock);
+  };
+
+  const updateCountStockUi = () => {
+    const item = getSelectedCountStockItem();
+    if (countStockUnitHint) {
+      if (!item) {
+        countStockUnitHint.textContent = '';
+      } else {
+        const hints = [
+          `Recorded usable stock: ${formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)}`,
+        ];
+        if (item.expiredStock > 0) {
+          hints.push(`Expired stock is separate: ${formatQuantityWithUnit(item.expiredStock, item.unitAbbreviation)}`);
+        }
+        countStockUnitHint.textContent = hints.join('\n');
+      }
+    }
+
+    const shouldShowExpiry = needsCountStockExpiry();
+    if (countStockExpiryWrap) countStockExpiryWrap.hidden = !shouldShowExpiry;
+    if (countStockExpiryInput) {
+      countStockExpiryInput.required = shouldShowExpiry;
+      countStockExpiryInput.disabled = isCountingStock || pageState !== STATES.READY || !isOwnerSignedIn || !shouldShowExpiry;
+      if (!shouldShowExpiry) countStockExpiryInput.value = '';
+    }
+  };
+
+  const setCountStockBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    countStockControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    updateCountStockUi();
+    if (countStockSubmitButton) {
+      countStockSubmitButton.textContent = isBusy ? 'Saving...' : 'Count Stock';
+      countStockSubmitButton.disabled = shouldDisable;
+    }
+  };
+
+  const resetCountStockForm = () => {
+    if (countStockForm) countStockForm.reset();
+    setCountStockStatus('');
+    updateCountStockUi();
+  };
+
+  const renderCountStockOptions = () => {
+    preserveSelectValue(countStockItemSelect, () => {
+      while (countStockItemSelect.options.length > 1) countStockItemSelect.remove(1);
+      inventoryItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.unitAbbreviation
+          ? `${item.itemName} (${item.unitAbbreviation})`
+          : item.itemName;
+        countStockItemSelect.appendChild(option);
+      });
+    });
+    updateCountStockUi();
+  };
+
+  const selectCountStockItem = (itemId) => {
+    if (!itemId || !countStockItemSelect) return false;
+    const hasOption = Array.from(countStockItemSelect.options)
+      .some((option) => option.value === itemId);
+    if (!hasOption) return false;
+    countStockItemSelect.value = itemId;
+    updateCountStockUi();
+    return true;
+  };
+
+  const focusCountStockQuantity = () => {
+    requestAnimationFrame(() => {
+      if (
+        activeDrawer?.dataset.inventoryDrawer === 'count-stock'
+        && countStockQuantityInput
+        && !countStockQuantityInput.disabled
+      ) {
+        countStockQuantityInput.focus();
+      }
+    });
+  };
+
   const extractInventoryErrorCode = (error) => {
     const source = [
       error?.details,
@@ -743,6 +879,11 @@
     return recordWasteErrorMessages[code] || "Couldn't record this waste. Check the details and try again.";
   };
 
+  const getCountStockErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return countStockErrorMessages[code] || "Couldn't save this count. Check the details and try again.";
+  };
+
   const parseRpcResponse = (data) => {
     if (!data) return {};
     if (typeof data === 'string') {
@@ -763,6 +904,8 @@
   };
 
   const hasMoreThanThreeDecimals = (value) => hasMoreThanDecimals(value, 3);
+
+  const isValidCountStockQuantityFormat = (value) => /^\d+(?:\.\d{1,3})?$/.test(value);
 
   const formatQuantity = (value) => {
     const number = parseNumber(value);
@@ -1035,6 +1178,7 @@
     renderReceiveStockOptions();
     renderUseStockOptions();
     renderRecordWasteOptions();
+    renderCountStockOptions();
   };
 
   const renderStatusChips = (container, item) => {
@@ -1068,6 +1212,12 @@
         }
         updateRecordWasteUi();
         if (selected) focusRecordWasteQuantity();
+      }
+      if (drawerName === 'count-stock') {
+        resetCountStockForm();
+        if (selectCountStockItem(itemId)) {
+          focusCountStockQuantity();
+        }
       }
     });
     return button;
@@ -1117,6 +1267,7 @@
       actionWrap.appendChild(createActionButton('Receive', 'receive-stock', item.itemId));
       actionWrap.appendChild(createActionButton('Use', 'use-stock', item.itemId));
       actionWrap.appendChild(createActionButton('Waste', 'record-waste', item.itemId));
+      actionWrap.appendChild(createActionButton('Count', 'count-stock', item.itemId));
       actionCell.appendChild(actionWrap);
       row.appendChild(actionCell);
 
@@ -1493,6 +1644,75 @@
     };
   };
 
+  const validateCountStockForm = () => {
+    const item = getSelectedCountStockItem();
+    if (!item) {
+      setCountStockStatus('Choose an item to count.');
+      countStockItemSelect?.focus();
+      return null;
+    }
+
+    const quantityRaw = countStockQuantityInput ? countStockQuantityInput.value.trim() : '';
+    if (!quantityRaw) {
+      setCountStockStatus('Enter the physical quantity counted.');
+      countStockQuantityInput?.focus();
+      return null;
+    }
+    if (!isValidCountStockQuantityFormat(quantityRaw)) {
+      setCountStockStatus('Physical count can use up to three decimal places.');
+      countStockQuantityInput?.focus();
+      return null;
+    }
+    const actualQuantity = Number(quantityRaw);
+    if (!Number.isFinite(actualQuantity)) {
+      setCountStockStatus('Enter the physical quantity counted.');
+      countStockQuantityInput?.focus();
+      return null;
+    }
+    if (actualQuantity < 0) {
+      setCountStockStatus('Physical count cannot be negative.');
+      countStockQuantityInput?.focus();
+      return null;
+    }
+
+    const expiryRequired = item.trackExpiry && actualQuantity > item.usableStock;
+    let expiryDate = countStockExpiryInput ? countStockExpiryInput.value : '';
+    if (expiryRequired) {
+      if (!expiryDate) {
+        setCountStockStatus('Enter an expiry date for the added stock.');
+        countStockExpiryInput?.focus();
+        return null;
+      }
+      const expiryOffset = getManilaDayOffset(expiryDate);
+      if (expiryOffset === null || expiryOffset < 0) {
+        setCountStockStatus('Expiry date must be today or later.');
+        countStockExpiryInput?.focus();
+        return null;
+      }
+    } else {
+      expiryDate = '';
+      if (countStockExpiryInput) countStockExpiryInput.value = '';
+    }
+
+    const notes = countStockNotesInput ? countStockNotesInput.value.trim() : '';
+    if (notes.length > 500) {
+      setCountStockStatus('Notes must be 500 characters or fewer.');
+      countStockNotesInput?.focus();
+      return null;
+    }
+
+    return {
+      item,
+      payload: {
+        p_item_id: item.itemId,
+        p_actual_quantity: actualQuantity,
+        p_notes: notes || 'Physical count from Count Stock drawer.',
+        p_existing_batch_id: null,
+        p_expiry_date: expiryDate || null,
+      },
+    };
+  };
+
   const updateListState = () => {
     const filters = getFilters();
     const searchActive = Boolean(filters.search);
@@ -1559,6 +1779,7 @@
     setReceiveStockBusy(isReceivingStock);
     setUseStockBusy(isUsingStock);
     setRecordWasteBusy(isRecordingWaste);
+    setCountStockBusy(isCountingStock);
     updateListState();
   };
 
@@ -1715,6 +1936,9 @@
       }
       if (button.dataset.inventoryDrawerOpen === 'record-waste') {
         resetRecordWasteForm();
+      }
+      if (button.dataset.inventoryDrawerOpen === 'count-stock') {
+        resetCountStockForm();
       }
       openDrawer(button.dataset.inventoryDrawerOpen, button);
     });
@@ -1916,6 +2140,45 @@
     } finally {
       isRecordingWaste = false;
       setRecordWasteBusy(false);
+    }
+  });
+
+  countStockItemSelect?.addEventListener('change', updateCountStockUi);
+  countStockQuantityInput?.addEventListener('input', updateCountStockUi);
+
+  countStockForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (isCountingStock) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setCountStockStatus('Sign in with the CURV owner account before counting stock.');
+      return;
+    }
+
+    const validated = validateCountStockForm();
+    if (!validated) return;
+
+    const { item, payload } = validated;
+    const countText = formatQuantityWithUnit(payload.p_actual_quantity, item.unitAbbreviation);
+    isCountingStock = true;
+    setCountStockStatus('Saving count...');
+    setCountStockBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_adjust_to_count', payload);
+      if (error) throw error;
+      const response = parseRpcResponse(data);
+      const itemName = response.item_name || item.itemName;
+      resetCountStockForm();
+      isCountingStock = false;
+      setCountStockBusy(false);
+      closeDrawer();
+      await loadInventoryData();
+      setStatus(`${itemName} recorded stock now matches the count: ${countText}.`);
+    } catch (error) {
+      console.error('Inventory count adjustment failed:', error);
+      setCountStockStatus(getCountStockErrorMessage(error));
+    } finally {
+      isCountingStock = false;
+      setCountStockBusy(false);
     }
   });
 
