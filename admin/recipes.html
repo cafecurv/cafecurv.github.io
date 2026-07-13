@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i10c1-grouped-recipes">
+  <link rel="stylesheet" href="admin.css?v=i10d2-recipe-editor">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i10c-recipes-auth-exclusion" defer></script>
-  <script src="recipes.js?v=i10c1-grouped-recipes" defer></script>
+  <script src="recipes.js?v=i10d2-recipe-editor" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -326,6 +326,59 @@
         <h3 id="recipe-ingredients-title">Ingredients</h3>
         <div class="recipes-ingredient-list" data-recipes-ingredient-list></div>
       </section>
+    </section>
+    <section class="inventory-drawer recipes-drawer recipes-editor-drawer" role="dialog" aria-modal="true" aria-labelledby="recipe-editor-title" data-recipes-drawer="editor" hidden>
+      <div class="inventory-drawer-head">
+        <div>
+          <p class="eyebrow">Recipe Editor</p>
+          <h2 id="recipe-editor-title" data-recipes-editor-title>Recipe Editor</h2>
+        </div>
+        <button type="button" class="inventory-drawer-close" data-recipes-drawer-close data-recipes-editor-close>Close</button>
+      </div>
+      <p class="page-helper recipes-editor-helper">Count only the ingredients that belong in one serving of this exact menu size.</p>
+      <div class="recipes-detail-meta" data-recipes-editor-meta></div>
+      <p class="inventory-drawer-notice" data-recipes-editor-status aria-live="polite" hidden></p>
+      <div class="recipes-editor-loading" data-recipes-editor-loading hidden>
+        <h3>Loading recipe editor...</h3>
+        <p>Getting the latest recipe and ingredient choices.</p>
+      </div>
+      <div class="recipes-editor-error" data-recipes-editor-error hidden>
+        <h3>Couldn't load the editor.</h3>
+        <p data-recipes-editor-error-copy>Try again before editing this recipe.</p>
+        <div class="inventory-form-actions recipes-error-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel-error>Cancel</button>
+          <button type="button" class="auth-button" data-recipes-editor-retry>Retry</button>
+        </div>
+      </div>
+      <div class="recipes-discard-confirm" data-recipes-discard-confirm hidden>
+        <h3>You have unsaved changes. Discard them?</h3>
+        <div class="inventory-form-actions recipes-confirm-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-keep-editing>Keep Editing</button>
+          <button type="button" class="auth-button" data-recipes-discard-editor>Discard Changes</button>
+        </div>
+      </div>
+      <form class="recipes-editor-form" data-recipes-editor-form novalidate>
+        <label class="admin-field" for="recipe-editor-notes">
+          <span>Recipe notes</span>
+          <textarea id="recipe-editor-notes" rows="4" maxlength="500" data-recipes-editor-notes></textarea>
+          <span class="inventory-field-hint" data-recipes-editor-notes-count>0 / 500</span>
+        </label>
+        <section class="recipes-editor-section" aria-labelledby="recipe-editor-ingredients-title">
+          <div class="recipes-editor-section-head">
+            <h3 id="recipe-editor-ingredients-title">Ingredients</h3>
+            <button type="button" class="inventory-row-action" data-recipes-add-ingredient>Add Ingredient</button>
+          </div>
+          <div class="recipes-editor-rows" data-recipes-editor-rows></div>
+        </section>
+        <div class="recipes-editor-summary" data-recipes-editor-summary aria-live="polite" hidden></div>
+        <div class="recipes-editor-footer">
+          <p class="inventory-field-hint">Saving will be enabled after editor testing is complete.</p>
+          <div class="inventory-form-actions recipes-editor-actions">
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel>Cancel</button>
+            <button type="button" class="auth-button" data-recipes-editor-save disabled>Save Recipe</button>
+          </div>
+        </div>
+      </form>
     </section>
   </div>
 </body>

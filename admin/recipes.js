@@ -12,6 +12,15 @@
     READY: 'READY',
     ERROR: 'ERROR',
   };
+  const EDITOR_STATES = {
+    CLOSED: 'CLOSED',
+    LOADING: 'LOADING',
+    CREATE_READY: 'CREATE_READY',
+    EDIT_READY: 'EDIT_READY',
+    DIRTY: 'DIRTY',
+    LOAD_ERROR: 'LOAD_ERROR',
+    DISCARD_CONFIRM: 'DISCARD_CONFIRM',
+  };
 
   const statusRegion = document.querySelector('[data-recipes-status]');
   const metricValues = new Map(Array.from(document.querySelectorAll('[data-recipes-metric]'))
@@ -42,6 +51,26 @@
   const detailStatus = document.querySelector('[data-recipes-detail-status]');
   const detailNotes = document.querySelector('[data-recipes-detail-notes]');
   const ingredientList = document.querySelector('[data-recipes-ingredient-list]');
+  const editorDrawer = document.querySelector('[data-recipes-drawer="editor"]');
+  const editorTitle = document.querySelector('[data-recipes-editor-title]');
+  const editorMeta = document.querySelector('[data-recipes-editor-meta]');
+  const editorStatus = document.querySelector('[data-recipes-editor-status]');
+  const editorLoading = document.querySelector('[data-recipes-editor-loading]');
+  const editorError = document.querySelector('[data-recipes-editor-error]');
+  const editorErrorCopy = document.querySelector('[data-recipes-editor-error-copy]');
+  const editorRetryButton = document.querySelector('[data-recipes-editor-retry]');
+  const editorErrorCancelButton = document.querySelector('[data-recipes-editor-cancel-error]');
+  const editorForm = document.querySelector('[data-recipes-editor-form]');
+  const editorNotes = document.querySelector('[data-recipes-editor-notes]');
+  const editorNotesCount = document.querySelector('[data-recipes-editor-notes-count]');
+  const editorRowsContainer = document.querySelector('[data-recipes-editor-rows]');
+  const addIngredientButton = document.querySelector('[data-recipes-add-ingredient]');
+  const editorSummary = document.querySelector('[data-recipes-editor-summary]');
+  const editorCancelButton = document.querySelector('[data-recipes-editor-cancel]');
+  const editorSaveButton = document.querySelector('[data-recipes-editor-save]');
+  const discardConfirm = document.querySelector('[data-recipes-discard-confirm]');
+  const keepEditingButton = document.querySelector('[data-recipes-keep-editing]');
+  const discardEditorButton = document.querySelector('[data-recipes-discard-editor]');
   const authForm = document.querySelector('[data-auth-form]');
   const emailInput = document.getElementById('owner-email');
   const passwordInput = document.getElementById('owner-password');
@@ -78,8 +107,24 @@
   let categories = [];
   let activeDrawer = null;
   let lastFocusedElement = null;
+  let pickerItems = null;
+  let pickerLoadPromise = null;
+  let pickerGeneration = 0;
+  let editorSequence = 0;
+  let editorState = EDITOR_STATES.CLOSED;
+  let editorMode = 'create';
+  let editorSummaryRow = null;
+  let editorRows = [];
+  let editorRowCounter = 0;
+  let editorInitialSnapshot = '';
+  let editorAttemptedCloseElement = null;
+  let editorPendingAfterDiscard = null;
+  let editorLastValidation = { isValid: true, problems: [] };
 
   const DASH = '-';
+  const MAX_RECIPE_LINES = 100;
+  const MAX_RECIPE_NOTES = 500;
+  const recipeQuantityPattern = /^\d+(?:\.\d{1,3})?$/;
 
   const statusLabels = {
     ready: 'Ready',
@@ -142,6 +187,18 @@
     while (element.firstChild) element.removeChild(element.firstChild);
   };
 
+  const isEditorDirtyState = () => editorState === EDITOR_STATES.DIRTY || editorState === EDITOR_STATES.DISCARD_CONFIRM;
+
+  const setBeforeUnloadProtection = () => {
+    window.onbeforeunload = isEditorDirtyState()
+      ? (event) => {
+        event.preventDefault();
+        event.returnValue = '';
+        return '';
+      }
+      : null;
+  };
+
   const createTextElement = (tagName, className, text) => {
     const element = document.createElement(tagName);
     if (className) element.className = className;
@@ -171,7 +228,7 @@
     if (firstFocusable) firstFocusable.focus();
   };
 
-  const closeDrawer = () => {
+  const closeDrawer = ({ restoreFocus = true } = {}) => {
     if (!activeDrawer || !drawerLayer || !backdrop) return;
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
@@ -181,11 +238,26 @@
     });
     drawerLayer.hidden = true;
     backdrop.hidden = true;
+    if (activeDrawer === editorDrawer) {
+      resetEditor({ keepTrigger: true });
+    }
     activeDrawer = null;
     detailSequence += 1;
-    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+    if (restoreFocus && lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
       lastFocusedElement.focus();
     }
+  };
+
+  const requestCloseDrawer = (trigger = document.activeElement) => {
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
+      editorPendingAfterDiscard = null;
+      showDiscardConfirm(trigger);
+      return;
+    }
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.DISCARD_CONFIRM) {
+      return;
+    }
+    closeDrawer();
   };
 
   const trapFocus = (event) => {
@@ -377,7 +449,24 @@
     button.textContent = 'View Recipe';
     button.dataset.recipesDrawerOpen = 'details';
     button.addEventListener('click', () => {
+      if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
+        editorPendingAfterDiscard = () => openRecipeDetails(row, button);
+        showDiscardConfirm(button);
+        return;
+      }
       openRecipeDetails(row, button);
+    });
+    return button;
+  };
+
+  const createEditorButton = (row, label, className = 'inventory-row-action') => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.dataset.recipesDrawerOpen = 'editor';
+    button.addEventListener('click', () => {
+      openRecipeEditor(row, button);
     });
     return button;
   };
@@ -497,7 +586,12 @@
       actionCell.dataset.label = 'Action';
       const actionWrap = document.createElement('div');
       actionWrap.className = 'inventory-row-actions';
-      actionWrap.appendChild(createViewButton(row));
+      if (row.recipeStatus === 'not_configured') {
+        actionWrap.appendChild(createEditorButton(row, 'Configure Recipe'));
+      } else {
+        actionWrap.appendChild(createViewButton(row));
+        actionWrap.appendChild(createEditorButton(row, 'Edit Recipe'));
+      }
       actionCell.appendChild(actionWrap);
       tr.appendChild(actionCell);
 
@@ -644,6 +738,537 @@
     detailStatus.hidden = !message;
   };
 
+  const setEditorStatus = (message = '') => {
+    if (!editorStatus) return;
+    editorStatus.textContent = message;
+    editorStatus.hidden = !message;
+  };
+
+  const setEditorState = (nextState) => {
+    editorState = nextState;
+    const isLoading = nextState === EDITOR_STATES.LOADING;
+    const isError = nextState === EDITOR_STATES.LOAD_ERROR;
+    const isConfirming = nextState === EDITOR_STATES.DISCARD_CONFIRM;
+    if (editorLoading) editorLoading.hidden = !isLoading;
+    if (editorError) editorError.hidden = !isError;
+    if (discardConfirm) discardConfirm.hidden = !isConfirming;
+    if (editorForm) editorForm.hidden = isLoading || isError || isConfirming;
+    setBeforeUnloadProtection();
+  };
+
+  const resetEditor = ({ keepTrigger = false } = {}) => {
+    editorSequence += 1;
+    editorMode = 'create';
+    editorSummaryRow = null;
+    editorRows = [];
+    editorInitialSnapshot = '';
+    editorAttemptedCloseElement = null;
+    editorPendingAfterDiscard = null;
+    editorLastValidation = { isValid: true, problems: [] };
+    if (!keepTrigger) lastFocusedElement = null;
+    if (editorTitle) editorTitle.textContent = 'Recipe Editor';
+    clearElement(editorMeta);
+    clearElement(editorRowsContainer);
+    if (editorNotes) {
+      editorNotes.value = '';
+      editorNotes.removeAttribute('aria-invalid');
+    }
+    if (editorNotesCount) editorNotesCount.textContent = '0 / 500';
+    if (editorSummary) {
+      editorSummary.hidden = true;
+      editorSummary.replaceChildren();
+    }
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.CLOSED);
+  };
+
+  const normalizePickerItem = (row) => ({
+    itemId: row.item_id || '',
+    itemName: row.item_name || 'Unnamed item',
+    categoryName: row.category_name || 'Uncategorized',
+    unitAbbreviation: row.unit_abbreviation || '',
+  });
+
+  const loadPickerItems = async () => {
+    if (pickerItems) return pickerItems;
+    if (pickerLoadPromise) return pickerLoadPromise;
+    if (!client || !isOwnerSignedIn) throw new Error('Sign in before loading inventory ingredients.');
+
+    const requestGeneration = pickerGeneration;
+    const requestPromise = client
+      .from('inventory_stock_summary')
+      .select('item_id,item_name,category_name,unit_abbreviation,is_active')
+      .eq('is_active', true)
+      .order('category_name', { ascending: true })
+      .order('item_name', { ascending: true })
+      .then((result) => {
+        if (result.error) throw result.error;
+        const loadedItems = (result.data || [])
+          .filter((row) => row.is_active !== false)
+          .map(normalizePickerItem)
+          .filter((item) => item.itemId);
+        if (requestGeneration === pickerGeneration && isOwnerSignedIn) {
+          pickerItems = loadedItems;
+          return pickerItems;
+        }
+        return [];
+      })
+      .finally(() => {
+        if (pickerLoadPromise === requestPromise) pickerLoadPromise = null;
+      });
+
+    pickerLoadPromise = requestPromise;
+    return pickerLoadPromise;
+  };
+
+  const clearPickerCache = () => {
+    pickerGeneration += 1;
+    pickerItems = null;
+    pickerLoadPromise = null;
+  };
+
+  const getPickerItem = (itemId) => (pickerItems || []).find((item) => item.itemId === itemId) || null;
+
+  const getEditorItemName = (row) => {
+    const activeItem = getPickerItem(row.itemId);
+    if (activeItem) return activeItem.itemName;
+    if (row.unavailableItem) return row.unavailableItem.itemName;
+    return 'ingredient';
+  };
+
+  const getEditorUnit = (row) => {
+    const activeItem = getPickerItem(row.itemId);
+    if (activeItem) return activeItem.unitAbbreviation;
+    if (row.unavailableItem) return row.unavailableItem.unitAbbreviation;
+    return '';
+  };
+
+  const createEditorRow = (overrides = {}) => {
+    editorRowCounter += 1;
+    return {
+      rowId: `recipe-line-${Date.now()}-${editorRowCounter}`,
+      itemId: '',
+      quantity: '',
+      unavailableItem: null,
+      touched: false,
+      ...overrides,
+    };
+  };
+
+  const getEditorSnapshot = () => JSON.stringify({
+    notes: editorNotes ? editorNotes.value : '',
+    lines: editorRows.map((row) => ({
+      itemId: row.itemId || '',
+      quantity: row.quantity || '',
+      unavailableItemId: row.unavailableItem ? row.unavailableItem.itemId : '',
+    })),
+  });
+
+  const updateNotesCount = () => {
+    if (!editorNotesCount || !editorNotes) return;
+    editorNotesCount.textContent = `${editorNotes.value.length} / ${MAX_RECIPE_NOTES}`;
+  };
+
+  const setEditorControlsDisabled = (isDisabled) => {
+    if (editorNotes) editorNotes.disabled = isDisabled;
+    if (addIngredientButton) addIngredientButton.disabled = isDisabled || editorRows.length >= MAX_RECIPE_LINES;
+    if (editorCancelButton) editorCancelButton.disabled = isDisabled;
+    if (editorSaveButton) editorSaveButton.disabled = true;
+    if (!editorRowsContainer) return;
+    editorRowsContainer.querySelectorAll('select, input, button').forEach((control) => {
+      control.disabled = isDisabled || (control.matches('[data-recipes-remove-ingredient]') && editorRows.length <= 0);
+    });
+  };
+
+  const renderEditorHeader = (row) => {
+    if (editorTitle) editorTitle.textContent = `${row.productName} - ${row.productSizeLabel}`;
+    clearElement(editorMeta);
+    if (!editorMeta) return;
+    [
+      row.categoryName,
+      getStatusLabel(row.recipeStatus),
+      row.recipeExists ? `Updated ${formatDate(row.recipeUpdatedAt)}` : 'No recipe yet',
+    ].forEach((text) => {
+      editorMeta.appendChild(createTextElement('span', 'recipes-detail-pill', text));
+    });
+  };
+
+  const addOption = (select, value, text, { disabled = false, selected = false } = {}) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    option.disabled = disabled;
+    option.selected = selected;
+    select.appendChild(option);
+    return option;
+  };
+
+  const buildIngredientSelectOptions = (select, row) => {
+    clearElement(select);
+    addOption(select, '', 'Choose ingredient...');
+
+    const activeItem = getPickerItem(row.itemId);
+    if (row.unavailableItem && !activeItem) {
+      const label = row.unavailableItem.isArchived ? 'Archived' : 'Unavailable';
+      addOption(select, row.unavailableItem.itemId, `${label} - ${row.unavailableItem.itemName}`, {
+        disabled: true,
+        selected: true,
+      });
+    }
+
+    const groups = new Map();
+    (pickerItems || []).forEach((item) => {
+      const groupName = item.categoryName || 'Uncategorized';
+      if (!groups.has(groupName)) groups.set(groupName, []);
+      groups.get(groupName).push(item);
+    });
+
+    Array.from(groups.entries()).forEach(([categoryName, items]) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = categoryName;
+      items.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.itemName;
+        optgroup.appendChild(option);
+      });
+      select.appendChild(optgroup);
+    });
+
+    select.value = row.itemId || '';
+  };
+
+  const getQuantityValidationMessage = (value) => {
+    const raw = value.trim();
+    if (!raw) return 'Enter a quantity.';
+    if (!recipeQuantityPattern.test(raw)) return 'Use plain decimal notation with up to three decimal places.';
+    const integerPart = raw.split('.')[0].replace(/^0+/, '') || '0';
+    if (integerPart.length > 11) return 'Use 11 or fewer digits before the decimal point.';
+    const isZero = raw.replace(/[.0]/g, '') === '';
+    if (isZero) return 'Quantity must be greater than zero.';
+    return '';
+  };
+
+  const renderEditorRows = () => {
+    clearElement(editorRowsContainer);
+    if (!editorRowsContainer) return;
+
+    editorRows.forEach((row, index) => {
+      const number = index + 1;
+      const rowElement = document.createElement('article');
+      rowElement.className = 'recipes-editor-row';
+      rowElement.dataset.editorRowId = row.rowId;
+
+      const ingredientId = `${row.rowId}-ingredient`;
+      const quantityId = `${row.rowId}-quantity`;
+      const unitId = `${row.rowId}-unit`;
+      const messageId = `${row.rowId}-message`;
+
+      const ingredientField = document.createElement('label');
+      ingredientField.className = 'admin-field recipes-editor-ingredient-field';
+      ingredientField.setAttribute('for', ingredientId);
+      ingredientField.appendChild(createTextElement('span', '', `Ingredient ${number}`));
+      const select = document.createElement('select');
+      select.id = ingredientId;
+      select.dataset.editorIngredient = row.rowId;
+      select.setAttribute('aria-describedby', messageId);
+      buildIngredientSelectOptions(select, row);
+      ingredientField.appendChild(select);
+      rowElement.appendChild(ingredientField);
+
+      const quantityField = document.createElement('label');
+      quantityField.className = 'admin-field recipes-editor-quantity-field';
+      quantityField.setAttribute('for', quantityId);
+      quantityField.appendChild(createTextElement('span', '', `Quantity for Ingredient ${number}`));
+      const quantityWrap = document.createElement('div');
+      quantityWrap.className = 'recipes-editor-quantity-wrap';
+      const quantityInput = document.createElement('input');
+      quantityInput.id = quantityId;
+      quantityInput.type = 'text';
+      quantityInput.inputMode = 'decimal';
+      quantityInput.autocomplete = 'off';
+      quantityInput.value = row.quantity;
+      quantityInput.dataset.editorQuantity = row.rowId;
+      quantityInput.setAttribute('aria-describedby', `${unitId} ${messageId}`);
+      const unitLabel = document.createElement('span');
+      unitLabel.className = 'recipes-editor-unit';
+      unitLabel.id = unitId;
+      unitLabel.textContent = getEditorUnit(row) || 'unit';
+      unitLabel.setAttribute('aria-label', `Unit for Ingredient ${number}`);
+      quantityWrap.appendChild(quantityInput);
+      quantityWrap.appendChild(unitLabel);
+      quantityField.appendChild(quantityWrap);
+      rowElement.appendChild(quantityField);
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'inventory-row-action recipes-remove-ingredient';
+      removeButton.dataset.recipesRemoveIngredient = row.rowId;
+      removeButton.textContent = 'Remove';
+      removeButton.setAttribute('aria-label', `Remove ${getEditorItemName(row)} ingredient`);
+      rowElement.appendChild(removeButton);
+
+      const message = document.createElement('p');
+      message.className = 'recipes-editor-row-message';
+      message.id = messageId;
+      message.dataset.editorRowMessage = row.rowId;
+      message.setAttribute('aria-live', 'polite');
+      rowElement.appendChild(message);
+
+      if (row.unavailableItem && !getPickerItem(row.itemId)) {
+        message.textContent = row.unavailableItem.isArchived
+          ? 'This ingredient is archived. Remove or replace it before saving.'
+          : 'This ingredient is unavailable. Remove or replace it before saving.';
+        message.classList.add('is-warning');
+      }
+
+      editorRowsContainer.appendChild(rowElement);
+    });
+
+    if (addIngredientButton) addIngredientButton.disabled = editorRows.length >= MAX_RECIPE_LINES;
+  };
+
+  const validateEditor = ({ show = false, focus = false } = {}) => {
+    const problems = [];
+    const seenItems = new Map();
+    let firstInvalidControl = null;
+    let completeLineCount = 0;
+
+    if (editorRows.length > MAX_RECIPE_LINES) {
+      problems.push('Recipes can have at most 100 ingredient rows.');
+    }
+
+    editorRows.forEach((row, index) => {
+      const number = index + 1;
+      const rowElement = editorRowsContainer?.querySelector(`[data-editor-row-id="${row.rowId}"]`);
+      const select = rowElement?.querySelector('[data-editor-ingredient]');
+      const quantityInput = rowElement?.querySelector('[data-editor-quantity]');
+      const message = rowElement?.querySelector('[data-editor-row-message]');
+      const rowMessages = [];
+
+      select?.removeAttribute('aria-invalid');
+      quantityInput?.removeAttribute('aria-invalid');
+      if (message && !(row.unavailableItem && !getPickerItem(row.itemId))) {
+        message.textContent = '';
+        message.classList.remove('is-warning');
+      }
+
+      if (!row.itemId) {
+        rowMessages.push(`Choose Ingredient ${number}.`);
+        if (!firstInvalidControl) firstInvalidControl = select;
+        select?.setAttribute('aria-invalid', 'true');
+      } else if (!getPickerItem(row.itemId)) {
+        const unavailableLabel = row.unavailableItem && row.unavailableItem.isArchived ? 'archived' : 'unavailable';
+        rowMessages.push(`Ingredient ${number} is ${unavailableLabel}.`);
+        if (!firstInvalidControl) firstInvalidControl = select;
+        select?.setAttribute('aria-invalid', 'true');
+      } else {
+        completeLineCount += 1;
+        if (seenItems.has(row.itemId)) {
+          rowMessages.push(`Ingredient ${number} is duplicated.`);
+          if (!firstInvalidControl) firstInvalidControl = select;
+          select?.setAttribute('aria-invalid', 'true');
+        }
+        seenItems.set(row.itemId, true);
+      }
+
+      const quantityMessage = getQuantityValidationMessage(row.quantity);
+      if (quantityMessage) {
+        rowMessages.push(`Ingredient ${number}: ${quantityMessage}`);
+        if (!firstInvalidControl) firstInvalidControl = quantityInput;
+        quantityInput?.setAttribute('aria-invalid', 'true');
+      }
+
+      if (rowMessages.length) {
+        problems.push(...rowMessages);
+        if (show || row.touched || (row.unavailableItem && !getPickerItem(row.itemId))) {
+          if (message) {
+            message.textContent = rowMessages.join(' ');
+            if (row.unavailableItem && !getPickerItem(row.itemId)) message.classList.add('is-warning');
+          }
+        }
+      }
+    });
+
+    if (completeLineCount === 0) {
+      problems.unshift('Add at least one complete ingredient line.');
+    }
+
+    const notesLength = (editorNotes?.value || '').trim().length;
+    editorNotes?.removeAttribute('aria-invalid');
+    if (notesLength > MAX_RECIPE_NOTES) {
+      problems.push('Recipe notes must be 500 characters or fewer.');
+      editorNotes?.setAttribute('aria-invalid', 'true');
+      if (!firstInvalidControl) firstInvalidControl = editorNotes;
+    }
+
+    const uniqueProblems = Array.from(new Set(problems));
+    editorLastValidation = { isValid: uniqueProblems.length === 0, problems: uniqueProblems };
+
+    if (editorSummary) {
+      editorSummary.replaceChildren();
+      if (show && uniqueProblems.length) {
+        const heading = createTextElement('strong', '', 'Fix these before saving later:');
+        const list = document.createElement('ul');
+        uniqueProblems.forEach((problem) => {
+          const item = document.createElement('li');
+          item.textContent = problem;
+          list.appendChild(item);
+        });
+        editorSummary.appendChild(heading);
+        editorSummary.appendChild(list);
+        editorSummary.hidden = false;
+      } else {
+        editorSummary.hidden = true;
+      }
+    }
+
+    if (focus && firstInvalidControl && typeof firstInvalidControl.focus === 'function') {
+      firstInvalidControl.focus();
+    }
+
+    return editorLastValidation;
+  };
+
+  const updateEditorDirtyState = () => {
+    if (![EDITOR_STATES.CREATE_READY, EDITOR_STATES.EDIT_READY, EDITOR_STATES.DIRTY].includes(editorState)) return;
+    const isDirty = getEditorSnapshot() !== editorInitialSnapshot;
+    if (isDirty && editorState !== EDITOR_STATES.DIRTY) {
+      setEditorState(EDITOR_STATES.DIRTY);
+    } else if (!isDirty && editorState === EDITOR_STATES.DIRTY) {
+      setEditorState(editorMode === 'edit' ? EDITOR_STATES.EDIT_READY : EDITOR_STATES.CREATE_READY);
+    }
+  };
+
+  const handleEditorChanged = ({ validate = true, show = false } = {}) => {
+    updateNotesCount();
+    if (validate) validateEditor({ show });
+    updateEditorDirtyState();
+  };
+
+  const focusEditorInitialField = () => {
+    const target = editorMode === 'edit'
+      ? (editorNotes || editorRowsContainer?.querySelector('[data-editor-ingredient]'))
+      : editorRowsContainer?.querySelector('[data-editor-ingredient]');
+    if (target && typeof target.focus === 'function') target.focus();
+  };
+
+  const focusNewIngredientRow = (rowId) => {
+    const target = editorRowsContainer?.querySelector(`[data-editor-ingredient="${rowId}"]`);
+    if (target && typeof target.focus === 'function') target.focus();
+  };
+
+  const showDiscardConfirm = (trigger = document.activeElement) => {
+    editorAttemptedCloseElement = trigger;
+    setEditorState(EDITOR_STATES.DISCARD_CONFIRM);
+    requestAnimationFrame(() => {
+      keepEditingButton?.focus();
+    });
+  };
+
+  const keepEditing = () => {
+    setEditorState(EDITOR_STATES.DIRTY);
+    const target = editorAttemptedCloseElement;
+    editorAttemptedCloseElement = null;
+    editorPendingAfterDiscard = null;
+    if (target && typeof target.focus === 'function') target.focus();
+  };
+
+  const discardEditorChanges = () => {
+    const pending = editorPendingAfterDiscard;
+    closeDrawer({ restoreFocus: !pending });
+    if (typeof pending === 'function') {
+      editorPendingAfterDiscard = null;
+      pending();
+    }
+  };
+
+  const setEditorLoadError = (message) => {
+    if (editorErrorCopy) editorErrorCopy.textContent = message || 'Try again before editing this recipe.';
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.LOAD_ERROR);
+  };
+
+  const normalizeRecipeLineForEditor = (line) => {
+    const itemId = line.inventory_item_id || '';
+    const isActive = line.inventory_item_is_active !== false;
+    const activePickerItem = getPickerItem(itemId);
+    return createEditorRow({
+      itemId,
+      quantity: line.quantity_required === null || line.quantity_required === undefined
+        ? ''
+        : String(line.quantity_required),
+      unavailableItem: activePickerItem ? null : {
+        itemId,
+        itemName: line.inventory_item_name || 'Unavailable ingredient',
+        unitAbbreviation: line.unit_abbreviation || '',
+        isArchived: !isActive,
+      },
+    });
+  };
+
+  const loadRecipeLinesForEditor = async (row) => {
+    if (!row.recipeExists || !row.recipeId) return [];
+    const result = await client
+      .from('inventory_recipe_line_details')
+      .select('recipe_id,recipe_line_id,inventory_item_id,inventory_item_name,inventory_item_is_active,quantity_required,unit_abbreviation,sort_order,recipe_notes')
+      .eq('recipe_id', row.recipeId)
+      .order('sort_order', { ascending: true })
+      .order('inventory_item_name', { ascending: true });
+    if (result.error) throw result.error;
+    return result.data || [];
+  };
+
+  const openRecipeEditor = async (row, trigger, { force = false } = {}) => {
+    if (!force && activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
+      editorPendingAfterDiscard = () => openRecipeEditor(row, trigger, { force: true });
+      showDiscardConfirm(trigger);
+      return;
+    }
+
+    editorSequence += 1;
+    const sequence = editorSequence;
+    editorSummaryRow = row;
+    editorMode = row.recipeExists ? 'edit' : 'create';
+    renderEditorHeader(row);
+    setEditorStatus('Loading editor...');
+    clearElement(editorRowsContainer);
+    if (editorNotes) editorNotes.value = '';
+    updateNotesCount();
+    openDrawer('editor', trigger);
+    setEditorState(EDITOR_STATES.LOADING);
+
+    try {
+      await loadPickerItems();
+      if (sequence !== editorSequence || !isOwnerSignedIn || editorSummaryRow !== row) return;
+      const lines = await loadRecipeLinesForEditor(row);
+      if (sequence !== editorSequence || !isOwnerSignedIn) return;
+
+      if (editorNotes) {
+        const lineNotes = lines.find((line) => line.recipe_notes !== null && line.recipe_notes !== undefined)?.recipe_notes;
+        editorNotes.value = row.recipeExists ? (lineNotes ?? row.recipeNotes ?? '') : '';
+      }
+
+      editorRows = row.recipeExists
+        ? lines.map(normalizeRecipeLineForEditor)
+        : [createEditorRow()];
+      if (!editorRows.length) editorRows = [createEditorRow()];
+
+      renderEditorRows();
+      updateNotesCount();
+      editorInitialSnapshot = getEditorSnapshot();
+      setEditorStatus(row.recipeExists ? 'Editing the latest saved recipe.' : 'Preparing a new recipe.');
+      setEditorState(row.recipeExists ? EDITOR_STATES.EDIT_READY : EDITOR_STATES.CREATE_READY);
+      const initialValidation = validateEditor({ show: false });
+      if (row.recipeExists && !initialValidation.isValid) validateEditor({ show: true });
+      requestAnimationFrame(focusEditorInitialField);
+    } catch (error) {
+      console.error('Recipe editor load failed:', error);
+      if (sequence !== editorSequence) return;
+      setEditorLoadError("Couldn't load recipe editor data. Try again.");
+    }
+  };
+
   const renderDetailHeader = (row) => {
     if (drawerTitle) drawerTitle.textContent = `${row.productName} - ${row.productSizeLabel}`;
     clearElement(detailMeta);
@@ -732,12 +1357,54 @@
     }
   };
 
+  const syncEditorRowFromSelect = (select) => {
+    const row = editorRows.find((item) => item.rowId === select.dataset.editorIngredient);
+    if (!row) return;
+    row.itemId = select.value;
+    row.touched = true;
+    if (getPickerItem(row.itemId)) row.unavailableItem = null;
+    renderEditorRows();
+    handleEditorChanged({ show: true });
+    const nextSelect = editorRowsContainer?.querySelector(`[data-editor-ingredient="${row.rowId}"]`);
+    nextSelect?.focus();
+  };
+
+  const syncEditorRowFromQuantity = (input) => {
+    const row = editorRows.find((item) => item.rowId === input.dataset.editorQuantity);
+    if (!row) return;
+    row.quantity = input.value;
+    row.touched = true;
+    handleEditorChanged({ show: true });
+  };
+
+  const addEditorIngredientRow = () => {
+    if (editorRows.length >= MAX_RECIPE_LINES) {
+      validateEditor({ show: true, focus: true });
+      return;
+    }
+    const row = createEditorRow({ touched: true });
+    editorRows.push(row);
+    renderEditorRows();
+    handleEditorChanged({ show: true });
+    requestAnimationFrame(() => focusNewIngredientRow(row.rowId));
+  };
+
+  const removeEditorIngredientRow = (rowId) => {
+    editorRows = editorRows.filter((row) => row.rowId !== rowId);
+    if (!editorRows.length) editorRows = [createEditorRow({ touched: true })];
+    renderEditorRows();
+    handleEditorChanged({ show: true });
+  };
+
   const handleAuthState = (isSignedIn, email = '') => {
     setSignedInState(isSignedIn, email);
     if (!isSignedIn) {
       loadSequence += 1;
+      editorSequence += 1;
       activeLoadSessionKey = '';
-      closeDrawer();
+      clearPickerCache();
+      closeDrawer({ restoreFocus: false });
+      resetEditor();
       clearRecipeState();
       setPageState(STATES.SIGNED_OUT);
       return;
@@ -768,15 +1435,75 @@
     }
   };
 
-  closeButtons.forEach((button) => {
-    button.addEventListener('click', closeDrawer);
+  editorRowsContainer?.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-editor-ingredient]');
+    if (select) syncEditorRowFromSelect(select);
   });
 
-  backdrop?.addEventListener('click', closeDrawer);
+  editorRowsContainer?.addEventListener('input', (event) => {
+    const input = event.target.closest('[data-editor-quantity]');
+    if (input) syncEditorRowFromQuantity(input);
+  });
+
+  editorRowsContainer?.addEventListener('blur', (event) => {
+    if (event.target.closest('[data-editor-ingredient], [data-editor-quantity]')) {
+      validateEditor({ show: true });
+    }
+  }, true);
+
+  editorRowsContainer?.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-recipes-remove-ingredient]');
+    if (!removeButton) return;
+    removeEditorIngredientRow(removeButton.dataset.recipesRemoveIngredient);
+  });
+
+  editorNotes?.addEventListener('input', () => {
+    handleEditorChanged({ show: true });
+  });
+
+  editorNotes?.addEventListener('blur', () => {
+    validateEditor({ show: true });
+  });
+
+  editorForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    validateEditor({ show: true, focus: true });
+    if (editorSaveButton) editorSaveButton.disabled = true;
+  });
+
+  addIngredientButton?.addEventListener('click', addEditorIngredientRow);
+
+  editorCancelButton?.addEventListener('click', () => {
+    requestCloseDrawer(editorCancelButton);
+  });
+
+  editorRetryButton?.addEventListener('click', () => {
+    if (editorSummaryRow) openRecipeEditor(editorSummaryRow, lastFocusedElement, { force: true });
+  });
+
+  editorErrorCancelButton?.addEventListener('click', () => {
+    closeDrawer();
+  });
+
+  keepEditingButton?.addEventListener('click', keepEditing);
+
+  discardEditorButton?.addEventListener('click', discardEditorChanges);
+
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', () => requestCloseDrawer(button));
+  });
+
+  backdrop?.addEventListener('click', () => {
+    const focusedEditorControl = activeDrawer === editorDrawer && editorDrawer.contains(document.activeElement)
+      ? document.activeElement
+      : null;
+    requestCloseDrawer(focusedEditorControl || document.activeElement);
+  });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && activeDrawer) {
-      closeDrawer();
+      event.preventDefault();
+      requestCloseDrawer(document.activeElement);
       return;
     }
     if (event.key === 'Escape' && ownerAccountMenu && !ownerAccountMenu.hidden) {
