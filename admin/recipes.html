@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Incoming Orders | CURV Control</title>
-  <meta name="description" content="Incoming Orders shell for CURV Control.">
+  <title>Recipes | CURV Control</title>
+  <meta name="description" content="Read-only recipe dashboard for CURV Control.">
   <script>
     (() => {
       const theme = localStorage.getItem('curvControlTheme') === 'light' ? 'light' : 'dark';
@@ -14,9 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=d8a-live-alerts">
+  <link rel="stylesheet" href="admin.css?v=i10c1-grouped-recipes">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=d8a-live-alerts" defer></script>
+  <script src="admin.js?v=i10c-recipes-auth-exclusion" defer></script>
+  <script src="recipes.js?v=i10c1-grouped-recipes" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -79,7 +80,7 @@
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
           <span class="nav-label">Dashboard</span>
         </a>
-        <a href="incoming-orders.html" class="admin-nav-link is-active" data-nav-item="incoming-orders" aria-label="Incoming Orders" aria-current="page">
+        <a href="incoming-orders.html" class="admin-nav-link" data-nav-item="incoming-orders" aria-label="Incoming Orders">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
           <span class="nav-label">Incoming Orders</span>
           <span class="nav-badge" hidden aria-hidden="true"></span>
@@ -96,7 +97,7 @@
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="nav-label">Inventory</span>
         </a>
-        <a href="recipes.html" class="admin-nav-link" data-nav-item="recipes" aria-label="Recipes">
+        <a href="recipes.html" class="admin-nav-link is-active" data-nav-item="recipes" aria-label="Recipes" aria-current="page">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg>
           <span class="nav-label">Recipes</span>
         </a>
@@ -105,7 +106,7 @@
           <span class="nav-label">Sales</span>
         </button>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-label="Settings" aria-disabled="true">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 0 1 22.62 8l-.06.06A1.65 1.65 0 0 0 22.4 10c.1.5.5.9 1 .9H24a2 2 0 0 1 0 4h-.09c-.5 0-.9.4-1.51 1.1z"/></svg>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06A2 2 0 0 1 22.6 7.4l-.06.06A1.65 1.65 0 0 0 22 9c.1.5.5.9 1 .9H24a2 2 0 0 1 0 4h-.09c-.5 0-.9.4-1.51 1.1z"/></svg>
           <span class="nav-label">Settings</span>
         </button>
       </nav>
@@ -118,62 +119,133 @@
       </div>
     </aside>
 
-    <main class="control-main incoming-orders-main" id="main-content" data-supabase-incoming-orders>
-      <section class="menu-manager-header incoming-orders-header" aria-labelledby="incoming-orders-title">
+    <main class="control-main inventory-main recipes-main" id="main-content" data-recipes-page>
+      <section class="inventory-header recipes-header" aria-labelledby="recipes-title">
         <div>
           <p class="eyebrow">CURV Control</p>
-          <h1 id="incoming-orders-title" class="dashboard-title">Incoming Orders</h1>
-          <p class="page-helper">Online ordering is live. New customer orders appear here in realtime for owner review.</p>
-          <p class="menu-connection-status" data-orders-auth-status role="status">Ready for owner sign in.</p>
+          <h1 id="recipes-title" class="dashboard-title">Recipes</h1>
+          <p class="page-helper">Connect menu items to inventory ingredients and see how many servings CURV can currently make.</p>
+          <p class="inventory-status-message" data-recipes-status aria-live="polite" hidden></p>
         </div>
       </section>
 
-      <section class="incoming-order-meta-row" aria-label="Incoming order quick controls">
-        <span class="incoming-order-today-pill">Today: <strong data-orders-today-total>PHP 0</strong></span>
-        <button type="button" class="order-sound-toggle" data-order-sound-toggle aria-pressed="false">Sound off</button>
+      <section class="inventory-summary-grid recipes-summary-grid" aria-label="Recipe summary">
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">#</span>
+          <div>
+            <p class="metric-label">Sellable Sizes</p>
+            <p class="metric-value" data-recipes-metric="sellable-sizes">&mdash;</p>
+            <p class="metric-subtext">Menu sizes that can have recipes</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">OK</span>
+          <div>
+            <p class="metric-label">Configured Recipes</p>
+            <p class="metric-value" data-recipes-metric="configured-recipes">&mdash;</p>
+            <p class="metric-subtext">Ready for staff review</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">!</span>
+          <div>
+            <p class="metric-label">Needs Attention</p>
+            <p class="metric-value" data-recipes-metric="needs-attention">&mdash;</p>
+            <p class="metric-subtext">Recipes to fix before use</p>
+          </div>
+        </article>
+        <article class="inventory-summary-card">
+          <span class="inventory-summary-icon" aria-hidden="true">--</span>
+          <div>
+            <p class="metric-label">Not Configured</p>
+            <p class="metric-value" data-recipes-metric="not-configured">&mdash;</p>
+            <p class="metric-subtext">Sizes without recipes yet</p>
+          </div>
+        </article>
       </section>
 
-      <section class="incoming-orders-toolbar" aria-label="Order queue filters">
-        <button type="button" class="order-filter-button is-active" data-order-status-filter="submitted" aria-pressed="true"><span>New</span><span class="order-filter-count" data-order-filter-count="submitted">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="accepted" aria-pressed="false"><span>Accepted</span><span class="order-filter-count" data-order-filter-count="accepted">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="preparing" aria-pressed="false"><span>Preparing</span><span class="order-filter-count" data-order-filter-count="preparing">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="ready" aria-pressed="false"><span>Ready</span><span class="order-filter-count" data-order-filter-count="ready">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="completed" aria-pressed="false"><span>Completed</span><span class="order-filter-count" data-order-filter-count="completed">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="cancelled" aria-pressed="false"><span>Cancelled</span><span class="order-filter-count" data-order-filter-count="cancelled">0</span></button>
+      <section class="inventory-panel" aria-labelledby="recipes-attention-title">
+        <div class="inventory-section-head">
+          <div>
+            <p class="eyebrow">Alerts</p>
+            <h2 id="recipes-attention-title">Needs Attention</h2>
+          </div>
+        </div>
+        <div class="inventory-attention-state" data-recipes-attention-state aria-live="polite">
+          <h3 data-recipes-attention-title>Nothing needs attention right now.</h3>
+          <p data-recipes-attention-copy>Recipes that need review will appear here.</p>
+        </div>
+        <div class="inventory-attention-list" data-recipes-attention-list hidden></div>
       </section>
 
-      <section class="incoming-orders-workspace" aria-label="Incoming orders workspace">
-        <section class="order-queue-panel" aria-labelledby="order-queue-title">
-          <div class="panel-heading-row">
-            <div>
-              <p class="eyebrow">Queue</p>
-              <h2 id="order-queue-title">Incoming Orders</h2>
-            </div>
-            <span class="static-status" data-order-status-label>New</span>
+      <section class="inventory-panel" aria-labelledby="all-recipes-title">
+        <div class="inventory-section-head">
+          <div>
+            <p class="eyebrow">List</p>
+            <h2 id="all-recipes-title">All Recipes</h2>
           </div>
-          <div class="order-list" data-order-list aria-live="polite">
-            <div class="order-empty-state" data-order-empty>
-              <h3>Owner sign-in required</h3>
-              <p>Sign in with owner access to load incoming orders.</p>
-            </div>
-          </div>
-        </section>
+        </div>
+        <div class="inventory-toolbar recipes-toolbar" aria-label="Recipe filters">
+          <label class="admin-field inventory-search-field" for="recipes-search">
+            <span>Search recipes</span>
+            <input id="recipes-search" type="search" autocomplete="off" data-recipes-search>
+          </label>
+          <label class="admin-field" for="recipes-category-filter">
+            <span>Category</span>
+            <select id="recipes-category-filter" data-recipes-category-filter>
+              <option value="all">All Categories</option>
+            </select>
+          </label>
+          <label class="admin-field" for="recipes-status-filter">
+            <span>Status</span>
+            <select id="recipes-status-filter" data-recipes-status-filter>
+              <option value="all">All Recipes</option>
+              <option value="ready">Ready</option>
+              <option value="needs_attention">Needs Attention</option>
+              <option value="not_configured">Not Configured</option>
+            </select>
+          </label>
+          <button type="button" class="inventory-clear-filters" data-recipes-clear-filters hidden>Clear filters</button>
+        </div>
+        <p class="inventory-result-count" data-recipes-result-count hidden></p>
 
-        <aside class="order-detail-panel" aria-labelledby="order-detail-title">
-          <div class="panel-heading-row">
-            <div>
-              <p class="eyebrow">Details</p>
-              <h2 id="order-detail-title">Order Details</h2>
-            </div>
-            <span class="static-status">Select order</span>
-          </div>
-          <div class="order-detail-empty" data-order-detail>
-            <div class="order-detail-placeholder">
-              <h3>Select an order</h3>
-              <p>Order contact, fulfillment, payment, and total details will appear here after selecting an order.</p>
-            </div>
-          </div>
-        </aside>
+        <div class="inventory-table-shell" data-recipes-table-shell hidden>
+          <table class="inventory-table recipes-table">
+            <thead>
+              <tr>
+                <th scope="col">Size</th>
+                <th scope="col">Recipe Status</th>
+                <th scope="col">Ingredients</th>
+                <th scope="col">Can Make</th>
+                <th scope="col">Updated</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody data-recipes-list></tbody>
+          </table>
+        </div>
+
+        <div class="inventory-empty-state" data-recipes-loading hidden>
+          <h3>Loading recipes...</h3>
+          <p>Checking recipe status and current can-make counts.</p>
+        </div>
+        <div class="inventory-empty-state" data-recipes-signed-out hidden>
+          <h3>Sign in to view recipes.</h3>
+          <p>Owner access is required before recipe data appears.</p>
+        </div>
+        <div class="inventory-empty-state" data-recipes-empty-state hidden>
+          <h3>No sellable sizes found.</h3>
+          <p>Menu product sizes will appear here when they are available.</p>
+        </div>
+        <div class="inventory-empty-state" data-recipes-no-results hidden>
+          <h3>No recipes match these filters.</h3>
+          <p>Try a different search, category, or status.</p>
+        </div>
+        <div class="inventory-empty-state is-error" data-recipes-error hidden>
+          <h3>Couldn't load recipes.</h3>
+          <p>Check your connection and try again.</p>
+          <button type="button" class="auth-button" data-recipes-retry>Try Again</button>
+        </div>
       </section>
     </main>
 
@@ -182,7 +254,7 @@
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
         <span>Dashboard</span>
       </a>
-      <a href="incoming-orders.html" class="mobile-nav-item is-active" aria-label="Orders" aria-current="page">
+      <a href="incoming-orders.html" class="mobile-nav-item" aria-label="Orders">
         <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg>
         <span>Orders</span>
         <span class="mobile-nav-badge" hidden aria-hidden="true"></span>
@@ -212,7 +284,7 @@
           <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span>Inventory</span>
         </a>
-        <a href="recipes.html" class="mobile-more-item" aria-label="Recipes">
+        <a href="recipes.html" class="mobile-more-item is-active" aria-label="Recipes" aria-current="page">
           <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg>
           <span>Recipes</span>
         </a>
@@ -232,6 +304,29 @@
       <span aria-hidden="true">&middot;</span>
       <span>&copy; <span id="current-year"></span></span>
     </footer>
+  </div>
+
+  <div class="inventory-drawer-backdrop" data-recipes-drawer-backdrop hidden></div>
+  <div class="inventory-drawer-layer" data-recipes-drawer-layer hidden>
+    <section class="inventory-drawer recipes-drawer" role="dialog" aria-modal="true" aria-labelledby="recipe-details-title" data-recipes-drawer="details" hidden>
+      <div class="inventory-drawer-head">
+        <div>
+          <p class="eyebrow">Recipe Details</p>
+          <h2 id="recipe-details-title" data-recipes-drawer-title>Recipe</h2>
+        </div>
+        <button type="button" class="inventory-drawer-close" data-recipes-drawer-close>Close</button>
+      </div>
+      <div class="recipes-detail-meta" data-recipes-detail-meta></div>
+      <p class="inventory-drawer-notice" data-recipes-detail-status aria-live="polite" hidden></p>
+      <section class="recipes-detail-section" aria-labelledby="recipe-notes-title">
+        <h3 id="recipe-notes-title">Notes</h3>
+        <p data-recipes-detail-notes>No recipe notes.</p>
+      </section>
+      <section class="recipes-detail-section" aria-labelledby="recipe-ingredients-title">
+        <h3 id="recipe-ingredients-title">Ingredients</h3>
+        <div class="recipes-ingredient-list" data-recipes-ingredient-list></div>
+      </section>
+    </section>
   </div>
 </body>
 </html>
