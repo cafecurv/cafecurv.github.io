@@ -585,6 +585,7 @@ body.inventory-drawer-open {
 .recipes-editor-loading,
 .recipes-editor-error,
 .recipes-discard-confirm,
+.recipes-save-panel,
 .recipes-editor-summary {
   display: grid;
   gap: 0.65rem;
@@ -597,21 +598,34 @@ body.inventory-drawer-open {
 .recipes-editor-loading[hidden],
 .recipes-editor-error[hidden],
 .recipes-discard-confirm[hidden],
+.recipes-save-panel[hidden],
 .recipes-editor-summary[hidden] {
   display: none !important;
 }
 
 .recipes-editor-loading h3,
 .recipes-editor-error h3,
-.recipes-discard-confirm h3 {
+.recipes-discard-confirm h3,
+.recipes-save-panel h3 {
   margin: 0;
   color: var(--cream);
 }
 
 .recipes-editor-loading p,
-.recipes-editor-error p {
+.recipes-editor-error p,
+.recipes-save-panel p {
   margin: 0;
   color: var(--slate);
+}
+
+.recipes-conflict-confirm {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.recipes-conflict-confirm[hidden] {
+  display: none !important;
 }
 
 .recipes-editor-form {

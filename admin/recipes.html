@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Recipes | CURV Control</title>
-  <meta name="description" content="Read-only recipe dashboard for CURV Control.">
+  <meta name="description" content="Recipe management dashboard for CURV Control.">
   <script>
     (() => {
       const theme = localStorage.getItem('curvControlTheme') === 'light' ? 'light' : 'dark';
@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i10d2-recipe-editor">
+  <link rel="stylesheet" href="admin.css?v=i10d3-recipe-save">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i10c-recipes-auth-exclusion" defer></script>
-  <script src="recipes.js?v=i10d2-recipe-editor" defer></script>
+  <script src="recipes.js?v=i10d3-final-hardening-b" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -337,7 +337,7 @@
       </div>
       <p class="page-helper recipes-editor-helper">Count only the ingredients that belong in one serving of this exact menu size.</p>
       <div class="recipes-detail-meta" data-recipes-editor-meta></div>
-      <p class="inventory-drawer-notice" data-recipes-editor-status aria-live="polite" hidden></p>
+      <p class="inventory-drawer-notice" data-recipes-editor-status aria-live="polite" tabindex="-1" hidden></p>
       <div class="recipes-editor-loading" data-recipes-editor-loading hidden>
         <h3>Loading recipe editor...</h3>
         <p>Getting the latest recipe and ingredient choices.</p>
@@ -357,6 +357,32 @@
           <button type="button" class="auth-button" data-recipes-discard-editor>Discard Changes</button>
         </div>
       </div>
+      <div class="recipes-save-panel" data-recipes-save-error hidden>
+        <h3 tabindex="-1" data-recipes-save-error-title>Recipe could not be saved.</h3>
+        <p data-recipes-save-error-copy>Check your connection and try again.</p>
+        <div class="inventory-form-actions recipes-error-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-save-error-keep>Keep Editing</button>
+          <button type="button" class="auth-button" data-recipes-save-retry>Try Save Again</button>
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-save-close hidden>Close</button>
+          <button type="button" class="auth-button" data-recipes-save-reload-page hidden>Reload Page</button>
+        </div>
+      </div>
+      <div class="recipes-save-panel" data-recipes-conflict hidden>
+        <h3 tabindex="-1" data-recipes-conflict-title>This recipe changed after you opened it.</h3>
+        <p data-recipes-conflict-copy>Reload the latest version before saving.</p>
+        <div class="inventory-form-actions recipes-error-actions" data-recipes-conflict-actions>
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-keep>Keep Editing</button>
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-cancel>Cancel</button>
+          <button type="button" class="auth-button" data-recipes-conflict-reload>Reload Latest</button>
+        </div>
+        <div class="recipes-conflict-confirm" data-recipes-conflict-confirm hidden>
+          <p>Reloading will replace your unsaved local changes with the latest saved recipe.</p>
+          <div class="inventory-form-actions recipes-error-actions">
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-reload-cancel>Keep Local Edits</button>
+            <button type="button" class="auth-button" data-recipes-conflict-reload-confirm>Reload Latest</button>
+          </div>
+        </div>
+      </div>
       <form class="recipes-editor-form" data-recipes-editor-form novalidate>
         <label class="admin-field" for="recipe-editor-notes">
           <span>Recipe notes</span>
@@ -372,7 +398,7 @@
         </section>
         <div class="recipes-editor-summary" data-recipes-editor-summary aria-live="polite" hidden></div>
         <div class="recipes-editor-footer">
-          <p class="inventory-field-hint">Saving will be enabled after editor testing is complete.</p>
+          <p class="inventory-field-hint" data-recipes-save-helper>Make a change to enable saving.</p>
           <div class="inventory-form-actions recipes-editor-actions">
             <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel>Cancel</button>
             <button type="button" class="auth-button" data-recipes-editor-save disabled>Save Recipe</button>

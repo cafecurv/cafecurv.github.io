@@ -20,6 +20,10 @@
     DIRTY: 'DIRTY',
     LOAD_ERROR: 'LOAD_ERROR',
     DISCARD_CONFIRM: 'DISCARD_CONFIRM',
+    SAVING: 'SAVING',
+    SAVE_ERROR: 'SAVE_ERROR',
+    SAVE_SUCCESS: 'SAVE_SUCCESS',
+    CONFLICT: 'CONFLICT',
   };
 
   const statusRegion = document.querySelector('[data-recipes-status]');
@@ -68,6 +72,23 @@
   const editorSummary = document.querySelector('[data-recipes-editor-summary]');
   const editorCancelButton = document.querySelector('[data-recipes-editor-cancel]');
   const editorSaveButton = document.querySelector('[data-recipes-editor-save]');
+  const saveHelper = document.querySelector('[data-recipes-save-helper]');
+  const saveErrorPanel = document.querySelector('[data-recipes-save-error]');
+  const saveErrorTitle = document.querySelector('[data-recipes-save-error-title]');
+  const saveErrorCopy = document.querySelector('[data-recipes-save-error-copy]');
+  const saveRetryButton = document.querySelector('[data-recipes-save-retry]');
+  const saveErrorKeepButton = document.querySelector('[data-recipes-save-error-keep]');
+  const saveCloseButton = document.querySelector('[data-recipes-save-close]');
+  const saveReloadPageButton = document.querySelector('[data-recipes-save-reload-page]');
+  const conflictPanel = document.querySelector('[data-recipes-conflict]');
+  const conflictTitle = document.querySelector('[data-recipes-conflict-title]');
+  const conflictCopy = document.querySelector('[data-recipes-conflict-copy]');
+  const conflictKeepButton = document.querySelector('[data-recipes-conflict-keep]');
+  const conflictCancelButton = document.querySelector('[data-recipes-conflict-cancel]');
+  const conflictReloadButton = document.querySelector('[data-recipes-conflict-reload]');
+  const conflictReloadConfirm = document.querySelector('[data-recipes-conflict-confirm]');
+  const conflictReloadCancelButton = document.querySelector('[data-recipes-conflict-reload-cancel]');
+  const conflictReloadConfirmButton = document.querySelector('[data-recipes-conflict-reload-confirm]');
   const discardConfirm = document.querySelector('[data-recipes-discard-confirm]');
   const keepEditingButton = document.querySelector('[data-recipes-keep-editing]');
   const discardEditorButton = document.querySelector('[data-recipes-discard-editor]');
@@ -101,6 +122,7 @@
   let loadSequence = 0;
   let detailSequence = 0;
   let activeLoadSessionKey = '';
+  let activeDashboardLoadPromise = null;
   let searchTimer = 0;
   let recipeRows = [];
   let filteredRows = [];
@@ -120,6 +142,11 @@
   let editorAttemptedCloseElement = null;
   let editorPendingAfterDiscard = null;
   let editorLastValidation = { isValid: true, problems: [] };
+  let editorBaseline = null;
+  let isSavingRecipe = false;
+  let saveSequence = 0;
+  let hasUnresolvedConflict = false;
+  let saveRefreshFailed = false;
 
   const DASH = '-';
   const MAX_RECIPE_LINES = 100;
@@ -187,7 +214,13 @@
     while (element.firstChild) element.removeChild(element.firstChild);
   };
 
-  const isEditorDirtyState = () => editorState === EDITOR_STATES.DIRTY || editorState === EDITOR_STATES.DISCARD_CONFIRM;
+  const isEditorDirtyState = () => !saveRefreshFailed && [
+    EDITOR_STATES.DIRTY,
+    EDITOR_STATES.DISCARD_CONFIRM,
+    EDITOR_STATES.SAVING,
+    EDITOR_STATES.SAVE_ERROR,
+    EDITOR_STATES.CONFLICT,
+  ].includes(editorState);
 
   const setBeforeUnloadProtection = () => {
     window.onbeforeunload = isEditorDirtyState()
@@ -208,6 +241,16 @@
 
   const getFocusable = (drawer) => Array.from(drawer.querySelectorAll(focusableSelector))
     .filter((element) => element.offsetParent !== null || element === document.activeElement);
+
+  const getStableFocusFallback = () => {
+    if (searchInput && searchInput.isConnected && !searchInput.disabled) return searchInput;
+    const pageTitle = document.getElementById('recipes-title');
+    if (pageTitle && pageTitle.isConnected) {
+      pageTitle.setAttribute('tabindex', '-1');
+      return pageTitle;
+    }
+    return null;
+  };
 
   const openDrawer = (drawerName, trigger) => {
     const drawer = drawers.find((item) => item.dataset.recipesDrawer === drawerName);
@@ -243,13 +286,32 @@
     }
     activeDrawer = null;
     detailSequence += 1;
-    if (restoreFocus && lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
-      lastFocusedElement.focus();
+    const focusTarget = lastFocusedElement && lastFocusedElement.isConnected
+      ? lastFocusedElement
+      : getStableFocusFallback();
+    if (restoreFocus && focusTarget && typeof focusTarget.focus === 'function') {
+      focusTarget.focus();
     }
   };
 
   const requestCloseDrawer = (trigger = document.activeElement) => {
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) {
+      return;
+    }
+    if (activeDrawer === editorDrawer && saveRefreshFailed) {
+      closeDrawer();
+      return;
+    }
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
+      conflictTitle?.focus();
+      return;
+    }
     if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
+      editorPendingAfterDiscard = null;
+      showDiscardConfirm(trigger);
+      return;
+    }
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVE_ERROR) {
       editorPendingAfterDiscard = null;
       showDiscardConfirm(trigger);
       return;
@@ -448,7 +510,19 @@
     button.className = className;
     button.textContent = 'View Recipe';
     button.dataset.recipesDrawerOpen = 'details';
+    button.dataset.recipesProductSizeId = row.productSizeId || '';
+    button.dataset.recipesAction = 'view';
     button.addEventListener('click', () => {
+      if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) return;
+      if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
+        conflictTitle?.focus();
+        return;
+      }
+      if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVE_ERROR) {
+        editorPendingAfterDiscard = () => openRecipeDetails(row, button);
+        showDiscardConfirm(button);
+        return;
+      }
       if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
         editorPendingAfterDiscard = () => openRecipeDetails(row, button);
         showDiscardConfirm(button);
@@ -465,10 +539,42 @@
     button.className = className;
     button.textContent = label;
     button.dataset.recipesDrawerOpen = 'editor';
+    button.dataset.recipesProductSizeId = row.productSizeId || '';
+    button.dataset.recipesAction = label === 'Configure Recipe' ? 'configure' : 'edit';
     button.addEventListener('click', () => {
       openRecipeEditor(row, button);
     });
     return button;
+  };
+
+  const getEditorReturnTarget = () => {
+    const productSizeId = editorBaseline?.productSizeId
+      || lastFocusedElement?.dataset?.recipesProductSizeId
+      || editorSummaryRow?.productSizeId
+      || '';
+    if (!productSizeId) return null;
+    const triggerAction = lastFocusedElement?.dataset?.recipesAction || '';
+    const sourceAction = ['configure', 'edit'].includes(triggerAction)
+      ? triggerAction
+      : (editorMode === 'create' ? 'configure' : 'edit');
+    return {
+      productSizeId,
+      sourceAction,
+      action: sourceAction === 'configure' ? 'edit' : sourceAction,
+    };
+  };
+
+  const findRecipeActionButton = (target) => {
+    if (!target || !target.productSizeId || !target.action) return null;
+    return Array.from(document.querySelectorAll('[data-recipes-product-size-id][data-recipes-action]'))
+      .find((button) => button.dataset.recipesProductSizeId === target.productSizeId
+        && button.dataset.recipesAction === target.action
+        && !button.disabled
+        && button.isConnected) || null;
+  };
+
+  const rebindEditorReturnFocus = (target) => {
+    lastFocusedElement = findRecipeActionButton(target) || getStableFocusFallback();
   };
 
   const renderAttention = () => {
@@ -683,53 +789,62 @@
   };
 
   const loadRecipeData = async () => {
-    if (!client || !isOwnerSignedIn) return;
+    if (!client || !isOwnerSignedIn) return { ok: false, reason: 'signed_out' };
     const sessionKey = signedInOwnerEmail || 'owner';
-    if (pageState === STATES.LOADING && activeLoadSessionKey === sessionKey) return;
+    if (pageState === STATES.LOADING && activeLoadSessionKey === sessionKey) {
+      return { ok: false, reason: 'stale' };
+    }
     activeLoadSessionKey = sessionKey;
     const sequence = loadSequence + 1;
     loadSequence = sequence;
     setPageState(STATES.LOADING);
 
-    try {
-      const result = await client
-        .from('inventory_recipe_summary')
-        .select('product_id,product_name,category_id,category_name,product_size_id,product_size_label,product_size_sort_order,recipe_id,recipe_exists,ingredient_line_count,inactive_ingredient_count,recipe_status,approximate_can_make,recipe_notes,recipe_updated_at')
-        .order('product_name', { ascending: true })
-        .order('product_size_sort_order', { ascending: true })
-        .order('product_size_label', { ascending: true });
-
-      if (result.error) throw result.error;
-      if (sequence !== loadSequence || !isOwnerSignedIn) return;
-
-      recipeRows = (result.data || []).map(normalizeRecipeRow);
-      const categoryMap = new Map();
-      recipeRows.forEach((row) => {
-        if (row.categoryId && !categoryMap.has(row.categoryId)) {
-          categoryMap.set(row.categoryId, { id: row.categoryId, name: row.categoryName });
-        }
-      });
-      categories = Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-      setPageState(STATES.READY);
-    } catch (error) {
-      console.error('Recipes read failed:', error);
-      if (sequence !== loadSequence) return;
+    let loadPromise;
+    loadPromise = (async () => {
       try {
-        const { data } = await client.auth.getSession();
-        const user = data && data.session && data.session.user;
-        if (!user) {
-          clearRecipeState();
-          setSignedInState(false);
-          setPageState(STATES.SIGNED_OUT);
-          return;
+        const result = await client
+          .from('inventory_recipe_summary')
+          .select('product_id,product_name,category_id,category_name,product_size_id,product_size_label,product_size_sort_order,recipe_id,recipe_exists,ingredient_line_count,inactive_ingredient_count,recipe_status,approximate_can_make,recipe_notes,recipe_updated_at')
+          .order('product_name', { ascending: true })
+          .order('product_size_sort_order', { ascending: true })
+          .order('product_size_label', { ascending: true });
+
+        if (result.error) throw result.error;
+        if (sequence !== loadSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+
+        recipeRows = (result.data || []).map(normalizeRecipeRow);
+        const categoryMap = new Map();
+        recipeRows.forEach((row) => {
+          if (row.categoryId && !categoryMap.has(row.categoryId)) {
+            categoryMap.set(row.categoryId, { id: row.categoryId, name: row.categoryName });
+          }
+        });
+        categories = Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        setPageState(STATES.READY);
+        return { ok: true };
+      } catch (error) {
+        console.error('Recipes read failed:', error);
+        if (sequence !== loadSequence) return { ok: false, reason: 'stale' };
+        try {
+          const { data } = await client.auth.getSession();
+          const user = data && data.session && data.session.user;
+          if (!user) {
+            handleAuthState(false);
+            return { ok: false, reason: 'signed_out' };
+          }
+        } catch (sessionError) {
+          console.error('Recipes session check failed:', sessionError);
         }
-      } catch (sessionError) {
-        console.error('Recipes session check failed:', sessionError);
+        setPageState(STATES.ERROR);
+        return { ok: false, reason: 'error' };
+      } finally {
+        if (sequence === loadSequence) activeLoadSessionKey = '';
+        if (activeDashboardLoadPromise === loadPromise) activeDashboardLoadPromise = null;
       }
-      setPageState(STATES.ERROR);
-    } finally {
-      if (sequence === loadSequence) activeLoadSessionKey = '';
-    }
+    })();
+
+    activeDashboardLoadPromise = loadPromise;
+    return loadPromise;
   };
 
   const setDetailStatus = (message = '') => {
@@ -749,10 +864,24 @@
     const isLoading = nextState === EDITOR_STATES.LOADING;
     const isError = nextState === EDITOR_STATES.LOAD_ERROR;
     const isConfirming = nextState === EDITOR_STATES.DISCARD_CONFIRM;
+    const isSaving = nextState === EDITOR_STATES.SAVING;
+    const isSaveError = nextState === EDITOR_STATES.SAVE_ERROR;
+    const isConflict = nextState === EDITOR_STATES.CONFLICT;
+    const isTerminalRefreshFailure = isSaveError && saveRefreshFailed;
     if (editorLoading) editorLoading.hidden = !isLoading;
     if (editorError) editorError.hidden = !isError;
     if (discardConfirm) discardConfirm.hidden = !isConfirming;
+    if (saveErrorPanel) saveErrorPanel.hidden = !isSaveError;
+    if (conflictPanel) conflictPanel.hidden = !isConflict;
+    if (conflictReloadConfirm) conflictReloadConfirm.hidden = true;
     if (editorForm) editorForm.hidden = isLoading || isError || isConfirming;
+    if (editorDrawer) {
+      editorDrawer.setAttribute('aria-busy', isSaving ? 'true' : 'false');
+    }
+    setEditorControlsDisabled(isLoading || isSaving || isTerminalRefreshFailure, {
+      allowDrawerClose: isTerminalRefreshFailure,
+    });
+    updateSaveButtonState();
     setBeforeUnloadProtection();
   };
 
@@ -765,6 +894,10 @@
     editorAttemptedCloseElement = null;
     editorPendingAfterDiscard = null;
     editorLastValidation = { isValid: true, problems: [] };
+    editorBaseline = null;
+    isSavingRecipe = false;
+    hasUnresolvedConflict = false;
+    saveRefreshFailed = false;
     if (!keepTrigger) lastFocusedElement = null;
     if (editorTitle) editorTitle.textContent = 'Recipe Editor';
     clearElement(editorMeta);
@@ -780,6 +913,28 @@
     }
     setEditorStatus('');
     setEditorState(EDITOR_STATES.CLOSED);
+  };
+
+  const getEditorReadyState = () => (editorMode === 'edit' ? EDITOR_STATES.EDIT_READY : EDITOR_STATES.CREATE_READY);
+
+  const normalizeBaselineFromRow = (row) => ({
+    productSizeId: row.productSizeId || '',
+    recipeId: row.recipeId || '',
+    recipeExists: row.recipeExists === true,
+    recipeUpdatedAt: row.recipeUpdatedAt || '',
+    recipeStatus: row.recipeStatus || 'not_configured',
+    recipeNotes: row.recipeNotes || '',
+  });
+
+  const fetchFreshSummaryRow = async (productSizeId) => {
+    if (!client || !productSizeId) return null;
+    const result = await client
+      .from('inventory_recipe_summary')
+      .select('product_id,product_name,category_id,category_name,product_size_id,product_size_label,product_size_sort_order,recipe_id,recipe_exists,ingredient_line_count,inactive_ingredient_count,recipe_status,approximate_can_make,recipe_notes,recipe_updated_at')
+      .eq('product_size_id', productSizeId)
+      .maybeSingle();
+    if (result.error) throw result.error;
+    return result.data ? normalizeRecipeRow(result.data) : null;
   };
 
   const normalizePickerItem = (row) => ({
@@ -869,11 +1024,14 @@
     editorNotesCount.textContent = `${editorNotes.value.length} / ${MAX_RECIPE_NOTES}`;
   };
 
-  const setEditorControlsDisabled = (isDisabled) => {
+  const setEditorControlsDisabled = (isDisabled, { allowDrawerClose = false } = {}) => {
     if (editorNotes) editorNotes.disabled = isDisabled;
     if (addIngredientButton) addIngredientButton.disabled = isDisabled || editorRows.length >= MAX_RECIPE_LINES;
     if (editorCancelButton) editorCancelButton.disabled = isDisabled;
     if (editorSaveButton) editorSaveButton.disabled = true;
+    editorDrawer?.querySelectorAll('[data-recipes-drawer-close]').forEach((button) => {
+      button.disabled = isDisabled && !allowDrawerClose;
+    });
     if (!editorRowsContainer) return;
     editorRowsContainer.querySelectorAll('select, input, button').forEach((control) => {
       control.disabled = isDisabled || (control.matches('[data-recipes-remove-ingredient]') && editorRows.length <= 0);
@@ -1108,7 +1266,7 @@
     if (editorSummary) {
       editorSummary.replaceChildren();
       if (show && uniqueProblems.length) {
-        const heading = createTextElement('strong', '', 'Fix these before saving later:');
+        const heading = createTextElement('strong', '', 'Fix these before saving:');
         const list = document.createElement('ul');
         uniqueProblems.forEach((problem) => {
           const item = document.createElement('li');
@@ -1130,8 +1288,43 @@
     return editorLastValidation;
   };
 
+  const hasValidSaveExpectation = () => {
+    if (!editorBaseline || !editorBaseline.productSizeId) return false;
+    if (editorMode === 'create') {
+      return editorBaseline.recipeExists === false
+        && !editorBaseline.recipeId
+        && !editorBaseline.recipeUpdatedAt;
+    }
+    return editorBaseline.recipeExists === true
+      && Boolean(editorBaseline.recipeId)
+      && Boolean(editorBaseline.recipeUpdatedAt);
+  };
+
+  const getSaveHelperText = () => {
+    if (saveRefreshFailed) return 'Recipe was saved, but the display could not refresh. Reload the Recipes page.';
+    if (editorState === EDITOR_STATES.SAVING) return 'Saving recipe...';
+    if (hasUnresolvedConflict || editorState === EDITOR_STATES.CONFLICT) return 'Reload the latest recipe before saving.';
+    if (![EDITOR_STATES.DIRTY, EDITOR_STATES.SAVE_ERROR].includes(editorState)) return 'Make a change to enable saving.';
+    if (!editorLastValidation.isValid) return 'Fix the highlighted fields before saving.';
+    if (!hasValidSaveExpectation()) return 'Reload the editor before saving.';
+    return 'Ready to save this recipe.';
+  };
+
+  const updateSaveButtonState = () => {
+    const canSave = isOwnerSignedIn
+      && editorState === EDITOR_STATES.DIRTY
+      && !hasUnresolvedConflict
+      && !isSavingRecipe
+      && !saveRefreshFailed
+      && editorLastValidation.isValid
+      && hasValidSaveExpectation();
+
+    if (editorSaveButton) editorSaveButton.disabled = !canSave;
+    if (saveHelper) saveHelper.textContent = getSaveHelperText();
+  };
+
   const updateEditorDirtyState = () => {
-    if (![EDITOR_STATES.CREATE_READY, EDITOR_STATES.EDIT_READY, EDITOR_STATES.DIRTY].includes(editorState)) return;
+    if (![EDITOR_STATES.CREATE_READY, EDITOR_STATES.EDIT_READY, EDITOR_STATES.DIRTY, EDITOR_STATES.SAVE_SUCCESS, EDITOR_STATES.SAVE_ERROR].includes(editorState)) return;
     const isDirty = getEditorSnapshot() !== editorInitialSnapshot;
     if (isDirty && editorState !== EDITOR_STATES.DIRTY) {
       setEditorState(EDITOR_STATES.DIRTY);
@@ -1143,7 +1336,11 @@
   const handleEditorChanged = ({ validate = true, show = false } = {}) => {
     updateNotesCount();
     if (validate) validateEditor({ show });
+    if (hasUnresolvedConflict && editorState !== EDITOR_STATES.CONFLICT) {
+      setEditorStatus('Reload the latest recipe before saving again.');
+    }
     updateEditorDirtyState();
+    updateSaveButtonState();
   };
 
   const focusEditorInitialField = () => {
@@ -1219,7 +1416,272 @@
     return result.data || [];
   };
 
+  const applyBackendEditorData = (freshRow, lines, { statusMessage = '', preserveState = false } = {}) => {
+    editorSummaryRow = freshRow;
+    editorMode = freshRow.recipeExists ? 'edit' : 'create';
+    editorBaseline = normalizeBaselineFromRow(freshRow);
+    renderEditorHeader(freshRow);
+
+    if (editorNotes) {
+      const lineNotes = lines.find((line) => line.recipe_notes !== null && line.recipe_notes !== undefined)?.recipe_notes;
+      editorNotes.value = freshRow.recipeExists ? (lineNotes ?? freshRow.recipeNotes ?? '') : '';
+    }
+
+    editorRows = freshRow.recipeExists
+      ? lines.map(normalizeRecipeLineForEditor)
+      : [createEditorRow()];
+    if (!editorRows.length) editorRows = [createEditorRow()];
+
+    renderEditorRows();
+    updateNotesCount();
+    editorInitialSnapshot = getEditorSnapshot();
+    hasUnresolvedConflict = false;
+    saveRefreshFailed = false;
+    setEditorStatus(statusMessage || (freshRow.recipeExists ? 'Editing the latest saved recipe.' : 'Preparing a new recipe.'));
+    if (preserveState) {
+      setEditorControlsDisabled(editorState === EDITOR_STATES.LOADING || editorState === EDITOR_STATES.SAVING);
+    } else {
+      setEditorState(freshRow.recipeExists ? EDITOR_STATES.EDIT_READY : EDITOR_STATES.CREATE_READY);
+    }
+    const initialValidation = validateEditor({ show: false });
+    if (freshRow.recipeExists && !initialValidation.isValid) validateEditor({ show: true });
+    updateSaveButtonState();
+  };
+
+  const buildRecipeSavePayload = () => {
+    const validation = validateEditor({ show: true, focus: true });
+    if (!validation.isValid || !editorBaseline || !editorBaseline.productSizeId) return null;
+
+    const p_lines = editorRows.map((row, index) => ({
+      inventory_item_id: row.itemId,
+      quantity_required: row.quantity.trim(),
+      sort_order: index,
+    }));
+
+    const trimmedNotes = (editorNotes?.value || '').trim();
+
+    return {
+      p_product_size_id: editorBaseline.productSizeId,
+      p_lines,
+      p_notes: trimmedNotes || null,
+      p_expected_recipe_id: editorMode === 'edit' ? editorBaseline.recipeId : null,
+      p_expected_updated_at: editorMode === 'edit' ? editorBaseline.recipeUpdatedAt : null,
+    };
+  };
+
+  const getBackendErrorDetail = (error) => {
+    if (!error) return '';
+    return String(error.details || error.detail || error.code || error.message || '');
+  };
+
+  const mapRecipeSaveError = (error) => {
+    const detail = getBackendErrorDetail(error);
+    if (detail.includes('INV_RECIPE_CONFLICT')) {
+      return {
+        kind: 'conflict',
+        message: 'This recipe changed after you opened it. Reload the latest version before saving.',
+      };
+    }
+    if (detail.includes('INV_RECIPE_EXPECTATION_INVALID')) {
+      return {
+        kind: 'reload_required',
+        message: 'The recipe version information is incomplete. Reload the latest recipe before saving.',
+      };
+    }
+    if (detail.includes('INV_AUTH_REQUIRED') || detail.includes('INV_ADMIN_REQUIRED') || error?.status === 401 || error?.status === 403) {
+      return {
+        kind: 'auth',
+        message: 'Your owner session may have expired. Sign in again and retry.',
+      };
+    }
+    const validationMessages = {
+      INV_RECIPE_NOTES_TOO_LONG: 'Recipe notes must be 500 characters or fewer.',
+      INV_RECIPE_LINES_INVALID: 'Recipe lines were not formatted correctly. Reload the editor and try again.',
+      INV_RECIPE_LINES_REQUIRED: 'Add at least one ingredient before saving.',
+      INV_RECIPE_TOO_MANY_LINES: 'Recipes can have at most 100 ingredients.',
+      INV_RECIPE_LINE_INVALID: 'Choose an ingredient for every recipe line.',
+      INV_RECIPE_ITEM_NOT_FOUND: 'One ingredient could not be found. Reload the editor and try again.',
+      INV_RECIPE_ITEM_INACTIVE: 'Archived ingredients must be removed or replaced before saving.',
+      INV_RECIPE_INVALID_QUANTITY: 'Each ingredient needs a valid quantity greater than zero.',
+      INV_RECIPE_QUANTITY_SCALE: 'Quantities can use up to three decimal places.',
+      INV_RECIPE_INVALID_SORT_ORDER: 'Recipe line order was not valid. Reload the editor and try again.',
+      INV_RECIPE_DUPLICATE_ITEM: 'Each ingredient can appear only once in a recipe.',
+      INV_RECIPE_PRODUCT_SIZE_REQUIRED: 'Choose a product size before saving.',
+      INV_RECIPE_PRODUCT_SIZE_NOT_FOUND: 'This menu size may have changed or been removed. Reload Recipes and try again.',
+    };
+    const matchedCode = Object.keys(validationMessages).find((code) => detail.includes(code));
+    if (matchedCode) {
+      return { kind: 'validation', message: validationMessages[matchedCode] };
+    }
+    return {
+      kind: 'unknown',
+      message: "CURV couldn't save the recipe. Check your connection and try again.",
+    };
+  };
+
+  const setSaveErrorState = (message, { refreshFailed = false } = {}) => {
+    saveRefreshFailed = refreshFailed;
+    if (saveErrorCopy) saveErrorCopy.textContent = message;
+    if (saveRetryButton) saveRetryButton.hidden = refreshFailed;
+    if (saveErrorKeepButton) saveErrorKeepButton.hidden = refreshFailed;
+    if (saveCloseButton) saveCloseButton.hidden = !refreshFailed;
+    if (saveReloadPageButton) saveReloadPageButton.hidden = !refreshFailed;
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.SAVE_ERROR);
+    requestAnimationFrame(() => {
+      if (refreshFailed) saveCloseButton?.focus();
+      else saveErrorTitle?.focus();
+    });
+  };
+
+  const setConflictState = (
+    message = 'This recipe changed after you opened it. Reload the latest version before saving.',
+    { title = 'This recipe changed after you opened it.' } = {},
+  ) => {
+    hasUnresolvedConflict = true;
+    if (conflictTitle) conflictTitle.textContent = title;
+    if (conflictCopy) conflictCopy.textContent = message;
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.CONFLICT);
+    updateSaveButtonState();
+    requestAnimationFrame(() => {
+      conflictTitle?.focus();
+    });
+  };
+
+  const refreshEditorAfterSave = async (productSizeId, sequence) => {
+    const freshRow = await fetchFreshSummaryRow(productSizeId);
+    if (sequence !== saveSequence || !isOwnerSignedIn) return false;
+    if (!freshRow) throw new Error('Saved recipe summary row was not found after save.');
+    const lines = await loadRecipeLinesForEditor(freshRow);
+    if (sequence !== saveSequence || !isOwnerSignedIn) return false;
+    applyBackendEditorData(freshRow, lines, { statusMessage: 'Recipe saved.', preserveState: true });
+    validateEditor({ show: false });
+    updateSaveButtonState();
+    return true;
+  };
+
+  const resolvePostSaveDashboardRefresh = async (initialResult, sequence) => {
+    let result = initialResult;
+    if (result?.reason === 'stale') {
+      const activeLoad = activeDashboardLoadPromise;
+      if (activeLoad) {
+        result = await activeLoad;
+        if (sequence !== saveSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+        if (result?.ok && pageState === STATES.READY) return result;
+        if (result?.reason === 'signed_out') return result;
+      } else if (pageState === STATES.READY) {
+        return { ok: true };
+      }
+      result = await loadRecipeData();
+      if (sequence !== saveSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+      if (result?.reason === 'stale' && pageState === STATES.READY) return { ok: true };
+      if (result?.reason === 'stale') return { ok: false, reason: 'error' };
+    }
+    if (result?.ok && pageState === STATES.READY) return result;
+    return result || { ok: false, reason: 'error' };
+  };
+
+  const saveRecipe = async () => {
+    if (!client || !isOwnerSignedIn || isSavingRecipe || hasUnresolvedConflict || saveRefreshFailed) return;
+    if (![EDITOR_STATES.DIRTY, EDITOR_STATES.SAVE_ERROR].includes(editorState)) return;
+
+    const payload = buildRecipeSavePayload();
+    if (!payload || !hasValidSaveExpectation()) {
+      updateSaveButtonState();
+      return;
+    }
+
+    try {
+      const { data } = await client.auth.getSession();
+      if (!data || !data.session || !data.session.user) {
+        setSaveErrorState('Your owner session may have expired. Sign in again and retry.');
+        return;
+      }
+    } catch (error) {
+      console.error('Recipe save session check failed:', error);
+      setSaveErrorState('Your owner session may have expired. Sign in again and retry.');
+      return;
+    }
+
+    const sequence = saveSequence + 1;
+    saveSequence = sequence;
+    const productSizeId = payload.p_product_size_id;
+    const returnFocusTarget = getEditorReturnTarget();
+    isSavingRecipe = true;
+    setEditorStatus('Saving recipe...');
+    setEditorState(EDITOR_STATES.SAVING);
+
+    try {
+      const { data, error } = await client.rpc('inventory_replace_recipe', payload);
+      if (sequence !== saveSequence || !isOwnerSignedIn) return;
+      if (error) throw error;
+
+      const confirmation = Array.isArray(data) ? data[0] : data;
+      if (!confirmation || confirmation.ok === false) {
+        throw new Error('Recipe save did not return a successful confirmation.');
+      }
+
+      try {
+        const refreshed = await refreshEditorAfterSave(productSizeId, sequence);
+        if (!refreshed) return;
+        const dashboardResult = await resolvePostSaveDashboardRefresh(await loadRecipeData(), sequence);
+        if (sequence !== saveSequence) return;
+        if (!dashboardResult.ok) {
+          if (dashboardResult.reason === 'signed_out') return;
+          if (dashboardResult.reason === 'stale') return;
+          setSaveErrorState('Recipe was saved, but the latest display could not be refreshed. Reload the Recipes page.', {
+            refreshFailed: true,
+          });
+          return;
+        }
+        rebindEditorReturnFocus(returnFocusTarget);
+        setEditorState(EDITOR_STATES.SAVE_SUCCESS);
+        requestAnimationFrame(() => {
+          editorStatus?.focus?.();
+          if (!editorStatus || editorStatus.hidden) {
+            const closeButton = editorDrawer?.querySelector('[data-recipes-drawer-close]');
+            closeButton?.focus();
+          }
+        });
+      } catch (refreshError) {
+        console.error('Recipe saved but refresh failed:', refreshError);
+        if (sequence !== saveSequence) return;
+        setSaveErrorState('Recipe was saved, but the latest display could not be refreshed. Reload the Recipes page.', {
+          refreshFailed: true,
+        });
+      }
+    } catch (error) {
+      console.error('Recipe save failed:', error);
+      if (sequence !== saveSequence) return;
+      const mapped = mapRecipeSaveError(error);
+      if (mapped.kind === 'conflict') {
+        setConflictState(mapped.message);
+      } else if (mapped.kind === 'reload_required') {
+        setConflictState(mapped.message, { title: 'Reload latest recipe before saving.' });
+      } else {
+        setSaveErrorState(mapped.message);
+      }
+    } finally {
+      if (sequence === saveSequence) {
+        isSavingRecipe = false;
+        updateSaveButtonState();
+        if (editorState === EDITOR_STATES.SAVING) setEditorState(EDITOR_STATES.DIRTY);
+      }
+    }
+  };
+
   const openRecipeEditor = async (row, trigger, { force = false } = {}) => {
+    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) return;
+    if (!force && activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
+      conflictTitle?.focus();
+      return;
+    }
+    if (!force && activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVE_ERROR) {
+      editorPendingAfterDiscard = () => openRecipeEditor(row, trigger, { force: true });
+      showDiscardConfirm(trigger);
+      return;
+    }
     if (!force && activeDrawer === editorDrawer && editorState === EDITOR_STATES.DIRTY) {
       editorPendingAfterDiscard = () => openRecipeEditor(row, trigger, { force: true });
       showDiscardConfirm(trigger);
@@ -1230,6 +1692,9 @@
     const sequence = editorSequence;
     editorSummaryRow = row;
     editorMode = row.recipeExists ? 'edit' : 'create';
+    editorBaseline = null;
+    hasUnresolvedConflict = false;
+    saveRefreshFailed = false;
     renderEditorHeader(row);
     setEditorStatus('Loading editor...');
     clearElement(editorRowsContainer);
@@ -1241,26 +1706,20 @@
     try {
       await loadPickerItems();
       if (sequence !== editorSequence || !isOwnerSignedIn || editorSummaryRow !== row) return;
-      const lines = await loadRecipeLinesForEditor(row);
-      if (sequence !== editorSequence || !isOwnerSignedIn) return;
-
-      if (editorNotes) {
-        const lineNotes = lines.find((line) => line.recipe_notes !== null && line.recipe_notes !== undefined)?.recipe_notes;
-        editorNotes.value = row.recipeExists ? (lineNotes ?? row.recipeNotes ?? '') : '';
+      const freshRow = await fetchFreshSummaryRow(row.productSizeId);
+      if (sequence !== editorSequence || !isOwnerSignedIn || editorSummaryRow !== row) return;
+      if (!freshRow) {
+        setEditorLoadError('This menu size may have changed or been removed. Reload Recipes and try again.');
+        return;
       }
+      editorSummaryRow = freshRow;
+      editorMode = freshRow.recipeExists ? 'edit' : 'create';
+      editorBaseline = normalizeBaselineFromRow(freshRow);
+      renderEditorHeader(freshRow);
 
-      editorRows = row.recipeExists
-        ? lines.map(normalizeRecipeLineForEditor)
-        : [createEditorRow()];
-      if (!editorRows.length) editorRows = [createEditorRow()];
-
-      renderEditorRows();
-      updateNotesCount();
-      editorInitialSnapshot = getEditorSnapshot();
-      setEditorStatus(row.recipeExists ? 'Editing the latest saved recipe.' : 'Preparing a new recipe.');
-      setEditorState(row.recipeExists ? EDITOR_STATES.EDIT_READY : EDITOR_STATES.CREATE_READY);
-      const initialValidation = validateEditor({ show: false });
-      if (row.recipeExists && !initialValidation.isValid) validateEditor({ show: true });
+      const lines = await loadRecipeLinesForEditor(freshRow);
+      if (sequence !== editorSequence || !isOwnerSignedIn) return;
+      applyBackendEditorData(freshRow, lines);
       requestAnimationFrame(focusEditorInitialField);
     } catch (error) {
       console.error('Recipe editor load failed:', error);
@@ -1401,7 +1860,10 @@
     if (!isSignedIn) {
       loadSequence += 1;
       editorSequence += 1;
+      saveSequence += 1;
+      isSavingRecipe = false;
       activeLoadSessionKey = '';
+      activeDashboardLoadPromise = null;
       clearPickerCache();
       closeDrawer({ restoreFocus: false });
       resetEditor();
@@ -1468,7 +1930,59 @@
   editorForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     validateEditor({ show: true, focus: true });
-    if (editorSaveButton) editorSaveButton.disabled = true;
+    updateSaveButtonState();
+  });
+
+  editorSaveButton?.addEventListener('click', () => {
+    saveRecipe();
+  });
+
+  saveRetryButton?.addEventListener('click', () => {
+    saveRecipe();
+  });
+
+  saveErrorKeepButton?.addEventListener('click', () => {
+    setEditorState(EDITOR_STATES.DIRTY);
+    updateSaveButtonState();
+    editorNotes?.focus();
+  });
+
+  saveCloseButton?.addEventListener('click', () => {
+    closeDrawer();
+  });
+
+  saveReloadPageButton?.addEventListener('click', () => {
+    window.location.reload();
+  });
+
+  conflictKeepButton?.addEventListener('click', () => {
+    setEditorState(EDITOR_STATES.DIRTY);
+    setEditorStatus('Reload the latest recipe before saving again.');
+    updateSaveButtonState();
+    editorNotes?.focus();
+  });
+
+  conflictCancelButton?.addEventListener('click', () => {
+    closeDrawer();
+  });
+
+  conflictReloadButton?.addEventListener('click', () => {
+    if (conflictReloadConfirm) conflictReloadConfirm.hidden = false;
+    requestAnimationFrame(() => {
+      conflictReloadCancelButton?.focus();
+    });
+  });
+
+  conflictReloadCancelButton?.addEventListener('click', () => {
+    if (conflictReloadConfirm) conflictReloadConfirm.hidden = true;
+    conflictReloadButton?.focus();
+  });
+
+  conflictReloadConfirmButton?.addEventListener('click', () => {
+    const row = editorSummaryRow;
+    if (!row) return;
+    hasUnresolvedConflict = false;
+    openRecipeEditor(row, lastFocusedElement, { force: true });
   });
 
   addIngredientButton?.addEventListener('click', addEditorIngredientRow);
