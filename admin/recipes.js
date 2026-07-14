@@ -24,6 +24,9 @@
     SAVE_ERROR: 'SAVE_ERROR',
     SAVE_SUCCESS: 'SAVE_SUCCESS',
     CONFLICT: 'CONFLICT',
+    DELETE_CONFIRM: 'DELETE_CONFIRM',
+    DELETING: 'DELETING',
+    DELETE_ERROR: 'DELETE_ERROR',
   };
 
   const statusRegion = document.querySelector('[data-recipes-status]');
@@ -71,6 +74,7 @@
   const addIngredientButton = document.querySelector('[data-recipes-add-ingredient]');
   const editorSummary = document.querySelector('[data-recipes-editor-summary]');
   const editorCancelButton = document.querySelector('[data-recipes-editor-cancel]');
+  const deleteOpenButton = document.querySelector('[data-recipes-delete-open]');
   const editorSaveButton = document.querySelector('[data-recipes-editor-save]');
   const saveHelper = document.querySelector('[data-recipes-save-helper]');
   const saveErrorPanel = document.querySelector('[data-recipes-save-error]');
@@ -89,6 +93,17 @@
   const conflictReloadConfirm = document.querySelector('[data-recipes-conflict-confirm]');
   const conflictReloadCancelButton = document.querySelector('[data-recipes-conflict-reload-cancel]');
   const conflictReloadConfirmButton = document.querySelector('[data-recipes-conflict-reload-confirm]');
+  const deleteConfirmPanel = document.querySelector('[data-recipes-delete-confirm]');
+  const deleteTitle = document.querySelector('[data-recipes-delete-title]');
+  const deleteCopy = document.querySelector('[data-recipes-delete-copy]');
+  const deleteNote = document.querySelector('[data-recipes-delete-note]');
+  const deleteKeepButton = document.querySelector('[data-recipes-delete-keep]');
+  const deleteConfirmButton = document.querySelector('[data-recipes-delete-confirm-button]');
+  const deleteErrorPanel = document.querySelector('[data-recipes-delete-error]');
+  const deleteErrorTitle = document.querySelector('[data-recipes-delete-error-title]');
+  const deleteErrorCopy = document.querySelector('[data-recipes-delete-error-copy]');
+  const deleteErrorKeepButton = document.querySelector('[data-recipes-delete-error-keep]');
+  const deleteRetryButton = document.querySelector('[data-recipes-delete-retry]');
   const discardConfirm = document.querySelector('[data-recipes-discard-confirm]');
   const keepEditingButton = document.querySelector('[data-recipes-keep-editing]');
   const discardEditorButton = document.querySelector('[data-recipes-discard-editor]');
@@ -141,12 +156,16 @@
   let editorInitialSnapshot = '';
   let editorAttemptedCloseElement = null;
   let editorPendingAfterDiscard = null;
+  let editorStateBeforeDelete = null;
   let editorLastValidation = { isValid: true, problems: [] };
   let editorBaseline = null;
   let isSavingRecipe = false;
+  let isDeletingRecipe = false;
   let saveSequence = 0;
+  let deleteSequence = 0;
   let hasUnresolvedConflict = false;
   let saveRefreshFailed = false;
+  let terminalRefreshFailedMessage = '';
 
   const DASH = '-';
   const MAX_RECIPE_LINES = 100;
@@ -220,6 +239,9 @@
     EDITOR_STATES.SAVING,
     EDITOR_STATES.SAVE_ERROR,
     EDITOR_STATES.CONFLICT,
+    EDITOR_STATES.DELETE_CONFIRM,
+    EDITOR_STATES.DELETING,
+    EDITOR_STATES.DELETE_ERROR,
   ].includes(editorState);
 
   const setBeforeUnloadProtection = () => {
@@ -295,11 +317,15 @@
   };
 
   const requestCloseDrawer = (trigger = document.activeElement) => {
-    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) {
+    if (activeDrawer === editorDrawer && [EDITOR_STATES.SAVING, EDITOR_STATES.DELETING].includes(editorState)) {
       return;
     }
     if (activeDrawer === editorDrawer && saveRefreshFailed) {
       closeDrawer();
+      return;
+    }
+    if (activeDrawer === editorDrawer && [EDITOR_STATES.DELETE_CONFIRM, EDITOR_STATES.DELETE_ERROR].includes(editorState)) {
+      keepRecipeAfterDeletePrompt();
       return;
     }
     if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
@@ -513,7 +539,11 @@
     button.dataset.recipesProductSizeId = row.productSizeId || '';
     button.dataset.recipesAction = 'view';
     button.addEventListener('click', () => {
-      if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) return;
+      if (activeDrawer === editorDrawer && [EDITOR_STATES.SAVING, EDITOR_STATES.DELETING].includes(editorState)) return;
+      if (activeDrawer === editorDrawer && [EDITOR_STATES.DELETE_CONFIRM, EDITOR_STATES.DELETE_ERROR].includes(editorState)) {
+        deleteTitle?.focus();
+        return;
+      }
       if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
         conflictTitle?.focus();
         return;
@@ -867,18 +897,23 @@
     const isSaving = nextState === EDITOR_STATES.SAVING;
     const isSaveError = nextState === EDITOR_STATES.SAVE_ERROR;
     const isConflict = nextState === EDITOR_STATES.CONFLICT;
+    const isDeleteConfirm = nextState === EDITOR_STATES.DELETE_CONFIRM;
+    const isDeleting = nextState === EDITOR_STATES.DELETING;
+    const isDeleteError = nextState === EDITOR_STATES.DELETE_ERROR;
     const isTerminalRefreshFailure = isSaveError && saveRefreshFailed;
     if (editorLoading) editorLoading.hidden = !isLoading;
     if (editorError) editorError.hidden = !isError;
     if (discardConfirm) discardConfirm.hidden = !isConfirming;
     if (saveErrorPanel) saveErrorPanel.hidden = !isSaveError;
     if (conflictPanel) conflictPanel.hidden = !isConflict;
+    if (deleteConfirmPanel) deleteConfirmPanel.hidden = !isDeleteConfirm;
+    if (deleteErrorPanel) deleteErrorPanel.hidden = !isDeleteError;
     if (conflictReloadConfirm) conflictReloadConfirm.hidden = true;
-    if (editorForm) editorForm.hidden = isLoading || isError || isConfirming;
+    if (editorForm) editorForm.hidden = isLoading || isError || isConfirming || isDeleteConfirm || isDeleteError;
     if (editorDrawer) {
-      editorDrawer.setAttribute('aria-busy', isSaving ? 'true' : 'false');
+      editorDrawer.setAttribute('aria-busy', (isSaving || isDeleting) ? 'true' : 'false');
     }
-    setEditorControlsDisabled(isLoading || isSaving || isTerminalRefreshFailure, {
+    setEditorControlsDisabled(isLoading || isSaving || isDeleting || isTerminalRefreshFailure, {
       allowDrawerClose: isTerminalRefreshFailure,
     });
     updateSaveButtonState();
@@ -893,11 +928,14 @@
     editorInitialSnapshot = '';
     editorAttemptedCloseElement = null;
     editorPendingAfterDiscard = null;
+    editorStateBeforeDelete = null;
     editorLastValidation = { isValid: true, problems: [] };
     editorBaseline = null;
     isSavingRecipe = false;
+    isDeletingRecipe = false;
     hasUnresolvedConflict = false;
     saveRefreshFailed = false;
+    terminalRefreshFailedMessage = '';
     if (!keepTrigger) lastFocusedElement = null;
     if (editorTitle) editorTitle.textContent = 'Recipe Editor';
     clearElement(editorMeta);
@@ -1028,6 +1066,7 @@
     if (editorNotes) editorNotes.disabled = isDisabled;
     if (addIngredientButton) addIngredientButton.disabled = isDisabled || editorRows.length >= MAX_RECIPE_LINES;
     if (editorCancelButton) editorCancelButton.disabled = isDisabled;
+    if (deleteOpenButton) deleteOpenButton.disabled = isDisabled;
     if (editorSaveButton) editorSaveButton.disabled = true;
     editorDrawer?.querySelectorAll('[data-recipes-drawer-close]').forEach((button) => {
       button.disabled = isDisabled && !allowDrawerClose;
@@ -1300,9 +1339,16 @@
       && Boolean(editorBaseline.recipeUpdatedAt);
   };
 
+  const hasValidDeleteExpectation = () => editorMode === 'edit'
+    && editorBaseline?.recipeExists === true
+    && Boolean(editorBaseline.productSizeId)
+    && Boolean(editorBaseline.recipeId)
+    && Boolean(editorBaseline.recipeUpdatedAt);
+
   const getSaveHelperText = () => {
-    if (saveRefreshFailed) return 'Recipe was saved, but the display could not refresh. Reload the Recipes page.';
+    if (saveRefreshFailed) return terminalRefreshFailedMessage || 'Recipe was saved, but the display could not refresh. Reload the Recipes page.';
     if (editorState === EDITOR_STATES.SAVING) return 'Saving recipe...';
+    if (editorState === EDITOR_STATES.DELETING) return 'Deleting recipe...';
     if (hasUnresolvedConflict || editorState === EDITOR_STATES.CONFLICT) return 'Reload the latest recipe before saving.';
     if (![EDITOR_STATES.DIRTY, EDITOR_STATES.SAVE_ERROR].includes(editorState)) return 'Make a change to enable saving.';
     if (!editorLastValidation.isValid) return 'Fix the highlighted fields before saving.';
@@ -1315,11 +1361,23 @@
       && editorState === EDITOR_STATES.DIRTY
       && !hasUnresolvedConflict
       && !isSavingRecipe
+      && !isDeletingRecipe
       && !saveRefreshFailed
       && editorLastValidation.isValid
       && hasValidSaveExpectation();
+    const canDelete = isOwnerSignedIn
+      && [EDITOR_STATES.EDIT_READY, EDITOR_STATES.DIRTY, EDITOR_STATES.SAVE_SUCCESS].includes(editorState)
+      && !hasUnresolvedConflict
+      && !isSavingRecipe
+      && !isDeletingRecipe
+      && !saveRefreshFailed
+      && hasValidDeleteExpectation();
 
     if (editorSaveButton) editorSaveButton.disabled = !canSave;
+    if (deleteOpenButton) {
+      deleteOpenButton.hidden = !hasValidDeleteExpectation();
+      deleteOpenButton.disabled = !canDelete;
+    }
     if (saveHelper) saveHelper.textContent = getSaveHelperText();
   };
 
@@ -1369,6 +1427,20 @@
     editorAttemptedCloseElement = null;
     editorPendingAfterDiscard = null;
     if (target && typeof target.focus === 'function') target.focus();
+  };
+
+  const getCurrentEditableEditorState = () => {
+    if (getEditorSnapshot() !== editorInitialSnapshot) return EDITOR_STATES.DIRTY;
+    return getEditorReadyState();
+  };
+
+  const keepRecipeAfterDeletePrompt = () => {
+    const nextState = editorStateBeforeDelete || getCurrentEditableEditorState();
+    editorStateBeforeDelete = null;
+    setEditorState(nextState);
+    requestAnimationFrame(() => {
+      deleteOpenButton?.focus();
+    });
   };
 
   const discardEditorChanges = () => {
@@ -1437,6 +1509,7 @@
     editorInitialSnapshot = getEditorSnapshot();
     hasUnresolvedConflict = false;
     saveRefreshFailed = false;
+    terminalRefreshFailedMessage = '';
     setEditorStatus(statusMessage || (freshRow.recipeExists ? 'Editing the latest saved recipe.' : 'Preparing a new recipe.'));
     if (preserveState) {
       setEditorControlsDisabled(editorState === EDITOR_STATES.LOADING || editorState === EDITOR_STATES.SAVING);
@@ -1521,6 +1594,8 @@
 
   const setSaveErrorState = (message, { refreshFailed = false } = {}) => {
     saveRefreshFailed = refreshFailed;
+    terminalRefreshFailedMessage = refreshFailed ? message : '';
+    if (saveErrorTitle) saveErrorTitle.textContent = refreshFailed ? 'Recipe display needs reload.' : 'Recipe could not be saved.';
     if (saveErrorCopy) saveErrorCopy.textContent = message;
     if (saveRetryButton) saveRetryButton.hidden = refreshFailed;
     if (saveErrorKeepButton) saveErrorKeepButton.hidden = refreshFailed;
@@ -1580,6 +1655,212 @@
     }
     if (result?.ok && pageState === STATES.READY) return result;
     return result || { ok: false, reason: 'error' };
+  };
+
+  const buildDeletePayload = () => {
+    if (!hasValidDeleteExpectation()) return null;
+    return {
+      p_product_size_id: editorBaseline.productSizeId,
+      p_expected_recipe_id: editorBaseline.recipeId,
+      p_expected_updated_at: editorBaseline.recipeUpdatedAt,
+    };
+  };
+
+  const getEditorRecipeLabel = () => {
+    const productName = editorSummaryRow?.productName || 'this product';
+    const sizeLabel = editorSummaryRow?.productSizeLabel || 'this size';
+    return `${productName} - ${sizeLabel}`;
+  };
+
+  const showDeleteConfirm = () => {
+    if (!hasValidDeleteExpectation() || isSavingRecipe || isDeletingRecipe || hasUnresolvedConflict || saveRefreshFailed) return;
+    editorStateBeforeDelete = getCurrentEditableEditorState();
+    if (deleteCopy) deleteCopy.textContent = `This will remove the saved recipe for "${getEditorRecipeLabel()}".`;
+    if (deleteNote) {
+      const dirtyNote = getEditorSnapshot() !== editorInitialSnapshot
+        ? ' Unsaved local edits in this drawer will also be discarded if you delete.'
+        : '';
+      deleteNote.textContent = `The menu item and inventory stock will stay unchanged. Only this recipe setup will be removed.${dirtyNote}`;
+    }
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.DELETE_CONFIRM);
+    requestAnimationFrame(() => {
+      deleteKeepButton?.focus();
+    });
+  };
+
+  const mapDeleteError = (error) => {
+    const detail = getBackendErrorDetail(error);
+    if (detail.includes('INV_RECIPE_CONFLICT')) {
+      return {
+        kind: 'conflict',
+        message: 'This recipe changed after you opened it. Reload the latest version before deleting.',
+      };
+    }
+    if (detail.includes('INV_RECIPE_EXPECTATION_REQUIRED') || detail.includes('INV_RECIPE_EXPECTATION_INVALID')) {
+      return {
+        kind: 'reload_required',
+        message: 'The recipe version information is incomplete. Reload the latest recipe before deleting.',
+      };
+    }
+    if (detail.includes('INV_AUTH_REQUIRED') || detail.includes('INV_ADMIN_REQUIRED') || error?.status === 401 || error?.status === 403) {
+      return {
+        kind: 'auth',
+        message: 'Your owner session may have expired. Sign in again before deleting.',
+      };
+    }
+    if (detail.includes('INV_RECIPE_PRODUCT_SIZE_REQUIRED') || detail.includes('INV_RECIPE_PRODUCT_SIZE_NOT_FOUND')) {
+      return {
+        kind: 'reload_required',
+        message: 'This menu size may have changed or been removed. Reload Recipes before deleting.',
+      };
+    }
+    return {
+      kind: 'unknown',
+      message: "CURV couldn't delete the recipe. Check your connection and try again.",
+    };
+  };
+
+  const setDeleteErrorState = (message) => {
+    if (deleteErrorCopy) deleteErrorCopy.textContent = message;
+    setEditorStatus('');
+    setEditorState(EDITOR_STATES.DELETE_ERROR);
+    requestAnimationFrame(() => {
+      deleteErrorTitle?.focus();
+    });
+  };
+
+  const resolvePostDeleteDashboardRefresh = async (initialResult, sequence) => {
+    let result = initialResult;
+    if (result?.reason === 'stale') {
+      const activeLoad = activeDashboardLoadPromise;
+      if (activeLoad) {
+        result = await activeLoad;
+        if (sequence !== deleteSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+        if (result?.ok && pageState === STATES.READY) return result;
+        if (result?.reason === 'signed_out') return result;
+      } else if (pageState === STATES.READY) {
+        return { ok: true };
+      }
+      result = await loadRecipeData();
+      if (sequence !== deleteSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+      if (result?.reason === 'stale' && pageState === STATES.READY) return { ok: true };
+      if (result?.reason === 'stale') return { ok: false, reason: 'error' };
+    }
+    if (result?.ok && pageState === STATES.READY) return result;
+    return result || { ok: false, reason: 'error' };
+  };
+
+  const handleDeleteSuccess = async (productSizeId, sequence) => {
+    const freshRow = await fetchFreshSummaryRow(productSizeId);
+    if (sequence !== deleteSequence || !isOwnerSignedIn) return false;
+    if (!freshRow || freshRow.recipeExists) {
+      throw new Error('Deleted recipe still appears configured after delete.');
+    }
+
+    const dashboardResult = await resolvePostDeleteDashboardRefresh(await loadRecipeData(), sequence);
+    if (sequence !== deleteSequence) return false;
+    if (!dashboardResult.ok) {
+      if (dashboardResult.reason === 'signed_out') return false;
+      if (dashboardResult.reason === 'stale') return false;
+      setSaveErrorState('Recipe was deleted, but the latest display could not be refreshed. Reload the Recipes page.', {
+        refreshFailed: true,
+      });
+      return false;
+    }
+
+    rebindEditorReturnFocus({ productSizeId, action: 'configure' });
+    setStatus('Recipe deleted.');
+    closeDrawer();
+    return true;
+  };
+
+  const deleteRecipe = async () => {
+    if (!client || !isOwnerSignedIn || isSavingRecipe || isDeletingRecipe || hasUnresolvedConflict || saveRefreshFailed) return;
+    if (![EDITOR_STATES.DELETE_CONFIRM, EDITOR_STATES.DELETE_ERROR].includes(editorState)) return;
+    const payload = buildDeletePayload();
+    if (!payload) {
+      setConflictState('The recipe version information is incomplete. Reload the latest recipe before deleting.', {
+        title: 'Reload latest recipe before deleting.',
+      });
+      return;
+    }
+
+    const sequence = deleteSequence + 1;
+    deleteSequence = sequence;
+    isDeletingRecipe = true;
+    setEditorStatus('Deleting recipe...');
+    setEditorState(EDITOR_STATES.DELETING);
+
+    try {
+      let sessionResult;
+      try {
+        sessionResult = await client.auth.getSession();
+      } catch (sessionError) {
+        console.error('Recipe delete session check failed:', sessionError);
+        if (sequence !== deleteSequence || !isOwnerSignedIn || editorState !== EDITOR_STATES.DELETING) return;
+        isDeletingRecipe = false;
+        setDeleteErrorState('Your owner session may have expired. Sign in again before deleting.');
+        updateSaveButtonState();
+        return;
+      }
+
+      if (sequence !== deleteSequence || !isOwnerSignedIn || editorState !== EDITOR_STATES.DELETING) return;
+
+      const user = sessionResult.data && sessionResult.data.session && sessionResult.data.session.user;
+      if (!user) {
+        handleAuthState(false);
+        return;
+      }
+
+      const { data, error } = await client.rpc('inventory_delete_recipe', payload);
+      if (sequence !== deleteSequence || !isOwnerSignedIn || editorState !== EDITOR_STATES.DELETING) return;
+      if (error) throw error;
+
+      const confirmation = Array.isArray(data) ? data[0] : data;
+      if (!confirmation || confirmation.ok === false) {
+        throw new Error('Recipe delete did not return a successful confirmation.');
+      }
+
+      try {
+        await handleDeleteSuccess(payload.p_product_size_id, sequence);
+      } catch (refreshError) {
+        console.error('Recipe deleted but refresh failed:', refreshError);
+        if (sequence !== deleteSequence) return;
+        setSaveErrorState('Recipe was deleted, but the latest display could not be refreshed. Reload the Recipes page.', {
+          refreshFailed: true,
+        });
+      }
+    } catch (error) {
+      console.error('Recipe delete failed:', error);
+      if (sequence !== deleteSequence) return;
+      const mapped = mapDeleteError(error);
+      if (mapped.kind === 'conflict') {
+        setConflictState(mapped.message);
+      } else if (mapped.kind === 'reload_required') {
+        setConflictState(mapped.message, { title: 'Reload latest recipe before deleting.' });
+      } else if (mapped.kind === 'auth') {
+        try {
+          const { data } = await client.auth.getSession();
+          const user = data && data.session && data.session.user;
+          if (!user) {
+            handleAuthState(false);
+            return;
+          }
+        } catch (sessionError) {
+          console.error('Recipe delete auth confirmation failed:', sessionError);
+        }
+        setDeleteErrorState(mapped.message);
+      } else {
+        setDeleteErrorState(mapped.message);
+      }
+    } finally {
+      if (sequence === deleteSequence) {
+        isDeletingRecipe = false;
+        updateSaveButtonState();
+        if (editorState === EDITOR_STATES.DELETING) setEditorState(EDITOR_STATES.DELETE_ERROR);
+      }
+    }
   };
 
   const saveRecipe = async () => {
@@ -1672,7 +1953,11 @@
   };
 
   const openRecipeEditor = async (row, trigger, { force = false } = {}) => {
-    if (activeDrawer === editorDrawer && editorState === EDITOR_STATES.SAVING) return;
+    if (activeDrawer === editorDrawer && [EDITOR_STATES.SAVING, EDITOR_STATES.DELETING].includes(editorState)) return;
+    if (!force && activeDrawer === editorDrawer && [EDITOR_STATES.DELETE_CONFIRM, EDITOR_STATES.DELETE_ERROR].includes(editorState)) {
+      deleteTitle?.focus();
+      return;
+    }
     if (!force && activeDrawer === editorDrawer && editorState === EDITOR_STATES.CONFLICT) {
       conflictTitle?.focus();
       return;
@@ -1693,8 +1978,10 @@
     editorSummaryRow = row;
     editorMode = row.recipeExists ? 'edit' : 'create';
     editorBaseline = null;
+    isDeletingRecipe = false;
     hasUnresolvedConflict = false;
     saveRefreshFailed = false;
+    terminalRefreshFailedMessage = '';
     renderEditorHeader(row);
     setEditorStatus('Loading editor...');
     clearElement(editorRowsContainer);
@@ -1861,7 +2148,9 @@
       loadSequence += 1;
       editorSequence += 1;
       saveSequence += 1;
+      deleteSequence += 1;
       isSavingRecipe = false;
+      isDeletingRecipe = false;
       activeLoadSessionKey = '';
       activeDashboardLoadPromise = null;
       clearPickerCache();
@@ -1935,6 +2224,26 @@
 
   editorSaveButton?.addEventListener('click', () => {
     saveRecipe();
+  });
+
+  deleteOpenButton?.addEventListener('click', () => {
+    showDeleteConfirm();
+  });
+
+  deleteKeepButton?.addEventListener('click', () => {
+    keepRecipeAfterDeletePrompt();
+  });
+
+  deleteConfirmButton?.addEventListener('click', () => {
+    deleteRecipe();
+  });
+
+  deleteErrorKeepButton?.addEventListener('click', () => {
+    keepRecipeAfterDeletePrompt();
+  });
+
+  deleteRetryButton?.addEventListener('click', () => {
+    deleteRecipe();
   });
 
   saveRetryButton?.addEventListener('click', () => {

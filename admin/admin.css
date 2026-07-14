@@ -746,6 +746,17 @@ body.inventory-drawer-open {
   min-height: 44px;
 }
 
+.recipes-danger-button {
+  border-color: rgba(224, 112, 112, 0.55);
+  color: #ffe2dc;
+}
+
+.recipes-danger-button:not(:disabled):hover,
+.recipes-danger-button:not(:disabled):focus-visible {
+  border-color: rgba(224, 112, 112, 0.85);
+  color: #fff3ef;
+}
+
 @media (max-width: 900px) {
   .inventory-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

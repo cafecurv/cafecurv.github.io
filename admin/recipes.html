@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i10d3-recipe-save">
+  <link rel="stylesheet" href="admin.css?v=i10d4-recipe-delete">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i10c-recipes-auth-exclusion" defer></script>
-  <script src="recipes.js?v=i10d3-final-hardening-b" defer></script>
+  <script src="recipes.js?v=i10d4-delete-lock-fix" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -383,6 +383,23 @@
           </div>
         </div>
       </div>
+      <div class="recipes-save-panel" data-recipes-delete-confirm hidden>
+        <h3 tabindex="-1" data-recipes-delete-title>Delete this recipe?</h3>
+        <p data-recipes-delete-copy>This will remove the saved recipe for this menu size.</p>
+        <p data-recipes-delete-note>The menu item and inventory stock will stay unchanged. Only this recipe setup will be removed.</p>
+        <div class="inventory-form-actions recipes-error-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-keep>Keep Recipe</button>
+          <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-confirm-button>Delete Recipe</button>
+        </div>
+      </div>
+      <div class="recipes-save-panel" data-recipes-delete-error hidden>
+        <h3 tabindex="-1" data-recipes-delete-error-title>Recipe could not be deleted.</h3>
+        <p data-recipes-delete-error-copy>Check your connection and try again.</p>
+        <div class="inventory-form-actions recipes-error-actions">
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-error-keep>Keep Recipe</button>
+          <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-retry>Try Delete Again</button>
+        </div>
+      </div>
       <form class="recipes-editor-form" data-recipes-editor-form novalidate>
         <label class="admin-field" for="recipe-editor-notes">
           <span>Recipe notes</span>
@@ -401,6 +418,7 @@
           <p class="inventory-field-hint" data-recipes-save-helper>Make a change to enable saving.</p>
           <div class="inventory-form-actions recipes-editor-actions">
             <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel>Cancel</button>
+            <button type="button" class="auth-button auth-button-secondary recipes-danger-button" data-recipes-delete-open hidden>Delete Recipe</button>
             <button type="button" class="auth-button" data-recipes-editor-save disabled>Save Recipe</button>
           </div>
         </div>
