@@ -43,6 +43,19 @@
   const tableShell = document.querySelector('[data-inventory-table-shell]');
   const listBody = document.querySelector('[data-inventory-list]');
   const resultCount = document.querySelector('[data-inventory-result-count]');
+  const movementSearchInput = document.querySelector('[data-movement-search]');
+  const movementTypeFilter = document.querySelector('[data-movement-type-filter]');
+  const movementPeriodFilter = document.querySelector('[data-movement-period-filter]');
+  const movementClearFiltersButton = document.querySelector('[data-movement-clear-filters]');
+  const movementResultCount = document.querySelector('[data-movement-result-count]');
+  const movementTableShell = document.querySelector('[data-movement-table-shell]');
+  const movementList = document.querySelector('[data-movement-list]');
+  const movementLoadingState = document.querySelector('[data-movement-loading]');
+  const movementSignedOutState = document.querySelector('[data-movement-signed-out]');
+  const movementEmptyState = document.querySelector('[data-movement-empty]');
+  const movementNoResultsState = document.querySelector('[data-movement-no-results]');
+  const movementErrorState = document.querySelector('[data-movement-error]');
+  const movementRetryButton = document.querySelector('[data-movement-retry]');
   const authForm = document.querySelector('[data-auth-form]');
   const emailInput = document.getElementById('owner-email');
   const passwordInput = document.getElementById('owner-password');
@@ -149,13 +162,19 @@
   let isOwnerSignedIn = false;
   let signedInOwnerEmail = '';
   let loadSequence = 0;
+  let movementLoadSequence = 0;
   let activeLoadSessionKey = '';
+  let activeMovementLoadSessionKey = '';
   let searchTimer = 0;
+  let movementSearchTimer = 0;
   let inventoryItems = [];
   let categories = [];
   let units = [];
   let alerts = [];
   let filteredItems = [];
+  let movementHistoryState = STATES.AUTH_LOADING;
+  let movementRows = [];
+  let filteredMovementRows = [];
   let isCreatingItem = false;
   let isReceivingStock = false;
   let isUsingStock = false;
@@ -227,6 +246,28 @@
     staff_use: 'Staff Use',
     other: 'Other',
   };
+
+  const movementTypeLabels = {
+    opening_balance: 'Opening Balance',
+    stock_in: 'Received',
+    stock_out: 'Used',
+    waste: 'Waste',
+    adjustment_in: 'Inventory Count +',
+    adjustment_out: 'Inventory Count -',
+    reversal: 'Reversal',
+  };
+
+  const movementQuantitySigns = {
+    opening_balance: '+',
+    stock_in: '+',
+    stock_out: '-',
+    waste: '-',
+    adjustment_in: '+',
+    adjustment_out: '-',
+    reversal: '',
+  };
+
+  const movementHistoryLimit = 100;
 
   const recordWasteErrorMessages = {
     INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before recording waste.',
@@ -982,6 +1023,31 @@
     }).format(date);
   };
 
+  const formatMovementDateTime = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'Asia/Manila',
+    }).format(date);
+  };
+
+  const getMovementPeriodStartIso = (period) => {
+    if (period === 'all') return '';
+    const now = new Date();
+    if (period === 'today') {
+      const today = getManilaTodayParts();
+      return new Date(Date.UTC(today.year, today.month - 1, today.day) - (8 * 60 * 60 * 1000)).toISOString();
+    }
+    const days = Number(period);
+    if (!Number.isFinite(days) || days <= 0) return '';
+    return new Date(now.getTime() - (days * 24 * 60 * 60 * 1000)).toISOString();
+  };
+
   const buildExpiryMap = (expiryRows) => {
     const map = new Map();
     expiryRows.forEach((row) => {
@@ -1273,6 +1339,148 @@
 
       listBody.appendChild(row);
     });
+  };
+
+  const getMovementFilters = () => ({
+    search: normalizeSearchText(movementSearchInput ? movementSearchInput.value : ''),
+    type: movementTypeFilter ? movementTypeFilter.value : 'all',
+    period: movementPeriodFilter ? movementPeriodFilter.value : '7',
+  });
+
+  const getMovementLabel = (type) => movementTypeLabels[type] || 'Stock Activity';
+
+  const getMovementReasonText = (movement) => {
+    const parts = [];
+    if (movement.reasonCode) parts.push(wasteReasonLabels[movement.reasonCode] || movement.reasonCode.replace(/_/g, ' '));
+    if (movement.referenceText) parts.push(movement.referenceText);
+    if (movement.batchRef) parts.push(`Batch ${movement.batchRef}`);
+    if (movement.movementGroupId) parts.push(`Operation ${movement.movementGroupId.slice(0, 8)}`);
+    return parts.join(' - ') || '-';
+  };
+
+  const getMovementQuantityText = (movement) => {
+    const sign = movementQuantitySigns[movement.movementType] || '';
+    return `${sign}${formatQuantityWithUnit(movement.quantity, movement.unitAbbreviation)}`;
+  };
+
+  const normalizeMovement = (row) => ({
+    movementId: row.movement_id || '',
+    movementGroupId: row.movement_group_id || '',
+    itemId: row.item_id || '',
+    itemName: row.item_name || 'Inventory item',
+    batchId: row.batch_id || '',
+    batchRef: row.batch_ref || '',
+    batchOrigin: row.batch_origin || '',
+    movementType: row.movement_type || '',
+    quantity: parseNumber(row.quantity),
+    unitId: row.unit_id || '',
+    unitName: row.unit_name || '',
+    unitAbbreviation: row.unit_abbreviation || '',
+    reasonCode: row.reason_code || '',
+    referenceId: row.reference_id || '',
+    referenceText: row.reference_text || '',
+    notes: row.notes || '',
+    createdBy: row.created_by || '',
+    actorName: row.actor_name || '',
+    createdAt: row.created_at || '',
+  });
+
+  const applyMovementFilters = () => {
+    const filters = getMovementFilters();
+    filteredMovementRows = movementRows.filter((movement) => {
+      const matchesSearch = !filters.search || normalizeSearchText(movement.itemName).includes(filters.search);
+      const matchesType = filters.type === 'all' || movement.movementType === filters.type;
+      return matchesSearch && matchesType;
+    });
+  };
+
+  const renderMovementRows = (movements) => {
+    clearElement(movementList);
+    movements.forEach((movement) => {
+      const row = document.createElement('tr');
+      const quantityText = getMovementQuantityText(movement);
+      const isNegative = quantityText.startsWith('-');
+      const isPositive = quantityText.startsWith('+');
+
+      const dateCell = document.createElement('td');
+      dateCell.dataset.label = 'Date & Time';
+      dateCell.appendChild(createTextElement('span', 'inventory-history-date', formatMovementDateTime(movement.createdAt)));
+      if (movement.actorName) dateCell.appendChild(createTextElement('span', 'inventory-item-meta', `By ${movement.actorName}`));
+      row.appendChild(dateCell);
+
+      const itemCell = document.createElement('td');
+      itemCell.dataset.label = 'Item';
+      itemCell.appendChild(createTextElement('strong', 'inventory-item-name', movement.itemName));
+      row.appendChild(itemCell);
+
+      const typeCell = document.createElement('td');
+      typeCell.dataset.label = 'Activity';
+      typeCell.textContent = getMovementLabel(movement.movementType);
+      row.appendChild(typeCell);
+
+      const quantityCell = document.createElement('td');
+      quantityCell.dataset.label = 'Quantity';
+      const quantity = createTextElement('span', 'inventory-history-quantity', quantityText);
+      if (isPositive) quantity.classList.add('is-positive');
+      if (isNegative) quantity.classList.add('is-negative');
+      quantityCell.appendChild(quantity);
+      row.appendChild(quantityCell);
+
+      const referenceCell = document.createElement('td');
+      referenceCell.dataset.label = 'Reference / Reason';
+      referenceCell.textContent = getMovementReasonText(movement);
+      row.appendChild(referenceCell);
+
+      const notesCell = document.createElement('td');
+      notesCell.dataset.label = 'Notes';
+      notesCell.textContent = movement.notes || '-';
+      row.appendChild(notesCell);
+
+      movementList?.appendChild(row);
+    });
+  };
+
+  const updateMovementListState = () => {
+    const filters = getMovementFilters();
+    const filtersActive = Boolean(filters.search) || filters.type !== 'all';
+    const shouldShowTable = movementHistoryState === STATES.READY && filteredMovementRows.length > 0;
+    const emptyFiltered = movementHistoryState === STATES.READY && movementRows.length > 0 && filteredMovementRows.length === 0;
+    const emptyHistory = movementHistoryState === STATES.READY && movementRows.length === 0;
+
+    if (movementTableShell) movementTableShell.hidden = !shouldShowTable;
+    if (movementLoadingState) movementLoadingState.hidden = movementHistoryState !== STATES.LOADING && movementHistoryState !== STATES.AUTH_LOADING;
+    if (movementSignedOutState) movementSignedOutState.hidden = movementHistoryState !== STATES.SIGNED_OUT;
+    if (movementEmptyState) movementEmptyState.hidden = !emptyHistory;
+    if (movementNoResultsState) movementNoResultsState.hidden = !emptyFiltered;
+    if (movementErrorState) movementErrorState.hidden = movementHistoryState !== STATES.ERROR;
+    if (movementClearFiltersButton) movementClearFiltersButton.hidden = !filtersActive;
+
+    if (movementResultCount) {
+      const periodText = movementPeriodFilter?.selectedOptions?.[0]?.textContent || 'recent activity';
+      if (shouldShowTable || emptyFiltered) {
+        movementResultCount.hidden = false;
+        movementResultCount.textContent = `${filteredMovementRows.length} movement${filteredMovementRows.length === 1 ? '' : 's'} shown - ${periodText}`;
+      } else {
+        movementResultCount.hidden = true;
+        movementResultCount.textContent = '';
+      }
+    }
+  };
+
+  const renderMovementHistory = () => {
+    if (movementHistoryState === STATES.READY) {
+      applyMovementFilters();
+      renderMovementRows(filteredMovementRows);
+    } else {
+      clearElement(movementList);
+      filteredMovementRows = [];
+    }
+    updateMovementListState();
+  };
+
+  const setMovementHistoryState = (nextState) => {
+    movementHistoryState = nextState;
+    renderMovementHistory();
   };
 
   const renderAttention = () => {
@@ -1810,6 +2018,14 @@
     if (searchInput) searchInput.value = '';
   };
 
+  const clearMovementHistoryState = () => {
+    movementRows = [];
+    filteredMovementRows = [];
+    if (movementSearchInput) movementSearchInput.value = '';
+    if (movementTypeFilter) movementTypeFilter.value = 'all';
+    if (movementPeriodFilter) movementPeriodFilter.value = '7';
+  };
+
   const loadInventoryData = async () => {
     if (!client || !isOwnerSignedIn) return;
     const sessionKey = signedInOwnerEmail || 'owner';
@@ -1898,16 +2114,72 @@
     }
   };
 
+  const loadMovementHistory = async ({ silent = false } = {}) => {
+    if (!client || !isOwnerSignedIn) return { ok: false, reason: 'signed_out' };
+    const sessionKey = signedInOwnerEmail || 'owner';
+    activeMovementLoadSessionKey = sessionKey;
+    const sequence = movementLoadSequence + 1;
+    movementLoadSequence = sequence;
+    if (!silent) setMovementHistoryState(STATES.LOADING);
+
+    try {
+      const filters = getMovementFilters();
+      const periodStart = getMovementPeriodStartIso(filters.period);
+      let query = client
+        .from('inventory_movement_log')
+        .select('movement_id,movement_group_id,item_id,item_name,batch_id,batch_ref,batch_origin,movement_type,quantity,unit_id,unit_name,unit_abbreviation,reason_code,reference_id,reference_text,notes,created_by,actor_name,created_at')
+        .order('created_at', { ascending: false })
+        .limit(movementHistoryLimit);
+
+      if (periodStart) query = query.gte('created_at', periodStart);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (sequence !== movementLoadSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
+
+      movementRows = (data || []).map(normalizeMovement);
+      setMovementHistoryState(STATES.READY);
+      return { ok: true };
+    } catch (error) {
+      console.error('Inventory movement history read failed:', error);
+      if (sequence !== movementLoadSequence) return { ok: false, reason: 'stale' };
+      try {
+        const { data } = await client.auth.getSession();
+        const user = data && data.session && data.session.user;
+        if (!user) {
+          clearMovementHistoryState();
+          setMovementHistoryState(STATES.SIGNED_OUT);
+          return { ok: false, reason: 'signed_out' };
+        }
+      } catch (sessionError) {
+        console.error('Inventory movement history session check failed:', sessionError);
+      }
+      setMovementHistoryState(STATES.ERROR);
+      return { ok: false, reason: 'error' };
+    } finally {
+      if (sequence === movementLoadSequence) activeMovementLoadSessionKey = '';
+    }
+  };
+
+  const refreshMovementHistoryAfterOperation = async () => {
+    return loadMovementHistory({ silent: true });
+  };
+
   const handleAuthState = (isSignedIn, email = '') => {
     setSignedInState(isSignedIn, email);
     if (!isSignedIn) {
       loadSequence += 1;
+      movementLoadSequence += 1;
       activeLoadSessionKey = '';
+      activeMovementLoadSessionKey = '';
       clearInventoryState();
+      clearMovementHistoryState();
       setPageState(STATES.SIGNED_OUT);
+      setMovementHistoryState(STATES.SIGNED_OUT);
       return;
     }
     loadInventoryData();
+    loadMovementHistory();
   };
 
   const refreshSession = async () => {
@@ -2055,7 +2327,10 @@
       setReceiveStockBusy(false);
       closeDrawer();
       await loadInventoryData();
-      setStatus(`${receivedText} received for ${itemName}.`);
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      setStatus(historyResult.ok
+        ? `${receivedText} received for ${itemName}.`
+        : `${receivedText} received for ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
     } catch (error) {
       console.error('Inventory stock receive failed:', error);
       setReceiveStockStatus(getReceiveStockErrorMessage(error));
@@ -2093,7 +2368,10 @@
       setUseStockBusy(false);
       closeDrawer();
       await loadInventoryData();
-      setStatus(`${usedText} used from ${itemName}.`);
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      setStatus(historyResult.ok
+        ? `${usedText} used from ${itemName}.`
+        : `${usedText} used from ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
     } catch (error) {
       console.error('Inventory stock use failed:', error);
       setUseStockStatus(getUseStockErrorMessage(error));
@@ -2133,7 +2411,10 @@
       setRecordWasteBusy(false);
       closeDrawer();
       await loadInventoryData();
-      setStatus(`${wastedText} recorded as ${reasonLabel} waste for ${itemName}.`);
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      setStatus(historyResult.ok
+        ? `${wastedText} recorded as ${reasonLabel} waste for ${itemName}.`
+        : `${wastedText} recorded as ${reasonLabel} waste for ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
     } catch (error) {
       console.error('Inventory waste recording failed:', error);
       setRecordWasteStatus(getRecordWasteErrorMessage(error));
@@ -2172,7 +2453,10 @@
       setCountStockBusy(false);
       closeDrawer();
       await loadInventoryData();
-      setStatus(`${itemName} recorded stock now matches the count: ${countText}.`);
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      setStatus(historyResult.ok
+        ? `${itemName} recorded stock now matches the count: ${countText}.`
+        : `${itemName} recorded stock now matches the count: ${countText}. Movement history could not refresh; use Try Again in Movement History.`);
     } catch (error) {
       console.error('Inventory count adjustment failed:', error);
       setCountStockStatus(getCountStockErrorMessage(error));
@@ -2225,15 +2509,56 @@
     updateListState();
   });
 
+  movementSearchInput?.addEventListener('input', () => {
+    window.clearTimeout(movementSearchTimer);
+    movementSearchTimer = window.setTimeout(() => {
+      if (movementHistoryState !== STATES.READY) return;
+      applyMovementFilters();
+      renderMovementRows(filteredMovementRows);
+      updateMovementListState();
+    }, 250);
+  });
+
+  movementTypeFilter?.addEventListener('change', () => {
+    if (movementHistoryState !== STATES.READY) return;
+    applyMovementFilters();
+    renderMovementRows(filteredMovementRows);
+    updateMovementListState();
+  });
+
+  movementPeriodFilter?.addEventListener('change', () => {
+    loadMovementHistory();
+  });
+
+  movementClearFiltersButton?.addEventListener('click', () => {
+    const periodChanged = movementPeriodFilter && movementPeriodFilter.value !== '7';
+    if (movementSearchInput) movementSearchInput.value = '';
+    if (movementTypeFilter) movementTypeFilter.value = 'all';
+    if (movementPeriodFilter) movementPeriodFilter.value = '7';
+    if (periodChanged) {
+      loadMovementHistory();
+      return;
+    }
+    applyMovementFilters();
+    renderMovementRows(filteredMovementRows);
+    updateMovementListState();
+  });
+
   retryButton?.addEventListener('click', () => {
     loadInventoryData();
   });
 
+  movementRetryButton?.addEventListener('click', () => {
+    loadMovementHistory();
+  });
+
   setInventoryNavActive();
   setPageState(STATES.AUTH_LOADING);
+  setMovementHistoryState(STATES.AUTH_LOADING);
 
   if (!hasSupabaseConfig || !window.supabase || typeof window.supabase.createClient !== 'function') {
     setPageState(STATES.ERROR);
+    setMovementHistoryState(STATES.ERROR);
     setFormDisabled(true);
     if (signOutButton) signOutButton.disabled = true;
     return;

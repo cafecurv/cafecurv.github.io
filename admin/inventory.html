@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i9b-count-stock">
+  <link rel="stylesheet" href="admin.css?v=i11b1-movement-history">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i9b-count-stock" defer></script>
+  <script src="inventory.js?v=i11b1-movement-history" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -272,6 +272,86 @@
           <h3>Couldn't load inventory.</h3>
           <p>Check your connection and try again.</p>
           <button type="button" class="auth-button" data-inventory-retry>Try Again</button>
+        </div>
+      </section>
+
+      <section class="inventory-panel" aria-labelledby="movement-history-title">
+        <div class="inventory-section-head">
+          <div>
+            <p class="eyebrow">Audit Trail</p>
+            <h2 id="movement-history-title">Movement History</h2>
+            <p>Review recent stock activity, including received, used, wasted, and counted quantities.</p>
+          </div>
+        </div>
+
+        <div class="inventory-toolbar inventory-history-toolbar" aria-label="Movement history filters">
+          <label class="admin-field inventory-search-field" for="movement-history-search">
+            <span>Search item</span>
+            <input id="movement-history-search" type="search" autocomplete="off" data-movement-search>
+          </label>
+          <label class="admin-field" for="movement-history-type">
+            <span>Activity</span>
+            <select id="movement-history-type" data-movement-type-filter>
+              <option value="all">All Activity</option>
+              <option value="opening_balance">Opening Balance</option>
+              <option value="stock_in">Received</option>
+              <option value="stock_out">Used</option>
+              <option value="waste">Waste</option>
+              <option value="adjustment_in">Inventory Count +</option>
+              <option value="adjustment_out">Inventory Count -</option>
+              <option value="reversal">Reversal</option>
+            </select>
+          </label>
+          <label class="admin-field" for="movement-history-period">
+            <span>Period</span>
+            <select id="movement-history-period" data-movement-period-filter>
+              <option value="today">Today</option>
+              <option value="7" selected>Last 7 Days</option>
+              <option value="30">Last 30 Days</option>
+              <option value="all">All Available</option>
+            </select>
+          </label>
+          <button type="button" class="inventory-clear-filters" data-movement-clear-filters hidden>Clear filters</button>
+        </div>
+
+        <p class="inventory-result-count" data-movement-result-count hidden></p>
+
+        <div class="inventory-table-shell inventory-history-table-shell" data-movement-table-shell hidden>
+          <table class="inventory-table inventory-history-table">
+            <thead>
+              <tr>
+                <th scope="col">Date &amp; Time</th>
+                <th scope="col">Item</th>
+                <th scope="col">Activity</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Reference / Reason</th>
+                <th scope="col">Notes</th>
+              </tr>
+            </thead>
+            <tbody data-movement-list></tbody>
+          </table>
+        </div>
+
+        <div class="inventory-empty-state" data-movement-loading hidden>
+          <h3>Loading movement history...</h3>
+          <p>Checking the latest stock activity.</p>
+        </div>
+        <div class="inventory-empty-state" data-movement-signed-out hidden>
+          <h3>Sign in to view movement history.</h3>
+          <p>Owner access is required before stock activity appears.</p>
+        </div>
+        <div class="inventory-empty-state" data-movement-empty hidden>
+          <h3>No movement history yet.</h3>
+          <p>Stock activity will appear here after receiving, using, wasting, or counting stock.</p>
+        </div>
+        <div class="inventory-empty-state" data-movement-no-results hidden>
+          <h3>No movements match these filters.</h3>
+          <p>Try another item, activity, or period.</p>
+        </div>
+        <div class="inventory-empty-state is-error" data-movement-error hidden>
+          <h3>Couldn't load movement history.</h3>
+          <p>Check your connection and try again.</p>
+          <button type="button" class="auth-button" data-movement-retry>Try Again</button>
         </div>
       </section>
     </main>
