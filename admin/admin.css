@@ -43,8 +43,8 @@
 .inventory-actions {
   display: flex;
   align-items: stretch;
-  gap: 0.8rem;
-  padding: 0.85rem;
+  gap: 0.65rem;
+  padding: 0.65rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
@@ -54,7 +54,43 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.65rem;
+}
+
+.inventory-setup-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px dashed rgba(200, 184, 154, 0.35);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.07);
+}
+
+.inventory-setup-panel h2,
+.inventory-setup-panel p {
+  margin: 0;
+}
+
+.inventory-setup-panel h2 {
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.inventory-setup-panel p:not(.eyebrow) {
+  margin-top: 0.2rem;
+  color: var(--slate);
+  font-size: 0.88rem;
+}
+
+.inventory-setup-action {
+  flex: 0 0 auto;
+  background: rgba(200, 184, 154, 0.1);
 }
 
 .inventory-action-button,
@@ -77,6 +113,15 @@
   cursor: pointer;
 }
 
+.inventory-action-button:not(.inventory-setup-action) {
+  min-height: 42px;
+  padding: 0.62rem 0.8rem;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+
 .inventory-action-button:hover,
 .inventory-action-button:focus-visible,
 .quick-action-link:hover,
@@ -90,7 +135,7 @@
 }
 
 .inventory-action-primary {
-  min-width: 180px;
+  min-width: 150px;
   background: var(--accent);
   color: var(--navy-950);
   border-color: transparent;
@@ -431,6 +476,15 @@ body.inventory-drawer-open {
   gap: 0.85rem;
 }
 
+.inventory-form-fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.inventory-form-fields[hidden] {
+  display: none;
+}
+
 .inventory-checkbox-field {
   min-height: 44px;
   display: flex;
@@ -482,6 +536,96 @@ body.inventory-drawer-open {
   color: var(--accent);
   background: rgba(200, 184, 154, 0.09);
   font-weight: 600;
+}
+
+.inventory-opening-confirm {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(200, 184, 154, 0.34);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.28);
+}
+
+.inventory-opening-confirm[hidden] {
+  display: none;
+}
+
+.inventory-opening-confirm h3,
+.inventory-opening-confirm p {
+  margin: 0;
+}
+
+.inventory-opening-confirm h3 {
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.98rem;
+  font-weight: 650;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.inventory-opening-confirm p {
+  color: var(--slate);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.inventory-opening-confirm-summary {
+  display: grid;
+  grid-template-columns: minmax(108px, 0.42fr) minmax(0, 1fr);
+  gap: 0.45rem 0.7rem;
+  margin: 0;
+}
+
+.inventory-opening-confirm-summary dt {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.inventory-opening-confirm-summary dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--cream);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.inventory-opening-confirm-warning {
+  padding: 0.72rem 0.8rem;
+  border: 1px solid rgba(224, 179, 111, 0.34);
+  border-radius: 8px;
+  background: rgba(224, 179, 111, 0.09);
+  color: #e0b36f;
+  font-weight: 650;
+}
+
+.inventory-opening-confirm-warning[hidden] {
+  display: none;
+}
+
+.inventory-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.inventory-confirm-actions .auth-button {
+  min-height: 44px;
+}
+
+:root[data-admin-theme="light"] .inventory-opening-confirm {
+  background: rgba(249, 243, 234, 0.94);
+  border-color: rgba(143, 118, 85, 0.28);
+}
+
+:root[data-admin-theme="light"] .inventory-opening-confirm-warning {
+  background: rgba(154, 107, 47, 0.09);
+  border-color: rgba(154, 107, 47, 0.28);
+  color: #9A6B2F;
 }
 
 /* Recipes Phase I10C read-only shell */
@@ -916,6 +1060,32 @@ body.inventory-drawer-open {
 
   .inventory-actions {
     display: grid;
+  }
+
+  .inventory-setup-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inventory-setup-action {
+    width: 100%;
+  }
+
+  .inventory-opening-confirm-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-opening-confirm-summary dt {
+    margin-top: 0.25rem;
+  }
+
+  .inventory-confirm-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inventory-confirm-actions .auth-button {
+    width: 100%;
   }
 
   .inventory-action-primary {

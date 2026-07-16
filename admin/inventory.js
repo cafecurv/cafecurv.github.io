@@ -87,6 +87,40 @@
     addItemTrackExpiryInput,
     addItemSubmitButton,
   ].filter(Boolean);
+  const openingBalanceForm = document.querySelector('[data-opening-balance-form]');
+  const openingBalanceFields = document.querySelector('[data-opening-balance-fields]');
+  const openingBalanceItemSelect = document.querySelector('[data-opening-balance-item]');
+  const openingBalanceQuantityInput = document.querySelector('[data-opening-balance-quantity]');
+  const openingBalanceUnitHint = document.querySelector('[data-opening-balance-unit-hint]');
+  const openingBalanceExpiryWrap = document.querySelector('[data-opening-balance-expiry-wrap]');
+  const openingBalanceExpiryInput = document.querySelector('[data-opening-balance-expiry]');
+  const openingBalanceCostInput = document.querySelector('[data-opening-balance-cost]');
+  const openingBalanceBatchRefInput = document.querySelector('[data-opening-balance-batch-ref]');
+  const openingBalanceNotesInput = document.querySelector('[data-opening-balance-notes]');
+  const openingBalanceStatus = document.querySelector('[data-opening-balance-status]');
+  const openingBalanceSubmitButton = document.querySelector('[data-opening-balance-submit]');
+  const openingBalanceConfirmPanel = document.querySelector('[data-opening-balance-confirm]');
+  const openingBalanceConfirmHeading = document.querySelector('[data-opening-balance-confirm-heading]');
+  const openingBalanceConfirmSummary = document.querySelector('[data-opening-balance-confirm-summary]');
+  const openingBalanceConfirmWarning = document.querySelector('[data-opening-balance-confirm-warning]');
+  const openingBalanceConfirmStatus = document.querySelector('[data-opening-balance-confirm-status]');
+  const openingBalanceGoBackButton = document.querySelector('[data-opening-balance-go-back]');
+  const openingBalanceConfirmSubmitButton = document.querySelector('[data-opening-balance-confirm-submit]');
+  const openingBalanceRetryRefreshButton = document.querySelector('[data-opening-balance-retry-refresh]');
+  const openingBalanceControls = [
+    openingBalanceItemSelect,
+    openingBalanceQuantityInput,
+    openingBalanceExpiryInput,
+    openingBalanceCostInput,
+    openingBalanceBatchRefInput,
+    openingBalanceNotesInput,
+    openingBalanceSubmitButton,
+  ].filter(Boolean);
+  const openingBalanceConfirmControls = [
+    openingBalanceGoBackButton,
+    openingBalanceConfirmSubmitButton,
+    openingBalanceRetryRefreshButton,
+  ].filter(Boolean);
   const receiveStockForm = document.querySelector('[data-receive-stock-form]');
   const receiveStockItemSelect = document.querySelector('[data-receive-stock-item]');
   const receiveStockQuantityInput = document.querySelector('[data-receive-stock-quantity]');
@@ -163,6 +197,7 @@
   let signedInOwnerEmail = '';
   let loadSequence = 0;
   let movementLoadSequence = 0;
+  let openingBalanceOperationSequence = 0;
   let activeLoadSessionKey = '';
   let activeMovementLoadSessionKey = '';
   let searchTimer = 0;
@@ -175,7 +210,10 @@
   let movementHistoryState = STATES.AUTH_LOADING;
   let movementRows = [];
   let filteredMovementRows = [];
+  let pendingOpeningBalance = null;
+  let openingBalanceRefreshFailed = false;
   let isCreatingItem = false;
+  let isSettingOpeningBalance = false;
   let isReceivingStock = false;
   let isUsingStock = false;
   let isRecordingWaste = false;
@@ -212,6 +250,18 @@
     INV_THRESHOLD_SCALE: 'Low-stock threshold can use up to three decimal places.',
     INV_STORAGE_TOO_LONG: 'Storage location must be 100 characters or fewer.',
     INV_ITEM_NAME_DUPLICATES_EXIST: 'Inventory duplicate names need review before new items can be added.',
+  };
+
+  const openingBalanceErrorMessages = {
+    INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before setting an opening balance.',
+    INV_ADMIN_REQUIRED: 'Only CURV owners can set opening balances.',
+    INV_ITEM_NOT_FOUND: 'That inventory item is no longer available. Refresh inventory and try again.',
+    INV_ITEM_INACTIVE: 'That inventory item is archived. Choose another active item.',
+    INV_INVALID_QUANTITY: 'Quantity or cost is invalid. Check the values and try again.',
+    INV_EXPIRY_REQUIRED: 'Enter an expiry date for this opening stock.',
+    INV_EXPIRY_IN_PAST: 'Expiry date must be today or later.',
+    INV_INVALID_BATCH_REF: 'Enter a batch reference or leave it blank.',
+    INV_DUPLICATE_BATCH_REF: 'That batch reference already exists for this item. Use another reference.',
   };
 
   const receiveStockErrorMessages = {
@@ -359,6 +409,14 @@
     updateOwnerAccountUi();
   };
 
+  const getOwnerSessionKey = () => signedInOwnerEmail || 'owner';
+
+  const isOpeningBalanceOperationCurrent = (sequence, ownerKey) => (
+    sequence === openingBalanceOperationSequence
+    && isOwnerSignedIn
+    && ownerKey === getOwnerSessionKey()
+  );
+
   const closeOwnerAccountMenu = () => {
     if (!ownerAccountMenu || !ownerAccountToggle) return;
     ownerAccountMenu.hidden = true;
@@ -396,10 +454,14 @@
 
   const closeDrawer = () => {
     if (!activeDrawer || !drawerLayer || !backdrop) return;
+    if (isSettingOpeningBalance && activeDrawer.dataset.inventoryDrawer === 'opening-balance') return;
     if (isReceivingStock && activeDrawer.dataset.inventoryDrawer === 'receive-stock') return;
     if (isUsingStock && activeDrawer.dataset.inventoryDrawer === 'use-stock') return;
     if (isRecordingWaste && activeDrawer.dataset.inventoryDrawer === 'record-waste') return;
     if (isCountingStock && activeDrawer.dataset.inventoryDrawer === 'count-stock') return;
+    if (activeDrawer.dataset.inventoryDrawer === 'opening-balance') {
+      resetOpeningBalanceForm();
+    }
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
     document.body.classList.remove('inventory-drawer-open');
@@ -500,6 +562,190 @@
         option.textContent = unit.abbreviation ? `${unit.name} (${unit.abbreviation})` : unit.name;
         addItemUnitSelect.appendChild(option);
       });
+    });
+  };
+
+  const setOpeningBalanceStatus = (message = '') => {
+    if (!openingBalanceStatus) return;
+    openingBalanceStatus.textContent = message;
+    openingBalanceStatus.hidden = !message;
+  };
+
+  const setOpeningBalanceConfirmStatus = (message = '') => {
+    if (!openingBalanceConfirmStatus) return;
+    openingBalanceConfirmStatus.textContent = message;
+    openingBalanceConfirmStatus.hidden = !message;
+  };
+
+  const getSelectedOpeningBalanceItem = () => {
+    const itemId = openingBalanceItemSelect ? openingBalanceItemSelect.value : '';
+    if (!itemId) return null;
+    return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const updateOpeningBalanceItemUi = () => {
+    const item = getSelectedOpeningBalanceItem();
+    if (openingBalanceUnitHint) {
+      if (!item) {
+        openingBalanceUnitHint.textContent = '';
+      } else {
+        const hints = [`Unit: ${item.unitAbbreviation || item.unitName || 'base unit'}`];
+        if (item.currentStock > 0) {
+          hints.push(`Current recorded stock: ${formatQuantityWithUnit(item.currentStock, item.unitAbbreviation)}`);
+        }
+        openingBalanceUnitHint.textContent = hints.join('\n');
+      }
+    }
+    const tracksExpiry = Boolean(item && item.trackExpiry);
+    if (openingBalanceExpiryWrap) openingBalanceExpiryWrap.hidden = !tracksExpiry;
+    if (openingBalanceExpiryInput) {
+      openingBalanceExpiryInput.required = tracksExpiry;
+      openingBalanceExpiryInput.disabled = isSettingOpeningBalance || pageState !== STATES.READY || !isOwnerSignedIn || !tracksExpiry;
+      if (!tracksExpiry) openingBalanceExpiryInput.value = '';
+    }
+  };
+
+  const setOpeningBalanceBusy = (isBusy) => {
+    const shouldDisable = isBusy || pageState !== STATES.READY || !isOwnerSignedIn;
+    openingBalanceControls.forEach((control) => {
+      control.disabled = shouldDisable || openingBalanceRefreshFailed;
+    });
+    openingBalanceConfirmControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (openingBalanceGoBackButton) {
+      openingBalanceGoBackButton.hidden = openingBalanceRefreshFailed;
+      openingBalanceGoBackButton.disabled = shouldDisable || openingBalanceRefreshFailed;
+    }
+    if (openingBalanceConfirmSubmitButton) {
+      openingBalanceConfirmSubmitButton.hidden = openingBalanceRefreshFailed;
+      openingBalanceConfirmSubmitButton.disabled = shouldDisable || openingBalanceRefreshFailed;
+      openingBalanceConfirmSubmitButton.textContent = isBusy ? 'Recording...' : 'Confirm Opening Balance';
+    }
+    if (openingBalanceRetryRefreshButton) {
+      openingBalanceRetryRefreshButton.hidden = !openingBalanceRefreshFailed;
+      openingBalanceRetryRefreshButton.disabled = isBusy || !isOwnerSignedIn;
+    }
+    updateOpeningBalanceItemUi();
+    if (openingBalanceSubmitButton) {
+      openingBalanceSubmitButton.textContent = isBusy ? 'Setting...' : 'Review Opening Balance';
+      openingBalanceSubmitButton.disabled = shouldDisable || openingBalanceRefreshFailed;
+    }
+  };
+
+  const resetOpeningBalanceForm = () => {
+    if (openingBalanceForm) openingBalanceForm.reset();
+    pendingOpeningBalance = null;
+    openingBalanceRefreshFailed = false;
+    setOpeningBalanceStatus('');
+    setOpeningBalanceConfirmStatus('');
+    clearElement(openingBalanceConfirmSummary);
+    if (openingBalanceConfirmWarning) {
+      openingBalanceConfirmWarning.textContent = '';
+      openingBalanceConfirmWarning.hidden = true;
+    }
+    if (openingBalanceFields) openingBalanceFields.hidden = false;
+    if (openingBalanceConfirmPanel) openingBalanceConfirmPanel.hidden = true;
+    updateOpeningBalanceItemUi();
+    setOpeningBalanceBusy(isSettingOpeningBalance);
+  };
+
+  const renderOpeningBalanceOptions = () => {
+    preserveSelectValue(openingBalanceItemSelect, () => {
+      while (openingBalanceItemSelect.options.length > 1) openingBalanceItemSelect.remove(1);
+      inventoryItems.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.itemId;
+        option.textContent = item.unitAbbreviation
+          ? `${item.itemName} (${item.unitAbbreviation})`
+          : item.itemName;
+        openingBalanceItemSelect.appendChild(option);
+      });
+    });
+    updateOpeningBalanceItemUi();
+  };
+
+  const focusOpeningBalanceQuantity = () => {
+    requestAnimationFrame(() => {
+      if (
+        activeDrawer?.dataset.inventoryDrawer === 'opening-balance'
+        && openingBalanceQuantityInput
+        && !openingBalanceQuantityInput.disabled
+      ) {
+        openingBalanceQuantityInput.focus();
+      }
+    });
+  };
+
+  const addOpeningBalanceSummaryRow = (label, value) => {
+    if (!openingBalanceConfirmSummary) return;
+    const term = createTextElement('dt', '', label);
+    const detail = createTextElement('dd', '', value || '-');
+    openingBalanceConfirmSummary.appendChild(term);
+    openingBalanceConfirmSummary.appendChild(detail);
+  };
+
+  const buildOpeningBalanceSnapshot = ({ item, payload }) => {
+    const hasExistingStock = item.currentStock > 0 || item.usableStock > 0 || item.expiredStock > 0;
+    return {
+      item,
+      payload,
+      itemName: item.itemName,
+      quantityText: formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation),
+      expiryText: payload.p_expiry_date || '',
+      costText: payload.p_cost_per_unit === null ? '' : new Intl.NumberFormat('en-PH', {
+        maximumFractionDigits: 4,
+      }).format(payload.p_cost_per_unit),
+      batchRef: payload.p_batch_ref || '',
+      currentUsableText: formatQuantityWithUnit(item.usableStock, item.unitAbbreviation),
+      hasExistingStock,
+    };
+  };
+
+  const showOpeningBalanceConfirmation = (validated) => {
+    pendingOpeningBalance = buildOpeningBalanceSnapshot(validated);
+    openingBalanceRefreshFailed = false;
+    setOpeningBalanceStatus('');
+    setOpeningBalanceConfirmStatus('');
+    clearElement(openingBalanceConfirmSummary);
+    addOpeningBalanceSummaryRow('Item', pendingOpeningBalance.itemName);
+    addOpeningBalanceSummaryRow('Opening quantity', pendingOpeningBalance.quantityText);
+    if (pendingOpeningBalance.expiryText) addOpeningBalanceSummaryRow('Expiry date', pendingOpeningBalance.expiryText);
+    if (pendingOpeningBalance.costText) addOpeningBalanceSummaryRow('Cost per unit', pendingOpeningBalance.costText);
+    if (pendingOpeningBalance.batchRef) addOpeningBalanceSummaryRow('Batch reference', pendingOpeningBalance.batchRef);
+    addOpeningBalanceSummaryRow('Current recorded usable stock', pendingOpeningBalance.currentUsableText);
+    if (openingBalanceConfirmWarning) {
+      openingBalanceConfirmWarning.textContent = pendingOpeningBalance.hasExistingStock
+        ? 'This item already has recorded stock. Confirm only if this is still setup stock that was already on hand.'
+        : '';
+      openingBalanceConfirmWarning.hidden = !pendingOpeningBalance.hasExistingStock;
+    }
+    if (openingBalanceFields) openingBalanceFields.hidden = true;
+    if (openingBalanceConfirmPanel) openingBalanceConfirmPanel.hidden = false;
+    setOpeningBalanceBusy(false);
+    requestAnimationFrame(() => {
+      if (openingBalanceConfirmHeading && !openingBalanceConfirmHeading.hidden) {
+        openingBalanceConfirmHeading.focus();
+      } else if (openingBalanceConfirmSubmitButton && !openingBalanceConfirmSubmitButton.disabled) {
+        openingBalanceConfirmSubmitButton.focus();
+      }
+    });
+  };
+
+  const returnToOpeningBalanceFields = () => {
+    if (isSettingOpeningBalance) return;
+    pendingOpeningBalance = null;
+    openingBalanceRefreshFailed = false;
+    setOpeningBalanceConfirmStatus('');
+    if (openingBalanceConfirmPanel) openingBalanceConfirmPanel.hidden = true;
+    if (openingBalanceFields) openingBalanceFields.hidden = false;
+    setOpeningBalanceBusy(false);
+    requestAnimationFrame(() => {
+      if (openingBalanceSubmitButton && !openingBalanceSubmitButton.disabled) {
+        openingBalanceSubmitButton.focus();
+      } else if (openingBalanceItemSelect && !openingBalanceItemSelect.disabled) {
+        openingBalanceItemSelect.focus();
+      }
     });
   };
 
@@ -905,6 +1151,11 @@
     return addItemErrorMessages[code] || "Couldn't add this item. Check the details and try again.";
   };
 
+  const getOpeningBalanceErrorMessage = (error) => {
+    const code = extractInventoryErrorCode(error);
+    return openingBalanceErrorMessages[code] || "Couldn't set this opening balance. Check the details and try again.";
+  };
+
   const getReceiveStockErrorMessage = (error) => {
     const code = extractInventoryErrorCode(error);
     return receiveStockErrorMessages[code] || "Couldn't receive this stock. Check the details and try again.";
@@ -1241,6 +1492,7 @@
         : 'all';
     }
     renderAddItemOptions();
+    renderOpeningBalanceOptions();
     renderReceiveStockOptions();
     renderUseStockOptions();
     renderRecordWasteOptions();
@@ -1619,6 +1871,103 @@
     };
   };
 
+  const validateOpeningBalanceForm = () => {
+    const item = getSelectedOpeningBalanceItem();
+    if (!item) {
+      setOpeningBalanceStatus('Choose an item for this opening balance.');
+      openingBalanceItemSelect?.focus();
+      return null;
+    }
+
+    const quantityRaw = openingBalanceQuantityInput ? openingBalanceQuantityInput.value.trim() : '';
+    if (!quantityRaw) {
+      setOpeningBalanceStatus('Enter the opening quantity.');
+      openingBalanceQuantityInput?.focus();
+      return null;
+    }
+    const quantity = Number(quantityRaw);
+    if (!Number.isFinite(quantity)) {
+      setOpeningBalanceStatus('Enter the opening quantity.');
+      openingBalanceQuantityInput?.focus();
+      return null;
+    }
+    if (quantity <= 0) {
+      setOpeningBalanceStatus('Opening quantity must be greater than zero.');
+      openingBalanceQuantityInput?.focus();
+      return null;
+    }
+    if (hasMoreThanThreeDecimals(quantityRaw)) {
+      setOpeningBalanceStatus('Opening quantity can use up to three decimal places.');
+      openingBalanceQuantityInput?.focus();
+      return null;
+    }
+
+    let expiryDate = null;
+    if (item.trackExpiry) {
+      expiryDate = openingBalanceExpiryInput ? openingBalanceExpiryInput.value : '';
+      if (!expiryDate) {
+        setOpeningBalanceStatus('Enter an expiry date for this opening stock.');
+        openingBalanceExpiryInput?.focus();
+        return null;
+      }
+      const expiryOffset = getManilaDayOffset(expiryDate);
+      if (expiryOffset === null || expiryOffset < 0) {
+        setOpeningBalanceStatus('Expiry date must be today or later.');
+        openingBalanceExpiryInput?.focus();
+        return null;
+      }
+    } else if (openingBalanceExpiryInput) {
+      openingBalanceExpiryInput.value = '';
+    }
+
+    const costRaw = openingBalanceCostInput ? openingBalanceCostInput.value.trim() : '';
+    let costPerUnit = null;
+    if (costRaw) {
+      costPerUnit = Number(costRaw);
+      if (!Number.isFinite(costPerUnit)) {
+        setOpeningBalanceStatus('Enter a valid cost per unit.');
+        openingBalanceCostInput?.focus();
+        return null;
+      }
+      if (costPerUnit < 0) {
+        setOpeningBalanceStatus('Cost cannot be negative.');
+        openingBalanceCostInput?.focus();
+        return null;
+      }
+      if (hasMoreThanDecimals(costRaw, 4)) {
+        setOpeningBalanceStatus('Cost can use up to four decimal places.');
+        openingBalanceCostInput?.focus();
+        return null;
+      }
+    }
+
+    const batchRef = openingBalanceBatchRefInput ? openingBalanceBatchRefInput.value.trim() : '';
+    if (openingBalanceBatchRefInput && openingBalanceBatchRefInput.value && !batchRef) {
+      setOpeningBalanceStatus('Batch reference cannot be blank.');
+      openingBalanceBatchRefInput.focus();
+      return null;
+    }
+
+    const notes = openingBalanceNotesInput ? openingBalanceNotesInput.value.trim() : '';
+    if (notes.length > 500) {
+      setOpeningBalanceStatus('Notes must be 500 characters or fewer.');
+      openingBalanceNotesInput?.focus();
+      return null;
+    }
+
+    return {
+      item,
+      payload: {
+        p_item_id: item.itemId,
+        p_quantity: quantity,
+        p_expiry_date: expiryDate || null,
+        p_cost_per_unit: costPerUnit,
+        p_batch_ref: batchRef || null,
+        p_notes: notes || null,
+      },
+    };
+  };
+
   const validateReceiveStockForm = () => {
     const item = getSelectedReceiveStockItem();
     if (!item) {
@@ -1984,6 +2333,7 @@
       filteredItems = [];
     }
     setAddItemBusy(isCreatingItem);
+    setOpeningBalanceBusy(isSettingOpeningBalance);
     setReceiveStockBusy(isReceivingStock);
     setUseStockBusy(isUsingStock);
     setRecordWasteBusy(isRecordingWaste);
@@ -2027,9 +2377,9 @@
   };
 
   const loadInventoryData = async () => {
-    if (!client || !isOwnerSignedIn) return;
-    const sessionKey = signedInOwnerEmail || 'owner';
-    if (pageState === STATES.LOADING && activeLoadSessionKey === sessionKey) return;
+    if (!client || !isOwnerSignedIn) return { ok: false, reason: 'signed_out' };
+    const sessionKey = getOwnerSessionKey();
+    if (pageState === STATES.LOADING && activeLoadSessionKey === sessionKey) return { ok: false, reason: 'stale' };
     activeLoadSessionKey = sessionKey;
     const sequence = loadSequence + 1;
     loadSequence = sequence;
@@ -2070,7 +2420,7 @@
 
       const failedResult = [stockResult, categoryResult, unitResult, lowStockResult, expiryResult].find((result) => result.error);
       if (failedResult) throw failedResult.error;
-      if (sequence !== loadSequence || !isOwnerSignedIn) return;
+      if (sequence !== loadSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
 
       const lowStockIds = new Set((lowStockResult.data || []).map((row) => row.item_id).filter(Boolean));
       const expiryMap = buildExpiryMap(expiryResult.data || []);
@@ -2093,22 +2443,29 @@
       summary = computeSummary(inventoryItems);
       alerts = computeAlerts(inventoryItems);
       setPageState(STATES.READY);
+      return { ok: true };
     } catch (error) {
       console.error('Inventory read failed:', error);
-      if (sequence !== loadSequence) return;
+      if (sequence !== loadSequence) return { ok: false, reason: 'stale' };
       try {
         const { data } = await client.auth.getSession();
         const user = data && data.session && data.session.user;
         if (!user) {
+          openingBalanceOperationSequence += 1;
+          pendingOpeningBalance = null;
+          openingBalanceRefreshFailed = false;
+          isSettingOpeningBalance = false;
+          resetOpeningBalanceForm();
           clearInventoryState();
           setSignedInState(false);
           setPageState(STATES.SIGNED_OUT);
-          return;
+          return { ok: false, reason: 'signed_out' };
         }
       } catch (sessionError) {
         console.error('Inventory session check failed:', sessionError);
       }
       setPageState(STATES.ERROR);
+      return { ok: false, reason: 'error' };
     } finally {
       if (sequence === loadSequence) activeLoadSessionKey = '';
     }
@@ -2170,10 +2527,15 @@
     if (!isSignedIn) {
       loadSequence += 1;
       movementLoadSequence += 1;
+      openingBalanceOperationSequence += 1;
       activeLoadSessionKey = '';
       activeMovementLoadSessionKey = '';
+      pendingOpeningBalance = null;
+      openingBalanceRefreshFailed = false;
+      isSettingOpeningBalance = false;
       clearInventoryState();
       clearMovementHistoryState();
+      resetOpeningBalanceForm();
       setPageState(STATES.SIGNED_OUT);
       setMovementHistoryState(STATES.SIGNED_OUT);
       return;
@@ -2198,10 +2560,112 @@
     }
   };
 
+  const finishOpeningBalanceAfterRefresh = (snapshot, inventoryResult, historyResult) => {
+    const warningText = snapshot.warningText ? ` ${snapshot.warningText}` : '';
+    const historyWarning = historyResult.ok
+      ? ''
+      : ' Movement history could not refresh; use Try Again in Movement History.';
+    resetOpeningBalanceForm();
+    isSettingOpeningBalance = false;
+    setOpeningBalanceBusy(false);
+    closeDrawer();
+    setStatus(`Opening balance set for ${snapshot.itemName}: ${snapshot.quantityText}.${warningText}${historyWarning}`);
+  };
+
+  const showOpeningBalanceRefreshFailure = () => {
+    openingBalanceRefreshFailed = true;
+    setOpeningBalanceConfirmStatus('Opening balance was recorded, but the latest inventory totals could not be loaded. Retry the page refresh. Do not submit the opening balance again.');
+    setOpeningBalanceBusy(false);
+    requestAnimationFrame(() => {
+      if (openingBalanceRetryRefreshButton && !openingBalanceRetryRefreshButton.disabled) {
+        openingBalanceRetryRefreshButton.focus();
+      } else if (openingBalanceConfirmHeading) {
+        openingBalanceConfirmHeading.focus();
+      }
+    });
+  };
+
+  const retryOpeningBalanceRefresh = async () => {
+    if (!pendingOpeningBalance || isSettingOpeningBalance || !isOwnerSignedIn) return;
+    const sequence = openingBalanceOperationSequence + 1;
+    openingBalanceOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
+    const snapshot = pendingOpeningBalance;
+    isSettingOpeningBalance = true;
+    setOpeningBalanceConfirmStatus('Refreshing inventory totals...');
+    setOpeningBalanceBusy(true);
+
+    const inventoryResult = await loadInventoryData();
+    if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+    if (!inventoryResult.ok) {
+      isSettingOpeningBalance = false;
+      showOpeningBalanceRefreshFailure();
+      return;
+    }
+
+    const historyResult = await refreshMovementHistoryAfterOperation();
+    if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+    isSettingOpeningBalance = false;
+    finishOpeningBalanceAfterRefresh(snapshot, inventoryResult, historyResult);
+  };
+
+  const confirmOpeningBalance = async () => {
+    if (!pendingOpeningBalance || isSettingOpeningBalance) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setOpeningBalanceConfirmStatus('Sign in with the CURV owner account before setting an opening balance.');
+      return;
+    }
+
+    const sequence = openingBalanceOperationSequence + 1;
+    openingBalanceOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
+    const snapshot = pendingOpeningBalance;
+    isSettingOpeningBalance = true;
+    openingBalanceRefreshFailed = false;
+    setOpeningBalanceConfirmStatus('Recording opening balance...');
+    setOpeningBalanceBusy(true);
+
+    try {
+      const { data, error } = await client.rpc('inventory_opening_balance', snapshot.payload);
+      if (error) throw error;
+      if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+
+      const response = parseRpcResponse(data);
+      const warnings = Array.isArray(response.warnings) ? response.warnings : [];
+      if (response.item_name) snapshot.itemName = response.item_name;
+      snapshot.warningText = warnings.join(' ');
+      if (warnings.length) {
+        setOpeningBalanceConfirmStatus(snapshot.warningText);
+      }
+
+      const inventoryResult = await loadInventoryData();
+      if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+      if (!inventoryResult.ok) {
+        isSettingOpeningBalance = false;
+        showOpeningBalanceRefreshFailure();
+        return;
+      }
+
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+      isSettingOpeningBalance = false;
+      finishOpeningBalanceAfterRefresh(snapshot, inventoryResult, historyResult);
+    } catch (error) {
+      console.error('Inventory opening balance failed:', error);
+      if (!isOpeningBalanceOperationCurrent(sequence, ownerKey)) return;
+      isSettingOpeningBalance = false;
+      setOpeningBalanceConfirmStatus(getOpeningBalanceErrorMessage(error));
+      setOpeningBalanceBusy(false);
+    }
+  };
+
   openButtons.forEach((button) => {
     button.addEventListener('click', () => {
       if (button.dataset.inventoryDrawerOpen === 'receive-stock') {
         clearReceiveStockItem();
+      }
+      if (button.dataset.inventoryDrawerOpen === 'opening-balance') {
+        resetOpeningBalanceForm();
       }
       if (button.dataset.inventoryDrawerOpen === 'use-stock') {
         clearUseStockItem();
@@ -2213,6 +2677,9 @@
         resetCountStockForm();
       }
       openDrawer(button.dataset.inventoryDrawerOpen, button);
+      if (button.dataset.inventoryDrawerOpen === 'opening-balance') {
+        focusOpeningBalanceQuantity();
+      }
     });
   });
 
@@ -2298,6 +2765,26 @@
       setAddItemBusy(false);
     }
   });
+
+  openingBalanceItemSelect?.addEventListener('change', updateOpeningBalanceItemUi);
+
+  openingBalanceForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (isSettingOpeningBalance) return;
+    if (openingBalanceRefreshFailed) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setOpeningBalanceStatus('Sign in with the CURV owner account before setting an opening balance.');
+      return;
+    }
+
+    const validated = validateOpeningBalanceForm();
+    if (!validated) return;
+    showOpeningBalanceConfirmation(validated);
+  });
+
+  openingBalanceGoBackButton?.addEventListener('click', returnToOpeningBalanceFields);
+  openingBalanceConfirmSubmitButton?.addEventListener('click', confirmOpeningBalance);
+  openingBalanceRetryRefreshButton?.addEventListener('click', retryOpeningBalanceRefresh);
 
   receiveStockItemSelect?.addEventListener('change', updateReceiveStockItemUi);
 

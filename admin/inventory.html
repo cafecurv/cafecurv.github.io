@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i11b1-movement-history">
+  <link rel="stylesheet" href="admin.css?v=i11b2-opening-balance-safety">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i11b1-movement-history" defer></script>
+  <script src="inventory.js?v=i11b2-opening-balance-safety" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -137,6 +137,15 @@
           <button type="button" class="inventory-action-button" data-inventory-drawer-open="record-waste">Record Waste</button>
           <button type="button" class="inventory-action-button" data-inventory-drawer-open="count-stock">Count Stock</button>
         </div>
+      </section>
+
+      <section class="inventory-setup-panel" aria-labelledby="inventory-setup-title">
+        <div>
+          <p class="eyebrow">Owner Setup</p>
+          <h2 id="inventory-setup-title">Opening Balance</h2>
+          <p>Use this only when an item first enters CURV Inventory and stock is already physically on hand.</p>
+        </div>
+        <button type="button" class="inventory-action-button inventory-setup-action" data-inventory-drawer-open="opening-balance">Set Opening Balance</button>
       </section>
 
       <section class="inventory-summary-grid" aria-label="Inventory summary">
@@ -438,9 +447,46 @@
       </form>
     </section>
 
+    <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-opening-balance-title" data-inventory-drawer="opening-balance" hidden>
+      <div class="inventory-drawer-head">
+        <div>
+          <p class="eyebrow">Owner Setup</p>
+          <h2 id="drawer-opening-balance-title">Set Opening Balance</h2>
+        </div>
+        <button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button>
+      </div>
+      <p class="inventory-drawer-notice">Use Opening Balance only for stock already on hand when an item is first introduced into CURV Inventory. Daily deliveries should use Receive Stock.</p>
+      <form class="inventory-preview-form" data-opening-balance-form>
+        <div class="inventory-form-fields" data-opening-balance-fields>
+          <label class="admin-field" for="opening-balance-item"><span>Item</span><select id="opening-balance-item" data-opening-balance-item required><option value="">Choose item</option></select></label>
+          <label class="admin-field" for="opening-balance-quantity"><span>Opening quantity</span><input id="opening-balance-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-opening-balance-quantity required><small class="inventory-field-hint" data-opening-balance-unit-hint></small></label>
+          <label class="admin-field" for="opening-balance-expiry" data-opening-balance-expiry-wrap hidden><span>Expiry date</span><input id="opening-balance-expiry" type="date" data-opening-balance-expiry></label>
+          <label class="admin-field" for="opening-balance-cost"><span>Cost per unit (optional)</span><input id="opening-balance-cost" type="number" min="0" step="0.0001" inputmode="decimal" data-opening-balance-cost></label>
+          <label class="admin-field" for="opening-balance-batch-ref"><span>Batch reference (optional)</span><input id="opening-balance-batch-ref" type="text" autocomplete="off" placeholder="Leave blank to auto-generate" data-opening-balance-batch-ref></label>
+          <label class="admin-field" for="opening-balance-notes"><span>Notes (optional)</span><textarea id="opening-balance-notes" rows="3" maxlength="500" placeholder="Optional opening balance note" data-opening-balance-notes></textarea></label>
+          <p class="inventory-form-status" data-opening-balance-status aria-live="polite" hidden></p>
+          <div class="inventory-form-actions">
+            <button type="submit" class="auth-button" data-opening-balance-submit>Review Opening Balance</button>
+          </div>
+        </div>
+        <div class="inventory-opening-confirm" data-opening-balance-confirm aria-live="polite" hidden>
+          <h3 id="opening-balance-confirm-title" tabindex="-1" data-opening-balance-confirm-heading>Confirm Opening Balance</h3>
+          <p>Opening Balance is intended for stock already on hand before normal inventory tracking. Future deliveries should use Receive Stock.</p>
+          <dl class="inventory-opening-confirm-summary" data-opening-balance-confirm-summary></dl>
+          <p class="inventory-opening-confirm-warning" data-opening-balance-confirm-warning hidden></p>
+          <p class="inventory-form-status" data-opening-balance-confirm-status aria-live="polite" hidden></p>
+          <div class="inventory-confirm-actions">
+            <button type="button" class="auth-button auth-button-secondary" data-opening-balance-go-back>Go Back</button>
+            <button type="button" class="auth-button" data-opening-balance-confirm-submit>Confirm Opening Balance</button>
+            <button type="button" class="auth-button" data-opening-balance-retry-refresh hidden>Retry Refresh</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-receive-stock-title" data-inventory-drawer="receive-stock" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Stock In</p><h2 id="drawer-receive-stock-title">Receive Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
-      <p>Record a new delivery or add starting quantities.</p>
+      <p>Record a delivery received after inventory tracking has started.</p>
       <form class="inventory-preview-form" data-receive-stock-form>
         <label class="admin-field" for="receive-stock-item"><span>Item</span><select id="receive-stock-item" data-receive-stock-item required><option value="">Choose item</option></select></label>
         <label class="admin-field" for="receive-stock-quantity"><span>Quantity received</span><input id="receive-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-receive-stock-quantity required><small class="inventory-field-hint" data-receive-stock-unit-hint></small></label>
