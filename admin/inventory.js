@@ -173,20 +173,37 @@
     recordWasteSubmitButton,
   ].filter(Boolean);
   const countStockForm = document.querySelector('[data-count-stock-form]');
+  const countStockFields = document.querySelector('[data-count-stock-fields]');
   const countStockItemSelect = document.querySelector('[data-count-stock-item]');
   const countStockQuantityInput = document.querySelector('[data-count-stock-quantity]');
   const countStockUnitHint = document.querySelector('[data-count-stock-unit-hint]');
+  const countStockPreview = document.querySelector('[data-count-stock-preview]');
+  const countStockPreviewRecorded = document.querySelector('[data-count-stock-preview-recorded]');
+  const countStockPreviewPhysical = document.querySelector('[data-count-stock-preview-physical]');
+  const countStockPreviewDifference = document.querySelector('[data-count-stock-preview-difference]');
+  const countStockPreviewResult = document.querySelector('[data-count-stock-preview-result]');
   const countStockExpiryWrap = document.querySelector('[data-count-stock-expiry-wrap]');
   const countStockExpiryInput = document.querySelector('[data-count-stock-expiry]');
   const countStockNotesInput = document.querySelector('[data-count-stock-notes]');
   const countStockStatus = document.querySelector('[data-count-stock-status]');
   const countStockSubmitButton = document.querySelector('[data-count-stock-submit]');
+  const countStockConfirmPanel = document.querySelector('[data-count-stock-confirm]');
+  const countStockConfirmHeading = document.querySelector('[data-count-stock-confirm-heading]');
+  const countStockConfirmSummary = document.querySelector('[data-count-stock-confirm-summary]');
+  const countStockConfirmWarning = document.querySelector('[data-count-stock-confirm-warning]');
+  const countStockConfirmStatus = document.querySelector('[data-count-stock-confirm-status]');
+  const countStockGoBackButton = document.querySelector('[data-count-stock-go-back]');
+  const countStockConfirmSubmitButton = document.querySelector('[data-count-stock-confirm-submit]');
   const countStockControls = [
     countStockItemSelect,
     countStockQuantityInput,
     countStockExpiryInput,
     countStockNotesInput,
     countStockSubmitButton,
+  ].filter(Boolean);
+  const countStockConfirmControls = [
+    countStockGoBackButton,
+    countStockConfirmSubmitButton,
   ].filter(Boolean);
 
   let activeDrawer = null;
@@ -217,6 +234,7 @@
   let filteredMovementRows = [];
   let pendingOpeningBalance = null;
   let openingBalanceRefreshFailed = false;
+  let pendingCountStock = null;
   let isCreatingItem = false;
   let isSettingOpeningBalance = false;
   let isReceivingStock = false;
@@ -459,6 +477,7 @@
     isUsingStock = false;
     isRecordingWaste = false;
     isCountingStock = false;
+    pendingCountStock = null;
   };
 
   const closeOwnerAccountMenu = () => {
@@ -505,6 +524,9 @@
     if (isCountingStock && activeDrawer.dataset.inventoryDrawer === 'count-stock') return;
     if (activeDrawer.dataset.inventoryDrawer === 'opening-balance') {
       resetOpeningBalanceForm();
+    }
+    if (activeDrawer.dataset.inventoryDrawer === 'count-stock') {
+      resetCountStockForm();
     }
     drawerLayer.classList.remove('is-open');
     backdrop.classList.remove('is-open');
@@ -1081,10 +1103,52 @@
     countStockStatus.hidden = !message;
   };
 
+  const setCountStockConfirmStatus = (message = '') => {
+    if (!countStockConfirmStatus) return;
+    countStockConfirmStatus.textContent = message;
+    countStockConfirmStatus.hidden = !message;
+  };
+
   const getSelectedCountStockItem = () => {
     const itemId = countStockItemSelect ? countStockItemSelect.value : '';
     if (!itemId) return null;
     return inventoryItems.find((item) => item.itemId === itemId) || null;
+  };
+
+  const roundStockQuantity = (value) => Math.round(parseNumber(value) * 1000) / 1000;
+
+  const getCountStockDelta = (item, actualQuantity) => {
+    if (!item || actualQuantity === null || !Number.isFinite(actualQuantity)) return null;
+    const recordedUsable = roundStockQuantity(item.usableStock);
+    const physicalCount = roundStockQuantity(actualQuantity);
+    const difference = roundStockQuantity(physicalCount - recordedUsable);
+    const absoluteDifference = Math.abs(difference);
+    const state = difference > 0 ? 'increase' : difference < 0 ? 'decrease' : 'no-change';
+    const isLargeChange = recordedUsable > 0
+      ? absoluteDifference >= roundStockQuantity(recordedUsable * 0.5)
+      : physicalCount > 0;
+    return {
+      recordedUsable,
+      physicalCount,
+      difference,
+      absoluteDifference,
+      state,
+      isLargeChange,
+    };
+  };
+
+  const getCountStockResultText = (delta, unitAbbreviation = '') => {
+    if (!delta) return 'Enter a physical count to preview the adjustment.';
+    const amount = formatQuantityWithUnit(delta.absoluteDifference, unitAbbreviation);
+    if (delta.state === 'increase') return `Recorded stock will increase by ${amount}.`;
+    if (delta.state === 'decrease') return `Recorded stock will decrease by ${amount}.`;
+    return 'No adjustment needed. Recorded stock already matches the physical count.';
+  };
+
+  const getSignedCountStockDifferenceText = (delta, unitAbbreviation = '') => {
+    if (!delta) return '-';
+    const sign = delta.difference > 0 ? '+' : '';
+    return `${sign}${formatQuantityWithUnit(delta.difference, unitAbbreviation)}`;
   };
 
   const getCountStockQuantityValue = () => {
@@ -1097,6 +1161,38 @@
     const item = getSelectedCountStockItem();
     const quantity = getCountStockQuantityValue();
     return Boolean(item?.trackExpiry && quantity !== null && quantity > item.usableStock);
+  };
+
+  const updateCountStockPreview = () => {
+    const item = getSelectedCountStockItem();
+    const quantity = getCountStockQuantityValue();
+    const delta = getCountStockDelta(item, quantity);
+    const hasPreview = Boolean(item && delta);
+    if (countStockPreview) {
+      countStockPreview.hidden = !item;
+      countStockPreview.dataset.countStockState = delta ? delta.state : 'empty';
+      countStockPreview.classList.toggle('is-large-change', Boolean(delta?.isLargeChange));
+    }
+    if (countStockPreviewRecorded) {
+      countStockPreviewRecorded.textContent = item
+        ? formatQuantityWithUnit(item.usableStock, item.unitAbbreviation)
+        : '-';
+    }
+    if (countStockPreviewPhysical) {
+      countStockPreviewPhysical.textContent = hasPreview
+        ? formatQuantityWithUnit(delta.physicalCount, item.unitAbbreviation)
+        : '-';
+    }
+    if (countStockPreviewDifference) {
+      countStockPreviewDifference.textContent = hasPreview
+        ? getSignedCountStockDifferenceText(delta, item.unitAbbreviation)
+        : '-';
+    }
+    if (countStockPreviewResult) {
+      countStockPreviewResult.textContent = hasPreview
+        ? getCountStockResultText(delta, item.unitAbbreviation)
+        : 'Enter a physical count to preview the adjustment.';
+    }
   };
 
   const updateCountStockUi = () => {
@@ -1115,6 +1211,8 @@
       }
     }
 
+    updateCountStockPreview();
+
     const shouldShowExpiry = needsCountStockExpiry();
     if (countStockExpiryWrap) countStockExpiryWrap.hidden = !shouldShowExpiry;
     if (countStockExpiryInput) {
@@ -1129,17 +1227,33 @@
     countStockControls.forEach((control) => {
       control.disabled = shouldDisable;
     });
+    countStockConfirmControls.forEach((control) => {
+      control.disabled = shouldDisable;
+    });
+    if (countStockConfirmSubmitButton) {
+      countStockConfirmSubmitButton.textContent = isBusy ? 'Saving...' : 'Confirm Count';
+    }
     updateCountStockUi();
     if (countStockSubmitButton) {
-      countStockSubmitButton.textContent = isBusy ? 'Saving...' : 'Count Stock';
+      countStockSubmitButton.textContent = isBusy ? 'Saving...' : 'Review Count';
       countStockSubmitButton.disabled = shouldDisable;
     }
   };
 
   const resetCountStockForm = () => {
     if (countStockForm) countStockForm.reset();
+    pendingCountStock = null;
     setCountStockStatus('');
+    setCountStockConfirmStatus('');
+    clearElement(countStockConfirmSummary);
+    if (countStockConfirmWarning) {
+      countStockConfirmWarning.textContent = '';
+      countStockConfirmWarning.hidden = true;
+    }
+    if (countStockFields) countStockFields.hidden = false;
+    if (countStockConfirmPanel) countStockConfirmPanel.hidden = true;
     updateCountStockUi();
+    setCountStockBusy(isCountingStock);
   };
 
   const renderCountStockOptions = () => {
@@ -1174,6 +1288,85 @@
         && countStockQuantityInput
         && !countStockQuantityInput.disabled
       ) {
+        countStockQuantityInput.focus();
+      }
+    });
+  };
+
+  const addCountStockSummaryRow = (label, value) => {
+    if (!countStockConfirmSummary) return;
+    const term = createTextElement('dt', '', label);
+    const detail = createTextElement('dd', '', value || '-');
+    countStockConfirmSummary.appendChild(term);
+    countStockConfirmSummary.appendChild(detail);
+  };
+
+  const buildCountStockSnapshot = ({ item, payload }) => {
+    const delta = getCountStockDelta(item, payload.p_actual_quantity);
+    return {
+      itemId: item.itemId,
+      itemName: item.itemName,
+      unitAbbreviation: item.unitAbbreviation,
+      recordedUsable: delta.recordedUsable,
+      physicalCount: delta.physicalCount,
+      difference: delta.difference,
+      absoluteDifference: delta.absoluteDifference,
+      state: delta.state,
+      isLargeChange: delta.isLargeChange,
+      expiryDate: payload.p_expiry_date || '',
+      notes: payload.p_notes === 'Physical count from Count Stock drawer.' ? '' : payload.p_notes,
+      payload,
+      recordedText: formatQuantityWithUnit(delta.recordedUsable, item.unitAbbreviation),
+      physicalText: formatQuantityWithUnit(delta.physicalCount, item.unitAbbreviation),
+      differenceText: getSignedCountStockDifferenceText(delta, item.unitAbbreviation),
+      resultText: getCountStockResultText(delta, item.unitAbbreviation),
+    };
+  };
+
+  const showCountStockConfirmation = (validated) => {
+    pendingCountStock = buildCountStockSnapshot(validated);
+    setCountStockStatus('');
+    setCountStockConfirmStatus('');
+    clearElement(countStockConfirmSummary);
+    addCountStockSummaryRow('Item', pendingCountStock.itemName);
+    addCountStockSummaryRow('Recorded usable stock', pendingCountStock.recordedText);
+    addCountStockSummaryRow('Physical count', pendingCountStock.physicalText);
+    addCountStockSummaryRow('Difference', pendingCountStock.differenceText);
+    addCountStockSummaryRow('Result', pendingCountStock.resultText);
+    if (pendingCountStock.expiryDate) addCountStockSummaryRow('Expiry date', pendingCountStock.expiryDate);
+    if (pendingCountStock.notes) addCountStockSummaryRow('Notes', pendingCountStock.notes);
+    if (countStockConfirmWarning) {
+      countStockConfirmWarning.textContent = pendingCountStock.isLargeChange
+        ? 'This is a large inventory adjustment. Double-check the item and physical count before confirming.'
+        : '';
+      countStockConfirmWarning.hidden = !pendingCountStock.isLargeChange;
+    }
+    if (countStockFields) countStockFields.hidden = true;
+    if (countStockConfirmPanel) {
+      countStockConfirmPanel.hidden = false;
+      countStockConfirmPanel.dataset.countStockState = pendingCountStock.state;
+    }
+    setCountStockBusy(false);
+    requestAnimationFrame(() => {
+      if (countStockConfirmHeading && !countStockConfirmHeading.hidden) {
+        countStockConfirmHeading.focus();
+      } else if (countStockConfirmSubmitButton && !countStockConfirmSubmitButton.disabled) {
+        countStockConfirmSubmitButton.focus();
+      }
+    });
+  };
+
+  const returnToCountStockFields = () => {
+    if (isCountingStock) return;
+    pendingCountStock = null;
+    setCountStockConfirmStatus('');
+    if (countStockConfirmPanel) countStockConfirmPanel.hidden = true;
+    if (countStockFields) countStockFields.hidden = false;
+    setCountStockBusy(false);
+    requestAnimationFrame(() => {
+      if (countStockSubmitButton && !countStockSubmitButton.disabled) {
+        countStockSubmitButton.focus();
+      } else if (countStockQuantityInput && !countStockQuantityInput.disabled) {
         countStockQuantityInput.focus();
       }
     });
@@ -2501,6 +2694,7 @@
           openingBalanceRefreshFailed = false;
           isSettingOpeningBalance = false;
           resetOpeningBalanceForm();
+          resetCountStockForm();
           clearInventoryState();
           setSignedInState(false);
           setPageState(STATES.SIGNED_OUT);
@@ -2555,6 +2749,7 @@
           openingBalanceRefreshFailed = false;
           isSettingOpeningBalance = false;
           resetOpeningBalanceForm();
+          resetCountStockForm();
           clearInventoryState();
           clearMovementHistoryState();
           setSignedInState(false);
@@ -2591,6 +2786,7 @@
       clearInventoryState();
       clearMovementHistoryState();
       resetOpeningBalanceForm();
+      resetCountStockForm();
       setPageState(STATES.SIGNED_OUT);
       setMovementHistoryState(STATES.SIGNED_OUT);
       return;
@@ -2711,6 +2907,60 @@
       isSettingOpeningBalance = false;
       setOpeningBalanceConfirmStatus(getOpeningBalanceErrorMessage(error));
       setOpeningBalanceBusy(false);
+    }
+  };
+
+  const confirmCountStock = async () => {
+    if (!pendingCountStock || isCountingStock) return;
+    if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
+      setCountStockConfirmStatus('Sign in with the CURV owner account before counting stock.');
+      return;
+    }
+
+    const snapshot = pendingCountStock;
+    if (snapshot.state === 'no-change') {
+      setStatus('Recorded stock already matches the physical count. No inventory adjustment was made.');
+      resetCountStockForm();
+      closeDrawer();
+      return;
+    }
+
+    const sequence = countStockOperationSequence + 1;
+    countStockOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
+    isCountingStock = true;
+    setCountStockConfirmStatus('Saving count...');
+    setCountStockBusy(true);
+    try {
+      const { data, error } = await client.rpc('inventory_adjust_to_count', snapshot.payload);
+      if (error) throw error;
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
+      const response = parseRpcResponse(data);
+      const itemName = response.item_name || snapshot.itemName;
+      const inventoryResult = await loadInventoryData();
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
+      resetCountStockForm();
+      isCountingStock = false;
+      setCountStockBusy(false);
+      closeDrawer();
+      const inventoryWarning = inventoryResult.ok
+        ? ''
+        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
+      const historyWarning = historyResult.ok
+        ? ''
+        : ' Movement history could not refresh; use Try Again in Movement History.';
+      setStatus(`${itemName} recorded stock now matches the count: ${snapshot.physicalText}.${inventoryWarning}${historyWarning}`);
+    } catch (error) {
+      console.error('Inventory count adjustment failed:', error);
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
+      setCountStockConfirmStatus(getCountStockErrorMessage(error));
+    } finally {
+      if (isCountStockOperationCurrent(sequence, ownerKey)) {
+        isCountingStock = false;
+        setCountStockBusy(false);
+      }
     }
   };
 
@@ -3022,7 +3272,7 @@
   countStockItemSelect?.addEventListener('change', updateCountStockUi);
   countStockQuantityInput?.addEventListener('input', updateCountStockUi);
 
-  countStockForm?.addEventListener('submit', async (event) => {
+  countStockForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     if (isCountingStock) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
@@ -3032,47 +3282,11 @@
 
     const validated = validateCountStockForm();
     if (!validated) return;
-
-    const { item, payload } = validated;
-    const countText = formatQuantityWithUnit(payload.p_actual_quantity, item.unitAbbreviation);
-    const sequence = countStockOperationSequence + 1;
-    countStockOperationSequence = sequence;
-    const ownerKey = getOwnerSessionKey();
-    isCountingStock = true;
-    setCountStockStatus('Saving count...');
-    setCountStockBusy(true);
-    try {
-      const { data, error } = await client.rpc('inventory_adjust_to_count', payload);
-      if (error) throw error;
-      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
-      const response = parseRpcResponse(data);
-      const itemName = response.item_name || item.itemName;
-      const inventoryResult = await loadInventoryData();
-      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
-      const historyResult = await refreshMovementHistoryAfterOperation();
-      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
-      resetCountStockForm();
-      isCountingStock = false;
-      setCountStockBusy(false);
-      closeDrawer();
-      const inventoryWarning = inventoryResult.ok
-        ? ''
-        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
-      const historyWarning = historyResult.ok
-        ? ''
-        : ' Movement history could not refresh; use Try Again in Movement History.';
-      setStatus(`${itemName} recorded stock now matches the count: ${countText}.${inventoryWarning}${historyWarning}`);
-    } catch (error) {
-      console.error('Inventory count adjustment failed:', error);
-      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
-      setCountStockStatus(getCountStockErrorMessage(error));
-    } finally {
-      if (isCountStockOperationCurrent(sequence, ownerKey)) {
-        isCountingStock = false;
-        setCountStockBusy(false);
-      }
-    }
+    showCountStockConfirmation(validated);
   });
+
+  countStockGoBackButton?.addEventListener('click', returnToCountStockFields);
+  countStockConfirmSubmitButton?.addEventListener('click', confirmCountStock);
 
   signOutButton?.addEventListener('click', async () => {
     if (!client) return;

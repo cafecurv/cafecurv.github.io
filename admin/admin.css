@@ -538,7 +538,9 @@ body.inventory-drawer-open {
   font-weight: 600;
 }
 
-.inventory-opening-confirm {
+.inventory-count-preview,
+.inventory-opening-confirm,
+.inventory-count-confirm {
   display: grid;
   gap: 0.85rem;
   padding: 0.95rem;
@@ -547,16 +549,65 @@ body.inventory-drawer-open {
   background: rgba(20, 24, 36, 0.28);
 }
 
-.inventory-opening-confirm[hidden] {
+.inventory-count-preview[hidden],
+.inventory-opening-confirm[hidden],
+.inventory-count-confirm[hidden] {
   display: none;
 }
 
-.inventory-opening-confirm h3,
-.inventory-opening-confirm p {
+.inventory-count-preview dl {
+  display: grid;
+  gap: 0.55rem;
   margin: 0;
 }
 
-.inventory-opening-confirm h3 {
+.inventory-count-preview dl div {
+  display: grid;
+  grid-template-columns: minmax(126px, 0.48fr) minmax(0, 1fr);
+  gap: 0.45rem 0.7rem;
+}
+
+.inventory-count-preview dt,
+.inventory-count-confirm-summary dt {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.inventory-count-preview dd,
+.inventory-count-confirm-summary dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--cream);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.inventory-count-preview[data-count-stock-state="increase"] [data-count-stock-preview-difference],
+.inventory-count-confirm[data-count-stock-state="increase"] .inventory-count-confirm-summary dd:nth-of-type(3) {
+  color: #a9d8b2;
+}
+
+.inventory-count-preview[data-count-stock-state="decrease"] [data-count-stock-preview-difference],
+.inventory-count-confirm[data-count-stock-state="decrease"] .inventory-count-confirm-summary dd:nth-of-type(3) {
+  color: #e0b36f;
+}
+
+.inventory-count-preview[data-count-stock-state="no-change"] [data-count-stock-preview-difference],
+.inventory-count-confirm[data-count-stock-state="no-change"] .inventory-count-confirm-summary dd:nth-of-type(3) {
+  color: var(--slate);
+}
+
+.inventory-opening-confirm h3,
+.inventory-opening-confirm p,
+.inventory-count-confirm h3,
+.inventory-count-confirm p {
+  margin: 0;
+}
+
+.inventory-opening-confirm h3,
+.inventory-count-confirm h3 {
   color: var(--cream);
   font-family: 'Jost', sans-serif;
   font-size: 0.98rem;
@@ -565,13 +616,15 @@ body.inventory-drawer-open {
   text-transform: uppercase;
 }
 
-.inventory-opening-confirm p {
+.inventory-opening-confirm p,
+.inventory-count-confirm p {
   color: var(--slate);
   font-size: 0.86rem;
   line-height: 1.5;
 }
 
-.inventory-opening-confirm-summary {
+.inventory-opening-confirm-summary,
+.inventory-count-confirm-summary {
   display: grid;
   grid-template-columns: minmax(108px, 0.42fr) minmax(0, 1fr);
   gap: 0.45rem 0.7rem;
@@ -593,7 +646,8 @@ body.inventory-drawer-open {
   overflow-wrap: anywhere;
 }
 
-.inventory-opening-confirm-warning {
+.inventory-opening-confirm-warning,
+.inventory-count-confirm-warning {
   padding: 0.72rem 0.8rem;
   border: 1px solid rgba(224, 179, 111, 0.34);
   border-radius: 8px;
@@ -602,7 +656,8 @@ body.inventory-drawer-open {
   font-weight: 650;
 }
 
-.inventory-opening-confirm-warning[hidden] {
+.inventory-opening-confirm-warning[hidden],
+.inventory-count-confirm-warning[hidden] {
   display: none;
 }
 
@@ -617,12 +672,25 @@ body.inventory-drawer-open {
   min-height: 44px;
 }
 
-:root[data-admin-theme="light"] .inventory-opening-confirm {
+:root[data-admin-theme="light"] .inventory-count-preview,
+:root[data-admin-theme="light"] .inventory-opening-confirm,
+:root[data-admin-theme="light"] .inventory-count-confirm {
   background: rgba(249, 243, 234, 0.94);
   border-color: rgba(143, 118, 85, 0.28);
 }
 
-:root[data-admin-theme="light"] .inventory-opening-confirm-warning {
+:root[data-admin-theme="light"] .inventory-count-preview[data-count-stock-state="increase"] [data-count-stock-preview-difference],
+:root[data-admin-theme="light"] .inventory-count-confirm[data-count-stock-state="increase"] .inventory-count-confirm-summary dd:nth-of-type(3) {
+  color: #2f7048;
+}
+
+:root[data-admin-theme="light"] .inventory-count-preview[data-count-stock-state="decrease"] [data-count-stock-preview-difference],
+:root[data-admin-theme="light"] .inventory-count-confirm[data-count-stock-state="decrease"] .inventory-count-confirm-summary dd:nth-of-type(3) {
+  color: #9A6B2F;
+}
+
+:root[data-admin-theme="light"] .inventory-opening-confirm-warning,
+:root[data-admin-theme="light"] .inventory-count-confirm-warning {
   background: rgba(154, 107, 47, 0.09);
   border-color: rgba(154, 107, 47, 0.28);
   color: #9A6B2F;
@@ -1071,11 +1139,15 @@ body.inventory-drawer-open {
     width: 100%;
   }
 
-  .inventory-opening-confirm-summary {
+  .inventory-count-preview dl div,
+  .inventory-opening-confirm-summary,
+  .inventory-count-confirm-summary {
     grid-template-columns: 1fr;
   }
 
-  .inventory-opening-confirm-summary dt {
+  .inventory-count-preview dt,
+  .inventory-opening-confirm-summary dt,
+  .inventory-count-confirm-summary dt {
     margin-top: 0.25rem;
   }
 

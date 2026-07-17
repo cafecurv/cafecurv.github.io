@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i11b2-opening-balance-safety">
+  <link rel="stylesheet" href="admin.css?v=i11c2-count-preview">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i11c1-mutation-guards" defer></script>
+  <script src="inventory.js?v=i11c2-count-preview" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -535,13 +535,34 @@
       <div class="inventory-drawer-head"><div><p class="eyebrow">Count</p><h2 id="drawer-count-stock-title">Count Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
       <p>Count only the usable stock physically on hand. CURV will change the recorded usable stock to match this count. Expired stock should be recorded as waste first.</p>
       <form class="inventory-preview-form" data-count-stock-form>
-        <label class="admin-field" for="count-stock-item"><span>Item</span><select id="count-stock-item" data-count-stock-item required><option value="">Choose item</option></select></label>
-        <label class="admin-field" for="count-stock-quantity"><span>Actual physical quantity</span><input id="count-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-count-stock-quantity required><small class="inventory-field-hint" data-count-stock-unit-hint></small></label>
-        <label class="admin-field" for="count-stock-expiry" data-count-stock-expiry-wrap hidden><span>Expiry date for added stock</span><input id="count-stock-expiry" type="date" data-count-stock-expiry><small class="inventory-field-hint">Required when adding stock for an item that tracks expiry.</small></label>
-        <label class="admin-field" for="count-stock-notes"><span>Notes (optional)</span><textarea id="count-stock-notes" rows="3" maxlength="500" placeholder="Optional count note" data-count-stock-notes></textarea></label>
-        <p class="inventory-form-status" data-count-stock-status aria-live="polite" hidden></p>
-        <div class="inventory-form-actions">
-          <button type="submit" class="auth-button" data-count-stock-submit>Count Stock</button>
+        <div class="inventory-form-fields" data-count-stock-fields>
+          <label class="admin-field" for="count-stock-item"><span>Item</span><select id="count-stock-item" data-count-stock-item required><option value="">Choose item</option></select></label>
+          <label class="admin-field" for="count-stock-quantity"><span>Actual physical quantity</span><input id="count-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-count-stock-quantity required><small class="inventory-field-hint" data-count-stock-unit-hint></small></label>
+          <div class="inventory-count-preview" data-count-stock-preview aria-live="polite" hidden>
+            <dl>
+              <div><dt>Recorded usable stock</dt><dd data-count-stock-preview-recorded>-</dd></div>
+              <div><dt>Physical count</dt><dd data-count-stock-preview-physical>-</dd></div>
+              <div><dt>Difference</dt><dd data-count-stock-preview-difference>-</dd></div>
+              <div><dt>Result</dt><dd data-count-stock-preview-result>-</dd></div>
+            </dl>
+          </div>
+          <label class="admin-field" for="count-stock-expiry" data-count-stock-expiry-wrap hidden><span>Expiry date for added stock</span><input id="count-stock-expiry" type="date" data-count-stock-expiry><small class="inventory-field-hint">Required when adding stock for an item that tracks expiry.</small></label>
+          <label class="admin-field" for="count-stock-notes"><span>Notes (optional)</span><textarea id="count-stock-notes" rows="3" maxlength="500" placeholder="Optional count note" data-count-stock-notes></textarea></label>
+          <p class="inventory-form-status" data-count-stock-status aria-live="polite" hidden></p>
+          <div class="inventory-form-actions">
+            <button type="submit" class="auth-button" data-count-stock-submit>Review Count</button>
+          </div>
+        </div>
+        <div class="inventory-count-confirm" data-count-stock-confirm aria-live="polite" hidden>
+          <h3 id="count-stock-confirm-title" tabindex="-1" data-count-stock-confirm-heading>Confirm Count</h3>
+          <p>Review the stock adjustment before CURV changes the recorded usable stock.</p>
+          <dl class="inventory-count-confirm-summary" data-count-stock-confirm-summary></dl>
+          <p class="inventory-count-confirm-warning" data-count-stock-confirm-warning hidden></p>
+          <p class="inventory-form-status" data-count-stock-confirm-status aria-live="polite" hidden></p>
+          <div class="inventory-confirm-actions">
+            <button type="button" class="auth-button auth-button-secondary" data-count-stock-go-back>Go Back</button>
+            <button type="button" class="auth-button" data-count-stock-confirm-submit>Confirm Count</button>
+          </div>
         </div>
       </form>
     </section>
