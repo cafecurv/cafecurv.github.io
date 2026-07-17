@@ -257,6 +257,45 @@
     '[tabindex]:not([tabindex="-1"])',
   ].join(',');
 
+  const canUseInventoryControls = () => (
+    pageState === STATES.READY && isOwnerSignedIn
+  );
+
+  const canRetryInventoryLoad = () => (
+    isOwnerSignedIn && pageState === STATES.ERROR
+  );
+
+  const canRetryMovementLoad = () => (
+    isOwnerSignedIn && movementHistoryState === STATES.ERROR
+  );
+
+  const setControlAvailability = (control, enabled) => {
+    if (!control) return;
+    if ('disabled' in control) {
+      control.disabled = !enabled;
+    } else {
+      control.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+  };
+
+  const updateInventoryControlAvailability = () => {
+    const enabled = canUseInventoryControls();
+    document.querySelectorAll('[data-inventory-drawer-open], [data-inventory-row-action]')
+      .forEach((control) => setControlAvailability(control, enabled));
+    [
+      searchInput,
+      categoryFilter,
+      statusFilter,
+      clearFiltersButton,
+      movementSearchInput,
+      movementTypeFilter,
+      movementPeriodFilter,
+      movementClearFiltersButton,
+    ].forEach((control) => setControlAvailability(control, enabled));
+    setControlAvailability(retryButton, canRetryInventoryLoad());
+    setControlAvailability(movementRetryButton, canRetryMovementLoad());
+  };
+
   const addItemErrorMessages = {
     INV_AUTH_REQUIRED: 'Sign in with the CURV owner account before adding items.',
     INV_ADMIN_REQUIRED: 'Only CURV owners can add inventory items.',
@@ -496,6 +535,10 @@
     .filter((element) => element.offsetParent !== null || element === document.activeElement);
 
   const openDrawer = (drawerName, trigger) => {
+    if (!canUseInventoryControls()) {
+      setStatus('Sign in with the CURV owner account to use inventory controls.');
+      return;
+    }
     const drawer = drawers.find((item) => item.dataset.inventoryDrawer === drawerName);
     if (!drawer || !drawerLayer || !backdrop) return;
     lastFocusedElement = trigger || document.activeElement;
@@ -1748,8 +1791,11 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'inventory-row-action';
+    button.dataset.inventoryRowAction = drawerName || 'none';
+    button.disabled = !canUseInventoryControls();
     button.textContent = label;
     button.addEventListener('click', () => {
+      if (!canUseInventoryControls()) return;
       if (!drawerName) return;
       openDrawer(drawerName, button);
       if (drawerName === 'receive-stock' && selectReceiveStockItem(itemId)) {
@@ -1943,6 +1989,7 @@
     if (movementNoResultsState) movementNoResultsState.hidden = !emptyFiltered;
     if (movementErrorState) movementErrorState.hidden = movementHistoryState !== STATES.ERROR;
     if (movementClearFiltersButton) movementClearFiltersButton.hidden = !filtersActive;
+    updateInventoryControlAvailability();
 
     if (movementResultCount) {
       const periodText = movementPeriodFilter?.selectedOptions?.[0]?.textContent || 'recent activity';
@@ -2576,6 +2623,7 @@
     setRecordWasteBusy(isRecordingWaste);
     setCountStockBusy(isCountingStock);
     updateListState();
+    updateInventoryControlAvailability();
   };
 
   const setPageState = (nextState) => {
@@ -2966,6 +3014,7 @@
 
   openButtons.forEach((button) => {
     button.addEventListener('click', () => {
+      if (!canUseInventoryControls()) return;
       if (button.dataset.inventoryDrawerOpen === 'receive-stock') {
         clearReceiveStockItem();
       }
@@ -3304,9 +3353,10 @@
   });
 
   searchInput?.addEventListener('input', () => {
+    if (!canUseInventoryControls()) return;
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => {
-      if (pageState !== STATES.READY) return;
+      if (!canUseInventoryControls()) return;
       applyFilters();
       renderInventoryRows(filteredItems);
       updateListState();
@@ -3315,7 +3365,7 @@
 
   [categoryFilter, statusFilter].forEach((control) => {
     control?.addEventListener('change', () => {
-      if (pageState !== STATES.READY) return;
+      if (!canUseInventoryControls()) return;
       applyFilters();
       renderInventoryRows(filteredItems);
       updateListState();
@@ -3323,6 +3373,7 @@
   });
 
   clearFiltersButton?.addEventListener('click', () => {
+    if (!canUseInventoryControls()) return;
     if (searchInput) searchInput.value = '';
     if (categoryFilter) categoryFilter.value = 'all';
     if (statusFilter) statusFilter.value = 'all';
@@ -3332,9 +3383,10 @@
   });
 
   movementSearchInput?.addEventListener('input', () => {
+    if (!canUseInventoryControls()) return;
     window.clearTimeout(movementSearchTimer);
     movementSearchTimer = window.setTimeout(() => {
-      if (movementHistoryState !== STATES.READY) return;
+      if (!canUseInventoryControls() || movementHistoryState !== STATES.READY) return;
       applyMovementFilters();
       renderMovementRows(filteredMovementRows);
       updateMovementListState();
@@ -3342,17 +3394,19 @@
   });
 
   movementTypeFilter?.addEventListener('change', () => {
-    if (movementHistoryState !== STATES.READY) return;
+    if (!canUseInventoryControls() || movementHistoryState !== STATES.READY) return;
     applyMovementFilters();
     renderMovementRows(filteredMovementRows);
     updateMovementListState();
   });
 
   movementPeriodFilter?.addEventListener('change', () => {
+    if (!canUseInventoryControls()) return;
     loadMovementHistory();
   });
 
   movementClearFiltersButton?.addEventListener('click', () => {
+    if (!canUseInventoryControls()) return;
     const periodChanged = movementPeriodFilter && movementPeriodFilter.value !== '7';
     if (movementSearchInput) movementSearchInput.value = '';
     if (movementTypeFilter) movementTypeFilter.value = 'all';
@@ -3367,10 +3421,12 @@
   });
 
   retryButton?.addEventListener('click', () => {
+    if (!canRetryInventoryLoad()) return;
     loadInventoryData();
   });
 
   movementRetryButton?.addEventListener('click', () => {
+    if (!canRetryMovementLoad()) return;
     loadMovementHistory();
   });
 
