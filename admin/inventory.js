@@ -197,6 +197,11 @@
   let signedInOwnerEmail = '';
   let loadSequence = 0;
   let movementLoadSequence = 0;
+  let addItemOperationSequence = 0;
+  let receiveStockOperationSequence = 0;
+  let useStockOperationSequence = 0;
+  let recordWasteOperationSequence = 0;
+  let countStockOperationSequence = 0;
   let openingBalanceOperationSequence = 0;
   let activeLoadSessionKey = '';
   let activeMovementLoadSessionKey = '';
@@ -411,11 +416,50 @@
 
   const getOwnerSessionKey = () => signedInOwnerEmail || 'owner';
 
+  const isInventoryMutationCurrent = (sequence, ownerKey, getCurrentSequence) => (
+    sequence === getCurrentSequence()
+    && isOwnerSignedIn
+    && ownerKey === getOwnerSessionKey()
+  );
+
+  const isAddItemOperationCurrent = (sequence, ownerKey) => (
+    isInventoryMutationCurrent(sequence, ownerKey, () => addItemOperationSequence)
+  );
+
+  const isReceiveStockOperationCurrent = (sequence, ownerKey) => (
+    isInventoryMutationCurrent(sequence, ownerKey, () => receiveStockOperationSequence)
+  );
+
+  const isUseStockOperationCurrent = (sequence, ownerKey) => (
+    isInventoryMutationCurrent(sequence, ownerKey, () => useStockOperationSequence)
+  );
+
+  const isRecordWasteOperationCurrent = (sequence, ownerKey) => (
+    isInventoryMutationCurrent(sequence, ownerKey, () => recordWasteOperationSequence)
+  );
+
+  const isCountStockOperationCurrent = (sequence, ownerKey) => (
+    isInventoryMutationCurrent(sequence, ownerKey, () => countStockOperationSequence)
+  );
+
   const isOpeningBalanceOperationCurrent = (sequence, ownerKey) => (
     sequence === openingBalanceOperationSequence
     && isOwnerSignedIn
     && ownerKey === getOwnerSessionKey()
   );
+
+  const invalidateInventoryMutations = () => {
+    addItemOperationSequence += 1;
+    receiveStockOperationSequence += 1;
+    useStockOperationSequence += 1;
+    recordWasteOperationSequence += 1;
+    countStockOperationSequence += 1;
+    isCreatingItem = false;
+    isReceivingStock = false;
+    isUsingStock = false;
+    isRecordingWaste = false;
+    isCountingStock = false;
+  };
 
   const closeOwnerAccountMenu = () => {
     if (!ownerAccountMenu || !ownerAccountToggle) return;
@@ -2451,6 +2495,7 @@
         const { data } = await client.auth.getSession();
         const user = data && data.session && data.session.user;
         if (!user) {
+          invalidateInventoryMutations();
           openingBalanceOperationSequence += 1;
           pendingOpeningBalance = null;
           openingBalanceRefreshFailed = false;
@@ -2504,7 +2549,16 @@
         const { data } = await client.auth.getSession();
         const user = data && data.session && data.session.user;
         if (!user) {
+          invalidateInventoryMutations();
+          openingBalanceOperationSequence += 1;
+          pendingOpeningBalance = null;
+          openingBalanceRefreshFailed = false;
+          isSettingOpeningBalance = false;
+          resetOpeningBalanceForm();
+          clearInventoryState();
           clearMovementHistoryState();
+          setSignedInState(false);
+          setPageState(STATES.SIGNED_OUT);
           setMovementHistoryState(STATES.SIGNED_OUT);
           return { ok: false, reason: 'signed_out' };
         }
@@ -2527,6 +2581,7 @@
     if (!isSignedIn) {
       loadSequence += 1;
       movementLoadSequence += 1;
+      invalidateInventoryMutations();
       openingBalanceOperationSequence += 1;
       activeLoadSessionKey = '';
       activeMovementLoadSessionKey = '';
@@ -2745,24 +2800,36 @@
     const payload = validateAddItemForm();
     if (!payload) return;
 
+    const sequence = addItemOperationSequence + 1;
+    addItemOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
     isCreatingItem = true;
     setAddItemStatus('Adding item...');
     setAddItemBusy(true);
     try {
       const { data, error } = await client.rpc('inventory_create_item', payload);
       if (error) throw error;
+      if (!isAddItemOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
+      const inventoryResult = await loadInventoryData();
+      if (!isAddItemOperationCurrent(sequence, ownerKey)) return;
       resetAddItemForm();
       closeDrawer();
-      await loadInventoryData();
-      revealCreatedItem(response.item_id || '');
-      setStatus('Inventory item added.');
+      if (inventoryResult.ok) {
+        revealCreatedItem(response.item_id || '');
+        setStatus('Inventory item added.');
+      } else {
+        setStatus('Inventory item added, but the latest totals could not be loaded. Use Try Again to refresh inventory.');
+      }
     } catch (error) {
       console.error('Inventory item creation failed:', error);
+      if (!isAddItemOperationCurrent(sequence, ownerKey)) return;
       setAddItemStatus(getAddItemErrorMessage(error));
     } finally {
-      isCreatingItem = false;
-      setAddItemBusy(false);
+      if (isAddItemOperationCurrent(sequence, ownerKey)) {
+        isCreatingItem = false;
+        setAddItemBusy(false);
+      }
     }
   });
 
@@ -2801,29 +2868,44 @@
 
     const { item, payload } = validated;
     const receivedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
+    const sequence = receiveStockOperationSequence + 1;
+    receiveStockOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
     isReceivingStock = true;
     setReceiveStockStatus('Receiving stock...');
     setReceiveStockBusy(true);
     try {
       const { data, error } = await client.rpc('inventory_stock_in', payload);
       if (error) throw error;
+      if (!isReceiveStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
       const itemName = response.item_name || item.itemName;
+      const inventoryResult = await loadInventoryData();
+      if (!isReceiveStockOperationCurrent(sequence, ownerKey)) return;
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isReceiveStockOperationCurrent(sequence, ownerKey)) return;
       resetReceiveStockForm();
       isReceivingStock = false;
       setReceiveStockBusy(false);
       closeDrawer();
-      await loadInventoryData();
-      const historyResult = await refreshMovementHistoryAfterOperation();
+      const inventoryWarning = inventoryResult.ok
+        ? ''
+        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
+      const historyWarning = historyResult.ok
+        ? ''
+        : ' Movement history could not refresh; use Try Again in Movement History.';
       setStatus(historyResult.ok
-        ? `${receivedText} received for ${itemName}.`
-        : `${receivedText} received for ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
+        ? `${receivedText} received for ${itemName}.${inventoryWarning}`
+        : `${receivedText} received for ${itemName}.${inventoryWarning}${historyWarning}`);
     } catch (error) {
       console.error('Inventory stock receive failed:', error);
+      if (!isReceiveStockOperationCurrent(sequence, ownerKey)) return;
       setReceiveStockStatus(getReceiveStockErrorMessage(error));
     } finally {
-      isReceivingStock = false;
-      setReceiveStockBusy(false);
+      if (isReceiveStockOperationCurrent(sequence, ownerKey)) {
+        isReceivingStock = false;
+        setReceiveStockBusy(false);
+      }
     }
   });
 
@@ -2842,29 +2924,42 @@
 
     const { item, payload } = validated;
     const usedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
+    const sequence = useStockOperationSequence + 1;
+    useStockOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
     isUsingStock = true;
     setUseStockStatus('Recording stock use...');
     setUseStockBusy(true);
     try {
       const { data, error } = await client.rpc('inventory_stock_out', payload);
       if (error) throw error;
+      if (!isUseStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
       const itemName = response.item_name || item.itemName;
+      const inventoryResult = await loadInventoryData();
+      if (!isUseStockOperationCurrent(sequence, ownerKey)) return;
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isUseStockOperationCurrent(sequence, ownerKey)) return;
       resetUseStockForm();
       isUsingStock = false;
       setUseStockBusy(false);
       closeDrawer();
-      await loadInventoryData();
-      const historyResult = await refreshMovementHistoryAfterOperation();
-      setStatus(historyResult.ok
-        ? `${usedText} used from ${itemName}.`
-        : `${usedText} used from ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
+      const inventoryWarning = inventoryResult.ok
+        ? ''
+        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
+      const historyWarning = historyResult.ok
+        ? ''
+        : ' Movement history could not refresh; use Try Again in Movement History.';
+      setStatus(`${usedText} used from ${itemName}.${inventoryWarning}${historyWarning}`);
     } catch (error) {
       console.error('Inventory stock use failed:', error);
+      if (!isUseStockOperationCurrent(sequence, ownerKey)) return;
       setUseStockStatus(getUseStockErrorMessage(error));
     } finally {
-      isUsingStock = false;
-      setUseStockBusy(false);
+      if (isUseStockOperationCurrent(sequence, ownerKey)) {
+        isUsingStock = false;
+        setUseStockBusy(false);
+      }
     }
   });
 
@@ -2885,29 +2980,42 @@
     const { item, payload, reasonCode } = validated;
     const wastedText = formatQuantityWithUnit(payload.p_quantity, item.unitAbbreviation);
     const reasonLabel = getWasteReasonLabel(reasonCode).toLowerCase();
+    const sequence = recordWasteOperationSequence + 1;
+    recordWasteOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
     isRecordingWaste = true;
     setRecordWasteStatus('Recording waste...');
     setRecordWasteBusy(true);
     try {
       const { data, error } = await client.rpc('inventory_record_waste', payload);
       if (error) throw error;
+      if (!isRecordWasteOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
       const itemName = response.item_name || item.itemName;
+      const inventoryResult = await loadInventoryData();
+      if (!isRecordWasteOperationCurrent(sequence, ownerKey)) return;
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isRecordWasteOperationCurrent(sequence, ownerKey)) return;
       resetRecordWasteForm();
       isRecordingWaste = false;
       setRecordWasteBusy(false);
       closeDrawer();
-      await loadInventoryData();
-      const historyResult = await refreshMovementHistoryAfterOperation();
-      setStatus(historyResult.ok
-        ? `${wastedText} recorded as ${reasonLabel} waste for ${itemName}.`
-        : `${wastedText} recorded as ${reasonLabel} waste for ${itemName}. Movement history could not refresh; use Try Again in Movement History.`);
+      const inventoryWarning = inventoryResult.ok
+        ? ''
+        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
+      const historyWarning = historyResult.ok
+        ? ''
+        : ' Movement history could not refresh; use Try Again in Movement History.';
+      setStatus(`${wastedText} recorded as ${reasonLabel} waste for ${itemName}.${inventoryWarning}${historyWarning}`);
     } catch (error) {
       console.error('Inventory waste recording failed:', error);
+      if (!isRecordWasteOperationCurrent(sequence, ownerKey)) return;
       setRecordWasteStatus(getRecordWasteErrorMessage(error));
     } finally {
-      isRecordingWaste = false;
-      setRecordWasteBusy(false);
+      if (isRecordWasteOperationCurrent(sequence, ownerKey)) {
+        isRecordingWaste = false;
+        setRecordWasteBusy(false);
+      }
     }
   });
 
@@ -2927,29 +3035,42 @@
 
     const { item, payload } = validated;
     const countText = formatQuantityWithUnit(payload.p_actual_quantity, item.unitAbbreviation);
+    const sequence = countStockOperationSequence + 1;
+    countStockOperationSequence = sequence;
+    const ownerKey = getOwnerSessionKey();
     isCountingStock = true;
     setCountStockStatus('Saving count...');
     setCountStockBusy(true);
     try {
       const { data, error } = await client.rpc('inventory_adjust_to_count', payload);
       if (error) throw error;
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
       const itemName = response.item_name || item.itemName;
+      const inventoryResult = await loadInventoryData();
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
+      const historyResult = await refreshMovementHistoryAfterOperation();
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
       resetCountStockForm();
       isCountingStock = false;
       setCountStockBusy(false);
       closeDrawer();
-      await loadInventoryData();
-      const historyResult = await refreshMovementHistoryAfterOperation();
-      setStatus(historyResult.ok
-        ? `${itemName} recorded stock now matches the count: ${countText}.`
-        : `${itemName} recorded stock now matches the count: ${countText}. Movement history could not refresh; use Try Again in Movement History.`);
+      const inventoryWarning = inventoryResult.ok
+        ? ''
+        : ' Latest inventory totals could not be loaded. Use Try Again to refresh inventory.';
+      const historyWarning = historyResult.ok
+        ? ''
+        : ' Movement history could not refresh; use Try Again in Movement History.';
+      setStatus(`${itemName} recorded stock now matches the count: ${countText}.${inventoryWarning}${historyWarning}`);
     } catch (error) {
       console.error('Inventory count adjustment failed:', error);
+      if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
       setCountStockStatus(getCountStockErrorMessage(error));
     } finally {
-      isCountingStock = false;
-      setCountStockBusy(false);
+      if (isCountStockOperationCurrent(sequence, ownerKey)) {
+        isCountingStock = false;
+        setCountStockBusy(false);
+      }
     }
   });
 
