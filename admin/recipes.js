@@ -615,7 +615,7 @@
       if (attentionState) attentionState.hidden = false;
       if (attentionList) attentionList.hidden = true;
       if (attentionTitle) attentionTitle.textContent = 'Checking recipes...';
-      if (attentionCopy) attentionCopy.textContent = 'Recipe alerts will appear here.';
+      if (attentionCopy) attentionCopy.textContent = '';
       return;
     }
 
@@ -623,7 +623,7 @@
       if (attentionState) attentionState.hidden = false;
       if (attentionList) attentionList.hidden = true;
       if (attentionTitle) attentionTitle.textContent = 'Sign in to view recipe alerts.';
-      if (attentionCopy) attentionCopy.textContent = 'Owner access is required before recipe data appears.';
+      if (attentionCopy) attentionCopy.textContent = '';
       return;
     }
 
@@ -639,7 +639,7 @@
       if (attentionState) attentionState.hidden = false;
       if (attentionList) attentionList.hidden = true;
       if (attentionTitle) attentionTitle.textContent = 'Nothing needs attention right now.';
-      if (attentionCopy) attentionCopy.textContent = 'Recipes that need review will appear here.';
+      if (attentionCopy) attentionCopy.textContent = '';
       return;
     }
 
@@ -2373,7 +2373,7 @@
     if (!client) return;
     signOutButton.disabled = true;
     try {
-      const { error } = await client.auth.signOut();
+      const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) throw error;
       closeOwnerAccountMenu();
     } catch (error) {

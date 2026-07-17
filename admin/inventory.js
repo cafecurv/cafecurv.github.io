@@ -536,7 +536,7 @@
 
   const openDrawer = (drawerName, trigger) => {
     if (!canUseInventoryControls()) {
-      setStatus('Sign in with the CURV owner account to use inventory controls.');
+      setStatus('Sign in to continue.');
       return;
     }
     const drawer = drawers.find((item) => item.dataset.inventoryDrawer === drawerName);
@@ -1740,7 +1740,8 @@
       setMetricValue('expiring-soon', String(summary.expiringSoon));
       setMetricValue('expired-stock', String(summary.expiredStock));
       metricNotes.forEach((note) => {
-        note.textContent = 'Live read-only inventory';
+        note.textContent = '';
+        note.hidden = true;
       });
       return;
     }
@@ -1751,6 +1752,7 @@
     setMetricValue('expiring-soon', loadingText);
     setMetricValue('expired-stock', loadingText);
     metricNotes.forEach((note) => {
+      note.hidden = false;
       if (pageState === STATES.LOADING) note.textContent = 'Loading inventory';
       else if (pageState === STATES.ERROR) note.textContent = 'Unavailable';
       else note.textContent = 'Waiting for owner sign-in';
@@ -2060,7 +2062,7 @@
     if (attentionList) attentionList.hidden = true;
     if (attentionTitle) {
       if (pageState === STATES.SIGNED_OUT) attentionTitle.textContent = 'Sign in to view stock alerts.';
-      else if (pageState === STATES.LOADING || pageState === STATES.AUTH_LOADING) attentionTitle.textContent = 'Checking for items that need attention...';
+      else if (pageState === STATES.LOADING || pageState === STATES.AUTH_LOADING) attentionTitle.textContent = 'Checking alerts...';
       else if (pageState === STATES.ERROR) attentionTitle.textContent = "Couldn't load alerts.";
       else attentionTitle.textContent = 'Nothing needs attention right now.';
     }
@@ -2911,7 +2913,7 @@
   const confirmOpeningBalance = async () => {
     if (!pendingOpeningBalance || isSettingOpeningBalance) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setOpeningBalanceConfirmStatus('Sign in with the CURV owner account before setting an opening balance.');
+      setOpeningBalanceConfirmStatus('Sign in to continue.');
       return;
     }
 
@@ -2961,7 +2963,7 @@
   const confirmCountStock = async () => {
     if (!pendingCountStock || isCountingStock) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setCountStockConfirmStatus('Sign in with the CURV owner account before counting stock.');
+      setCountStockConfirmStatus('Sign in to continue.');
       return;
     }
 
@@ -2999,7 +3001,7 @@
       const historyWarning = historyResult.ok
         ? ''
         : ' Movement history could not refresh; use Try Again in Movement History.';
-      setStatus(`${itemName} recorded stock now matches the count: ${snapshot.physicalText}.${inventoryWarning}${historyWarning}`);
+      setStatus(`Count updated: ${itemName} is ${snapshot.physicalText}.${inventoryWarning}${historyWarning}`);
     } catch (error) {
       console.error('Inventory count adjustment failed:', error);
       if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
@@ -3092,7 +3094,7 @@
     event.preventDefault();
     if (isCreatingItem) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setAddItemStatus('Sign in with the CURV owner account before adding items.');
+      setAddItemStatus('Sign in to continue.');
       return;
     }
 
@@ -3139,7 +3141,7 @@
     if (isSettingOpeningBalance) return;
     if (openingBalanceRefreshFailed) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setOpeningBalanceStatus('Sign in with the CURV owner account before setting an opening balance.');
+      setOpeningBalanceStatus('Sign in to continue.');
       return;
     }
 
@@ -3158,7 +3160,7 @@
     event.preventDefault();
     if (isReceivingStock) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setReceiveStockStatus('Sign in with the CURV owner account before receiving stock.');
+      setReceiveStockStatus('Sign in to continue.');
       return;
     }
 
@@ -3214,7 +3216,7 @@
     event.preventDefault();
     if (isUsingStock) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setUseStockStatus('Sign in with the CURV owner account before using stock.');
+      setUseStockStatus('Sign in to continue.');
       return;
     }
 
@@ -3269,7 +3271,7 @@
     event.preventDefault();
     if (isRecordingWaste) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setRecordWasteStatus('Sign in with the CURV owner account before recording waste.');
+      setRecordWasteStatus('Sign in to continue.');
       return;
     }
 
@@ -3325,7 +3327,7 @@
     event.preventDefault();
     if (isCountingStock) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
-      setCountStockStatus('Sign in with the CURV owner account before counting stock.');
+      setCountStockStatus('Sign in to continue.');
       return;
     }
 
@@ -3341,7 +3343,7 @@
     if (!client) return;
     signOutButton.disabled = true;
     try {
-      const { error } = await client.auth.signOut();
+      const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) throw error;
       closeOwnerAccountMenu();
     } catch (error) {

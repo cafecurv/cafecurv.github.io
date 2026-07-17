@@ -920,7 +920,7 @@
 
   signOutButton?.addEventListener('click', async () => {
     signOutButton.disabled = true;
-    await supabaseClient.auth.signOut();
+    await supabaseClient.auth.signOut({ scope: 'local' });
     setSignedInState(false);
     closeOwnerAccountMenu();
   });
@@ -3412,7 +3412,7 @@
     updateBulkPublishControls();
     resetDisplayOrder();
     resetOptionGroups();
-    renderProductEmptyState('Owner sign-in required', 'Products from Supabase will appear here after the owner account is connected.');
+    renderProductEmptyState('Owner sign-in required', 'Sign in to continue.');
   };
 
   const formatPrice = (price) => new Intl.NumberFormat('en-PH', {
@@ -3717,7 +3717,7 @@
     setOptionGroupFormDisabled(true);
     resetOptionChoiceForm();
     setOptionChoiceFormDisabled(true);
-    renderOptionEmptyState(optionGroupList, 'Owner sign-in required', 'Reusable option groups will appear here after owner sign-in.', 'h4');
+      renderOptionEmptyState(optionGroupList, 'Owner sign-in required', 'Sign in to continue.', 'h4');
     renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
     if (optionChoiceList) optionChoiceList.innerHTML = '';
     setOptionManagerStatus('Sign in to load reusable option groups.');
@@ -5798,7 +5798,7 @@
   if (signOutButton) {
     signOutButton.addEventListener('click', async () => {
       setStatus('Signing out...');
-      const { error } = await client.auth.signOut();
+      const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) {
         setStatus('Sign out failed. ' + error.message);
         return;
@@ -6346,11 +6346,12 @@
     return '';
   };
 
-  const renderOrderDetailPlaceholder = (title = 'Select an order', message = 'Order contact, fulfillment, payment, and total details will appear here after selecting an order.') => {
+  const renderOrderDetailPlaceholder = (title = 'Select an order', message = '') => {
     if (!orderDetail) return;
     orderDetail.innerHTML = '';
     const placeholder = makeElement('div', 'order-detail-placeholder');
-    placeholder.append(makeElement('h3', '', title), makeElement('p', '', message));
+    placeholder.append(makeElement('h3', '', title));
+    if (message) placeholder.append(makeElement('p', '', message));
     orderDetail.appendChild(placeholder);
   };
 
@@ -6676,7 +6677,7 @@
   const renderOrders = () => {
     if (!orderList) return;
     if (!isOwnerSignedIn) {
-      renderOrderEmptyState('Owner sign-in required', 'Sign in with owner access to load incoming orders.');
+      renderOrderEmptyState('Owner sign-in required', 'Sign in to continue.');
       renderOrderDetailPlaceholder('Select an order', 'Sign in to load order details.');
       return;
     }
@@ -7376,7 +7377,7 @@
   if (signOutButton) {
     signOutButton.addEventListener('click', async () => {
       setStatus('Signing out...');
-      const { error } = await client.auth.signOut();
+      const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) {
         setStatus('Sign out failed. ' + error.message);
         return;

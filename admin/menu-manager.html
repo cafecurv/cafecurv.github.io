@@ -16,7 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=o6c-toast-fix">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=o6c-toast-fix" defer></script>
+  <script src="admin.js?v=u1-text-cleanup" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -128,7 +128,6 @@
         <div>
           <p class="eyebrow">CURV Control</p>
           <h1 id="menu-manager-title" class="dashboard-title">Menu Manager</h1>
-          <p class="page-helper">Prepare and organize menu data for the live customer menu.</p>
           <p class="menu-connection-status" data-auth-status role="status">Connected to Supabase &middot; Published items update the live menu.</p>
         </div>
       </section>
@@ -139,7 +138,6 @@
             <button type="button" class="product-editor-back" data-back-to-products>&larr; Back to Products</button>
             <p class="eyebrow">Product Editor</p>
             <h2 id="draft-product-section-title" data-product-editor-view-title>Create Item</h2>
-            <p>Create or edit products here. Published and available items appear on the customer menu.</p>
           </div>
           <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="draft-product-content" data-label-collapsed="+ Add Item" data-label-expanded="- Add Item" aria-expanded="false" aria-controls="draft-product-content">+ Add Item</button>
         </div>
@@ -147,7 +145,6 @@
           <div class="draft-product-intro">
             <p class="eyebrow">Draft Product</p>
             <h3 id="draft-product-title">Create Item</h3>
-            <p>Draft products are saved in Supabase only and do not appear on the customer menu yet.</p>
             <p class="editor-publish-note" data-editor-publish-note hidden>This item is published. Saving changes updates the live menu.</p>
           </div>
           <form class="draft-product-form" data-draft-product-form novalidate>
@@ -382,7 +379,6 @@
           <div>
             <p class="eyebrow">Option Library</p>
             <h2 id="option-groups-title">Option Groups &amp; Choices</h2>
-            <p>Reusable option groups only. Product attachment comes later.</p>
           </div>
           <button type="button" class="admin-collapsible-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand option library" data-aria-label-expanded="Collapse option library" aria-label="Expand option library" title="Expand option library" aria-expanded="false" aria-controls="option-groups-content">&#9662;</button>
         </div>
@@ -396,7 +392,6 @@
               </div>
               <div class="option-form-heading">
                 <h3 id="option-group-form-title" data-option-group-form-title>Create Option Group</h3>
-                <p>Choices and product attachment come later.</p>
               </div>
               <form class="option-group-form" data-option-group-form novalidate>
                 <label class="admin-field" for="option-group-name">
@@ -438,7 +433,7 @@
               <div class="option-group-list" data-option-group-list aria-live="polite">
                 <div class="option-empty-state">
                   <h4>Owner sign-in required</h4>
-                  <p>Reusable option groups will appear here after owner sign-in.</p>
+                  <p>Sign in to continue.</p>
                 </div>
               </div>
             </section>
@@ -451,12 +446,10 @@
               <div class="option-group-detail" data-option-group-detail>
                 <div class="option-empty-state">
                   <h3 id="option-group-detail-title">Select a group</h3>
-                  <p>Select a group to see its choices.</p>
                 </div>
               </div>
               <div class="option-form-heading">
                 <h3 data-option-choice-form-title>Create Option Choice</h3>
-                <p>Choices belong to the selected option group.</p>
               </div>
               <form class="option-choice-form" data-option-choice-form novalidate>
                 <label class="admin-field" for="option-choice-label">
@@ -596,7 +589,7 @@
             <div class="product-preview-list" data-product-list>
               <div class="product-empty-state">
                 <h3>Owner sign-in required</h3>
-                <p>Products from Supabase will appear here after the owner account is connected.</p>
+                <p>Sign in to continue.</p>
               </div>
             </div>
           </section>

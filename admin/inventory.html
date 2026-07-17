@@ -16,8 +16,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=i11c2-count-preview">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=i5a-inventory-auth-exclusion" defer></script>
-  <script src="inventory.js?v=i11d1-retry-gating-fix" defer></script>
+  <script src="admin.js?v=u1-text-cleanup" defer></script>
+  <script src="inventory.js?v=u1-text-cleanup" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -124,7 +124,6 @@
         <div>
           <p class="eyebrow">CURV Control</p>
           <h1 id="inventory-title" class="dashboard-title">Inventory</h1>
-          <p class="page-helper">Track ingredients, supplies, expiry dates, and stock changes.</p>
           <p class="inventory-status-message" data-inventory-status aria-live="polite" hidden></p>
         </div>
       </section>
@@ -143,7 +142,6 @@
         <div>
           <p class="eyebrow">Owner Setup</p>
           <h2 id="inventory-setup-title">Opening Balance</h2>
-          <p>Use this only when an item first enters CURV Inventory and stock is already physically on hand.</p>
         </div>
         <button type="button" class="inventory-action-button inventory-setup-action" data-inventory-drawer-open="opening-balance">Set Opening Balance</button>
       </section>
@@ -154,7 +152,6 @@
           <div>
             <p class="metric-label">Inventory Items</p>
             <p class="metric-value" data-inventory-metric="items">&mdash;</p>
-            <p class="metric-subtext">Active ingredients and supplies</p>
             <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
@@ -163,7 +160,6 @@
           <div>
             <p class="metric-label">Low Stock</p>
             <p class="metric-value" data-inventory-metric="low-stock">&mdash;</p>
-            <p class="metric-subtext">Needs restocking soon</p>
             <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
@@ -172,7 +168,6 @@
           <div>
             <p class="metric-label">Expiring Soon</p>
             <p class="metric-value" data-inventory-metric="expiring-soon">&mdash;</p>
-            <p class="metric-subtext">Within the next 7 days</p>
             <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
@@ -181,7 +176,6 @@
           <div>
             <p class="metric-label">Expired Stock</p>
             <p class="metric-value" data-inventory-metric="expired-stock">&mdash;</p>
-            <p class="metric-subtext">Review and record as waste</p>
             <p class="metric-subtext" data-inventory-metric-note>Waiting for owner sign-in</p>
           </div>
         </article>
@@ -256,13 +250,11 @@
           <p>Checking current stock, low-stock items, and expiry alerts.</p>
         </div>
         <div class="inventory-empty-state" data-inventory-signed-out hidden>
-          <h3>Sign in to view and manage inventory.</h3>
-          <p>Owner access is required before inventory data appears.</p>
+          <h3>Sign in to view inventory.</h3>
         </div>
 
         <div class="inventory-empty-state" data-inventory-empty-state>
           <h3>No inventory items yet.</h3>
-          <p>Add your first ingredient or supply to get started.</p>
           <button type="button" class="auth-button" data-inventory-drawer-open="add-item">Add Item</button>
         </div>
         <div class="inventory-empty-state" data-inventory-no-search hidden>
@@ -347,7 +339,6 @@
         </div>
         <div class="inventory-empty-state" data-movement-signed-out hidden>
           <h3>Sign in to view movement history.</h3>
-          <p>Owner access is required before stock activity appears.</p>
         </div>
         <div class="inventory-empty-state" data-movement-empty hidden>
           <h3>No movement history yet.</h3>
@@ -432,7 +423,6 @@
         </div>
         <button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button>
       </div>
-      <p>Create an ingredient or supply to track in inventory.</p>
       <form class="inventory-preview-form" data-add-item-form>
         <label class="admin-field" for="add-item-name"><span>Item name</span><input id="add-item-name" type="text" autocomplete="off" maxlength="100" data-add-item-name required></label>
         <label class="admin-field" for="add-item-category"><span>Category</span><select id="add-item-category" data-add-item-category required><option value="">Choose category</option></select></label>
@@ -455,7 +445,7 @@
         </div>
         <button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button>
       </div>
-      <p class="inventory-drawer-notice">Use Opening Balance only for stock already on hand when an item is first introduced into CURV Inventory. Daily deliveries should use Receive Stock.</p>
+      <p class="inventory-drawer-notice">For initial stock only. Use Receive Stock for later deliveries.</p>
       <form class="inventory-preview-form" data-opening-balance-form>
         <div class="inventory-form-fields" data-opening-balance-fields>
           <label class="admin-field" for="opening-balance-item"><span>Item</span><select id="opening-balance-item" data-opening-balance-item required><option value="">Choose item</option></select></label>
@@ -471,7 +461,6 @@
         </div>
         <div class="inventory-opening-confirm" data-opening-balance-confirm aria-live="polite" hidden>
           <h3 id="opening-balance-confirm-title" tabindex="-1" data-opening-balance-confirm-heading>Confirm Opening Balance</h3>
-          <p>Opening Balance is intended for stock already on hand before normal inventory tracking. Future deliveries should use Receive Stock.</p>
           <dl class="inventory-opening-confirm-summary" data-opening-balance-confirm-summary></dl>
           <p class="inventory-opening-confirm-warning" data-opening-balance-confirm-warning hidden></p>
           <p class="inventory-form-status" data-opening-balance-confirm-status aria-live="polite" hidden></p>
@@ -486,7 +475,6 @@
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-receive-stock-title" data-inventory-drawer="receive-stock" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Stock In</p><h2 id="drawer-receive-stock-title">Receive Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
-      <p>Record a delivery received after inventory tracking has started.</p>
       <form class="inventory-preview-form" data-receive-stock-form>
         <label class="admin-field" for="receive-stock-item"><span>Item</span><select id="receive-stock-item" data-receive-stock-item required><option value="">Choose item</option></select></label>
         <label class="admin-field" for="receive-stock-quantity"><span>Quantity received</span><input id="receive-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-receive-stock-quantity required><small class="inventory-field-hint" data-receive-stock-unit-hint></small></label>
@@ -503,7 +491,6 @@
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-use-stock-title" data-inventory-drawer="use-stock" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Stock Out</p><h2 id="drawer-use-stock-title">Use Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
-      <p>Record ingredients or supplies used during service.</p>
       <form class="inventory-preview-form" data-use-stock-form>
         <label class="admin-field" for="use-stock-item"><span>Item</span><select id="use-stock-item" data-use-stock-item required><option value="">Choose item</option></select></label>
         <label class="admin-field" for="use-stock-quantity"><span>Quantity used</span><input id="use-stock-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-use-stock-quantity required><small class="inventory-field-hint" data-use-stock-unit-hint></small></label>
@@ -518,7 +505,6 @@
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-record-waste-title" data-inventory-drawer="record-waste" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Waste</p><h2 id="drawer-record-waste-title">Record Waste</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
-      <p>Record stock that was spilled, expired, or unusable.</p>
       <form class="inventory-preview-form" data-record-waste-form>
         <label class="admin-field" for="record-waste-item"><span>Item</span><select id="record-waste-item" data-record-waste-item required><option value="">Choose item</option></select></label>
         <label class="admin-field" for="record-waste-quantity"><span>Quantity wasted</span><input id="record-waste-quantity" type="number" min="0" step="0.001" inputmode="decimal" data-record-waste-quantity required><small class="inventory-field-hint" data-record-waste-unit-hint></small></label>
@@ -533,7 +519,7 @@
 
     <section class="inventory-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-count-stock-title" data-inventory-drawer="count-stock" hidden>
       <div class="inventory-drawer-head"><div><p class="eyebrow">Count</p><h2 id="drawer-count-stock-title">Count Stock</h2></div><button type="button" class="inventory-drawer-close" data-inventory-drawer-close>Close</button></div>
-      <p>Count only the usable stock physically on hand. CURV will change the recorded usable stock to match this count. Expired stock should be recorded as waste first.</p>
+      <p>Enter the usable stock physically on hand.</p>
       <form class="inventory-preview-form" data-count-stock-form>
         <div class="inventory-form-fields" data-count-stock-fields>
           <label class="admin-field" for="count-stock-item"><span>Item</span><select id="count-stock-item" data-count-stock-item required><option value="">Choose item</option></select></label>

@@ -16,8 +16,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css?v=i10d5-clean-footer-actions">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=i10c-recipes-auth-exclusion" defer></script>
-  <script src="recipes.js?v=i10d5-recipes-polish" defer></script>
+  <script src="admin.js?v=u1-text-cleanup" defer></script>
+  <script src="recipes.js?v=u1-text-cleanup" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -124,7 +124,6 @@
         <div>
           <p class="eyebrow">CURV Control</p>
           <h1 id="recipes-title" class="dashboard-title">Recipes</h1>
-          <p class="page-helper">Connect menu items to inventory ingredients and see how many servings CURV can currently make.</p>
           <p class="inventory-status-message" data-recipes-status aria-live="polite" hidden></p>
         </div>
       </section>
@@ -135,7 +134,6 @@
           <div>
             <p class="metric-label">Sellable Sizes</p>
             <p class="metric-value" data-recipes-metric="sellable-sizes">&mdash;</p>
-            <p class="metric-subtext">Menu sizes that can have recipes</p>
           </div>
         </article>
         <article class="inventory-summary-card">
@@ -143,7 +141,6 @@
           <div>
             <p class="metric-label">Configured Recipes</p>
             <p class="metric-value" data-recipes-metric="configured-recipes">&mdash;</p>
-            <p class="metric-subtext">Ready for staff review</p>
           </div>
         </article>
         <article class="inventory-summary-card">
@@ -151,7 +148,6 @@
           <div>
             <p class="metric-label">Needs Attention</p>
             <p class="metric-value" data-recipes-metric="needs-attention">&mdash;</p>
-            <p class="metric-subtext">Recipes to fix before use</p>
           </div>
         </article>
         <article class="inventory-summary-card">
@@ -159,7 +155,6 @@
           <div>
             <p class="metric-label">Not Configured</p>
             <p class="metric-value" data-recipes-metric="not-configured">&mdash;</p>
-            <p class="metric-subtext">Sizes without recipes yet</p>
           </div>
         </article>
       </section>
@@ -173,7 +168,6 @@
         </div>
         <div class="inventory-attention-state" data-recipes-attention-state aria-live="polite">
           <h3 data-recipes-attention-title>Nothing needs attention right now.</h3>
-          <p data-recipes-attention-copy>Recipes that need review will appear here.</p>
         </div>
         <div class="inventory-attention-list" data-recipes-attention-list hidden></div>
       </section>
@@ -227,11 +221,9 @@
 
         <div class="inventory-empty-state" data-recipes-loading hidden>
           <h3>Loading recipes...</h3>
-          <p>Checking recipe status and current can-make counts.</p>
         </div>
         <div class="inventory-empty-state" data-recipes-signed-out hidden>
           <h3>Sign in to view recipes.</h3>
-          <p>Owner access is required before recipe data appears.</p>
         </div>
         <div class="inventory-empty-state" data-recipes-empty-state hidden>
           <h3>No sellable sizes found.</h3>
