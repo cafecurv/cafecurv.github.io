@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i11c2-count-preview">
+  <link rel="stylesheet" href="admin.css?v=u2-action-standard">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=u1-text-cleanup" defer></script>
   <script src="inventory.js?v=u1-text-cleanup" defer></script>
@@ -431,8 +431,9 @@
         <label class="admin-field" for="add-item-storage"><span>Storage location</span><input id="add-item-storage" type="text" autocomplete="off" maxlength="100" data-add-item-storage></label>
         <label class="inventory-checkbox-field" for="add-item-track-expiry"><input id="add-item-track-expiry" type="checkbox" data-add-item-track-expiry><span>Track expiry dates for this item</span></label>
         <p class="inventory-form-status" data-add-item-status aria-live="polite" hidden></p>
-        <div class="inventory-form-actions">
+        <div class="inventory-form-actions admin-editor-actions">
           <button type="submit" class="auth-button" data-add-item-submit>Add Item</button>
+          <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
         </div>
       </form>
     </section>
@@ -455,8 +456,9 @@
           <label class="admin-field" for="opening-balance-batch-ref"><span>Batch reference (optional)</span><input id="opening-balance-batch-ref" type="text" autocomplete="off" placeholder="Leave blank to auto-generate" data-opening-balance-batch-ref></label>
           <label class="admin-field" for="opening-balance-notes"><span>Notes (optional)</span><textarea id="opening-balance-notes" rows="3" maxlength="500" placeholder="Optional opening balance note" data-opening-balance-notes></textarea></label>
           <p class="inventory-form-status" data-opening-balance-status aria-live="polite" hidden></p>
-          <div class="inventory-form-actions">
+          <div class="inventory-form-actions admin-editor-actions">
             <button type="submit" class="auth-button" data-opening-balance-submit>Review Opening Balance</button>
+            <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
           </div>
         </div>
         <div class="inventory-opening-confirm" data-opening-balance-confirm aria-live="polite" hidden>
@@ -464,9 +466,9 @@
           <dl class="inventory-opening-confirm-summary" data-opening-balance-confirm-summary></dl>
           <p class="inventory-opening-confirm-warning" data-opening-balance-confirm-warning hidden></p>
           <p class="inventory-form-status" data-opening-balance-confirm-status aria-live="polite" hidden></p>
-          <div class="inventory-confirm-actions">
-            <button type="button" class="auth-button auth-button-secondary" data-opening-balance-go-back>Go Back</button>
+          <div class="inventory-confirm-actions admin-confirm-actions">
             <button type="button" class="auth-button" data-opening-balance-confirm-submit>Confirm Opening Balance</button>
+            <button type="button" class="auth-button auth-button-secondary" data-opening-balance-go-back>Go Back</button>
             <button type="button" class="auth-button" data-opening-balance-retry-refresh hidden>Retry Refresh</button>
           </div>
         </div>
@@ -483,8 +485,9 @@
         <label class="admin-field" for="receive-stock-reference"><span>Reference (optional)</span><input id="receive-stock-reference" type="text" autocomplete="off" maxlength="100" placeholder="Invoice, delivery note, or supplier reference" data-receive-stock-reference></label>
         <label class="admin-field" for="receive-stock-notes"><span>Notes (optional)</span><textarea id="receive-stock-notes" rows="3" maxlength="500" placeholder="Optional receiving note" data-receive-stock-notes></textarea></label>
         <p class="inventory-form-status" data-receive-stock-status aria-live="polite" hidden></p>
-        <div class="inventory-form-actions">
+        <div class="inventory-form-actions admin-editor-actions">
           <button type="submit" class="auth-button" data-receive-stock-submit>Receive Stock</button>
+          <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
         </div>
       </form>
     </section>
@@ -497,8 +500,9 @@
         <label class="admin-field" for="use-stock-reference"><span>Reference (optional)</span><input id="use-stock-reference" type="text" autocomplete="off" maxlength="100" placeholder="Service use, prep batch, or reason" data-use-stock-reference></label>
         <label class="admin-field" for="use-stock-notes"><span>Notes (optional)</span><textarea id="use-stock-notes" rows="3" maxlength="500" placeholder="Optional stock-use note" data-use-stock-notes></textarea></label>
         <p class="inventory-form-status" data-use-stock-status aria-live="polite" hidden></p>
-        <div class="inventory-form-actions">
+        <div class="inventory-form-actions admin-editor-actions">
           <button type="submit" class="auth-button" data-use-stock-submit>Use Stock</button>
+          <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
         </div>
       </form>
     </section>
@@ -511,8 +515,9 @@
         <label class="admin-field" for="record-waste-reason"><span>Reason</span><select id="record-waste-reason" data-record-waste-reason required><option value="">Choose reason</option><option value="expired">Expired</option><option value="spoiled">Spoiled</option><option value="spilled">Spilled</option><option value="damaged">Damaged</option><option value="preparation_error">Preparation Error</option><option value="overproduction">Overproduction</option><option value="quality_rejection">Quality Rejection</option><option value="staff_use">Staff Use</option><option value="other">Other</option></select><small class="inventory-field-hint" data-record-waste-reason-hint></small></label>
         <label class="admin-field" for="record-waste-notes"><span>Notes (optional)</span><textarea id="record-waste-notes" rows="3" maxlength="500" placeholder="Optional waste note" data-record-waste-notes></textarea></label>
         <p class="inventory-form-status" data-record-waste-status aria-live="polite" hidden></p>
-        <div class="inventory-form-actions">
+        <div class="inventory-form-actions admin-editor-actions">
           <button type="submit" class="auth-button" data-record-waste-submit>Record Waste</button>
+          <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
         </div>
       </form>
     </section>
@@ -535,8 +540,9 @@
           <label class="admin-field" for="count-stock-expiry" data-count-stock-expiry-wrap hidden><span>Expiry date for added stock</span><input id="count-stock-expiry" type="date" data-count-stock-expiry><small class="inventory-field-hint">Required when adding stock for an item that tracks expiry.</small></label>
           <label class="admin-field" for="count-stock-notes"><span>Notes (optional)</span><textarea id="count-stock-notes" rows="3" maxlength="500" placeholder="Optional count note" data-count-stock-notes></textarea></label>
           <p class="inventory-form-status" data-count-stock-status aria-live="polite" hidden></p>
-          <div class="inventory-form-actions">
+          <div class="inventory-form-actions admin-editor-actions">
             <button type="submit" class="auth-button" data-count-stock-submit>Review Count</button>
+            <button type="button" class="auth-button auth-button-secondary" data-inventory-drawer-close>Cancel</button>
           </div>
         </div>
         <div class="inventory-count-confirm" data-count-stock-confirm aria-live="polite" hidden>
@@ -545,9 +551,9 @@
           <dl class="inventory-count-confirm-summary" data-count-stock-confirm-summary></dl>
           <p class="inventory-count-confirm-warning" data-count-stock-confirm-warning hidden></p>
           <p class="inventory-form-status" data-count-stock-confirm-status aria-live="polite" hidden></p>
-          <div class="inventory-confirm-actions">
-            <button type="button" class="auth-button auth-button-secondary" data-count-stock-go-back>Go Back</button>
+          <div class="inventory-confirm-actions admin-confirm-actions">
             <button type="button" class="auth-button" data-count-stock-confirm-submit>Confirm Count</button>
+            <button type="button" class="auth-button auth-button-secondary" data-count-stock-go-back>Go Back</button>
           </div>
         </div>
       </form>

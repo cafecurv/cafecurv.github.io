@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=i10d5-clean-footer-actions">
+  <link rel="stylesheet" href="admin.css?v=u2-action-standard">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=u1-text-cleanup" defer></script>
   <script src="recipes.js?v=u1-text-cleanup" defer></script>
@@ -327,94 +327,103 @@
         </div>
         <button type="button" class="inventory-drawer-close" data-recipes-drawer-close data-recipes-editor-close>Close</button>
       </div>
-      <p class="page-helper recipes-editor-helper">Count only the ingredients that belong in one serving of this exact menu size.</p>
-      <div class="recipes-detail-meta" data-recipes-editor-meta></div>
-      <p class="inventory-drawer-notice" data-recipes-editor-status aria-live="polite" tabindex="-1" hidden></p>
-      <div class="recipes-editor-loading" data-recipes-editor-loading hidden>
-        <h3>Loading recipe editor...</h3>
-        <p>Getting the latest recipe and ingredient choices.</p>
-      </div>
-      <div class="recipes-editor-error" data-recipes-editor-error hidden>
-        <h3>Couldn't load the editor.</h3>
-        <p data-recipes-editor-error-copy>Try again before editing this recipe.</p>
-        <div class="inventory-form-actions recipes-error-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel-error>Cancel</button>
-          <button type="button" class="auth-button" data-recipes-editor-retry>Retry</button>
+      <div class="recipes-editor-scroll-content">
+        <p class="page-helper recipes-editor-helper">Count only the ingredients that belong in one serving of this exact menu size.</p>
+        <div class="recipes-detail-meta" data-recipes-editor-meta></div>
+        <p class="inventory-drawer-notice" data-recipes-editor-status aria-live="polite" tabindex="-1" hidden></p>
+        <div class="recipes-editor-loading" data-recipes-editor-loading hidden>
+          <h3>Loading recipe editor...</h3>
+          <p>Getting the latest recipe and ingredient choices.</p>
         </div>
-      </div>
-      <div class="recipes-discard-confirm" data-recipes-discard-confirm hidden>
-        <h3>You have unsaved changes. Discard them?</h3>
-        <div class="inventory-form-actions recipes-confirm-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-keep-editing>Keep Editing</button>
-          <button type="button" class="auth-button" data-recipes-discard-editor>Discard Changes</button>
-        </div>
-      </div>
-      <div class="recipes-save-panel" data-recipes-save-error hidden>
-        <h3 tabindex="-1" data-recipes-save-error-title>Recipe could not be saved.</h3>
-        <p data-recipes-save-error-copy>Check your connection and try again.</p>
-        <div class="inventory-form-actions recipes-error-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-save-error-keep>Keep Editing</button>
-          <button type="button" class="auth-button" data-recipes-save-retry>Try Save Again</button>
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-save-close hidden>Close</button>
-          <button type="button" class="auth-button" data-recipes-save-reload-page hidden>Reload Page</button>
-        </div>
-      </div>
-      <div class="recipes-save-panel" data-recipes-conflict hidden>
-        <h3 tabindex="-1" data-recipes-conflict-title>This recipe changed after you opened it.</h3>
-        <p data-recipes-conflict-copy>Reload the latest version before saving.</p>
-        <div class="inventory-form-actions recipes-error-actions" data-recipes-conflict-actions>
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-keep>Keep Editing</button>
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-cancel>Cancel</button>
-          <button type="button" class="auth-button" data-recipes-conflict-reload>Reload Latest</button>
-        </div>
-        <div class="recipes-conflict-confirm" data-recipes-conflict-confirm hidden>
-          <p>Reloading will replace your unsaved local changes with the latest saved recipe.</p>
+        <div class="recipes-editor-error" data-recipes-editor-error hidden>
+          <h3>Couldn't load the editor.</h3>
+          <p data-recipes-editor-error-copy>Try again before editing this recipe.</p>
           <div class="inventory-form-actions recipes-error-actions">
-            <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-reload-cancel>Keep Local Edits</button>
-            <button type="button" class="auth-button" data-recipes-conflict-reload-confirm>Reload Latest</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel-error>Cancel</button>
+            <button type="button" class="auth-button" data-recipes-editor-retry>Retry</button>
           </div>
         </div>
-      </div>
-      <div class="recipes-save-panel" data-recipes-delete-confirm hidden>
-        <h3 tabindex="-1" data-recipes-delete-title>Delete this recipe?</h3>
-        <p data-recipes-delete-copy>This will remove the saved recipe for this menu size.</p>
-        <p data-recipes-delete-note>The menu item and inventory stock will stay unchanged. Only this recipe setup will be removed.</p>
-        <div class="inventory-form-actions recipes-error-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-keep>Keep Recipe</button>
-          <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-confirm-button>Delete Recipe</button>
-        </div>
-      </div>
-      <div class="recipes-save-panel" data-recipes-delete-error hidden>
-        <h3 tabindex="-1" data-recipes-delete-error-title>Recipe could not be deleted.</h3>
-        <p data-recipes-delete-error-copy>Check your connection and try again.</p>
-        <div class="inventory-form-actions recipes-error-actions">
-          <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-error-keep>Keep Recipe</button>
-          <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-retry>Try Delete Again</button>
-        </div>
-      </div>
-      <form class="recipes-editor-form" data-recipes-editor-form novalidate>
-        <label class="admin-field" for="recipe-editor-notes">
-          <span>Recipe notes</span>
-          <textarea id="recipe-editor-notes" rows="4" maxlength="500" data-recipes-editor-notes></textarea>
-          <span class="inventory-field-hint" data-recipes-editor-notes-count>0 / 500</span>
-        </label>
-        <section class="recipes-editor-section" aria-labelledby="recipe-editor-ingredients-title">
-          <div class="recipes-editor-section-head">
-            <h3 id="recipe-editor-ingredients-title">Ingredients</h3>
-            <button type="button" class="inventory-row-action" data-recipes-add-ingredient>Add Ingredient</button>
-          </div>
-          <div class="recipes-editor-rows" data-recipes-editor-rows></div>
-        </section>
-        <div class="recipes-editor-summary" data-recipes-editor-summary aria-live="polite" hidden></div>
-        <div class="recipes-editor-footer">
-          <p class="inventory-field-hint" data-recipes-save-helper>Make a change to enable saving.</p>
-          <div class="inventory-form-actions recipes-editor-actions">
-            <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel>Cancel</button>
-            <button type="button" class="auth-button auth-button-secondary recipes-danger-button" data-recipes-delete-open hidden>Delete Recipe</button>
-            <button type="button" class="auth-button" data-recipes-editor-save disabled>Save Recipe</button>
+        <div class="recipes-discard-confirm" data-recipes-discard-confirm hidden>
+          <h3>You have unsaved changes. Discard them?</h3>
+          <div class="inventory-form-actions recipes-confirm-actions">
+            <button type="button" class="auth-button" data-recipes-discard-editor>Discard Changes</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-keep-editing>Keep Editing</button>
           </div>
         </div>
-      </form>
+        <div class="recipes-save-panel" data-recipes-save-error hidden>
+          <h3 tabindex="-1" data-recipes-save-error-title>Recipe could not be saved.</h3>
+          <p data-recipes-save-error-copy>Check your connection and try again.</p>
+          <div class="inventory-form-actions recipes-error-actions">
+            <button type="button" class="auth-button" data-recipes-save-retry>Try Save Again</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-save-error-keep>Keep Editing</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-save-close hidden>Close</button>
+            <button type="button" class="auth-button" data-recipes-save-reload-page hidden>Reload Page</button>
+          </div>
+        </div>
+        <div class="recipes-save-panel" data-recipes-conflict hidden>
+          <h3 tabindex="-1" data-recipes-conflict-title>This recipe changed after you opened it.</h3>
+          <p data-recipes-conflict-copy>Reload the latest version before saving.</p>
+          <div class="inventory-form-actions recipes-error-actions" data-recipes-conflict-actions>
+            <button type="button" class="auth-button" data-recipes-conflict-reload>Reload Latest</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-keep>Keep Editing</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-cancel>Cancel</button>
+          </div>
+          <div class="recipes-conflict-confirm" data-recipes-conflict-confirm hidden>
+            <p>Reloading will replace your unsaved local changes with the latest saved recipe.</p>
+            <div class="inventory-form-actions recipes-error-actions">
+              <button type="button" class="auth-button" data-recipes-conflict-reload-confirm>Reload Latest</button>
+              <button type="button" class="auth-button auth-button-secondary" data-recipes-conflict-reload-cancel>Keep Local Edits</button>
+            </div>
+          </div>
+        </div>
+        <div class="recipes-save-panel" data-recipes-delete-confirm hidden>
+          <h3 tabindex="-1" data-recipes-delete-title>Delete this recipe?</h3>
+          <p data-recipes-delete-copy>This will remove the saved recipe for this menu size.</p>
+          <p data-recipes-delete-note>The menu item and inventory stock will stay unchanged. Only this recipe setup will be removed.</p>
+          <div class="inventory-form-actions recipes-error-actions">
+            <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-confirm-button>Delete Recipe</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-keep>Keep Recipe</button>
+          </div>
+        </div>
+        <div class="recipes-save-panel" data-recipes-delete-error hidden>
+          <h3 tabindex="-1" data-recipes-delete-error-title>Recipe could not be deleted.</h3>
+          <p data-recipes-delete-error-copy>Check your connection and try again.</p>
+          <div class="inventory-form-actions recipes-error-actions">
+            <button type="button" class="auth-button recipes-danger-button" data-recipes-delete-retry>Try Delete Again</button>
+            <button type="button" class="auth-button auth-button-secondary" data-recipes-delete-error-keep>Keep Recipe</button>
+          </div>
+        </div>
+        <form class="recipes-editor-form" data-recipes-editor-form novalidate>
+          <label class="admin-field" for="recipe-editor-notes">
+            <span>Recipe notes</span>
+            <textarea id="recipe-editor-notes" rows="4" maxlength="500" data-recipes-editor-notes></textarea>
+            <span class="inventory-field-hint" data-recipes-editor-notes-count>0 / 500</span>
+          </label>
+          <section class="recipes-editor-section" aria-labelledby="recipe-editor-ingredients-title">
+            <div class="recipes-editor-section-head">
+              <h3 id="recipe-editor-ingredients-title">Ingredients</h3>
+              <button type="button" class="inventory-row-action" data-recipes-add-ingredient>Add Ingredient</button>
+            </div>
+            <div class="recipes-editor-rows" data-recipes-editor-rows></div>
+          </section>
+          <div class="recipes-editor-summary" data-recipes-editor-summary aria-live="polite" hidden></div>
+        </form>
+      </div>
+      <div class="recipes-editor-footer">
+        <div class="inventory-form-actions recipes-editor-actions">
+          <button type="button" class="auth-button" data-recipes-editor-save disabled>Save Recipe</button>
+          <button type="button" class="auth-button auth-button-secondary" data-recipes-editor-cancel>Cancel</button>
+          <button type="button" class="auth-button auth-button-secondary recipes-danger-button admin-icon-action admin-icon-action-danger recipes-delete-icon-button" data-recipes-delete-open aria-label="Delete recipe" title="Delete recipe" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16"></path>
+              <path d="M9 7V4h6v3"></path>
+              <path d="M7 7l1 13h8l1-13"></path>
+              <path d="M10 11v5"></path>
+              <path d="M14 11v5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
     </section>
   </div>
 </body>

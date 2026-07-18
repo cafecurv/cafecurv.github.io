@@ -512,11 +512,49 @@ body.inventory-drawer-open {
 
 .inventory-form-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .inventory-form-actions .auth-button {
   min-width: 132px;
+}
+
+.admin-editor-actions,
+.admin-confirm-actions,
+.inline-category-actions,
+.option-form-actions,
+.product-option-attach-actions,
+.product-option-settings-actions {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.admin-icon-action {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.admin-icon-action svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.admin-icon-action-danger {
+  border-color: rgba(224, 112, 112, 0.55);
+  color: #ffe2dc;
+  background: rgba(224, 112, 112, 0.08);
 }
 
 .inventory-field-hint {
@@ -827,9 +865,19 @@ body.inventory-drawer-open {
   display: flex;
   flex-direction: column;
   align-content: stretch;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.recipes-editor-scroll-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: 1rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-padding-bottom: 10rem;
+  padding-right: 0.15rem;
+  scroll-padding: 1rem 0 1rem;
   scrollbar-gutter: stable;
 }
 
@@ -844,6 +892,7 @@ body.inventory-drawer-open {
 .recipes-editor-summary {
   display: grid;
   gap: 0.75rem;
+  scroll-margin-bottom: 12rem;
   padding: 1rem;
   border: 1px solid rgba(200, 184, 154, 0.3);
   border-radius: 8px;
@@ -893,7 +942,6 @@ body.inventory-drawer-open {
 .recipes-editor-form {
   display: grid;
   gap: 1rem;
-  flex: 1 0 auto;
 }
 
 .recipes-editor-form[hidden] {
@@ -951,7 +999,7 @@ body.inventory-drawer-open {
   display: grid;
   grid-template-columns: minmax(240px, 1.1fr) minmax(180px, 0.65fr) minmax(92px, auto);
   gap: 0.75rem;
-  align-items: start;
+  align-items: end;
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -985,11 +1033,13 @@ body.inventory-drawer-open {
 
 .recipes-remove-ingredient {
   min-height: 44px;
+  align-self: end;
 }
 
 .recipes-editor-row-message {
   grid-column: 1 / -1;
   min-height: 1rem;
+  scroll-margin-bottom: 12rem;
   margin: 0;
   color: #e0b36f;
   font-weight: 600;
@@ -1013,21 +1063,23 @@ body.inventory-drawer-open {
 }
 
 .recipes-editor-footer {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
+  position: relative;
+  bottom: auto;
   z-index: 4;
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding: 1rem 0 0;
-  border-top: 1px solid rgba(200, 184, 154, 0.24);
-  background: linear-gradient(180deg, rgba(22, 18, 15, 0.86), rgba(22, 18, 15, 0.98) 36%);
-  box-shadow: 0 -18px 32px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(200, 184, 154, 0.22);
+  background: var(--surface);
+  box-shadow: 0 -8px 20px rgba(20, 24, 36, 0.18);
 }
 
-.recipes-editor-footer .inventory-field-hint {
-  margin: 0;
+.recipes-editor-drawer:has(.recipes-editor-form[hidden]) .recipes-editor-footer {
+  display: none !important;
 }
 
 .recipes-editor-actions,
@@ -1037,15 +1089,37 @@ body.inventory-drawer-open {
 }
 
 .recipes-editor-actions {
-  display: grid;
-  grid-template-columns: auto auto minmax(156px, auto);
+  display: flex;
   align-items: center;
-  justify-content: end;
-  justify-self: end;
+  justify-content: center;
+  gap: 12px;
 }
 
 .recipes-editor-actions [data-recipes-editor-save] {
   min-width: 156px;
+}
+
+.recipes-delete-icon-button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin-left: 8px;
+}
+
+.recipes-delete-icon-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.recipes-editor-footer [hidden] {
+  display: none !important;
 }
 
 .recipes-editor-actions .auth-button,
@@ -1102,11 +1176,10 @@ body.inventory-drawer-open {
   .recipes-editor-drawer {
     width: 100%;
     max-height: min(92vh, 720px);
-    scroll-padding-bottom: 11rem;
   }
 
   .recipes-editor-footer {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   }
 }
 
@@ -1158,6 +1231,17 @@ body.inventory-drawer-open {
 
   .inventory-confirm-actions .auth-button {
     width: 100%;
+  }
+
+  .admin-editor-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .admin-editor-actions .auth-button {
+    width: 100%;
+    min-width: 0;
   }
 
   .inventory-action-primary {
@@ -1272,28 +1356,27 @@ body.inventory-drawer-open {
   }
 
   .recipes-editor-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-content: stretch;
-    justify-self: stretch;
-  }
-
-  .recipes-editor-actions [data-recipes-editor-save] {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .recipes-editor-actions [data-recipes-editor-cancel],
-  .recipes-editor-actions [data-recipes-delete-open] {
-    grid-row: 2;
-    width: 100%;
-    min-width: 0;
+    display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
+    gap: 10px;
+    width: 100%;
   }
 
-  .recipes-editor-actions:not(:has([data-recipes-delete-open]:not([hidden]))) [data-recipes-editor-cancel] {
-    grid-column: 1 / -1;
+  .recipes-editor-actions [data-recipes-editor-save],
+  .recipes-editor-actions [data-recipes-editor-cancel] {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 154px;
+  }
+
+  .recipes-delete-icon-button {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    margin-left: 8px;
+    justify-content: center;
   }
 }
 
@@ -4195,7 +4278,6 @@ body.more-drawer-open {
 
 .inline-category-actions {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
 }
 
@@ -4436,6 +4518,7 @@ body.more-drawer-open {
 
 .variant-remove-button {
   min-height: 44px;
+  align-self: end;
   border: 1px solid rgba(189, 196, 212, 0.18);
   border-radius: 8px;
   background: rgba(36, 44, 66, 0.42);
@@ -4488,9 +4571,16 @@ body.more-drawer-open {
 .product-option-attach-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.65rem;
   flex-wrap: wrap;
+}
+
+.product-option-toolbar {
+  justify-content: space-between;
+}
+
+.product-option-attach-actions {
+  justify-content: center;
 }
 
 .product-option-attach-button {
@@ -4642,7 +4732,6 @@ body.more-drawer-open {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
 }
 
 .product-option-default-editor {
@@ -5940,6 +6029,265 @@ body.more-drawer-open {
   color: #1C2235;
 }
 
+:root[data-admin-theme="light"] .menu-manager-main {
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .menu-manager-header .menu-connection-status {
+  background: #F9F3EA;
+  border-color: rgba(143, 118, 85, 0.28);
+  color: #8D7655;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .menu-manager-panel,
+:root[data-admin-theme="light"] .menu-manager-main .draft-product-panel,
+:root[data-admin-theme="light"] .menu-manager-main .product-editor-panel,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-panel,
+:root[data-admin-theme="light"] .menu-manager-main .option-groups-panel {
+  background: #FFFDF7;
+  border-color: rgba(200, 184, 154, 0.5);
+  box-shadow: 0 14px 32px rgba(56, 45, 30, 0.08);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-preview,
+:root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-content,
+:root[data-admin-theme="light"] .menu-manager-main .product-filter-bar,
+:root[data-admin-theme="light"] .menu-manager-main .product-search-bar,
+:root[data-admin-theme="light"] .menu-manager-main .inline-category-create,
+:root[data-admin-theme="light"] .menu-manager-main .variant-builder,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-attachments,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-attach-form,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-settings-form,
+:root[data-admin-theme="light"] .menu-manager-main .option-manager-card {
+  background: #F9F3EA;
+  border-color: rgba(200, 184, 154, 0.42);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-preview-card,
+:root[data-admin-theme="light"] .menu-manager-main .product-empty-state,
+:root[data-admin-theme="light"] .menu-manager-main .editor-empty-state,
+:root[data-admin-theme="light"] .menu-manager-main .variant-row,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-empty,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-card,
+:root[data-admin-theme="light"] .menu-manager-main .option-group-item,
+:root[data-admin-theme="light"] .menu-manager-main .option-empty-state,
+:root[data-admin-theme="light"] .menu-manager-main .option-choice-card,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-empty,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-row {
+  background: #FFFDF7;
+  border-color: rgba(87, 74, 55, 0.18);
+  color: #4F5665;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-preview-card.is-published {
+  background: linear-gradient(135deg, rgba(249, 243, 234, 0.98), rgba(255, 253, 247, 0.96));
+  border-color: rgba(143, 118, 85, 0.34);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main h2,
+:root[data-admin-theme="light"] .menu-manager-main h3,
+:root[data-admin-theme="light"] .menu-manager-main h4,
+:root[data-admin-theme="light"] .menu-manager-main h5,
+:root[data-admin-theme="light"] .menu-manager-main .product-card-title,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-name,
+:root[data-admin-theme="light"] .menu-manager-main .option-group-name,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-meta dd,
+:root[data-admin-theme="light"] .menu-manager-main .option-detail-list dd {
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .page-helper,
+:root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-head p,
+:root[data-admin-theme="light"] .menu-manager-main .product-preview-heading p,
+:root[data-admin-theme="light"] .menu-manager-main .product-card-category,
+:root[data-admin-theme="light"] .menu-manager-main .product-card-description,
+:root[data-admin-theme="light"] .menu-manager-main .product-empty-state p,
+:root[data-admin-theme="light"] .menu-manager-main .product-image-path,
+:root[data-admin-theme="light"] .menu-manager-main .product-filter-label,
+:root[data-admin-theme="light"] .menu-manager-main .product-bulk-actions span,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-head p,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-status,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-empty p,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-meta,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-sort,
+:root[data-admin-theme="light"] .menu-manager-main .option-form-heading p,
+:root[data-admin-theme="light"] .menu-manager-main .option-group-meta,
+:root[data-admin-theme="light"] .menu-manager-main .option-choice-meta,
+:root[data-admin-theme="light"] .menu-manager-main .option-empty-state p,
+:root[data-admin-theme="light"] .menu-manager-main .option-manager-status,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-empty p,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-key,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-status,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-default-copy,
+:root[data-admin-theme="light"] .menu-manager-main .product-sold-by,
+:root[data-admin-theme="light"] .menu-manager-main .product-variant-cost,
+:root[data-admin-theme="light"] .menu-manager-main .static-footnote,
+:root[data-admin-theme="light"] .menu-manager-main .editor-empty-state p,
+:root[data-admin-theme="light"] .menu-manager-main .draft-product-panel p {
+  color: #4F5665;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .eyebrow,
+:root[data-admin-theme="light"] .menu-manager-main .static-status,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-handle,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-unsaved,
+:root[data-admin-theme="light"] .menu-manager-main .option-detail-list dt,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-meta dt,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-default-editor h5,
+:root[data-admin-theme="light"] .menu-manager-main .editor-publish-note {
+  color: #8D7655;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .admin-field {
+  color: #4F5665;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .admin-field input,
+:root[data-admin-theme="light"] .menu-manager-main .admin-field select,
+:root[data-admin-theme="light"] .menu-manager-main .admin-field textarea,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge-chip-field {
+  background: #FFFDF7;
+  border-color: rgba(143, 118, 85, 0.28);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .admin-field input::placeholder,
+:root[data-admin-theme="light"] .menu-manager-main .admin-field textarea::placeholder,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge-chip-field input::placeholder {
+  color: rgba(79, 86, 101, 0.62);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .admin-field input:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .admin-field select:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .admin-field textarea:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge-chip-field input:disabled {
+  opacity: 1;
+  background: #ECE3D4;
+  border-color: rgba(143, 118, 85, 0.18);
+  color: rgba(31, 39, 61, 0.52);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .draft-checkbox,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-default-check {
+  background: #FFFDF7;
+  border-color: rgba(143, 118, 85, 0.24);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .draft-checkbox:has(input:disabled) {
+  opacity: 1;
+  background: #ECE3D4;
+  color: rgba(31, 39, 61, 0.58);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-badge,
+:root[data-admin-theme="light"] .menu-manager-main .product-variant-pill,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge-chip,
+:root[data-admin-theme="light"] .menu-manager-main .option-status-pill,
+:root[data-admin-theme="light"] .menu-manager-main .option-mini-button {
+  background: #F3EBDC;
+  border-color: rgba(143, 118, 85, 0.26);
+  color: #4F5665;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-badge.is-live,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge.is-available,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge.is-special,
+:root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-active,
+:root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-type {
+  background: rgba(143, 118, 85, 0.12);
+  border-color: rgba(143, 118, 85, 0.36);
+  color: #8D7655;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-badge.is-muted,
+:root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-inactive,
+:root[data-admin-theme="light"] .menu-manager-main .option-mini-button.is-muted {
+  background: #ECE3D4;
+  border-color: rgba(143, 118, 85, 0.16);
+  color: rgba(31, 39, 61, 0.56);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-search-clear,
+:root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle,
+:root[data-admin-theme="light"] .menu-manager-main .category-icon-button,
+:root[data-admin-theme="light"] .menu-manager-main .variant-remove-button,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-move-button,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-settings-toggle,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-settings-save {
+  background: #FFFDF7;
+  border-color: rgba(143, 118, 85, 0.28);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-search-clear:hover,
+:root[data-admin-theme="light"] .menu-manager-main .product-search-clear:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle:hover,
+:root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .category-icon-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .category-icon-button:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-move-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-move-button:focus-visible {
+  background: #F3EBDC;
+  border-color: rgba(143, 118, 85, 0.44);
+  color: #141824;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button.is-publish {
+  background: #273149;
+  border-color: #273149;
+  color: #F8F1E4;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .category-icon-button.is-danger,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button.is-danger,
+:root[data-admin-theme="light"] .menu-manager-main .product-option-detach-button {
+  background: rgba(174, 83, 68, 0.08);
+  border-color: rgba(143, 52, 44, 0.28);
+  color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .category-icon-button:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .product-search-clear:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .display-order-move-button:disabled {
+  opacity: 1;
+  background: #ECE3D4;
+  border-color: rgba(143, 118, 85, 0.16);
+  color: rgba(31, 39, 61, 0.44);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-image-preview {
+  background: #F9F3EA;
+  border-color: rgba(143, 118, 85, 0.18);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-image-preview img {
+  background: #ECE3D4;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-image-placeholder {
+  color: rgba(79, 86, 101, 0.66);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-editor-panel .draft-actions {
+  background: rgba(255, 253, 247, 0.96);
+  border-top-color: rgba(143, 118, 85, 0.16);
+  backdrop-filter: none;
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-badge-chip button {
+  background: rgba(143, 118, 85, 0.12);
+  color: #4F5665;
+}
+
 :root[data-admin-theme="light"] .recipes-editor-loading,
 :root[data-admin-theme="light"] .recipes-editor-error,
 :root[data-admin-theme="light"] .recipes-save-panel,
@@ -5975,26 +6323,25 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .recipes-editor-footer {
-  gap: 0.5rem;
-  padding: 0.75rem 0 max(0.5rem, env(safe-area-inset-bottom));
+  padding: 12px 16px;
   background: linear-gradient(180deg, rgba(240, 237, 230, 0), rgba(240, 237, 230, 0.94) 30%, #F0EDE6 58%);
   border-top-color: rgba(87, 74, 55, 0.16);
   box-shadow: none;
 }
 
-:root[data-admin-theme="light"] .recipes-editor-footer .inventory-field-hint {
-  margin: 0;
-  color: #4F5665;
-  font-size: 0.78rem;
-}
-
 :root[data-admin-theme="light"] .recipes-editor-footer .recipes-editor-actions {
-  gap: 0.5rem;
+  gap: 12px;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+@media (max-width: 959px) {
+  :root[data-admin-theme="light"] .recipes-editor-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
 }
 
 :root[data-admin-theme="light"] .recipes-editor-footer [data-recipes-editor-save] {
@@ -6040,10 +6387,14 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .recipes-editor-footer [data-recipes-delete-open] {
-  min-width: 145px;
   background: rgba(174, 83, 68, 0.06);
   border-color: rgba(143, 52, 44, 0.28);
   color: #8F342C;
+}
+
+:root[data-admin-theme="light"] .recipes-editor-footer .recipes-delete-icon-button {
+  width: 44px;
+  min-width: 44px;
 }
 
 :root[data-admin-theme="light"] .recipes-editor-footer [data-recipes-delete-open]:not(:disabled):hover,
@@ -6058,6 +6409,13 @@ body.more-drawer-open {
   border-color: rgba(143, 52, 44, 0.14);
   color: rgba(143, 52, 44, 0.38);
   cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  :root[data-admin-theme="light"] .recipes-editor-footer [data-recipes-editor-save],
+  :root[data-admin-theme="light"] .recipes-editor-footer [data-recipes-editor-cancel] {
+    min-width: 0;
+  }
 }
 
 :root[data-admin-theme="light"] .recipes-editor-row {
