@@ -1482,6 +1482,124 @@ a {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
+  overscroll-behavior-y: contain;
+}
+
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+#curv-ptr-indicator {
+  --ptr-travel: 0px;
+  --ptr-rotation: 0deg;
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 85;
+  width: min(260px, calc(100vw - 2rem));
+  opacity: 0;
+  transform: translate3d(-50%, calc(-120% + var(--ptr-travel)), 0);
+  transition: opacity 0.16s ease, transform 0.18s ease;
+}
+
+#curv-ptr-indicator.is-pulling,
+#curv-ptr-indicator.is-ready,
+#curv-ptr-indicator.is-refreshing {
+  opacity: 1;
+}
+
+#curv-ptr-indicator.is-pulling,
+#curv-ptr-indicator.is-ready {
+  transition: opacity 0.12s ease;
+}
+
+#curv-ptr-indicator.is-cancelling {
+  opacity: 0;
+}
+
+.curv-ptr-track {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.62rem 0.9rem;
+  border: 1px solid rgba(200, 184, 154, 0.38);
+  border-radius: 999px;
+  background: rgba(20, 24, 36, 0.94);
+  box-shadow: 0 18px 42px rgba(5, 8, 16, 0.24);
+  color: var(--cream);
+  backdrop-filter: blur(16px);
+}
+
+.curv-ptr-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 1.2rem;
+  color: var(--accent);
+  font-size: 1rem;
+  line-height: 1;
+  transform: rotate(var(--ptr-rotation));
+}
+
+#curv-ptr-indicator.is-refreshing .curv-ptr-icon {
+  animation: curv-ptr-spin 0.72s linear infinite;
+}
+
+.curv-ptr-label {
+  min-width: 0;
+  color: var(--slate);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#curv-ptr-indicator.is-ready .curv-ptr-label,
+#curv-ptr-indicator.is-refreshing .curv-ptr-label {
+  color: var(--cream);
+}
+
+@keyframes curv-ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:root[data-admin-theme="light"] .curv-ptr-track {
+  background: rgba(255, 253, 247, 0.96);
+  border-color: rgba(87, 74, 55, 0.2);
+  box-shadow: 0 18px 42px rgba(87, 74, 55, 0.16);
+  color: #1C2235;
+}
+
+:root[data-admin-theme="light"] .curv-ptr-label {
+  color: #574A37;
+}
+
+:root[data-admin-theme="light"] #curv-ptr-indicator.is-ready .curv-ptr-label,
+:root[data-admin-theme="light"] #curv-ptr-indicator.is-refreshing .curv-ptr-label {
+  color: #1C2235;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #curv-ptr-indicator {
+    transition: none;
+  }
+
+  .curv-ptr-icon {
+    transform: none;
+  }
+
+  #curv-ptr-indicator.is-refreshing .curv-ptr-icon {
+    animation: none;
+  }
 }
 
 .topbar {

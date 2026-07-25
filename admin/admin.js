@@ -6809,8 +6809,10 @@
   };
 
   const loadOrderSummary = async () => {
-    resetSummary();
-    if (!isOwnerSignedIn) return;
+    if (!isOwnerSignedIn) {
+      resetSummary();
+      return;
+    }
 
     const { data, error } = await client
       .from('orders')
@@ -6820,12 +6822,20 @@
 
     if (error) return;
 
+    const nextCounts = {
+      submitted: 0,
+      accepted: 0,
+      preparing: 0,
+      ready: 0,
+      completed: 0,
+      cancelled: 0,
+    };
     const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
     let todayAmount = 0;
     let todayCurrency = 'PHP';
 
     (data || []).forEach((order) => {
-      if (Object.prototype.hasOwnProperty.call(orderStatusCounts, order.status)) orderStatusCounts[order.status] += 1;
+      if (Object.prototype.hasOwnProperty.call(nextCounts, order.status)) nextCounts[order.status] += 1;
       const createdKey = order.created_at
         ? new Date(order.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
         : '';
@@ -6835,6 +6845,9 @@
       }
     });
 
+    Object.keys(orderStatusCounts).forEach((status) => {
+      orderStatusCounts[status] = nextCounts[status] || 0;
+    });
     filterCountBadges.forEach((badge) => {
       const status = badge.dataset.orderFilterCount || '';
       badge.textContent = String(orderStatusCounts[status] || 0);
@@ -7415,4 +7428,253 @@
   syncOrderSoundToggle();
   renderOrders();
   refreshSession();
+})();
+(() => {
+  const indicatorId = 'curv-ptr-indicator';
+  const states = {
+    idle: 'IDLE',
+    pulling: 'PULLING',
+    ready: 'READY',
+    refreshing: 'REFRESHING',
+    cancelling: 'CANCELLING',
+  };
+  const interactiveSelector = [
+    'input',
+    'textarea',
+    'select',
+    'button',
+    'a',
+    '[role="button"]',
+    '[role="slider"]',
+    '[contenteditable="true"]',
+    '.owner-account',
+    '.notification-control',
+    '.notification-button',
+    '.mobile-more-button',
+    '.nav-toggle',
+  ].join(',');
+  const blockerSelector = [
+    '#incoming-order-notification-panel',
+    '[role="dialog"]',
+    '.mobile-more-overlay',
+    '.mobile-more-drawer',
+    '.inventory-drawer-backdrop',
+    '.inventory-drawer-layer',
+    '.inventory-drawer',
+    '.recipes-drawer',
+    '.recipes-editor-drawer',
+  ].join(',');
+  const threshold = 60;
+  const maxTravel = 64;
+  const dragStartLimit = 72;
+  const reloadDelay = 300;
+
+  let state = states.idle;
+  let startX = 0;
+  let startY = 0;
+  let pointerMode = '';
+  let acceptedAtStart = false;
+  let isDragging = false;
+  let reloadTimer = null;
+
+  const createIndicator = () => {
+    const existingIndicator = document.getElementById(indicatorId);
+    if (existingIndicator) return existingIndicator;
+
+    const indicator = document.createElement('div');
+    indicator.id = indicatorId;
+    indicator.setAttribute('aria-hidden', 'true');
+
+    const track = document.createElement('div');
+    track.className = 'curv-ptr-track';
+
+    const icon = document.createElement('span');
+    icon.className = 'curv-ptr-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '↻';
+
+    const label = document.createElement('span');
+    label.className = 'curv-ptr-label';
+    label.textContent = 'Pull to refresh';
+
+    track.append(icon, label);
+    indicator.appendChild(track);
+    document.body.insertBefore(indicator, document.body.firstChild);
+    return indicator;
+  };
+
+  const indicator = createIndicator();
+  const label = indicator.querySelector('.curv-ptr-label');
+
+  const hasTextSelection = () => {
+    const selection = window.getSelection ? window.getSelection() : null;
+    return Boolean(selection && String(selection).trim());
+  };
+
+  const isPageAtTop = () => {
+    const windowTop = Number(window.scrollY || 0);
+    const documentTop = Number(document.documentElement?.scrollTop || 0);
+    const bodyTop = Number(document.body?.scrollTop || 0);
+    return windowTop <= 0 && documentTop <= 0 && bodyTop <= 0;
+  };
+
+  const isVisible = (element) => {
+    if (!element || element.hidden || element.getAttribute('aria-hidden') === 'true') return false;
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+
+  const isOwnerAccountMenuOpen = () => {
+    const menu = document.querySelector('[data-owner-account-menu]');
+    return isVisible(menu);
+  };
+
+  const hasOpenBlocker = () => {
+    if (document.body.classList.contains('more-drawer-open')) return true;
+    if (document.body.classList.contains('inventory-drawer-open')) return true;
+    if (isOwnerAccountMenuOpen()) return true;
+    return Array.from(document.querySelectorAll(blockerSelector)).some(isVisible);
+  };
+
+  const isScrollableChild = (target) => {
+    let node = target && target.nodeType === Node.ELEMENT_NODE ? target : target?.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const canScroll = /(auto|scroll|overlay)/.test(overflowY) && node.scrollHeight > node.clientHeight;
+      if (canScroll) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
+
+  const canStartGesture = (event) => {
+    const target = event.target;
+    return isPageAtTop()
+      && state === states.idle
+      && !reloadTimer
+      && !hasOpenBlocker()
+      && !hasTextSelection()
+      && !(target && target.closest && target.closest(interactiveSelector))
+      && !isScrollableChild(target);
+  };
+
+  const setIndicatorState = (nextState, distance = 0) => {
+    const visualDistance = Math.max(0, Math.min(maxTravel, distance));
+    const progress = Math.max(0, Math.min(1, distance / threshold));
+    state = nextState;
+    indicator.style.setProperty('--ptr-travel', visualDistance.toFixed(1) + 'px');
+    indicator.style.setProperty('--ptr-rotation', Math.round(progress * 360) + 'deg');
+    indicator.classList.toggle('is-pulling', nextState === states.pulling);
+    indicator.classList.toggle('is-ready', nextState === states.ready);
+    indicator.classList.toggle('is-refreshing', nextState === states.refreshing);
+    indicator.classList.toggle('is-cancelling', nextState === states.cancelling);
+    if (label) {
+      label.textContent = nextState === states.refreshing
+        ? 'Refreshing...'
+        : (nextState === states.ready ? 'Release to refresh' : 'Pull to refresh');
+    }
+  };
+
+  const clearReloadTimer = () => {
+    if (!reloadTimer) return;
+    window.clearTimeout(reloadTimer);
+    reloadTimer = null;
+  };
+
+  const resetPullState = () => {
+    if (state !== states.refreshing) clearReloadTimer();
+    startX = 0;
+    startY = 0;
+    pointerMode = '';
+    acceptedAtStart = false;
+    isDragging = false;
+    if (state === states.refreshing) return;
+    setIndicatorState(states.cancelling, 0);
+    window.setTimeout(() => {
+      if (state === states.cancelling) setIndicatorState(states.idle, 0);
+    }, 180);
+  };
+
+  const finishGesture = () => {
+    if (state === states.ready) {
+      setIndicatorState(states.refreshing, threshold);
+      reloadTimer = window.setTimeout(() => {
+        window.location.reload();
+      }, reloadDelay);
+      return;
+    }
+    resetPullState();
+  };
+
+  const updatePull = (currentX, currentY) => {
+    if (!acceptedAtStart) return false;
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+    if (!isDragging) {
+      if (deltaY <= 8 || Math.abs(deltaY) <= Math.abs(deltaX)) return false;
+      isDragging = true;
+    }
+    if (deltaY <= 0) {
+      resetPullState();
+      return false;
+    }
+    setIndicatorState(deltaY >= threshold ? states.ready : states.pulling, deltaY);
+    return true;
+  };
+
+  const handleTouchStart = (event) => {
+    if (!event.touches || event.touches.length !== 1) return;
+    acceptedAtStart = canStartGesture(event);
+    if (!acceptedAtStart) return;
+    const touch = event.touches[0];
+    pointerMode = 'touch';
+    startX = touch.clientX;
+    startY = touch.clientY;
+  };
+
+  const handleTouchMove = (event) => {
+    if (pointerMode !== 'touch' || !event.touches || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    if (updatePull(touch.clientX, touch.clientY)) event.preventDefault();
+  };
+
+  const handleMouseDown = (event) => {
+    if (event.button !== 0 || event.clientY > dragStartLimit) return;
+    acceptedAtStart = canStartGesture(event);
+    if (!acceptedAtStart) return;
+    event.preventDefault();
+    pointerMode = 'mouse';
+    startX = event.clientX;
+    startY = event.clientY;
+  };
+
+  const handleMouseMove = (event) => {
+    if (pointerMode !== 'mouse') return;
+    if (updatePull(event.clientX, event.clientY)) event.preventDefault();
+  };
+
+  const handlePointerEnd = () => {
+    if (!pointerMode) return;
+    finishGesture();
+  };
+
+  const handleMouseOut = (event) => {
+    if (pointerMode !== 'mouse') return;
+    if (event.relatedTarget || event.toElement) return;
+    resetPullState();
+  };
+
+  document.addEventListener('touchstart', handleTouchStart, { passive: true });
+  document.addEventListener('touchmove', handleTouchMove, { passive: false });
+  document.addEventListener('touchend', handlePointerEnd);
+  document.addEventListener('touchcancel', resetPullState);
+  document.addEventListener('mousedown', handleMouseDown);
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('mouseup', handlePointerEnd);
+  window.addEventListener('mouseout', handleMouseOut);
+  window.addEventListener('blur', resetPullState);
+  window.addEventListener('pagehide', resetPullState);
 })();
