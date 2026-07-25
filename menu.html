@@ -1074,8 +1074,72 @@
     margin-top: 0.7rem;
   }
 
+  .tracking-action-link,
   .after-submit-actions .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    text-decoration: none;
     margin-top: 0;
+  }
+
+  .tracking-action-link {
+    width: 100%;
+  }
+
+  .order-success-heading {
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .order-number-display {
+    display: grid;
+    gap: 0.18rem;
+    padding: 0.62rem 0.7rem;
+    border: 0.5px solid rgba(200,184,154,0.5);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.28);
+  }
+
+  .order-number-display span {
+    color: var(--gray-mid);
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+  }
+
+  .order-number-display strong {
+    color: var(--navy);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    overflow-wrap: anywhere;
+  }
+
+  .tracking-guidance,
+  .tracking-copy-status {
+    font-size: 0.74rem;
+    line-height: 1.45;
+  }
+
+  .tracking-guidance {
+    color: var(--gray-mid);
+  }
+
+  .tracking-copy-status {
+    min-height: 1.05rem;
+    color: #4a7c59;
+    font-family: 'Raleway', sans-serif;
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  .tracking-copy-status.error {
+    color: #b24b4b;
   }
 
   .order-confirm-overlay {
@@ -3326,6 +3390,7 @@
       <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" disabled>Submit Order</button>
       <button class="submit-btn copy-fallback" onclick="copyOrder()" id="copyBtn" hidden>Copy Order Message</button>
       <div class="submit-status" id="submitOrderStatus" role="status" aria-live="polite"></div>
+      <div class="submit-status" id="trackingCopyLiveRegion" aria-live="polite"></div>
       <div class="after-submit-status" id="afterSubmitStatus" hidden></div>
       <button class="submit-btn messenger" onclick="openMessenger()" id="openMessengerBtn" hidden>Open Messenger →</button>
     </div>
@@ -7570,6 +7635,9 @@
 
   let isSubmittingPublicOrder = false;
   let lastSubmittedPublicOrderSignature = '';
+  const TRACKING_URL_BASE = 'https://www.thecurv.cafe/track.html';
+  const TRACKING_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const trackingCopyTimers = new Map();
 
   // Public online ordering is intentionally enabled for launch.
   function isPublicOrderSubmitEnabled() {
@@ -7596,29 +7664,106 @@
     return cart.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0);
   }
 
-  function getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal) {
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getSafeTrackingToken(token) {
+    const cleanToken = String(token || '').trim();
+    return TRACKING_TOKEN_PATTERN.test(cleanToken) ? cleanToken : '';
+  }
+
+  function getTrackingUrl(token) {
+    const safeToken = getSafeTrackingToken(token);
+    return safeToken ? TRACKING_URL_BASE + '?t=' + encodeURIComponent(safeToken) : '';
+  }
+
+  function normalizeSubmittedOrderInfo(info) {
+    if (!info || !info.orderNumber) return null;
+    const trackingToken = getSafeTrackingToken(info.trackingToken || info.tracking_token || '');
+    const storedUrl = typeof info.trackingUrl === 'string' && info.trackingUrl.includes(TRACKING_URL_BASE)
+      ? info.trackingUrl
+      : '';
+    const trackingUrl = trackingToken ? getTrackingUrl(trackingToken) : storedUrl;
     return {
-      orderNumber: orderNumber || 'received',
-      fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
-      subtotal: Number(subtotal || getCartSubtotal() || 0),
-      submittedAt: new Date().toISOString()
+      orderNumber: String(info.orderNumber || 'received'),
+      fulfillmentType: info.fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
+      subtotal: Number(info.subtotal || 0),
+      trackingToken,
+      trackingUrl,
+      submittedAt: info.submittedAt || new Date().toISOString()
     };
   }
 
+  function getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal, trackingToken) {
+    const safeToken = getSafeTrackingToken(trackingToken);
+    return normalizeSubmittedOrderInfo({
+      orderNumber: orderNumber || 'received',
+      fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
+      subtotal: Number(subtotal || getCartSubtotal() || 0),
+      trackingToken: safeToken,
+      trackingUrl: getTrackingUrl(safeToken),
+      submittedAt: new Date().toISOString()
+    });
+  }
+
   function saveLatestSubmittedOrder(info) {
-    latestSubmittedOrder = info;
+    const safeInfo = normalizeSubmittedOrderInfo(info);
+    latestSubmittedOrder = safeInfo;
     try {
-      localStorage.setItem(RECENT_ORDER_STORAGE_KEY, JSON.stringify(info));
+      if (safeInfo) localStorage.setItem(RECENT_ORDER_STORAGE_KEY, JSON.stringify(safeInfo));
     } catch (error) {}
   }
 
   function loadLatestSubmittedOrder() {
     try {
       const raw = localStorage.getItem(RECENT_ORDER_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      return raw ? normalizeSubmittedOrderInfo(JSON.parse(raw)) : null;
     } catch (error) {
       return null;
     }
+  }
+
+  function getTrackingCopyStatus(statusId) {
+    return statusId ? document.getElementById(statusId) : document.getElementById('trackingCopyLiveRegion');
+  }
+
+  function setTrackingCopyStatus(statusId, message, tone = '') {
+    const status = getTrackingCopyStatus(statusId);
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('error', tone === 'error');
+  }
+
+  function renderTrackingActions(info, context, includeBackAction = true) {
+    const safeInfo = normalizeSubmittedOrderInfo(info);
+    if (!safeInfo || !safeInfo.trackingUrl) {
+      return `
+        <p class="tracking-guidance">Your order was received. Contact CURV on Messenger and provide your order number for tracking assistance.</p>
+        <div class="after-submit-actions">
+          <button type="button" class="submit-btn messenger" onclick="openMessenger()">Message CURV on Messenger</button>
+          ${includeBackAction ? '<button type="button" class="submit-btn copy-fallback" onclick="backToMenu()">Back to Menu</button>' : ''}
+        </div>
+      `;
+    }
+
+    const safeUrl = escapeHtml(safeInfo.trackingUrl);
+    const copyButtonId = context + 'TrackingCopy';
+    const statusId = context + 'TrackingCopyStatus';
+    return `
+      <div class="after-submit-actions">
+        <a class="submit-btn tracking-action-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Track My Order</a>
+        <button type="button" class="submit-btn copy-fallback" id="${copyButtonId}" onclick="copyTrackingLink('${copyButtonId}', '${statusId}')">Copy Tracking Link</button>
+        ${includeBackAction ? '<button type="button" class="submit-btn copy-fallback" onclick="backToMenu()">Back to Menu</button>' : ''}
+      </div>
+      <p class="tracking-guidance">For the best tracking experience, open the link in Chrome or Safari instead of Messenger's browser. Copy the tracking link and paste it there.</p>
+      <p class="tracking-copy-status" id="${statusId}" aria-live="polite"></p>
+    `;
   }
 
   function renderRecentOrderReminder() {
@@ -7632,8 +7777,9 @@
     }
     reminder.hidden = false;
     reminder.innerHTML = `
-      <strong>Recent order: ${recentOrder.orderNumber}</strong>
-      <p>Need an update? Message us on Messenger with your order number.</p>
+      <strong>Recent order: ${escapeHtml(recentOrder.orderNumber)}</strong>
+      <p>Need an update? ${recentOrder.trackingUrl ? 'Track it with your private link.' : 'Message us on Messenger with your order number.'}</p>
+      ${recentOrder.trackingUrl ? renderTrackingActions(recentOrder, 'recentOrder', false) : ''}
     `;
   }
 
@@ -7651,6 +7797,65 @@
     }
     fallbackCopy(text);
     return Promise.resolve();
+  }
+
+  function copyTrackingLink(buttonId, statusId) {
+    const info = latestSubmittedOrder || loadLatestSubmittedOrder();
+    const trackingUrl = info && info.trackingUrl ? info.trackingUrl : '';
+    const button = buttonId ? document.getElementById(buttonId) : null;
+    const originalText = button ? (button.dataset.originalText || button.textContent || 'Copy Tracking Link') : '';
+
+    if (!trackingUrl) {
+      setTrackingCopyStatus(statusId, 'Tracking link is unavailable. Message CURV with your order number.', 'error');
+      return Promise.resolve(false);
+    }
+
+    if (button) button.dataset.originalText = originalText;
+    const scheduleCopyButtonRestore = () => {
+      if (!buttonId || !button) return;
+      if (trackingCopyTimers.has(buttonId)) window.clearTimeout(trackingCopyTimers.get(buttonId));
+      trackingCopyTimers.set(buttonId, window.setTimeout(() => {
+        button.textContent = button.dataset.originalText || 'Copy Tracking Link';
+        trackingCopyTimers.delete(buttonId);
+      }, 2000));
+    };
+    return copyTextToClipboard(trackingUrl).then(() => {
+      if (button) button.textContent = '✓ Link copied!';
+      setTrackingCopyStatus(statusId, 'Tracking link copied');
+      const liveRegion = document.getElementById('trackingCopyLiveRegion');
+      if (liveRegion) liveRegion.textContent = 'Tracking link copied';
+      scheduleCopyButtonRestore();
+      return true;
+    }).catch(() => {
+      try {
+        fallbackCopy(trackingUrl);
+        if (button) button.textContent = '✓ Link copied!';
+        setTrackingCopyStatus(statusId, 'Tracking link copied');
+        const liveRegion = document.getElementById('trackingCopyLiveRegion');
+        if (liveRegion) liveRegion.textContent = 'Tracking link copied';
+        scheduleCopyButtonRestore();
+        return true;
+      } catch (error) {
+        setTrackingCopyStatus(statusId, 'Unable to copy automatically. Open Track My Order and copy the link from your browser.', 'error');
+        return false;
+      }
+    });
+  }
+
+  function backToMenu() {
+    closeOrderConfirmModal();
+    const statusBox = document.getElementById('afterSubmitStatus');
+    if (statusBox) statusBox.hidden = true;
+    const target = document.querySelector('.section.active .section-title') || document.querySelector('.section-title') || document.querySelector('main');
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (typeof target.focus === 'function') {
+        const previousTabIndex = target.getAttribute('tabindex');
+        target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        if (previousTabIndex === null) target.removeAttribute('tabindex');
+      }
+    }
   }
 
   function closeOrderConfirmModal() {
@@ -7684,6 +7889,10 @@
       actionsEl.appendChild(button);
     });
     overlay.hidden = false;
+    const firstTarget = actionsEl.querySelector('button') || bodyEl.querySelector('a, button') || titleEl;
+    if (firstTarget && typeof firstTarget.focus === 'function') {
+      window.setTimeout(() => firstTarget.focus(), 0);
+    }
     return overlay;
   }
 
@@ -7736,27 +7945,26 @@
   function showOrderSuccessModal(info) {
     const isPickup = info && info.fulfillmentType === 'pickup';
     const subtotal = Number(info.subtotal || 0).toLocaleString();
+    const orderNumberHtml = escapeHtml(info && info.orderNumber ? info.orderNumber : 'received');
     const bodyHtml = isPickup
       ? `
-          <p>Your order number is ${info.orderNumber}.</p>
+          <p class="order-success-heading">Order received!</p>
+          <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
           <p>Please wait for our confirmation before pick-up.</p>
+          ${renderTrackingActions(info, 'modalOrder')}
         `
       : `
-          <p>Your order number is ${info.orderNumber}.</p>
+          <p class="order-success-heading">Order received!</p>
+          <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
           <p>Order subtotal: ₱${subtotal}</p>
           <p>To check your actual total including delivery fee, message us through Messenger together with your order number.</p>
+          ${renderTrackingActions(info, 'modalOrder')}
         `;
 
     setOrderConfirmModal(
       'Order received!',
       bodyHtml,
-      [{
-        label: isPickup ? 'Check Status via Messenger' : 'Confirm Total via Messenger',
-        onClick: () => {
-          closeOrderConfirmModal();
-          openMessenger();
-        }
-      }],
+      [],
     );
   }
 
@@ -7765,17 +7973,18 @@
     if (!statusBox || !info) return;
     const isPickup = info.fulfillmentType === 'pickup';
     const subtotal = Number(info.subtotal || 0).toLocaleString();
+    const orderNumberHtml = escapeHtml(info.orderNumber || 'received');
     statusBox.hidden = false;
+    statusBox.setAttribute('role', 'status');
+    statusBox.setAttribute('aria-live', 'polite');
     statusBox.innerHTML = `
-      <strong>Order submitted</strong>
-      <p>Order #: ${info.orderNumber}</p>
+      <strong class="order-success-heading">Order received!</strong>
+      <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
       ${isPickup ? '' : `<p>Order subtotal: ₱${subtotal}</p>`}
       <p>${isPickup
         ? 'Please wait for our confirmation before pick-up.'
         : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.'}</p>
-      <div class="after-submit-actions">
-        <button type="button" class="submit-btn messenger" onclick="openMessenger()">${isPickup ? 'Check Status via Messenger' : 'Confirm Total via Messenger'}</button>
-      </div>
+      ${renderTrackingActions(info, 'afterSubmit')}
     `;
   }
 
@@ -7807,14 +8016,14 @@
     renderCart();
   }
 
-  function handleSuccessfulPublicOrder(orderNumber, fulfillmentType, subtotal) {
-    const info = getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal);
+  function handleSuccessfulPublicOrder(orderNumber, fulfillmentType, subtotal, trackingToken) {
+    const info = getSubmittedOrderInfo(orderNumber, fulfillmentType, subtotal, trackingToken);
     saveLatestSubmittedOrder(info);
     renderRecentOrderReminder();
     renderAfterSubmitStatus(info);
     setSubmittedFormLocked(true);
     showOrderSuccessModal(info);
-    setSubmitOrderStatus('Order submitted. Message CURV on Messenger with your order number.', 'success');
+    setSubmitOrderStatus(info.trackingUrl ? 'Order received. Your tracking link is ready.' : 'Order received. Message CURV on Messenger with your order number.', 'success');
     return info;
   }
 
@@ -7895,9 +8104,10 @@
       if (error) throw error;
 
       const confirmation = Array.isArray(data) ? data[0] : data;
-      const orderNumber = confirmation && confirmation.order_number ? confirmation.order_number : 'received';
+      const orderNumber = confirmation && confirmation.order_number ? String(confirmation.order_number).trim() : 'received';
+      const trackingToken = confirmation && confirmation.tracking_token ? getSafeTrackingToken(confirmation.tracking_token) : '';
       lastSubmittedPublicOrderSignature = payloadSignature;
-      handleSuccessfulPublicOrder(orderNumber, payload.fulfillment_type, payload.subtotal);
+      handleSuccessfulPublicOrder(orderNumber || 'received', payload.fulfillment_type, payload.subtotal, trackingToken);
       submittedSuccessfully = true;
     } catch (error) {
       setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
@@ -7957,10 +8167,10 @@
   }
 
   if (isPublicOrderSubmitEnabled()) {
-    window.curvPreviewOrderSuccess = function(orderNumber, fulfillmentType) {
+    window.curvPreviewOrderSuccess = function(orderNumber, fulfillmentType, trackingToken) {
       const safeType = fulfillmentType === 'pickup' ? 'pickup' : 'delivery';
       const previewNumber = orderNumber || (safeType === 'pickup' ? 'C-1001' : 'C-1000');
-      return handleSuccessfulPublicOrder(previewNumber, safeType, getCartSubtotal());
+      return handleSuccessfulPublicOrder(previewNumber, safeType, getCartSubtotal(), trackingToken);
     };
   }
 
