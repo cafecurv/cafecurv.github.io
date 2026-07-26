@@ -6558,12 +6558,11 @@
     const statusKey = normalizeOrderStatus(order.status);
     const paymentStatus = normalizePaymentStatus(order && order.payment_status);
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
-    const canShowPaymentShortcut = ['preparing', 'ready', 'completed'].includes(statusKey)
-      && ['unpaid', 'pending'].includes(paymentStatus);
-    const isCompletedPaid = statusKey === 'completed' && paymentStatus === 'paid';
+    const canShowPaymentShortcut = statusKey !== 'cancelled' && ['unpaid', 'pending'].includes(paymentStatus);
+    const canShowPaidConfirmation = statusKey !== 'cancelled' && paymentStatus === 'paid';
 
     const actionRow = makeElement('div', 'order-action-row');
-    const appendPaymentShortcut = () => {
+    const createPaymentShortcut = () => {
       const isSaving = activePaymentAction
         && activePaymentAction.orderId === order.id
         && activePaymentAction.nextStatus === 'paid';
@@ -6576,7 +6575,7 @@
         event.stopPropagation();
         handlePaymentStatusAction(order, 'paid');
       });
-      actionRow.appendChild(button);
+      return button;
     };
 
     actions.forEach((action) => {
@@ -6595,12 +6594,11 @@
         handleOrderStatusAction(order, action);
       });
       actionRow.appendChild(button);
-      if (canShowPaymentShortcut && action.tone !== 'cancel') appendPaymentShortcut();
     });
 
-    if (canShowPaymentShortcut && !actions.length) appendPaymentShortcut();
-
-    if (isCompletedPaid) {
+    if (canShowPaymentShortcut) {
+      actionRow.appendChild(createPaymentShortcut());
+    } else if (canShowPaidConfirmation) {
       const paidButton = makeElement('button', 'auth-button order-action-button order-payment-shortcut-button', 'Paid ✓');
       paidButton.type = 'button';
       paidButton.disabled = true;
