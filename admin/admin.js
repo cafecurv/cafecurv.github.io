@@ -6556,9 +6556,29 @@
 
   const renderOrderStatusActions = (order) => {
     const statusKey = normalizeOrderStatus(order.status);
+    const paymentStatus = normalizePaymentStatus(order && order.payment_status);
     const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
+    const canShowPaymentShortcut = ['preparing', 'ready', 'completed'].includes(statusKey)
+      && ['unpaid', 'pending'].includes(paymentStatus);
+    const isCompletedPaid = statusKey === 'completed' && paymentStatus === 'paid';
 
     const actionRow = makeElement('div', 'order-action-row');
+    const appendPaymentShortcut = () => {
+      const isSaving = activePaymentAction
+        && activePaymentAction.orderId === order.id
+        && activePaymentAction.nextStatus === 'paid';
+      const button = makeElement('button', 'auth-button order-action-button order-payment-shortcut-button', isSaving ? 'Saving...' : 'Mark as Paid');
+      button.type = 'button';
+      button.disabled = Boolean(activePaymentAction) || Boolean(activeOrderAction) || ordersLoading;
+      if (isSaving) button.setAttribute('aria-busy', 'true');
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handlePaymentStatusAction(order, 'paid');
+      });
+      actionRow.appendChild(button);
+    };
+
     actions.forEach((action) => {
       const isSaving = activeOrderAction
         && activeOrderAction.orderId === order.id
@@ -6575,7 +6595,18 @@
         handleOrderStatusAction(order, action);
       });
       actionRow.appendChild(button);
+      if (canShowPaymentShortcut && action.tone !== 'cancel') appendPaymentShortcut();
     });
+
+    if (canShowPaymentShortcut && !actions.length) appendPaymentShortcut();
+
+    if (isCompletedPaid) {
+      const paidButton = makeElement('button', 'auth-button order-action-button order-payment-shortcut-button', 'Paid ✓');
+      paidButton.type = 'button';
+      paidButton.disabled = true;
+      paidButton.setAttribute('aria-label', 'Payment recorded as paid');
+      actionRow.appendChild(paidButton);
+    }
 
     const printButton = makeElement('button', 'auth-button auth-button-secondary order-action-button order-print-ticket-button', 'Print Ticket');
     printButton.type = 'button';
