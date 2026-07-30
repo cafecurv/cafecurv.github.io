@@ -6632,6 +6632,13 @@
   let pendingOrderConfirmResolve = null;
   const CURV_MESSENGER_URL = 'https://m.me/cafecurv';
   const RECENT_ORDER_STORAGE_KEY = 'curv-latest-public-order';
+  const PUBLIC_SUBMISSION_KEY_STORAGE_KEY = 'curv-public-submission-key';
+  const PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY = 'curv-public-submission-signature';
+  const PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY = 'curv-public-submission-failure';
+  const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  let activeSubmissionKey = '';
+  let activeSubmissionKeySignature = '';
+  let activeSubmissionFailureMode = '';
 
   function initPanel(id, defaults) {
     if (!panelState[id]) {
@@ -7678,6 +7685,137 @@
     return TRACKING_TOKEN_PATTERN.test(cleanToken) ? cleanToken : '';
   }
 
+  function getSafeSubmissionKey(key) {
+    const cleanKey = String(key || '').trim();
+    return UUID_V4_PATTERN.test(cleanKey) ? cleanKey : '';
+  }
+
+  function generatePublicSubmissionKey() {
+    const cryptoSource = window.crypto || window.msCrypto;
+    if (cryptoSource && typeof cryptoSource.randomUUID === 'function') {
+      const key = getSafeSubmissionKey(cryptoSource.randomUUID());
+      if (key) return key;
+    }
+    if (!cryptoSource || typeof cryptoSource.getRandomValues !== 'function') {
+      throw new Error('Secure order key generation is unavailable in this browser.');
+    }
+    const bytes = new Uint8Array(16);
+    cryptoSource.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'));
+    return [
+      hex.slice(0, 4).join(''),
+      hex.slice(4, 6).join(''),
+      hex.slice(6, 8).join(''),
+      hex.slice(8, 10).join(''),
+      hex.slice(10, 16).join('')
+    ].join('-');
+  }
+
+  function getStoredPublicSubmissionKey() {
+    try {
+      const storedKey = getSafeSubmissionKey(sessionStorage.getItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY));
+      if (storedKey) return storedKey;
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY);
+    } catch (error) {}
+    return '';
+  }
+
+  function setStoredPublicSubmissionKey(key) {
+    activeSubmissionKey = getSafeSubmissionKey(key);
+    try {
+      if (activeSubmissionKey) sessionStorage.setItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY, activeSubmissionKey);
+      else sessionStorage.removeItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY);
+    } catch (error) {}
+    return activeSubmissionKey;
+  }
+
+  function getStoredPublicSubmissionSignature() {
+    try {
+      const storedSignature = String(sessionStorage.getItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY) || '').trim();
+      if (/^[0-9a-f]{64}$/i.test(storedSignature)) return storedSignature;
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY);
+    } catch (error) {}
+    return '';
+  }
+
+  function setStoredPublicSubmissionSignature(signature) {
+    activeSubmissionKeySignature = /^[0-9a-f]{64}$/i.test(String(signature || '').trim()) ? String(signature).trim().toLowerCase() : '';
+    try {
+      if (activeSubmissionKeySignature) sessionStorage.setItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY, activeSubmissionKeySignature);
+      else sessionStorage.removeItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY);
+    } catch (error) {}
+    return activeSubmissionKeySignature;
+  }
+
+  function getStoredPublicSubmissionFailureMode() {
+    try {
+      const storedMode = String(sessionStorage.getItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY) || '').trim();
+      if (storedMode === 'validation' || storedMode === 'ambiguous') return storedMode;
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY);
+    } catch (error) {}
+    return '';
+  }
+
+  function setStoredPublicSubmissionFailureMode(mode) {
+    activeSubmissionFailureMode = mode === 'validation' || mode === 'ambiguous' ? mode : '';
+    try {
+      if (activeSubmissionFailureMode) sessionStorage.setItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY, activeSubmissionFailureMode);
+      else sessionStorage.removeItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY);
+    } catch (error) {}
+    return activeSubmissionFailureMode;
+  }
+
+  function clearPublicSubmissionState() {
+    activeSubmissionKey = '';
+    activeSubmissionKeySignature = '';
+    activeSubmissionFailureMode = '';
+    try {
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY);
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY);
+      sessionStorage.removeItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY);
+    } catch (error) {}
+  }
+
+  function getOrCreatePublicSubmissionKey() {
+    const currentKey = getSafeSubmissionKey(activeSubmissionKey) || getStoredPublicSubmissionKey();
+    if (currentKey) return setStoredPublicSubmissionKey(currentKey);
+    return setStoredPublicSubmissionKey(generatePublicSubmissionKey());
+  }
+
+  async function getPublicSubmissionSignatureDigest(payloadSignature) {
+    const cryptoSource = window.crypto || window.msCrypto;
+    if (!cryptoSource || !cryptoSource.subtle || typeof cryptoSource.subtle.digest !== 'function' || !window.TextEncoder) {
+      return '';
+    }
+    const encoded = new TextEncoder().encode(String(payloadSignature || ''));
+    const buffer = await cryptoSource.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function preparePublicSubmissionKey(payloadSignature) {
+    const signatureDigest = await getPublicSubmissionSignatureDigest(payloadSignature);
+    const storedSignature = activeSubmissionKeySignature || getStoredPublicSubmissionSignature();
+    const failureMode = activeSubmissionFailureMode || getStoredPublicSubmissionFailureMode();
+    if (signatureDigest && storedSignature && signatureDigest !== storedSignature && failureMode !== 'validation') {
+      clearPublicSubmissionState();
+    }
+    const key = getOrCreatePublicSubmissionKey();
+    if (signatureDigest) setStoredPublicSubmissionSignature(signatureDigest);
+    return key;
+  }
+
+  function isPublicSubmissionKeyConflict(error) {
+    if (!error) return false;
+    return ['message', 'details', 'hint', 'code']
+      .some((field) => String(error[field] || '').includes('INV_SUBMISSION_KEY_CONFLICT'));
+  }
+
+  function isPublicOrderValidationError(error) {
+    return Boolean(error && String(error.code || '') === '22023');
+  }
+
   function getTrackingUrl(token) {
     const safeToken = getSafeTrackingToken(token);
     return safeToken ? TRACKING_URL_BASE + '?t=' + encodeURIComponent(safeToken) : '';
@@ -8090,6 +8228,15 @@
       return;
     }
 
+    let submissionKey = '';
+    try {
+      submissionKey = await preparePublicSubmissionKey(payloadSignature);
+    } catch (error) {
+      setSubmitOrderStatus('Unable to prepare secure online order submission. Please use Copy Order instead.', 'error');
+      return;
+    }
+    payload.submission_key = submissionKey;
+
     const submitButton = document.getElementById('submitOrderBtn');
     isSubmittingPublicOrder = true;
     if (submitButton) {
@@ -8104,13 +8251,23 @@
       if (error) throw error;
 
       const confirmation = Array.isArray(data) ? data[0] : data;
-      const orderNumber = confirmation && confirmation.order_number ? String(confirmation.order_number).trim() : 'received';
+      const orderNumber = confirmation && confirmation.order_number ? String(confirmation.order_number).trim() : '';
       const trackingToken = confirmation && confirmation.tracking_token ? getSafeTrackingToken(confirmation.tracking_token) : '';
+      if (!orderNumber || !trackingToken) {
+        throw new Error('Order confirmation was incomplete. Please try again or use Copy Order.');
+      }
       lastSubmittedPublicOrderSignature = payloadSignature;
       handleSuccessfulPublicOrder(orderNumber || 'received', payload.fulfillment_type, payload.subtotal, trackingToken);
       submittedSuccessfully = true;
+      clearPublicSubmissionState();
     } catch (error) {
-      setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
+      if (isPublicSubmissionKeyConflict(error)) {
+        clearPublicSubmissionState();
+        setSubmitOrderStatus("We couldn't safely submit this updated order. Please review your cart and try again.", 'error');
+      } else {
+        setStoredPublicSubmissionFailureMode(isPublicOrderValidationError(error) ? 'validation' : 'ambiguous');
+        setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
+      }
     } finally {
       isSubmittingPublicOrder = false;
       syncAnytimeOrderState();
