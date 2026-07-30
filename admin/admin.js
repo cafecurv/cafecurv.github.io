@@ -5892,6 +5892,7 @@
   let orderItemsLoadError = '';
   let selectedOrderId = '';
   let ordersLoading = false;
+  let orderLoadGeneration = 0;
   let activeOrderAction = null;
   let activePaymentAction = null;
   let ordersRealtimeChannel = null;
@@ -6885,11 +6886,16 @@
   };
 
   const loadItemCounts = async (orders) => {
-    itemCountByOrderId = new Map();
-    orderItemsByOrderId = new Map();
-    orderItemsLoadError = '';
+    const nextItemCountByOrderId = new Map();
+    const nextOrderItemsByOrderId = new Map();
     const orderIds = orders.map(order => order.id).filter(Boolean);
-    if (!orderIds.length) return;
+    if (!orderIds.length) {
+      return {
+        itemCounts: nextItemCountByOrderId,
+        orderItems: nextOrderItemsByOrderId,
+        error: '',
+      };
+    }
 
     const { data, error } = await client
       .from('order_items')
@@ -6898,17 +6904,26 @@
       .order('sort_order', { ascending: true });
 
     if (error) {
-      orderItemsLoadError = 'Unable to load item details. ' + error.message;
-      return;
+      return {
+        itemCounts: nextItemCountByOrderId,
+        orderItems: nextOrderItemsByOrderId,
+        error: 'Unable to load item details. ' + error.message,
+      };
     }
 
     (data || []).forEach((item) => {
-      const currentCount = itemCountByOrderId.get(item.order_id) || 0;
-      itemCountByOrderId.set(item.order_id, currentCount + 1);
-      const items = orderItemsByOrderId.get(item.order_id) || [];
+      const currentCount = nextItemCountByOrderId.get(item.order_id) || 0;
+      nextItemCountByOrderId.set(item.order_id, currentCount + 1);
+      const items = nextOrderItemsByOrderId.get(item.order_id) || [];
       items.push(item);
-      orderItemsByOrderId.set(item.order_id, items);
+      nextOrderItemsByOrderId.set(item.order_id, items);
     });
+
+    return {
+      itemCounts: nextItemCountByOrderId,
+      orderItems: nextOrderItemsByOrderId,
+      error: '',
+    };
   };
 
   const handleOrderStatusAction = async (order, action) => {
@@ -6995,6 +7010,7 @@
   };
 
   const loadOrders = async ({ preserveSelection = false } = {}) => {
+    const loadGeneration = ++orderLoadGeneration;
     if (!isOwnerSignedIn) {
       latestOrders = [];
       itemCountByOrderId = new Map();
@@ -7019,6 +7035,8 @@
       .eq('status', activeStatus)
       .order('created_at', { ascending: false });
 
+    if (loadGeneration !== orderLoadGeneration) return;
+
     ordersLoading = false;
 
     if (error) {
@@ -7032,8 +7050,14 @@
       return;
     }
 
-    latestOrders = data || [];
-    await loadItemCounts(latestOrders);
+    const nextOrders = data || [];
+    const itemLoadResult = await loadItemCounts(nextOrders);
+    if (loadGeneration !== orderLoadGeneration) return;
+
+    latestOrders = nextOrders;
+    itemCountByOrderId = itemLoadResult.itemCounts;
+    orderItemsByOrderId = itemLoadResult.orderItems;
+    orderItemsLoadError = itemLoadResult.error;
     renderOrders();
     setStatus(getLoadedStatusMessage(latestOrders.length));
 
