@@ -5831,6 +5831,9 @@
     cancelled: 'Cancelled',
   };
   const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track.html';
+  const WAITING_WATCH_MINUTES = 10;
+  const WAITING_URGENT_MINUTES = 20;
+  const ACTIVE_ORDER_STATUSES = new Set(['submitted', 'accepted', 'preparing', 'ready']);
 
   const ORDER_STATUS_ACTIONS = {
     submitted: [
@@ -6021,6 +6024,33 @@
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return diffDays + ' day' + (diffDays === 1 ? '' : 's') + ' ago';
     return formatOrderDate(value);
+  };
+
+  const getWaitingMinutes = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return null;
+    return Math.floor(diffMs / 60000);
+  };
+
+  const formatWaitingDuration = (value) => {
+    const waitingMinutes = getWaitingMinutes(value);
+    if (waitingMinutes === null) return '';
+    if (waitingMinutes < 1) return 'Just now';
+    if (waitingMinutes < 60) return 'Waiting ' + waitingMinutes + ' min';
+    const hours = Math.floor(waitingMinutes / 60);
+    const minutes = waitingMinutes % 60;
+    return 'Waiting ' + hours + ' hr' + (minutes ? ' ' + minutes + ' min' : '');
+  };
+
+  const getWaitingTone = (value) => {
+    const waitingMinutes = getWaitingMinutes(value);
+    if (waitingMinutes === null) return '';
+    if (waitingMinutes >= WAITING_URGENT_MINUTES) return 'urgent';
+    if (waitingMinutes >= WAITING_WATCH_MINUTES) return 'watch';
+    return '';
   };
 
   const getOrderSource = (order) => {
@@ -6730,11 +6760,26 @@
     }
 
     orderList.innerHTML = '';
-    latestOrders.forEach((order) => {
+    const visibleOrders = ACTIVE_ORDER_STATUSES.has(activeStatus)
+      ? [...latestOrders].sort((first, second) => {
+        const firstTime = new Date(first.created_at || '').getTime();
+        const secondTime = new Date(second.created_at || '').getTime();
+        if (Number.isNaN(firstTime) && Number.isNaN(secondTime)) return 0;
+        if (Number.isNaN(firstTime)) return 1;
+        if (Number.isNaN(secondTime)) return -1;
+        return firstTime - secondTime;
+      })
+      : latestOrders;
+    visibleOrders.forEach((order) => {
       const isSelected = order.id === selectedOrderId;
+      const statusKey = normalizeOrderStatus(order.status);
+      const isActiveOrder = ACTIVE_ORDER_STATUSES.has(statusKey);
+      const waitingLabel = isActiveOrder ? formatWaitingDuration(order.created_at) : '';
+      const waitingTone = waitingLabel ? getWaitingTone(order.created_at) : '';
       const card = document.createElement('article');
       let cardClass = 'order-card order-ticket' + (isSelected ? ' is-selected' : '');
       if (recentlyReceivedOrderIds.has(order.id)) cardClass += ' is-new-arrival';
+      if (waitingTone) cardClass += ' is-waiting-' + waitingTone;
       card.className = cardClass;
       card.dataset.orderId = order.id || '';
 
@@ -6754,18 +6799,22 @@
         const cancelStatus = getCustomerCancelStatus(order);
         badgeGroup.appendChild(makeElement('span', 'order-cancel-request-badge is-' + cancelStatus, cancelBadgeLabel));
       }
+      if (waitingLabel) {
+        const waitingBadgeClass = 'order-waiting-badge' + (waitingTone ? ' is-' + waitingTone : '');
+        badgeGroup.appendChild(makeElement('span', waitingBadgeClass, waitingLabel));
+      }
       head.append(
         makeElement('span', 'order-number', order.order_number || 'Order'),
         badgeGroup,
       );
 
       const meta = makeElement('div', 'order-card-meta');
-      const ageDisplay = formatOrderAge(order.created_at);
+      const ageDisplay = isActiveOrder ? '' : formatOrderAge(order.created_at);
       const isDelivery = getFulfillmentType(order) === 'delivery';
-      meta.append(
-        makeElement('span', 'order-age', ageDisplay || formatOrderDate(order.created_at)),
-        makeElement('span', '', (isDelivery ? 'Subtotal ' : '') + formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)),
-      );
+      if (ageDisplay) {
+        meta.appendChild(makeElement('span', 'order-age', ageDisplay || formatOrderDate(order.created_at)));
+      }
+      meta.appendChild(makeElement('span', '', (isDelivery ? 'Subtotal ' : '') + formatCurrency(isDelivery ? (order.subtotal || order.total) : order.total, order.currency)));
 
       const customer = makeElement('div', 'order-card-customer');
       customer.append(

@@ -5332,6 +5332,17 @@ body.more-drawer-open {
   box-shadow: inset 3px 0 0 rgba(222, 150, 126, 0.42);
 }
 
+.order-card.is-waiting-watch {
+  border-color: rgba(232, 188, 102, 0.34);
+  box-shadow: inset 3px 0 0 rgba(232, 188, 102, 0.36);
+}
+
+.order-card.is-waiting-urgent {
+  border-color: rgba(222, 150, 126, 0.48);
+  background: rgba(130, 55, 48, 0.13);
+  box-shadow: inset 3px 0 0 rgba(222, 150, 126, 0.44);
+}
+
 .order-ticket {
   cursor: default;
 }
@@ -5404,7 +5415,8 @@ body.more-drawer-open {
 .order-status-badge,
 .order-fulfillment-badge,
 .order-source-badge,
-.order-cancel-request-badge {
+.order-cancel-request-badge,
+.order-waiting-badge {
   border: 1px solid rgba(200, 184, 154, 0.36);
   border-radius: 999px;
   color: var(--accent);
@@ -5437,6 +5449,24 @@ body.more-drawer-open {
   border-color: rgba(200, 184, 154, 0.32);
   background: rgba(200, 184, 154, 0.08);
   color: var(--accent);
+}
+
+.order-waiting-badge {
+  border-color: rgba(189, 196, 212, 0.24);
+  color: var(--cream);
+  background: rgba(20, 24, 36, 0.32);
+}
+
+.order-waiting-badge.is-watch {
+  border-color: rgba(232, 188, 102, 0.42);
+  color: #f0c972;
+  background: rgba(112, 83, 25, 0.18);
+}
+
+.order-waiting-badge.is-urgent {
+  border-color: rgba(222, 150, 126, 0.5);
+  color: #f1b5a8;
+  background: rgba(130, 55, 48, 0.2);
 }
 
 .order-age {
