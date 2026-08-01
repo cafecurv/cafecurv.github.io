@@ -134,12 +134,18 @@
       </section>
 
       <section class="incoming-orders-toolbar" aria-label="Order queue filters">
-        <button type="button" class="order-filter-button is-active" data-order-status-filter="submitted" aria-pressed="true"><span>New</span><span class="order-filter-count" data-order-filter-count="submitted">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="accepted" aria-pressed="false"><span>Accepted</span><span class="order-filter-count" data-order-filter-count="accepted">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="preparing" aria-pressed="false"><span>Preparing</span><span class="order-filter-count" data-order-filter-count="preparing">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="ready" aria-pressed="false"><span>Ready</span><span class="order-filter-count" data-order-filter-count="ready">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="completed" aria-pressed="false"><span>Completed</span><span class="order-filter-count" data-order-filter-count="completed">0</span></button>
-        <button type="button" class="order-filter-button" data-order-status-filter="cancelled" aria-pressed="false"><span>Cancelled</span><span class="order-filter-count" data-order-filter-count="cancelled">0</span></button>
+        <button type="button" class="order-filter-button is-active" data-order-filter="active" aria-pressed="true"><span>Active</span><span class="order-filter-count" data-order-filter-count="active">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="submitted" aria-pressed="false"><span>New</span><span class="order-filter-count" data-order-filter-count="submitted">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="accepted" aria-pressed="false"><span>Accepted</span><span class="order-filter-count" data-order-filter-count="accepted">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="preparing" aria-pressed="false"><span>Preparing</span><span class="order-filter-count" data-order-filter-count="preparing">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="ready" aria-pressed="false"><span>Ready</span><span class="order-filter-count" data-order-filter-count="ready">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="unpaid" aria-pressed="false"><span>Unpaid</span><span class="order-filter-count" data-order-filter-count="unpaid">0</span></button>
+        <button type="button" class="order-filter-button order-history-toggle" data-order-history-toggle aria-expanded="false" aria-controls="order-history-filters"><span>History</span></button>
+      </section>
+
+      <section class="incoming-orders-history-toolbar" id="order-history-filters" data-order-history-filters aria-label="Order history filters" hidden>
+        <button type="button" class="order-filter-button" data-order-filter="completed" aria-pressed="false"><span>Completed</span><span class="order-filter-count" data-order-filter-count="completed">0</span></button>
+        <button type="button" class="order-filter-button" data-order-filter="cancelled" aria-pressed="false"><span>Cancelled</span><span class="order-filter-count" data-order-filter-count="cancelled">0</span></button>
       </section>
 
       <section class="incoming-orders-workspace" aria-label="Incoming orders workspace">
@@ -149,7 +155,7 @@
               <p class="eyebrow">Queue</p>
               <h2 id="order-queue-title">Incoming Orders</h2>
             </div>
-            <span class="static-status" data-order-status-label>New</span>
+            <span class="static-status" data-order-status-label>Active</span>
           </div>
           <div class="order-list" data-order-list aria-live="polite">
             <div class="order-empty-state" data-order-empty>

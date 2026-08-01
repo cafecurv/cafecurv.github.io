@@ -5079,7 +5079,8 @@ body.more-drawer-open {
   color: var(--accent);
 }
 
-.incoming-orders-toolbar {
+.incoming-orders-toolbar,
+.incoming-orders-history-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.42rem;
@@ -5087,6 +5088,16 @@ body.more-drawer-open {
   border-radius: 10px;
   background: rgba(15, 19, 31, 0.42);
   padding: 0.5rem;
+}
+
+.incoming-orders-history-toolbar {
+  margin-top: -0.48rem;
+  border-color: rgba(189, 196, 212, 0.1);
+  background: rgba(20, 24, 36, 0.28);
+}
+
+.incoming-orders-history-toolbar[hidden] {
+  display: none;
 }
 
 .order-filter-button {
@@ -5140,6 +5151,11 @@ body.more-drawer-open {
 .order-filter-button.has-new-attention .order-filter-count {
   background: rgba(222, 150, 126, 0.18);
   color: #ffd6cf;
+}
+
+.order-history-toggle.is-expanded {
+  border-color: rgba(189, 196, 212, 0.26);
+  color: var(--cream);
 }
 
 .order-filter-button:disabled {
@@ -5283,7 +5299,8 @@ body.more-drawer-open {
     grid-template-columns: 1fr;
   }
 
-  .incoming-orders-toolbar {
+  .incoming-orders-toolbar,
+  .incoming-orders-history-toolbar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5341,6 +5358,11 @@ body.more-drawer-open {
   border-color: rgba(222, 150, 126, 0.48);
   background: rgba(130, 55, 48, 0.13);
   box-shadow: inset 3px 0 0 rgba(222, 150, 126, 0.44);
+}
+
+.order-card.is-ready-for-handoff {
+  border-color: rgba(116, 202, 166, 0.38);
+  box-shadow: inset 3px 0 0 rgba(116, 202, 166, 0.36);
 }
 
 .order-ticket {
@@ -5436,6 +5458,12 @@ body.more-drawer-open {
 .order-source-badge {
   border-color: rgba(189, 196, 212, 0.22);
   color: var(--slate);
+}
+
+.order-status-badge.is-ready {
+  border-color: rgba(116, 202, 166, 0.44);
+  background: rgba(31, 101, 78, 0.18);
+  color: #8de0bc;
 }
 
 .order-cancel-request-badge {
@@ -5918,6 +5946,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .order-detail-grid div,
 :root[data-admin-theme="light"] .order-delivery-grid div,
 :root[data-admin-theme="light"] .incoming-orders-toolbar,
+:root[data-admin-theme="light"] .incoming-orders-history-toolbar,
 :root[data-admin-theme="light"] .incoming-order-today-pill,
 :root[data-admin-theme="light"] .order-sound-toggle,
 :root[data-admin-theme="light"] .notification-item,

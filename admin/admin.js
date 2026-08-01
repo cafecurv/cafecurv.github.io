@@ -5833,7 +5833,21 @@
   const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track.html';
   const WAITING_WATCH_MINUTES = 10;
   const WAITING_URGENT_MINUTES = 20;
-  const ACTIVE_ORDER_STATUSES = new Set(['submitted', 'accepted', 'preparing', 'ready']);
+  const ACTIVE_STATUS_KEYS = ['submitted', 'accepted', 'preparing', 'ready'];
+  const ACTIVE_ORDER_STATUSES = new Set(ACTIVE_STATUS_KEYS);
+  const ACTIVE_PAYMENT_FILTER_STATUSES = new Set(['unpaid', 'pending']);
+  const FILTER_LABELS = {
+    active: 'Active',
+    submitted: 'New',
+    accepted: 'Accepted',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    unpaid: 'Unpaid',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+  const HISTORY_FILTERS = new Set(['completed', 'cancelled']);
+  const ACTIVE_WORK_FILTERS = new Set(['active', 'submitted', 'accepted', 'preparing', 'ready', 'unpaid']);
 
   const ORDER_STATUS_ACTIONS = {
     submitted: [
@@ -5873,20 +5887,25 @@
   const orderList = ordersRoot.querySelector('[data-order-list]');
   const orderDetail = ordersRoot.querySelector('[data-order-detail]');
   const orderStatusLabel = ordersRoot.querySelector('[data-order-status-label]');
-  const filterButtons = Array.from(ordersRoot.querySelectorAll('[data-order-status-filter]'));
+  const filterButtons = Array.from(ordersRoot.querySelectorAll('[data-order-filter]'));
   const filterCountBadges = Array.from(ordersRoot.querySelectorAll('[data-order-filter-count]'));
+  const historyToggleButton = ordersRoot.querySelector('[data-order-history-toggle]');
+  const historyFilterRow = ordersRoot.querySelector('[data-order-history-filters]');
   const todayTotal = ordersRoot.querySelector('[data-orders-today-total]');
   const orderSoundToggle = ordersRoot.querySelector('[data-order-sound-toggle]');
   const orderStatusCounts = {
+    active: 0,
     submitted: 0,
     accepted: 0,
     preparing: 0,
     ready: 0,
+    unpaid: 0,
     completed: 0,
     cancelled: 0,
   };
 
-  let activeStatus = 'submitted';
+  let activeFilter = 'active';
+  let isHistoryFilterExpanded = false;
   let isOwnerSignedIn = false;
   let signedInOwnerEmail = '';
   let latestOrders = [];
@@ -6367,6 +6386,33 @@
   };
 
   const normalizeOrderStatus = (status) => String(status || '').trim().toLowerCase();
+
+  const normalizeOrderFilter = (filter) => {
+    const cleanFilter = String(filter || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(FILTER_LABELS, cleanFilter) ? cleanFilter : 'active';
+  };
+
+  const getFilterStatusKeys = (filter) => {
+    const cleanFilter = normalizeOrderFilter(filter);
+    if (cleanFilter === 'active' || cleanFilter === 'unpaid') return ACTIVE_STATUS_KEYS;
+    return [cleanFilter];
+  };
+
+  const doesOrderMatchFilter = (order, filter) => {
+    const cleanFilter = normalizeOrderFilter(filter);
+    const status = normalizeOrderStatus(order && order.status);
+    if (cleanFilter === 'active') return ACTIVE_ORDER_STATUSES.has(status);
+    if (cleanFilter === 'unpaid') {
+      return ACTIVE_ORDER_STATUSES.has(status)
+        && ACTIVE_PAYMENT_FILTER_STATUSES.has(normalizePaymentStatus(order && order.payment_status));
+    }
+    return status === cleanFilter;
+  };
+
+  const getOrderFilterForStatus = (status) => {
+    const cleanStatus = normalizeOrderStatus(status);
+    return Object.prototype.hasOwnProperty.call(FILTER_LABELS, cleanStatus) ? cleanStatus : 'active';
+  };
   const getCustomerCancelStatus = (order) => String(order && order.customer_cancel_status || '').trim().toLowerCase();
   const hasCustomerCancelRequest = (order) => getCustomerCancelStatus(order) === 'requested';
   const getCustomerCancelBadgeLabel = (order) => {
@@ -6748,8 +6794,8 @@
     }
 
     if (!latestOrders.length) {
-      const label = STATUS_LABELS[activeStatus] || 'selected';
-      renderOrderEmptyState('No ' + label.toLowerCase() + ' orders', 'There are no orders in this status yet.');
+      const label = FILTER_LABELS[activeFilter] || 'selected';
+      renderOrderEmptyState('No ' + label.toLowerCase() + ' orders', 'There are no orders for this filter yet.');
       renderOrderDetailPlaceholder();
       return;
     }
@@ -6760,7 +6806,7 @@
     }
 
     orderList.innerHTML = '';
-    const visibleOrders = ACTIVE_ORDER_STATUSES.has(activeStatus)
+    const visibleOrders = ACTIVE_WORK_FILTERS.has(activeFilter)
       ? [...latestOrders].sort((first, second) => {
         const firstTime = new Date(first.created_at || '').getTime();
         const secondTime = new Date(second.created_at || '').getTime();
@@ -6779,6 +6825,7 @@
       const card = document.createElement('article');
       let cardClass = 'order-card order-ticket' + (isSelected ? ' is-selected' : '');
       if (recentlyReceivedOrderIds.has(order.id)) cardClass += ' is-new-arrival';
+      if (statusKey === 'ready') cardClass += ' is-ready-for-handoff';
       if (waitingTone) cardClass += ' is-waiting-' + waitingTone;
       card.className = cardClass;
       card.dataset.orderId = order.id || '';
@@ -6792,7 +6839,7 @@
       badgeGroup.append(
         makeElement('span', 'order-fulfillment-badge', getFulfillmentLabel(order)),
         makeElement('span', 'order-source-badge', getOrderSource(order)),
-        makeElement('span', 'order-status-badge', STATUS_LABELS[order.status] || order.status || 'Order'),
+        makeElement('span', 'order-status-badge' + (statusKey === 'ready' ? ' is-ready' : ''), STATUS_LABELS[statusKey] || statusKey || 'Order'),
       );
       const cancelBadgeLabel = getCustomerCancelBadgeLabel(order);
       if (cancelBadgeLabel) {
@@ -6859,17 +6906,24 @@
   };
 
   const updateFilterUi = () => {
+    const shouldShowHistoryFilters = isHistoryFilterExpanded || HISTORY_FILTERS.has(activeFilter);
     filterButtons.forEach((button) => {
-      const isActive = button.dataset.orderStatusFilter === activeStatus;
-      const isNewFilter = button.dataset.orderStatusFilter === 'submitted';
+      const buttonFilter = normalizeOrderFilter(button.dataset.orderFilter);
+      const isActive = buttonFilter === activeFilter;
+      const isNewFilter = buttonFilter === 'submitted';
       button.classList.toggle('is-active', isActive);
       button.classList.toggle('has-new-attention', isNewFilter && recentlyReceivedOrderIds.size > 0);
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
-    if (orderStatusLabel) orderStatusLabel.textContent = STATUS_LABELS[activeStatus] || 'Orders';
+    if (historyFilterRow) historyFilterRow.hidden = !shouldShowHistoryFilters;
+    if (historyToggleButton) {
+      historyToggleButton.classList.toggle('is-expanded', shouldShowHistoryFilters);
+      historyToggleButton.setAttribute('aria-expanded', shouldShowHistoryFilters ? 'true' : 'false');
+    }
+    if (orderStatusLabel) orderStatusLabel.textContent = FILTER_LABELS[activeFilter] || 'Orders';
   };
 
-  const getStatusName = () => String(STATUS_LABELS[activeStatus] || 'selected').toLowerCase();
+  const getStatusName = () => String(FILTER_LABELS[activeFilter] || 'selected').toLowerCase();
 
   const getLoadedStatusMessage = (count) => {
     const statusName = getStatusName();
@@ -6895,17 +6949,19 @@
 
     const { data, error } = await client
       .from('orders')
-      .select('status,total,currency,created_at')
+      .select('status,payment_status,total,currency,created_at')
       .order('created_at', { ascending: false })
       .limit(500);
 
     if (error) return;
 
     const nextCounts = {
+      active: 0,
       submitted: 0,
       accepted: 0,
       preparing: 0,
       ready: 0,
+      unpaid: 0,
       completed: 0,
       cancelled: 0,
     };
@@ -6914,7 +6970,14 @@
     let todayCurrency = 'PHP';
 
     (data || []).forEach((order) => {
-      if (Object.prototype.hasOwnProperty.call(nextCounts, order.status)) nextCounts[order.status] += 1;
+      const status = normalizeOrderStatus(order.status);
+      if (Object.prototype.hasOwnProperty.call(nextCounts, status)) nextCounts[status] += 1;
+      if (ACTIVE_ORDER_STATUSES.has(status)) {
+        nextCounts.active += 1;
+        if (ACTIVE_PAYMENT_FILTER_STATUSES.has(normalizePaymentStatus(order.payment_status))) {
+          nextCounts.unpaid += 1;
+        }
+      }
       const createdKey = order.created_at
         ? new Date(order.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
         : '';
@@ -7023,7 +7086,8 @@
     if (hasCustomerCancelRequest(order) && payload.customer_cancel_status && typeof window.curvClearIncomingOrderNotification === 'function') {
       window.curvClearIncomingOrderNotification(getCancellationRequestKey(order));
     }
-    activeStatus = action.nextStatus;
+    activeFilter = getOrderFilterForStatus(action.nextStatus);
+    if (HISTORY_FILTERS.has(activeFilter)) isHistoryFilterExpanded = true;
     updateFilterUi();
     await loadOrderSummary();
     if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
@@ -7078,11 +7142,20 @@
     setStatus('Loading ' + getStatusName() + ' orders...');
     renderOrders();
 
-    const { data, error } = await client
+    const filterStatuses = getFilterStatusKeys(activeFilter);
+    let query = client
       .from('orders')
       .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at')
-      .eq('status', activeStatus)
       .order('created_at', { ascending: false });
+
+    if (filterStatuses.length === 1) {
+      query = query.eq('status', filterStatuses[0]);
+    } else {
+      query = query.in('status', filterStatuses);
+    }
+    if (activeFilter === 'unpaid') query = query.or('payment_status.in.(unpaid,pending),payment_status.is.null');
+
+    const { data, error } = await query;
 
     if (loadGeneration !== orderLoadGeneration) return;
 
@@ -7249,7 +7322,7 @@
       markRecentlyReceivedOrder(incomingOrder);
       await loadOrderSummary();
       if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
-      if (!incomingStatus || incomingStatus === activeStatus) {
+      if (!incomingStatus || doesOrderMatchFilter(incomingOrder, activeFilter)) {
         await loadOrders({ preserveSelection: true });
       }
       setStatus(incomingStatus === 'submitted' ? 'New order received.' : 'Order queue refreshed.');
@@ -7268,11 +7341,12 @@
     const targetId = String(target && (target.id || target.key) || '').trim();
     const targetKey = String(target && target.key || targetId).trim();
     const targetStatus = normalizeOrderStatus(target && target.status) || 'submitted';
-    const nextStatus = Object.prototype.hasOwnProperty.call(orderStatusCounts, targetStatus) ? targetStatus : 'submitted';
+    const nextFilter = getOrderFilterForStatus(targetStatus);
     if (!targetId || !isOwnerSignedIn) return;
     stopIncomingOrderAlert();
-    if (activeStatus !== nextStatus) {
-      activeStatus = nextStatus;
+    if (activeFilter !== nextFilter) {
+      activeFilter = nextFilter;
+      if (HISTORY_FILTERS.has(activeFilter)) isHistoryFilterExpanded = true;
       updateFilterUi();
       await loadOrders({ preserveSelection: true });
     } else if (!latestOrders.length && !ordersLoading) {
@@ -7348,7 +7422,7 @@
       });
       await loadOrderSummary();
       if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
-      if (activeStatus === 'submitted') await loadOrders({ preserveSelection: true });
+      if (['active', 'submitted', 'unpaid'].includes(activeFilter)) await loadOrders({ preserveSelection: true });
       if (newCancellationRequests.length) {
         setStatus(newCancellationRequests.length === 1 ? 'Cancellation request received.' : 'Cancellation requests received.');
       } else if (newOrders.length) {
@@ -7418,19 +7492,31 @@
 
   window.addEventListener('curv-close-owner-dropdowns', closeOwnerAccountMenu);
 
+  if (historyToggleButton) {
+    historyToggleButton.addEventListener('click', () => {
+      if (HISTORY_FILTERS.has(activeFilter)) {
+        isHistoryFilterExpanded = true;
+      } else {
+        isHistoryFilterExpanded = !isHistoryFilterExpanded;
+      }
+      updateFilterUi();
+    });
+  }
+
   filterButtons.forEach((button) => {
     button.addEventListener('click', async () => {
       stopIncomingOrderAlert();
-      const nextStatus = button.dataset.orderStatusFilter || 'submitted';
-      if (nextStatus === 'submitted') {
+      const nextFilter = normalizeOrderFilter(button.dataset.orderFilter);
+      if (nextFilter === 'submitted') {
         recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
         recentlyReceivedOrderTimers.clear();
         recentlyReceivedOrderIds.clear();
         if (typeof window.curvClearSubmittedOrderNotifications === 'function') window.curvClearSubmittedOrderNotifications();
         updateFilterUi();
       }
-      if (nextStatus === activeStatus || ordersLoading || activeOrderAction) return;
-      activeStatus = nextStatus;
+      if (nextFilter === activeFilter || ordersLoading || activeOrderAction) return;
+      activeFilter = nextFilter;
+      if (HISTORY_FILTERS.has(activeFilter)) isHistoryFilterExpanded = true;
       updateFilterUi();
       await loadOrders();
     });
@@ -7513,6 +7599,8 @@
       orderItemsByOrderId = new Map();
       orderItemsLoadError = '';
       selectedOrderId = '';
+      activeFilter = 'active';
+      isHistoryFilterExpanded = false;
       resetSummary();
       updateFilterUi();
       if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
