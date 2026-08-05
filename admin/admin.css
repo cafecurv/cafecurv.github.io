@@ -5079,6 +5079,87 @@ body.more-drawer-open {
   color: var(--accent);
 }
 
+.website-ordering-control {
+  min-height: 34px;
+  border: 1px solid rgba(200, 184, 154, 0.18);
+  border-radius: 10px;
+  background: rgba(20, 24, 36, 0.34);
+  color: var(--slate);
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 0.58rem;
+  padding: 0.38rem 0.48rem 0.38rem 0.62rem;
+}
+
+.website-ordering-control[hidden] {
+  display: none;
+}
+
+.website-ordering-label,
+.website-ordering-live,
+.website-ordering-error {
+  margin: 0;
+}
+
+.website-ordering-label {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.05px;
+  text-transform: uppercase;
+}
+
+.website-ordering-state-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
+}
+
+.website-ordering-status {
+  border-radius: 999px;
+  background: rgba(91, 154, 107, 0.16);
+  color: #9BD8A7;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.36rem 0.5rem;
+}
+
+.website-ordering-status.is-paused {
+  background: rgba(235, 182, 91, 0.16);
+  color: #EBC78F;
+}
+
+.website-ordering-status.is-loading {
+  background: rgba(189, 196, 212, 0.12);
+  color: var(--slate);
+}
+
+.website-ordering-toggle {
+  min-height: 28px;
+  padding: 0.32rem 0.58rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.website-ordering-live,
+.website-ordering-error {
+  grid-column: 1 / -1;
+  max-width: 32rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.website-ordering-live {
+  color: var(--muted);
+}
+
+.website-ordering-error {
+  color: #F1A6A6;
+}
+
 .incoming-orders-toolbar,
 .incoming-orders-history-toolbar {
   display: flex;
@@ -5949,6 +6030,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .incoming-orders-history-toolbar,
 :root[data-admin-theme="light"] .incoming-order-today-pill,
 :root[data-admin-theme="light"] .order-sound-toggle,
+:root[data-admin-theme="light"] .website-ordering-control,
 :root[data-admin-theme="light"] .notification-item,
 :root[data-admin-theme="light"] .owner-menu-action {
   background: rgba(255, 251, 242, 0.78);
@@ -6660,8 +6742,17 @@ body.more-drawer-open {
   }
 
   .incoming-order-today-pill,
-  .order-sound-toggle {
+  .order-sound-toggle,
+  .website-ordering-control {
     justify-content: center;
+  }
+
+  .website-ordering-control {
+    width: 100%;
+  }
+
+  .website-ordering-state-row {
+    justify-content: flex-end;
   }
 
   .order-card-head,

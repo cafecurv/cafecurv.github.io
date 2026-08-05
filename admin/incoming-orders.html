@@ -131,6 +131,39 @@
       <section class="incoming-order-meta-row" aria-label="Incoming order quick controls">
         <span class="incoming-order-today-pill">Today: <strong data-orders-today-total>PHP 0</strong></span>
         <button type="button" class="order-sound-toggle" data-order-sound-toggle aria-pressed="false">Sound off</button>
+        <section
+          class="website-ordering-control"
+          data-website-ordering-control
+          role="group"
+          aria-labelledby="website-ordering-label"
+          hidden
+        >
+          <p
+            id="website-ordering-label"
+            class="website-ordering-label"
+          >
+            Website Ordering
+          </p>
+
+          <div
+            class="website-ordering-state-row"
+            data-website-ordering-state-row
+          ></div>
+
+          <p
+            class="website-ordering-live"
+            data-website-ordering-live
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <p
+            class="website-ordering-error"
+            data-website-ordering-error
+            role="alert"
+            hidden
+          ></p>
+        </section>
       </section>
 
       <section class="incoming-orders-toolbar" aria-label="Order queue filters">

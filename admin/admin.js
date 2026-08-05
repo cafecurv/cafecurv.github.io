@@ -5930,6 +5930,10 @@
   const historyFilterRow = ordersRoot.querySelector('[data-order-history-filters]');
   const todayTotal = ordersRoot.querySelector('[data-orders-today-total]');
   const orderSoundToggle = ordersRoot.querySelector('[data-order-sound-toggle]');
+  const websiteOrderingControl = ordersRoot.querySelector('[data-website-ordering-control]');
+  const websiteOrderingStateRow = ordersRoot.querySelector('[data-website-ordering-state-row]');
+  const websiteOrderingLive = ordersRoot.querySelector('[data-website-ordering-live]');
+  const websiteOrderingError = ordersRoot.querySelector('[data-website-ordering-error]');
   const orderStatusCounts = {
     active: 0,
     submitted: 0,
@@ -5952,6 +5956,13 @@
   let selectedOrderId = '';
   let ordersLoading = false;
   let orderLoadGeneration = 0;
+  let websiteOrderingLoadGeneration = 0;
+  let websiteOrderingEnabled = null;
+  let websiteOrderingLoading = false;
+  let websiteOrderingSaving = false;
+  let websiteOrderingConfirmingPause = false;
+  let websiteOrderingMessage = '';
+  let websiteOrderingErrorMessage = '';
   let activeOrderAction = null;
   let activePaymentAction = null;
   let ordersRealtimeChannel = null;
@@ -6403,6 +6414,194 @@
     if (className) element.className = className;
     if (text !== undefined) element.textContent = text;
     return element;
+  };
+
+  const getWebsiteOrderingErrorMessage = (error, fallback = 'Unable to update Website Ordering. Try again.') => {
+    const detail = String(error && error.details ? error.details : '').trim();
+    if (detail === 'CURV_AUTH_REQUIRED') return 'Sign in again to update Website Ordering.';
+    if (detail === 'CURV_ADMIN_REQUIRED') return 'Owner access is required to update Website Ordering.';
+    if (detail === 'CURV_INVALID_INPUT') return 'Website Ordering needs a valid open or paused state.';
+    if (detail === 'CURV_STORE_SETTINGS_MISSING') return 'Website Ordering settings are missing. Run the approved backend setup first.';
+    return fallback + (error && error.message ? ' ' + error.message : '');
+  };
+
+  const getWebsiteOrderingEnabledFromResponse = (response) => {
+    if (!response || typeof response.website_ordering_enabled !== 'boolean') return null;
+    return response.website_ordering_enabled;
+  };
+
+  const resetWebsiteOrderingControl = () => {
+    websiteOrderingLoadGeneration += 1;
+    websiteOrderingEnabled = null;
+    websiteOrderingLoading = false;
+    websiteOrderingSaving = false;
+    websiteOrderingConfirmingPause = false;
+    websiteOrderingMessage = '';
+    websiteOrderingErrorMessage = '';
+    renderWebsiteOrderingControl();
+  };
+
+  const renderWebsiteOrderingControl = () => {
+    if (!websiteOrderingControl) return;
+    websiteOrderingControl.hidden = !isOwnerSignedIn;
+    if (!isOwnerSignedIn) {
+      if (websiteOrderingStateRow) websiteOrderingStateRow.replaceChildren();
+      if (websiteOrderingLive) websiteOrderingLive.textContent = '';
+      if (websiteOrderingError) {
+        websiteOrderingError.textContent = '';
+        websiteOrderingError.hidden = true;
+      }
+      return;
+    }
+
+    if (websiteOrderingStateRow) {
+      const isPauseConfirmationVisible = websiteOrderingConfirmingPause
+        && websiteOrderingEnabled === true
+        && !websiteOrderingLoading
+        && !websiteOrderingSaving;
+      const statusLabel = websiteOrderingLoading
+        ? 'Checking...'
+        : websiteOrderingEnabled === false
+          ? 'Paused'
+          : websiteOrderingEnabled === true
+            ? 'Open'
+            : 'Unknown';
+      const statusClass = 'website-ordering-status'
+        + (websiteOrderingEnabled === false ? ' is-paused' : '')
+        + (websiteOrderingLoading ? ' is-loading' : '');
+      const statusBadge = makeElement('span', statusClass, statusLabel);
+      if (isPauseConfirmationVisible) {
+        const keepOpenButton = makeElement('button', 'auth-button auth-button-secondary website-ordering-toggle', 'Keep Open');
+        keepOpenButton.type = 'button';
+        keepOpenButton.addEventListener('click', () => {
+          websiteOrderingConfirmingPause = false;
+          websiteOrderingMessage = 'Website Ordering remains open for new public orders.';
+          renderWebsiteOrderingControl();
+        });
+
+        const confirmPauseButton = makeElement('button', 'auth-button website-ordering-toggle', 'Confirm Pause');
+        confirmPauseButton.type = 'button';
+        confirmPauseButton.addEventListener('click', () => {
+          websiteOrderingConfirmingPause = false;
+          handleWebsiteOrderingUpdate(false);
+        });
+
+        websiteOrderingStateRow.replaceChildren(statusBadge, keepOpenButton, confirmPauseButton);
+        if (websiteOrderingLive) websiteOrderingLive.textContent = 'Pause new public website orders? Existing orders stay in the queue.';
+        if (websiteOrderingError) {
+          websiteOrderingError.textContent = websiteOrderingErrorMessage;
+          websiteOrderingError.hidden = !websiteOrderingErrorMessage;
+        }
+        return;
+      }
+
+      const toggleButton = makeElement(
+        'button',
+        'auth-button website-ordering-toggle' + (websiteOrderingEnabled === false ? '' : ' auth-button-secondary'),
+        websiteOrderingSaving
+          ? 'Saving...'
+          : websiteOrderingEnabled === false
+            ? 'Resume'
+            : 'Pause'
+      );
+      toggleButton.type = 'button';
+      toggleButton.disabled = websiteOrderingLoading || websiteOrderingSaving || websiteOrderingEnabled === null;
+      toggleButton.setAttribute('aria-busy', websiteOrderingSaving ? 'true' : 'false');
+      toggleButton.setAttribute('aria-label', websiteOrderingEnabled === false ? 'Resume Website Ordering' : 'Pause Website Ordering');
+      toggleButton.addEventListener('click', () => {
+        if (websiteOrderingEnabled === null) return;
+        if (websiteOrderingEnabled === true) {
+          websiteOrderingConfirmingPause = true;
+          websiteOrderingErrorMessage = '';
+          renderWebsiteOrderingControl();
+          return;
+        }
+        handleWebsiteOrderingUpdate(true);
+      });
+      websiteOrderingStateRow.replaceChildren(statusBadge, toggleButton);
+    }
+
+    if (websiteOrderingLive) websiteOrderingLive.textContent = websiteOrderingMessage;
+    if (websiteOrderingError) {
+      websiteOrderingError.textContent = websiteOrderingErrorMessage;
+      websiteOrderingError.hidden = !websiteOrderingErrorMessage;
+    }
+  };
+
+  const loadWebsiteOrderingStatus = async () => {
+    const loadGeneration = ++websiteOrderingLoadGeneration;
+    if (!isOwnerSignedIn) {
+      resetWebsiteOrderingControl();
+      return;
+    }
+
+    websiteOrderingLoading = true;
+    websiteOrderingConfirmingPause = false;
+    websiteOrderingErrorMessage = '';
+    websiteOrderingMessage = 'Checking Website Ordering...';
+    renderWebsiteOrderingControl();
+
+    const { data, error } = await client.rpc('get_public_store_status');
+    if (loadGeneration !== websiteOrderingLoadGeneration) return;
+
+    websiteOrderingLoading = false;
+    if (error) {
+      websiteOrderingErrorMessage = 'Unable to load Website Ordering status. ' + error.message;
+      websiteOrderingMessage = '';
+      renderWebsiteOrderingControl();
+      return;
+    }
+
+    const response = Array.isArray(data) ? data[0] : data;
+    const nextEnabled = getWebsiteOrderingEnabledFromResponse(response);
+    if (nextEnabled === null) {
+      websiteOrderingErrorMessage = 'Website Ordering status response was incomplete. Try refreshing.';
+      websiteOrderingMessage = '';
+      renderWebsiteOrderingControl();
+      return;
+    }
+    websiteOrderingEnabled = nextEnabled;
+    websiteOrderingMessage = websiteOrderingEnabled
+      ? 'Website Ordering is open for new public orders.'
+      : 'Website Ordering is paused for new public orders.';
+    renderWebsiteOrderingControl();
+  };
+
+  const handleWebsiteOrderingUpdate = async (nextEnabled) => {
+    if (!isOwnerSignedIn || websiteOrderingLoading || websiteOrderingSaving) return;
+    const actionLabel = nextEnabled ? 'resume Website Ordering' : 'pause Website Ordering';
+
+    const loadGeneration = ++websiteOrderingLoadGeneration;
+    websiteOrderingSaving = true;
+    websiteOrderingConfirmingPause = false;
+    websiteOrderingErrorMessage = '';
+    websiteOrderingMessage = (nextEnabled ? 'Resuming' : 'Pausing') + ' Website Ordering...';
+    renderWebsiteOrderingControl();
+
+    const { data, error } = await client.rpc('set_website_ordering_enabled', { p_enabled: nextEnabled });
+    if (loadGeneration !== websiteOrderingLoadGeneration) return;
+
+    websiteOrderingSaving = false;
+    if (error) {
+      websiteOrderingErrorMessage = getWebsiteOrderingErrorMessage(error, 'Unable to ' + actionLabel + '. Try again.');
+      websiteOrderingMessage = '';
+      renderWebsiteOrderingControl();
+      return;
+    }
+
+    const response = Array.isArray(data) ? data[0] : data;
+    const nextWebsiteOrderingEnabled = getWebsiteOrderingEnabledFromResponse(response);
+    if (!response || response.ok !== true || nextWebsiteOrderingEnabled === null) {
+      websiteOrderingErrorMessage = 'Website Ordering update response was incomplete. Refresh and check the current state.';
+      websiteOrderingMessage = '';
+      renderWebsiteOrderingControl();
+      return;
+    }
+    websiteOrderingEnabled = nextWebsiteOrderingEnabled;
+    websiteOrderingMessage = websiteOrderingEnabled
+      ? 'Website Ordering resumed for new public orders.'
+      : 'Website Ordering paused for new public orders.';
+    renderWebsiteOrderingControl();
   };
 
   const renderDetailSection = (title, rows, className = '') => {
@@ -7480,6 +7679,7 @@
     const isSignedIn = Boolean(data && data.session && data.session.user);
     setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
     if (isSignedIn) {
+      await loadWebsiteOrderingStatus();
       await loadOrderSummary();
       await loadOrders();
       await initializeSubmittedOrderBaseline();
@@ -7498,6 +7698,7 @@
       orderItemsByOrderId = new Map();
       orderItemsLoadError = '';
       selectedOrderId = '';
+      resetWebsiteOrderingControl();
       resetSummary();
       updateFilterUi();
       renderOrders();
@@ -7577,6 +7778,12 @@
 
   ordersRoot.addEventListener('click', stopIncomingOrderAlert);
   document.addEventListener('keydown', stopIncomingOrderAlert);
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !websiteOrderingConfirmingPause) return;
+    websiteOrderingConfirmingPause = false;
+    websiteOrderingMessage = 'Website Ordering remains open for new public orders.';
+    renderWebsiteOrderingControl();
+  });
 
   if (authForm) {
     authForm.addEventListener('submit', async (event) => {
@@ -7595,6 +7802,7 @@
       setFormDisabled(false);
       if (error) {
         setSignedInState(false);
+        resetWebsiteOrderingControl();
         resetSummary();
         renderOrders();
         setStatus('Sign in failed. ' + error.message);
@@ -7604,6 +7812,7 @@
       if (passwordInput) passwordInput.value = '';
       setSignedInState(true, email);
       closeOwnerAccountMenu();
+      await loadWebsiteOrderingStatus();
       await loadOrderSummary();
       await loadOrders();
       await initializeSubmittedOrderBaseline();
@@ -7638,6 +7847,7 @@
       selectedOrderId = '';
       activeFilter = 'active';
       isHistoryFilterExpanded = false;
+      resetWebsiteOrderingControl();
       resetSummary();
       updateFilterUi();
       if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
@@ -7653,6 +7863,7 @@
 
   updateFilterUi();
   syncOrderSoundToggle();
+  renderWebsiteOrderingControl();
   renderOrders();
   refreshSession();
 })();
