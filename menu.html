@@ -658,6 +658,26 @@
   }
 
   .order-btn:hover { background: #2e3a5c; }
+  .order-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+
+  .order-btn:disabled:hover { background: var(--navy); }
+
+  .order-bar-status {
+    max-width: 680px;
+    margin: 0.45rem auto 0;
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.68rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+  }
+
+  .order-bar-status.error { color: #9b5b4d; }
 
   .cart-badge {
     background: var(--accent);
@@ -3270,10 +3290,11 @@
 
 <!-- ORDER BAR -->
 <div class="order-bar" id="orderBar">
-  <button class="order-btn" onclick="toggleForm()">
-    Place an Order
+  <button class="order-btn" id="orderBarButton" onclick="toggleForm()">
+    <span data-order-bar-label>Place an Order</span>
     <span class="cart-badge" id="cartBadge">0</span>
   </button>
+  <div class="order-bar-status" data-ordering-status-message role="status" aria-live="polite" hidden></div>
 </div>
 
 <!-- FLOATING FORM -->
@@ -6873,7 +6894,7 @@
 
     // Open order form if closed
     const f = document.getElementById('formFloat');
-    if (!f.classList.contains('open')) {
+    if (!f.classList.contains('open') && isPublicOrderSubmitEnabled() && isPublicOrderTechnicalAvailable) {
       f.classList.add('open');
       document.getElementById('formBody').classList.remove('minimized');
       document.getElementById('minimizedBar').classList.remove('show');
@@ -6973,6 +6994,8 @@
     if (deliveryTimeMode === 'specific' && specificTime && !isValidPreferredTime(specificTime)) {
       return { message: 'Please choose a valid preferred time.', tone: 'error' };
     }
+    const orderingStatus = getOrderingStatusMessage();
+    if (orderingStatus.message) return orderingStatus;
     return {
       message: "Orders are accepted anytime. We'll confirm item availability, delivery fee, and estimated preparation time through Messenger before preparing your order.",
       tone: ''
@@ -7024,8 +7047,10 @@
         submitButton.disabled = true;
         submitButton.textContent = 'Submitting...';
       } else {
-        submitButton.disabled = !isPublicOrderSubmitEnabled() || !isPublicOrderTechnicalAvailable || Boolean(validationMessage);
-        submitButton.textContent = 'Submit Order';
+        const canRetryWhilePaused = isWebsiteOrderingEnabled === false && hasStoredPublicSubmissionRetryState();
+        const isSubmitDisabled = (!isPublicOrderSubmitEnabled() && !canRetryWhilePaused) || !isPublicOrderTechnicalAvailable || Boolean(validationMessage);
+        submitButton.disabled = isSubmitDisabled;
+        submitButton.textContent = canRetryWhilePaused && !validationMessage ? 'Retry Submit' : (isSubmitDisabled && !validationMessage ? getPublicOrderDisabledLabel() : 'Submit Order');
       }
     }
 
@@ -7471,6 +7496,12 @@
     const f = document.getElementById('formFloat');
     if (f.classList.contains('open')) {
       closeForm();
+    } else if (isWebsiteOrderingEnabled === false) {
+      syncPublicOrderSubmitGate();
+      setSubmitOrderStatus(WEBSITE_ORDERING_PAUSED_MESSAGE, 'error');
+    } else if (isPublicOrderTechnicalAvailable && !isPublicOrderSubmitEnabled()) {
+      syncPublicOrderSubmitGate();
+      setSubmitOrderStatus('Checking Website Ordering status. Please try again in a moment.');
     } else {
       f.classList.add('open');
       document.getElementById('formBody').classList.remove('minimized');
@@ -7649,14 +7680,20 @@
 
   let isSubmittingPublicOrder = false;
   let isPublicOrderTechnicalAvailable = true;
+  let isWebsiteOrderingEnabled = null;
+  let isWebsiteOrderingStatusLoading = false;
+  let websiteOrderingStatusGeneration = 0;
+  let websiteOrderingStatusFetchError = '';
   let lastSubmittedPublicOrderSignature = '';
   const TRACKING_URL_BASE = 'https://www.thecurv.cafe/track.html';
   const TRACKING_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const trackingCopyTimers = new Map();
+  const WEBSITE_ORDERING_PAUSED_MESSAGE = 'Website ordering is currently paused. You can still browse the menu and check back soon.';
+  const WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE = 'Website ordering was paused before your order could be submitted. Your cart is still saved.';
 
   // Public online ordering is intentionally enabled for launch.
   function isPublicOrderSubmitEnabled() {
-    return true;
+    return isWebsiteOrderingEnabled === true;
   }
 
   function syncPublicOrderSubmitGate() {
@@ -7664,12 +7701,106 @@
     if (!submitButton) return;
     submitButton.hidden = false;
     syncAnytimeOrderState();
-    if (!isPublicOrderSubmitEnabled()) setSubmitOrderStatus('');
+    syncOrderBarState();
+    if (!isPublicOrderSubmitEnabled() && isWebsiteOrderingEnabled !== false) setSubmitOrderStatus('');
   }
 
   function setPublicOrderTechnicalAvailability(isAvailable) {
     isPublicOrderTechnicalAvailable = Boolean(isAvailable);
     syncAnytimeOrderState();
+    syncOrderBarState();
+  }
+
+  function setWebsiteOrderingStatus(isEnabled) {
+    isWebsiteOrderingEnabled = typeof isEnabled === 'boolean' ? isEnabled : null;
+    websiteOrderingStatusFetchError = '';
+    syncAnytimeOrderState();
+    syncOrderBarState();
+  }
+
+  function getWebsiteOrderingStatusFromResponse(response) {
+    if (!response || typeof response.website_ordering_enabled !== 'boolean') return null;
+    return response.website_ordering_enabled;
+  }
+
+  function hasStoredPublicSubmissionRetryState() {
+    const storedKey = getSafeSubmissionKey(activeSubmissionKey) || getStoredPublicSubmissionKey();
+    const storedSignature = activeSubmissionKeySignature || getStoredPublicSubmissionSignature();
+    const failureMode = activeSubmissionFailureMode || getStoredPublicSubmissionFailureMode();
+    return Boolean(storedKey && storedSignature && failureMode === 'ambiguous');
+  }
+
+  function isWebsiteOrderingClosedError(error) {
+    if (!error) return false;
+    return ['message', 'details', 'hint', 'code']
+      .some((field) => String(error[field] || '').includes('CURV_ORDERING_CLOSED'));
+  }
+
+  function getPublicOrderDisabledLabel() {
+    if (!isPublicOrderTechnicalAvailable) return 'Submit Order';
+    if (isWebsiteOrderingEnabled === false) return 'Ordering Paused';
+    if (isWebsiteOrderingEnabled === null || isWebsiteOrderingStatusLoading) return 'Checking Ordering...';
+    return 'Submit Order';
+  }
+
+  function getOrderingStatusMessage() {
+    if (!isPublicOrderTechnicalAvailable) {
+      return {
+        message: 'Online order submission is unavailable right now. Please use Copy Order instead.',
+        tone: 'error'
+      };
+    }
+    if (isWebsiteOrderingEnabled === false) {
+      return {
+        message: WEBSITE_ORDERING_PAUSED_MESSAGE,
+        tone: 'error'
+      };
+    }
+    if (websiteOrderingStatusFetchError && isWebsiteOrderingEnabled === null) {
+      return {
+        message: websiteOrderingStatusFetchError,
+        tone: 'error'
+      };
+    }
+    if (websiteOrderingStatusFetchError) {
+      return {
+        message: websiteOrderingStatusFetchError,
+        tone: ''
+      };
+    }
+    if (isWebsiteOrderingEnabled === null) {
+      return {
+        message: 'Checking Website Ordering status...',
+        tone: ''
+      };
+    }
+    return { message: '', tone: '' };
+  }
+
+  function syncOrderBarState() {
+    const orderBar = document.getElementById('orderBar');
+    const orderButton = document.getElementById('orderBarButton');
+    const orderLabel = document.querySelector('[data-order-bar-label]');
+    const orderStatus = document.querySelector('[data-ordering-status-message]');
+    if (!orderBar || !orderButton) return;
+
+    const statusMessage = getOrderingStatusMessage();
+    const shouldDisable = isPublicOrderTechnicalAvailable && isWebsiteOrderingEnabled !== true;
+    orderButton.disabled = shouldDisable;
+    if (orderLabel) {
+      orderLabel.textContent = !isPublicOrderTechnicalAvailable
+        ? 'Use Copy Order'
+        : isWebsiteOrderingEnabled === false
+          ? 'Website Ordering Paused'
+          : isWebsiteOrderingEnabled === null
+            ? 'Checking Ordering...'
+            : 'Place an Order';
+    }
+    if (orderStatus) {
+      orderStatus.textContent = statusMessage.message;
+      orderStatus.hidden = !statusMessage.message;
+      orderStatus.classList.toggle('error', statusMessage.tone === 'error');
+    }
   }
 
   function setSubmitOrderStatus(message, tone = '') {
@@ -7817,6 +7948,15 @@
     const key = getOrCreatePublicSubmissionKey();
     if (signatureDigest) setStoredPublicSubmissionSignature(signatureDigest);
     return key;
+  }
+
+  async function hasPublicSubmissionReplayCandidate(payloadSignature) {
+    const storedKey = getSafeSubmissionKey(activeSubmissionKey) || getStoredPublicSubmissionKey();
+    const storedSignature = activeSubmissionKeySignature || getStoredPublicSubmissionSignature();
+    const failureMode = activeSubmissionFailureMode || getStoredPublicSubmissionFailureMode();
+    if (!storedKey || !storedSignature || failureMode !== 'ambiguous') return false;
+    const signatureDigest = await getPublicSubmissionSignatureDigest(payloadSignature);
+    return Boolean(signatureDigest && signatureDigest === storedSignature);
   }
 
   function isPublicSubmissionKeyConflict(error) {
@@ -8215,7 +8355,11 @@
   }
 
   async function submitPublicOrder() {
-    if (!isPublicOrderSubmitEnabled()) return;
+    if (!isPublicOrderTechnicalAvailable) {
+      syncPublicOrderSubmitGate();
+      setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
+      return;
+    }
     if (isOrderSubmittedLocked) return;
     if (isSubmittingPublicOrder) return;
 
@@ -8227,6 +8371,17 @@
     }
 
     const payloadSignature = JSON.stringify(payload);
+    const canAttemptPausedReplay = isWebsiteOrderingEnabled === false
+      ? await hasPublicSubmissionReplayCandidate(payloadSignature)
+      : false;
+    if (!isPublicOrderSubmitEnabled() && !canAttemptPausedReplay) {
+      syncPublicOrderSubmitGate();
+      setSubmitOrderStatus(isWebsiteOrderingEnabled === false
+        ? WEBSITE_ORDERING_PAUSED_MESSAGE
+        : 'Checking Website Ordering status. Please try again in a moment.', isWebsiteOrderingEnabled === false ? 'error' : '');
+      return;
+    }
+
     if (payloadSignature === lastSubmittedPublicOrderSignature) {
       setSubmitOrderStatus('This order was already submitted. Please wait for CURV confirmation or change the cart before submitting again.', 'success');
       return;
@@ -8279,6 +8434,9 @@
       if (isPublicSubmissionKeyConflict(error)) {
         clearPublicSubmissionState();
         setSubmitOrderStatus("We couldn't safely submit this updated order. Please review your cart and try again.", 'error');
+      } else if (isWebsiteOrderingClosedError(error)) {
+        setWebsiteOrderingStatus(false);
+        setSubmitOrderStatus(WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE, 'error');
       } else {
         setStoredPublicSubmissionFailureMode(isPublicOrderValidationError(error) ? 'validation' : 'ambiguous');
         setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
@@ -8298,6 +8456,14 @@
     preferredTimeInput.addEventListener('input', syncAnytimeOrderState);
     preferredTimeInput.addEventListener('change', syncAnytimeOrderState);
   }
+
+  window.addEventListener('focus', () => {
+    refreshWebsiteOrderingStatus();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshWebsiteOrderingStatus();
+  });
 
   function copyOrder() {
     const msg = buildMessage();
@@ -8395,6 +8561,57 @@
     }
     setPublicOrderTechnicalAvailability(true);
     return publicMenuSupabaseClient;
+  }
+
+  async function refreshWebsiteOrderingStatus() {
+    if (isSubmittingPublicOrder) return;
+    const requestGeneration = ++websiteOrderingStatusGeneration;
+    const client = getPublicSupabaseClient();
+    if (!client) {
+      isWebsiteOrderingStatusLoading = false;
+      setPublicOrderTechnicalAvailability(false);
+      return;
+    }
+
+    isWebsiteOrderingStatusLoading = true;
+    syncAnytimeOrderState();
+    syncOrderBarState();
+
+    try {
+      const { data, error } = await client.rpc('get_public_store_status');
+      if (requestGeneration !== websiteOrderingStatusGeneration) return;
+      isWebsiteOrderingStatusLoading = false;
+
+      if (error) {
+        websiteOrderingStatusFetchError = isWebsiteOrderingEnabled === null
+          ? "We couldn't confirm Website Ordering status. Please try again in a moment."
+          : 'Website Ordering status could not refresh. Last known status is still shown.';
+        syncAnytimeOrderState();
+        syncOrderBarState();
+        return;
+      }
+
+      const response = Array.isArray(data) ? data[0] : data;
+      const nextStatus = getWebsiteOrderingStatusFromResponse(response);
+      if (nextStatus === null) {
+        websiteOrderingStatusFetchError = isWebsiteOrderingEnabled === null
+          ? "We couldn't confirm Website Ordering status. Please try again in a moment."
+          : 'Website Ordering status response was incomplete. Last known status is still shown.';
+        syncAnytimeOrderState();
+        syncOrderBarState();
+        return;
+      }
+
+      setWebsiteOrderingStatus(nextStatus);
+    } catch (error) {
+      if (requestGeneration !== websiteOrderingStatusGeneration) return;
+      isWebsiteOrderingStatusLoading = false;
+      websiteOrderingStatusFetchError = isWebsiteOrderingEnabled === null
+        ? "We couldn't confirm Website Ordering status. Please try again in a moment."
+        : 'Website Ordering status could not refresh. Last known status is still shown.';
+      syncAnytimeOrderState();
+      syncOrderBarState();
+    }
   }
 
   async function fetchPublicMenuProducts(client) {
@@ -8762,6 +8979,7 @@
     try {
       if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
+    refreshWebsiteOrderingStatus();
     fetchPublicMenuFromSupabase();
   });
 
