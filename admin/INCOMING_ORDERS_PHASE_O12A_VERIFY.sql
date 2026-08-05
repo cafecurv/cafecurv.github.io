@@ -265,8 +265,8 @@ declare
   v_owner_id uuid;
   v_non_admin_id uuid := '00000000-0000-4000-8000-0000000012ff';
   v_response jsonb;
-  v_before timestamptz;
   v_after timestamptz;
+  v_restored_at timestamptz;
   v_detail text;
 begin
   begin
@@ -326,11 +326,6 @@ begin
     end if;
   end;
 
-  select updated_at into v_before
-  from public.store_settings
-  where id is true;
-
-  perform pg_sleep(0.01);
   v_response := public.set_website_ordering_enabled(false);
 
   if (select array_agg(key order by key) from jsonb_object_keys(v_response) as key)
@@ -349,7 +344,7 @@ begin
     and website_ordering_enabled is false
     and updated_by = v_owner_id;
 
-  if v_after is null or v_after <= v_before then
+  if v_after is null or v_after <> (v_response ->> 'updated_at')::timestamptz then
     raise exception 'set_website_ordering_enabled(false) did not update status/audit fields.';
   end if;
 
@@ -357,6 +352,16 @@ begin
 
   if (v_response ->> 'website_ordering_enabled')::boolean is not true then
     raise exception 'set_website_ordering_enabled(true) returned unexpected response: %', v_response;
+  end if;
+
+  select updated_at into v_restored_at
+  from public.store_settings
+  where id is true
+    and website_ordering_enabled is true
+    and updated_by = v_owner_id;
+
+  if v_restored_at is null or v_restored_at <> (v_response ->> 'updated_at')::timestamptz then
+    raise exception 'set_website_ordering_enabled(true) did not restore status/audit fields.';
   end if;
 
   delete from public.store_settings where id is true;
