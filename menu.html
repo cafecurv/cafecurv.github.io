@@ -6989,6 +6989,7 @@
 
   function syncAnytimeOrderState() {
     const submitButton = document.getElementById('submitOrderBtn');
+    const copyButton = document.getElementById('copyBtn');
     const asapButton = document.getElementById('tabAsap');
     const specificButton = document.getElementById('tabSpecific');
     const timeInput = document.getElementById('f-delivery-time');
@@ -7023,9 +7024,15 @@
         submitButton.disabled = true;
         submitButton.textContent = 'Submitting...';
       } else {
-        submitButton.disabled = !isPublicOrderSubmitEnabled() || Boolean(validationMessage);
+        submitButton.disabled = !isPublicOrderSubmitEnabled() || !isPublicOrderTechnicalAvailable || Boolean(validationMessage);
         submitButton.textContent = 'Submit Order';
       }
+    }
+
+    if (copyButton) {
+      const shouldShowCopyFallback = !isOrderSubmittedLocked && !isSubmittingPublicOrder && !isPublicOrderTechnicalAvailable;
+      copyButton.hidden = !shouldShowCopyFallback;
+      copyButton.disabled = !shouldShowCopyFallback;
     }
   }
 
@@ -7641,6 +7648,7 @@
   }
 
   let isSubmittingPublicOrder = false;
+  let isPublicOrderTechnicalAvailable = true;
   let lastSubmittedPublicOrderSignature = '';
   const TRACKING_URL_BASE = 'https://www.thecurv.cafe/track.html';
   const TRACKING_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -7657,6 +7665,11 @@
     submitButton.hidden = false;
     syncAnytimeOrderState();
     if (!isPublicOrderSubmitEnabled()) setSubmitOrderStatus('');
+  }
+
+  function setPublicOrderTechnicalAvailability(isAvailable) {
+    isPublicOrderTechnicalAvailable = Boolean(isAvailable);
+    syncAnytimeOrderState();
   }
 
   function setSubmitOrderStatus(message, tone = '') {
@@ -8224,9 +8237,11 @@
 
     const client = getPublicSupabaseClient();
     if (!client) {
+      setPublicOrderTechnicalAvailability(false);
       setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
       return;
     }
+    setPublicOrderTechnicalAvailability(true);
 
     let submissionKey = '';
     try {
@@ -8378,6 +8393,7 @@
         PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
       );
     }
+    setPublicOrderTechnicalAvailability(true);
     return publicMenuSupabaseClient;
   }
 

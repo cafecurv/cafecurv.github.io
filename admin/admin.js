@@ -236,6 +236,20 @@
     ? 'Delivery'
     : 'Pick-up';
 
+  const normalizePaymentStatus = (status) => {
+    const cleanStatus = String(status || '').trim().toLowerCase();
+    return cleanStatus || 'unpaid';
+  };
+
+  const formatPaymentStatus = (status) => {
+    const cleanStatus = normalizePaymentStatus(status);
+    if (cleanStatus === 'unpaid') return 'Unpaid';
+    if (cleanStatus === 'pending') return 'Pending';
+    if (cleanStatus === 'paid') return 'Paid';
+    if (cleanStatus === 'refunded') return 'Refunded';
+    return cleanStatus.replace(/[_-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+  };
+
   const getOrderSummary = (order) => {
     const key = getOrderAlertKey(order);
     if (!key) return null;
@@ -246,7 +260,8 @@
       orderNumber: String(order.order_number || 'Order'),
       customerName: String(order.customer_name || 'Guest'),
       fulfillmentLabel: getFulfillmentLabel(order),
-      subtotal: Number(order.subtotal || order.total || 0),
+      paymentLabel: formatPaymentStatus(order.payment_status),
+      amount: Number(order.total || order.subtotal || 0),
       currency: String(order.currency || 'PHP'),
       createdAt: String(order.created_at || ''),
       status: String(order.status || 'submitted'),
@@ -264,7 +279,8 @@
       orderNumber: String(order.order_number || 'Order'),
       customerName: String(order.customer_name || 'Guest'),
       fulfillmentLabel: getFulfillmentLabel(order),
-      subtotal: Number(order.subtotal || order.total || 0),
+      paymentLabel: formatPaymentStatus(order.payment_status),
+      amount: Number(order.total || order.subtotal || 0),
       currency: String(order.currency || 'PHP'),
       createdAt: String(order.customer_cancel_requested_at || order.created_at || ''),
       status: String(order.status || 'submitted'),
@@ -462,9 +478,10 @@
       meta.className = 'notification-item-meta';
       meta.textContent = [
         summary.fulfillmentLabel || 'Order',
+        summary.paymentLabel || '',
         summary.type === 'cancellation'
           ? String(summary.status || '').replace(/_/g, ' ')
-          : formatCurrency(summary.subtotal, summary.currency),
+          : formatCurrency(summary.amount !== undefined ? summary.amount : summary.subtotal, summary.currency),
         formatOrderAge(summary.createdAt),
       ].filter(Boolean).join(' · ');
 
@@ -581,9 +598,9 @@
     content.addEventListener('click', () => {
       stopNewOrderAlert();
       dismissOrderToast();
-      if (getAdminPageName() !== 'incoming-orders.html') {
-        window.location.href = 'incoming-orders.html';
-      }
+      const summary = orderToast && orderToast.curvNotificationSummary;
+      if (summary) openIncomingOrderNotification(summary);
+      else if (getAdminPageName() !== 'incoming-orders.html') window.location.href = 'incoming-orders.html';
     });
 
     const title = document.createElement('span');
@@ -620,11 +637,21 @@
     const toast = ensureOrderToast();
     const title = toast.querySelector('[data-order-toast-title]');
     const detail = toast.querySelector('[data-order-toast-detail]');
+    const summary = getOrderSummary(order);
     const orderNumber = order && order.order_number ? String(order.order_number) : 'New order';
-    const customerName = order && order.customer_name ? String(order.customer_name).trim() : '';
+    const customerName = summary && summary.customerName ? String(summary.customerName).trim() : '';
+    const orderMeta = summary
+      ? [summary.fulfillmentLabel, summary.paymentLabel, formatCurrency(summary.amount, summary.currency)].filter(Boolean).join(' - ')
+      : '';
 
+    toast.curvNotificationSummary = summary;
     if (title) title.textContent = 'New order received';
-    if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
+    if (detail) {
+      detail.textContent = [
+        'Order ' + orderNumber + (customerName ? ' from ' + customerName : ''),
+        orderMeta,
+      ].filter(Boolean).join(' - ');
+    }
 
     startNewOrderAlert();
     toast.hidden = false;
@@ -640,11 +667,21 @@
     const toast = ensureOrderToast();
     const title = toast.querySelector('[data-order-toast-title]');
     const detail = toast.querySelector('[data-order-toast-detail]');
+    const summary = getCancellationRequestSummary(order);
     const orderNumber = order && order.order_number ? String(order.order_number) : 'Order';
-    const customerName = order && order.customer_name ? String(order.customer_name).trim() : '';
+    const customerName = summary && summary.customerName ? String(summary.customerName).trim() : '';
+    const orderMeta = summary
+      ? [summary.fulfillmentLabel, summary.paymentLabel, formatCurrency(summary.amount, summary.currency)].filter(Boolean).join(' - ')
+      : '';
 
+    toast.curvNotificationSummary = summary;
     if (title) title.textContent = 'Cancellation requested';
-    if (detail) detail.textContent = customerName ? 'Order ' + orderNumber + ' from ' + customerName : 'Order ' + orderNumber;
+    if (detail) {
+      detail.textContent = [
+        'Order ' + orderNumber + (customerName ? ' from ' + customerName : ''),
+        orderMeta,
+      ].filter(Boolean).join(' - ');
+    }
 
     startNewOrderAlert();
     toast.hidden = false;
@@ -7251,7 +7288,7 @@
   const fetchRecentSubmittedOrders = async () => {
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,customer_cancel_status,created_at')
+      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,payment_status,customer_cancel_status,created_at')
       .eq('status', 'submitted')
       .order('created_at', { ascending: false })
       .limit(50);
@@ -7263,7 +7300,7 @@
   const fetchRecentCancellationRequests = async () => {
     const { data, error } = await client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,customer_cancel_status,customer_cancel_requested_at,created_at')
+      .select('id,order_number,status,source,customer_name,fulfillment_type,subtotal,total,currency,payment_status,customer_cancel_status,customer_cancel_requested_at,created_at')
       .eq('customer_cancel_status', 'requested')
       .order('customer_cancel_requested_at', { ascending: false })
       .limit(50);
