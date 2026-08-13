@@ -5870,6 +5870,13 @@
   const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track.html';
   const WAITING_WATCH_MINUTES = 10;
   const WAITING_URGENT_MINUTES = 20;
+  const ORDER_SEARCH_INDEX_LIMIT = 750;
+  const ORDER_SEARCH_MIN_QUERY_LENGTH = 2;
+  const ORDER_SEARCH_MAX_RESULTS = 20;
+  const ORDER_SEARCH_DEBOUNCE_MS = 140;
+  const ORDER_SEARCH_INDEX_MAX_AGE_MS = 5 * 60 * 1000;
+  const ORDER_LIST_SELECT = 'id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at';
+  const ORDER_SEARCH_SELECT = 'id,order_number,status,customer_name,customer_phone,fulfillment_type,delivery_address,payment_status,customer_notes,created_at';
   const ACTIVE_STATUS_KEYS = ['submitted', 'accepted', 'preparing', 'ready'];
   const ACTIVE_ORDER_STATUSES = new Set(ACTIVE_STATUS_KEYS);
   const ACTIVE_PAYMENT_FILTER_STATUSES = new Set(['unpaid', 'pending']);
@@ -5930,6 +5937,8 @@
   const historyFilterRow = ordersRoot.querySelector('[data-order-history-filters]');
   const todayTotal = ordersRoot.querySelector('[data-orders-today-total]');
   const orderSoundToggle = ordersRoot.querySelector('[data-order-sound-toggle]');
+  const orderSearchInput = ordersRoot.querySelector('[data-order-search-input]');
+  const orderSearchResultsPanel = ordersRoot.querySelector('[data-order-search-results]');
   const websiteOrderingControl = ordersRoot.querySelector('[data-website-ordering-control]');
   const websiteOrderingStateRow = ordersRoot.querySelector('[data-website-ordering-state-row]');
   const websiteOrderingLive = ordersRoot.querySelector('[data-website-ordering-live]');
@@ -5956,6 +5965,19 @@
   let selectedOrderId = '';
   let ordersLoading = false;
   let orderLoadGeneration = 0;
+  let orderRouteGeneration = 0;
+  let searchIndex = [];
+  let searchIndexFetchedAt = 0;
+  let searchIndexLoading = false;
+  let searchIndexGeneration = 0;
+  let searchQuery = '';
+  let searchResults = [];
+  let searchResultsOpen = false;
+  let searchActiveResultIndex = -1;
+  let searchErrorMessage = '';
+  let searchDebounceTimer = null;
+  let searchedOrderHighlightId = '';
+  let searchedOrderHighlightTimer = null;
   let websiteOrderingLoadGeneration = 0;
   let websiteOrderingEnabled = null;
   let websiteOrderingLoading = false;
@@ -6049,7 +6071,10 @@
     isOwnerSignedIn = isSignedIn;
     signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
     updateOwnerAccountUi();
+    if (orderSearchInput) orderSearchInput.disabled = !isOwnerSignedIn;
   };
+
+  if (orderSearchInput) orderSearchInput.disabled = !isOwnerSignedIn;
 
   const formatCurrency = (value, currency = 'PHP') => {
     const amount = Number(value || 0);
@@ -6416,6 +6441,305 @@
     return element;
   };
 
+  const normalizeSearchText = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const normalizeSearchDigits = (value) => String(value || '').replace(/\D+/g, '');
+  const normalizeSearchOrderNumber = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+  const getSearchAliasValues = (query) => {
+    const normalized = normalizeSearchText(query);
+    const aliases = new Set([normalized]);
+    if (['pickup', 'pick up', 'pick-up'].includes(normalized)) aliases.add('pickup');
+    if (['delivery', 'deliver'].includes(normalized)) aliases.add('delivery');
+    if (['new', 'submitted'].includes(normalized)) aliases.add('submitted');
+    if (normalized === 'accepted') aliases.add('accepted');
+    if (['prepare', 'preparing'].includes(normalized)) aliases.add('preparing');
+    if (normalized === 'ready') aliases.add('ready');
+    if (['complete', 'completed'].includes(normalized)) aliases.add('completed');
+    if (['cancel', 'cancelled', 'canceled'].includes(normalized)) aliases.add('cancelled');
+    ['unpaid', 'pending', 'paid', 'refunded'].forEach((status) => {
+      if (normalized === status) aliases.add(status);
+    });
+    return Array.from(aliases).filter(Boolean);
+  };
+
+  const normalizeSearchOrder = (order) => {
+    const orderNumber = String(order && order.order_number || '').trim();
+    return {
+      order,
+      createdTime: new Date(order && order.created_at || '').getTime() || 0,
+      orderNumber,
+      normalizedOrderNumber: normalizeSearchOrderNumber(orderNumber),
+      orderNumberDigits: normalizeSearchDigits(orderNumber),
+      customerName: normalizeSearchText(order && order.customer_name),
+      customerPhone: normalizeSearchDigits(order && order.customer_phone),
+      deliveryAddress: normalizeSearchText(order && order.delivery_address),
+      fulfillmentType: normalizeSearchText(getFulfillmentType(order)),
+      status: normalizeOrderStatus(order && order.status),
+      paymentStatus: normalizePaymentStatus(order && order.payment_status),
+      customerNotes: normalizeSearchText(order && order.customer_notes),
+    };
+  };
+
+  const getOrderSearchRank = (entry, query) => {
+    const textQuery = normalizeSearchText(query);
+    const orderQuery = normalizeSearchOrderNumber(query);
+    const digitQuery = normalizeSearchDigits(query);
+    const aliases = getSearchAliasValues(query);
+    if (orderQuery && entry.normalizedOrderNumber === orderQuery) return 1;
+    if (digitQuery && entry.orderNumberDigits && entry.orderNumberDigits === digitQuery) return 1;
+    if (orderQuery && entry.normalizedOrderNumber.includes(orderQuery)) return 2;
+    if (digitQuery && entry.orderNumberDigits && entry.orderNumberDigits.includes(digitQuery)) return 2;
+    if (digitQuery && entry.customerPhone.includes(digitQuery)) return 3;
+    if (textQuery && entry.customerName.includes(textQuery)) return 4;
+    if (textQuery && entry.deliveryAddress.includes(textQuery)) return 5;
+    if (aliases.some(alias => alias && (
+      entry.fulfillmentType.includes(alias)
+      || entry.status.includes(alias)
+      || entry.paymentStatus.includes(alias)
+      || entry.customerNotes.includes(alias)
+    ))) return 6;
+    return 0;
+  };
+
+  const getMaskedPhone = (value) => {
+    const digits = normalizeSearchDigits(value);
+    if (!digits) return 'No phone';
+    const lastDigits = digits.slice(-3);
+    return digits.slice(0, 4) + ' .... ' + lastDigits;
+  };
+
+  const getOrderSearchDateLabel = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const getOrderSearchAddressPreview = (order) => {
+    if (getFulfillmentType(order) !== 'delivery') return '';
+    const address = String(order && order.delivery_address || '').trim();
+    if (!address) return '';
+    return address.length > 64 ? address.slice(0, 61).trimEnd() + '...' : address;
+  };
+
+  const clearSearchedOrderHighlight = () => {
+    if (searchedOrderHighlightTimer) window.clearTimeout(searchedOrderHighlightTimer);
+    searchedOrderHighlightTimer = null;
+    searchedOrderHighlightId = '';
+  };
+
+  const setSearchedOrderHighlight = (orderId) => {
+    clearSearchedOrderHighlight();
+    searchedOrderHighlightId = String(orderId || '');
+    if (!searchedOrderHighlightId) return;
+    searchedOrderHighlightTimer = window.setTimeout(() => {
+      searchedOrderHighlightId = '';
+      searchedOrderHighlightTimer = null;
+      renderOrders();
+    }, 2600);
+  };
+
+  const closeOrderSearchResults = () => {
+    searchResults = [];
+    searchResultsOpen = false;
+    searchActiveResultIndex = -1;
+    searchErrorMessage = '';
+    renderOrderSearchResults();
+  };
+
+  const resetOrderSearch = () => {
+    if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+    orderRouteGeneration += 1;
+    searchIndexGeneration += 1;
+    searchIndex = [];
+    searchIndexFetchedAt = 0;
+    searchIndexLoading = false;
+    searchQuery = '';
+    searchResults = [];
+    searchResultsOpen = false;
+    searchActiveResultIndex = -1;
+    searchErrorMessage = '';
+    if (orderSearchInput) {
+      orderSearchInput.value = '';
+      orderSearchInput.removeAttribute('aria-activedescendant');
+    }
+    clearSearchedOrderHighlight();
+    renderOrderSearchResults();
+  };
+
+  const isSearchIndexFresh = () => {
+    return searchIndex.length > 0
+      && searchIndexFetchedAt > 0
+      && Date.now() - searchIndexFetchedAt < ORDER_SEARCH_INDEX_MAX_AGE_MS;
+  };
+
+  const loadOrderSearchIndex = async ({ force = false } = {}) => {
+    if (!isOwnerSignedIn) return false;
+    if (!force && isSearchIndexFresh()) return true;
+    if (searchIndexLoading) return false;
+
+    const generation = ++searchIndexGeneration;
+    searchIndexLoading = true;
+    searchErrorMessage = '';
+    renderOrderSearchResults();
+
+    const { data, error } = await client
+      .from('orders')
+      .select(ORDER_SEARCH_SELECT)
+      .order('created_at', { ascending: false })
+      .limit(ORDER_SEARCH_INDEX_LIMIT);
+
+    if (generation !== searchIndexGeneration) return false;
+
+    searchIndexLoading = false;
+    if (error) {
+      searchErrorMessage = "Couldn't load order search. Check your connection and try again.";
+      searchIndex = [];
+      searchIndexFetchedAt = 0;
+      renderOrderSearchResults();
+      return false;
+    }
+
+    searchIndex = (data || []).map(normalizeSearchOrder);
+    searchIndexFetchedAt = Date.now();
+    renderOrderSearchResults();
+    return true;
+  };
+
+  const updateOrderSearchResults = async ({ forceIndex = false } = {}) => {
+    searchQuery = orderSearchInput ? orderSearchInput.value.trim() : '';
+    searchActiveResultIndex = -1;
+    if (!isOwnerSignedIn || searchQuery.length < ORDER_SEARCH_MIN_QUERY_LENGTH) {
+      closeOrderSearchResults();
+      return;
+    }
+    searchResultsOpen = true;
+
+    if (!isSearchIndexFresh() || forceIndex) {
+      const loaded = await loadOrderSearchIndex({ force: forceIndex });
+      if (!loaded && !searchIndex.length) return;
+    }
+
+    const matches = searchIndex
+      .map((entry) => ({ entry, rank: getOrderSearchRank(entry, searchQuery) }))
+      .filter((match) => match.rank > 0)
+      .sort((first, second) => {
+        if (first.rank !== second.rank) return first.rank - second.rank;
+        return second.entry.createdTime - first.entry.createdTime;
+      })
+      .slice(0, ORDER_SEARCH_MAX_RESULTS);
+
+    searchResults = matches.map(match => match.entry.order);
+    searchResultsOpen = true;
+    searchActiveResultIndex = searchResults.length ? 0 : -1;
+    renderOrderSearchResults();
+  };
+
+  const scheduleOrderSearch = () => {
+    if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = window.setTimeout(() => {
+      searchDebounceTimer = null;
+      updateOrderSearchResults();
+    }, ORDER_SEARCH_DEBOUNCE_MS);
+  };
+
+  const renderOrderSearchResults = () => {
+    if (!orderSearchInput || !orderSearchResultsPanel) return;
+    const hasQuery = searchQuery.trim().length >= ORDER_SEARCH_MIN_QUERY_LENGTH;
+    const shouldOpen = searchResultsOpen && isOwnerSignedIn && hasQuery;
+    orderSearchInput.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    orderSearchInput.setAttribute('aria-busy', searchIndexLoading ? 'true' : 'false');
+    if (searchActiveResultIndex >= 0 && searchResults[searchActiveResultIndex]) {
+      orderSearchInput.setAttribute('aria-activedescendant', 'order-search-result-' + searchActiveResultIndex);
+    } else {
+      orderSearchInput.removeAttribute('aria-activedescendant');
+    }
+
+    orderSearchResultsPanel.replaceChildren();
+    orderSearchResultsPanel.hidden = !shouldOpen;
+    if (!shouldOpen) return;
+
+    if (searchIndexLoading) {
+      const loading = makeElement('div', 'order-search-state', 'Loading order search...');
+      orderSearchResultsPanel.appendChild(loading);
+      return;
+    }
+
+    if (searchErrorMessage) {
+      const errorWrap = makeElement('div', 'order-search-state is-error');
+      errorWrap.appendChild(makeElement('p', '', searchErrorMessage));
+      const retryButton = makeElement('button', 'auth-button auth-button-secondary order-search-retry', 'Retry');
+      retryButton.type = 'button';
+      retryButton.addEventListener('click', () => updateOrderSearchResults({ forceIndex: true }));
+      errorWrap.appendChild(retryButton);
+      orderSearchResultsPanel.appendChild(errorWrap);
+      return;
+    }
+
+    if (!searchResults.length) {
+      orderSearchResultsPanel.appendChild(makeElement('div', 'order-search-state', 'No matching orders found.'));
+      return;
+    }
+
+    searchResults.forEach((order, index) => {
+      const status = normalizeOrderStatus(order.status);
+      const option = makeElement('div', 'order-search-result' + (index === searchActiveResultIndex ? ' is-active' : ''));
+      option.id = 'order-search-result-' + index;
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', index === searchActiveResultIndex ? 'true' : 'false');
+      option.tabIndex = -1;
+      option.dataset.searchResultIndex = String(index);
+
+      const header = makeElement('div', 'order-search-result-head');
+      header.append(
+        makeElement('strong', '', order.order_number || 'Order'),
+        makeElement('span', 'order-status-badge', STATUS_LABELS[status] || status || 'Order'),
+      );
+      const customer = makeElement('p', 'order-search-result-customer', order.customer_name || 'Guest');
+      const meta = makeElement('p', 'order-search-result-meta', [
+        getMaskedPhone(order.customer_phone),
+        getFulfillmentLabel(order),
+        getOrderSearchDateLabel(order.created_at),
+      ].filter(Boolean).join(' · '));
+      option.append(header, customer, meta);
+      const addressPreview = getOrderSearchAddressPreview(order);
+      if (addressPreview) option.appendChild(makeElement('p', 'order-search-result-address', addressPreview));
+      option.addEventListener('mousedown', (event) => event.preventDefault());
+      option.addEventListener('click', () => openOrderFromSearchResult(index));
+      orderSearchResultsPanel.appendChild(option);
+    });
+  };
+
+  const moveOrderSearchActiveResult = (direction) => {
+    if (!searchResults.length) return;
+    searchActiveResultIndex = (searchActiveResultIndex + direction + searchResults.length) % searchResults.length;
+    renderOrderSearchResults();
+  };
+
+  const handleOrderSearchKeydown = (event) => {
+    if (event.key === 'ArrowDown') {
+      if (!searchResults.length) return;
+      event.preventDefault();
+      moveOrderSearchActiveResult(1);
+    } else if (event.key === 'ArrowUp') {
+      if (!searchResults.length) return;
+      event.preventDefault();
+      moveOrderSearchActiveResult(-1);
+    } else if (event.key === 'Enter') {
+      if (searchActiveResultIndex < 0 || !searchResults[searchActiveResultIndex]) return;
+      event.preventDefault();
+      openOrderFromSearchResult(searchActiveResultIndex);
+    } else if (event.key === 'Escape') {
+      closeOrderSearchResults();
+    }
+  };
+
   const getWebsiteOrderingErrorMessage = (error, fallback = 'Unable to update Website Ordering. Try again.') => {
     const detail = String(error && error.details ? error.details : '').trim();
     if (detail === 'CURV_AUTH_REQUIRED') return 'Sign in again to update Website Ordering.';
@@ -6648,6 +6972,17 @@
   const getOrderFilterForStatus = (status) => {
     const cleanStatus = normalizeOrderStatus(status);
     return Object.prototype.hasOwnProperty.call(FILTER_LABELS, cleanStatus) ? cleanStatus : 'active';
+  };
+
+  const getSearchOrderFilterForStatus = (status) => {
+    const cleanStatus = normalizeOrderStatus(status);
+    if (cleanStatus === 'submitted') return 'submitted';
+    if (cleanStatus === 'accepted') return 'accepted';
+    if (cleanStatus === 'preparing') return 'preparing';
+    if (cleanStatus === 'ready') return 'ready';
+    if (cleanStatus === 'completed') return 'completed';
+    if (cleanStatus === 'cancelled') return 'cancelled';
+    return 'active';
   };
   const getCustomerCancelStatus = (order) => String(order && order.customer_cancel_status || '').trim().toLowerCase();
   const hasCustomerCancelRequest = (order) => getCustomerCancelStatus(order) === 'requested';
@@ -7061,6 +7396,7 @@
       const card = document.createElement('article');
       let cardClass = 'order-card order-ticket' + (isSelected ? ' is-selected' : '');
       if (recentlyReceivedOrderIds.has(order.id)) cardClass += ' is-new-arrival';
+      if (searchedOrderHighlightId && searchedOrderHighlightId === order.id) cardClass += ' is-search-highlighted';
       if (statusKey === 'ready') cardClass += ' is-ready-for-handoff';
       if (waitingTone) cardClass += ' is-waiting-' + waitingTone;
       card.className = cardClass;
@@ -7319,6 +7655,7 @@
     }
 
     activeOrderAction = null;
+    searchIndexFetchedAt = 0;
     if (hasCustomerCancelRequest(order) && payload.customer_cancel_status && typeof window.curvClearIncomingOrderNotification === 'function') {
       window.curvClearIncomingOrderNotification(getCancellationRequestKey(order));
     }
@@ -7354,6 +7691,7 @@
     }
 
     activePaymentAction = null;
+    searchIndexFetchedAt = 0;
     await loadOrders({ preserveSelection: true });
     setStatus((order.order_number || 'Order') + ' payment marked ' + formatPaymentStatus(nextStatus).toLowerCase() + '.');
   };
@@ -7381,7 +7719,7 @@
     const filterStatuses = getFilterStatusKeys(activeFilter);
     let query = client
       .from('orders')
-      .select('id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at')
+      .select(ORDER_LIST_SELECT)
       .order('created_at', { ascending: false });
 
     if (filterStatuses.length === 1) {
@@ -7555,6 +7893,7 @@
     realtimeRefreshInFlight = true;
     const incomingStatus = normalizeOrderStatus(incomingOrder && incomingOrder.status);
     try {
+      if (incomingOrder && incomingOrder.id) searchIndexFetchedAt = 0;
       markRecentlyReceivedOrder(incomingOrder);
       await loadOrderSummary();
       if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
@@ -7573,13 +7912,51 @@
     }
   };
 
-  const openOrderFromNotification = async (target) => {
+  const fetchExactOrderById = async (orderId) => {
+    const { data, error } = await client
+      .from('orders')
+      .select(ORDER_LIST_SELECT)
+      .eq('id', orderId)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  };
+
+  const integrateExactOrderIntoCurrentList = async (order) => {
+    const routeFilter = getSearchOrderFilterForStatus(order && order.status);
+    if (!order || !order.id || (!doesOrderMatchFilter(order, activeFilter) && !(activeFilter === 'active' && routeFilter === 'active'))) return false;
+    latestOrders = latestOrders.filter(existingOrder => existingOrder.id !== order.id);
+    latestOrders.unshift(order);
+
+    const itemLoadResult = await loadItemCounts([order]);
+    const nextItemCountByOrderId = new Map(itemCountByOrderId);
+    const nextOrderItemsByOrderId = new Map(orderItemsByOrderId);
+    nextItemCountByOrderId.set(order.id, itemLoadResult.itemCounts.get(order.id) || 0);
+    nextOrderItemsByOrderId.set(order.id, itemLoadResult.orderItems.get(order.id) || []);
+    itemCountByOrderId = nextItemCountByOrderId;
+    orderItemsByOrderId = nextOrderItemsByOrderId;
+    orderItemsLoadError = itemLoadResult.error;
+    return true;
+  };
+
+  const scrollOrderCardIntoView = (orderId) => {
+    window.requestAnimationFrame(() => {
+      const safeSelector = typeof CSS !== 'undefined' && CSS.escape
+        ? '[data-order-id="' + CSS.escape(orderId) + '"]'
+        : '[data-order-id="' + String(orderId).replace(/"/g, '\\"') + '"]';
+      const card = orderList ? orderList.querySelector(safeSelector) : null;
+      if (card && typeof card.scrollIntoView === 'function') {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  };
+
+  const routeToOrder = async (target, { highlight = false, clearNotificationKey = '', allowReroute = true } = {}) => {
     const targetId = String(target && (target.id || target.key) || '').trim();
-    const targetKey = String(target && target.key || targetId).trim();
-    const targetStatus = normalizeOrderStatus(target && target.status) || 'submitted';
-    const nextFilter = getOrderFilterForStatus(targetStatus);
-    if (!targetId || !isOwnerSignedIn) return;
-    stopIncomingOrderAlert();
+    if (!targetId || !isOwnerSignedIn) return false;
+    const routeGeneration = ++orderRouteGeneration;
+    const nextFilter = getSearchOrderFilterForStatus(target && target.status);
+
     if (activeFilter !== nextFilter) {
       activeFilter = nextFilter;
       if (HISTORY_FILTERS.has(activeFilter)) isHistoryFilterExpanded = true;
@@ -7588,17 +7965,70 @@
     } else if (!latestOrders.length && !ordersLoading) {
       await loadOrders({ preserveSelection: true });
     }
+    if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+
+    let orderToOpen = latestOrders.find(order => order.id === targetId) || null;
+    if (!orderToOpen) {
+      try {
+        const exactOrder = await fetchExactOrderById(targetId);
+        if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+        if (!exactOrder) {
+          setStatus('This order is no longer available.');
+          return false;
+        }
+        const exactFilter = getSearchOrderFilterForStatus(exactOrder.status);
+        if (allowReroute && exactFilter !== activeFilter) {
+          return routeToOrder(exactOrder, { highlight, clearNotificationKey, allowReroute: false });
+        }
+        const integrated = await integrateExactOrderIntoCurrentList(exactOrder);
+        if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+        if (!integrated) {
+          setStatus('This order is no longer available in the selected queue.');
+          return false;
+        }
+        orderToOpen = exactOrder;
+      } catch (error) {
+        setStatus('Unable to open order. ' + (error && error.message ? error.message : 'Try again.'));
+        return false;
+      }
+    }
+
     selectedOrderId = targetId;
-    if (typeof window.curvClearIncomingOrderNotification === 'function') {
-      window.curvClearIncomingOrderNotification(targetKey);
+    if (typeof window.curvClearIncomingOrderNotification === 'function' && clearNotificationKey) {
+      window.curvClearIncomingOrderNotification(clearNotificationKey);
     }
     recentlyReceivedOrderIds.delete(targetId);
     if (recentlyReceivedOrderTimers.has(targetId)) {
       window.clearTimeout(recentlyReceivedOrderTimers.get(targetId));
       recentlyReceivedOrderTimers.delete(targetId);
     }
+    if (highlight) setSearchedOrderHighlight(targetId);
     updateFilterUi();
     renderOrders();
+    scrollOrderCardIntoView(targetId);
+    return Boolean(orderToOpen);
+  };
+
+  const openOrderFromSearchResult = async (index) => {
+    const order = searchResults[index];
+    if (!order || !order.id || !isOwnerSignedIn) return;
+    searchResults = [];
+    searchResultsOpen = false;
+    searchActiveResultIndex = -1;
+    searchErrorMessage = '';
+    renderOrderSearchResults();
+    await routeToOrder(order, { highlight: true, allowReroute: true });
+  };
+
+  const openOrderFromNotification = async (target) => {
+    const targetId = String(target && (target.id || target.key) || '').trim();
+    const targetKey = String(target && target.key || targetId).trim();
+    if (!targetId || !isOwnerSignedIn) return;
+    stopIncomingOrderAlert();
+    await routeToOrder(
+      Object.assign({}, target, { status: normalizeOrderStatus(target && target.status) || 'submitted' }),
+      { clearNotificationKey: targetKey, allowReroute: true },
+    );
   };
 
   window.curvOpenIncomingOrderNotification = openOrderFromNotification;
@@ -7698,6 +8128,7 @@
       orderItemsByOrderId = new Map();
       orderItemsLoadError = '';
       selectedOrderId = '';
+      resetOrderSearch();
       resetWebsiteOrderingControl();
       resetSummary();
       updateFilterUi();
@@ -7729,6 +8160,30 @@
   });
 
   window.addEventListener('curv-close-owner-dropdowns', closeOwnerAccountMenu);
+
+  if (orderSearchInput) {
+    orderSearchInput.addEventListener('focus', () => {
+      if (!isOwnerSignedIn) return;
+      if (!isSearchIndexFresh()) loadOrderSearchIndex();
+      searchQuery = orderSearchInput.value.trim();
+      if (searchQuery.length >= ORDER_SEARCH_MIN_QUERY_LENGTH) updateOrderSearchResults();
+    });
+    orderSearchInput.addEventListener('input', () => {
+      searchQuery = orderSearchInput.value.trim();
+      if (searchQuery.length < ORDER_SEARCH_MIN_QUERY_LENGTH) {
+        closeOrderSearchResults();
+        return;
+      }
+      scheduleOrderSearch();
+    });
+    orderSearchInput.addEventListener('keydown', handleOrderSearchKeydown);
+  }
+
+  document.addEventListener('click', (event) => {
+    const searchShell = ordersRoot.querySelector('[data-order-search-shell]');
+    if (!searchShell || searchShell.contains(event.target)) return;
+    closeOrderSearchResults();
+  });
 
   if (historyToggleButton) {
     historyToggleButton.addEventListener('click', () => {
@@ -7802,6 +8257,7 @@
       setFormDisabled(false);
       if (error) {
         setSignedInState(false);
+        resetOrderSearch();
         resetWebsiteOrderingControl();
         resetSummary();
         renderOrders();
@@ -7847,6 +8303,7 @@
       selectedOrderId = '';
       activeFilter = 'active';
       isHistoryFilterExpanded = false;
+      resetOrderSearch();
       resetWebsiteOrderingControl();
       resetSummary();
       updateFilterUi();
@@ -7859,6 +8316,7 @@
   window.addEventListener('pagehide', () => {
     unsubscribeFromOrdersRealtime();
     stopOrdersFallbackPolling();
+    resetOrderSearch();
   });
 
   updateFilterUi();

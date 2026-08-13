@@ -3203,47 +3203,10 @@
     </div>
 
     <div id="pastries-supabase-mount" style="display:none"></div>
-    <div id="pastries-hardcoded-fallback">
-    <div class="note-box">
-      <div class="note-label">Coming Soon</div>
-      <p>Our pastry and dessert menu is currently in development. Each item is being perfected before it earns a spot on the menu — stay tuned.</p>
+    <div id="pastries-empty-state" class="note-box">
+      <p>Pastries are baking in the background. Check back soon for what’s coming out of the oven.</p>
     </div>
 
-    <div class="category">
-      <span class="category-label">Viennoiserie</span>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Croissant <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">classic butter croissant · shatteringly flaky on the outside · pillowy soft within.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Pain au Chocolat <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">buttery croissant dough · dark chocolate center. a French classic done right.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Danish <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">laminated pastry dough · seasonal fruit or cream filling. delicate, light, and a little fancy.</div></div></div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Choux Pastry</span>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Choux au Craquelin <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">choux pastry · crispy craquelin topping · filled with flavored cream. small but mighty.</div></div></div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Curv Cookies</span>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Classic Chocolate Chip <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">brown butter · dark chocolate chips · crispy edges · gooey center. the one you already know and love.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">White Matcha <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">ceremonial matcha · white chocolate chunks · earthy, sweet, and very Curv.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Red Velvet <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">deep red cocoa cookie · cream cheese chips · soft, rich, and a little dramatic.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Biscoff <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">biscoff butter · caramelized cookie crumble · warm spice in every bite.</div></div></div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Sourdough</span>
-      <div class="note-box" style="margin-top:0.5rem;">
-        <div class="note-label">Dropping Soon</div>
-        <p>Something's proofing in the background. Details coming when it's ready.</p>
-      </div>
-    </div>
-
-    <div class="category">
-      <span class="category-label">Cheesecakes</span>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Matcha Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">ceremonial matcha · burnt basque base · creamy, slightly bitter, deeply satisfying.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Classic Burnt Basque <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">pure cream cheese · caramelized top · custardy center. the one that started the burnt basque obsession.</div></div></div>
-      <div class="menu-item unavailable"><div class="item-info"><div class="item-name">Blueberry Cheesecake <span class="coming-soon-badge">Coming Soon</span></div><div class="item-desc">classic cheesecake base · blueberry compote · fresh and fruity with every forkful.</div></div></div>
-    </div>
-    </div>
   </section>
 
 </main>
@@ -6136,9 +6099,8 @@
     }
 
     const products = Array.isArray(pastriesCategory.products) ? pastriesCategory.products : [];
-    if (!products.length) {
-      return { ok: false, reason: 'Supabase Pastries & Desserts category has no published available products.' };
-    }
+    const categorySections = getPublicCategorySectionsForCategory(shapedPublicMenu, pastriesCategory.id);
+    if (!products.length) return { ok: true, items: [], categorySections };
 
     const items = [];
     for (const product of products) {
@@ -6158,11 +6120,13 @@
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         variant_group_name: product.variant_group_name,
+        category_section_id: product.category_section_id || null,
+        sort_order: product.sort_order,
         variants: variantMap.variants
       });
     }
 
-    return { ok: true, items };
+    return { ok: true, items, categorySections };
   }
 
   function renderPastryProduct(item) {
@@ -6190,27 +6154,43 @@
       </div>`;
   }
 
-  function renderPastryCategory(items) {
+  function renderPastryCategory(label, items) {
     return `
       <div class="category">
-        <span class="category-label">Pastries & Desserts</span>
+        <span class="category-label">${escapeMenuHtml(label)}</span>
         ${items.map(renderPastryProduct).join('')}
       </div>`;
+  }
+
+  function renderPastryCategories(items, categorySections = []) {
+    const groups = buildPublicCategorySectionGroups(items, categorySections);
+    if (!groups) return renderPastryCategory('Pastries & Desserts', items);
+
+    const categories = [];
+    if (groups.unsectionedItems.length) {
+      categories.push(renderPastryCategory('Pastries & Desserts', groups.unsectionedItems));
+    }
+    groups.sectionGroups.forEach(group => {
+      categories.push(renderPastryCategory(group.section.name, group.items));
+    });
+    return categories.join('');
   }
 
   function renderSupabasePastriesOrFallback(shapedPublicMenu) {
     const mapped = mapPublicPastryItems(shapedPublicMenu);
     const mount = document.getElementById('pastries-supabase-mount');
-    const fallback = document.getElementById('pastries-hardcoded-fallback');
+    const emptyState = document.getElementById('pastries-empty-state');
 
-    if (!mapped.ok || !mount || !fallback) {
-      console.warn('[CURV menu] Pastries & Desserts using hardcoded fallback.', mapped.reason || 'Pastries & Desserts mount unavailable.');
+    if (!mapped.ok || !mount || !emptyState) {
+      console.warn('[CURV menu] Pastries & Desserts could not render.', mapped.reason || 'Pastries & Desserts mount unavailable.');
       return false;
     }
 
-    mount.innerHTML = renderPastryCategory(mapped.items);
-    mount.style.display = '';
-    fallback.style.display = 'none';
+    mount.innerHTML = mapped.items.length
+      ? renderPastryCategories(mapped.items, mapped.categorySections)
+      : '';
+    mount.style.display = mapped.items.length ? '' : 'none';
+    emptyState.style.display = mapped.items.length ? 'none' : '';
     return true;
   }
 

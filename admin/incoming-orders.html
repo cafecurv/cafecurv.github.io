@@ -166,6 +166,29 @@
         </section>
       </section>
 
+      <section class="order-search-shell" data-order-search-shell aria-label="Universal order search">
+        <label class="sr-only" for="order-search-input">Search orders, customer, phone, address</label>
+        <input
+          id="order-search-input"
+          class="order-search-input"
+          type="search"
+          placeholder="Search orders, customer, phone, address..."
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="order-search-results"
+          data-order-search-input
+        >
+        <div
+          class="order-search-results"
+          id="order-search-results"
+          data-order-search-results
+          role="listbox"
+          hidden
+        ></div>
+      </section>
+
       <section class="incoming-orders-toolbar" aria-label="Order queue filters">
         <button type="button" class="order-filter-button is-active" data-order-filter="active" aria-pressed="true"><span>Active</span><span class="order-filter-count" data-order-filter-count="active">0</span></button>
         <button type="button" class="order-filter-button" data-order-filter="submitted" aria-pressed="false"><span>New</span><span class="order-filter-count" data-order-filter-count="submitted">0</span></button>

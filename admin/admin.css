@@ -5160,6 +5160,118 @@ body.more-drawer-open {
   color: #F1A6A6;
 }
 
+.order-search-shell {
+  position: relative;
+  z-index: 4;
+  margin-top: -0.12rem;
+}
+
+.order-search-input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(200, 184, 154, 0.16);
+  border-radius: 10px;
+  background: rgba(15, 19, 31, 0.48);
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.86rem;
+  outline: none;
+  padding: 0.68rem 0.86rem;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.order-search-input::placeholder {
+  color: rgba(189, 196, 212, 0.72);
+}
+
+.order-search-input:focus {
+  border-color: rgba(200, 184, 154, 0.42);
+  background: rgba(20, 24, 36, 0.72);
+}
+
+.order-search-results {
+  position: absolute;
+  top: calc(100% + 0.38rem);
+  left: 0;
+  right: 0;
+  max-height: min(440px, 62vh);
+  overflow-y: auto;
+  border: 1px solid rgba(200, 184, 154, 0.18);
+  border-radius: 10px;
+  background: rgba(15, 19, 31, 0.98);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  padding: 0.38rem;
+}
+
+.order-search-results[hidden] {
+  display: none;
+}
+
+.order-search-result {
+  border-radius: 8px;
+  color: var(--slate);
+  cursor: pointer;
+  padding: 0.66rem 0.72rem;
+}
+
+.order-search-result:hover,
+.order-search-result.is-active {
+  background: rgba(200, 184, 154, 0.1);
+  color: var(--cream);
+}
+
+.order-search-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.order-search-result-head strong {
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.82rem;
+}
+
+.order-search-result-customer,
+.order-search-result-meta,
+.order-search-result-address,
+.order-search-state p {
+  margin: 0;
+}
+
+.order-search-result-customer {
+  margin-top: 0.24rem;
+  color: var(--cream);
+  font-weight: 700;
+}
+
+.order-search-result-meta,
+.order-search-result-address,
+.order-search-state {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.order-search-result-address {
+  margin-top: 0.18rem;
+}
+
+.order-search-state {
+  padding: 0.72rem;
+}
+
+.order-search-state.is-error {
+  display: grid;
+  gap: 0.5rem;
+  color: #F1A6A6;
+}
+
+.order-search-retry {
+  justify-self: flex-start;
+}
+
 .incoming-orders-toolbar,
 .incoming-orders-history-toolbar {
   display: flex;
@@ -5428,6 +5540,12 @@ body.more-drawer-open {
   border-color: rgba(222, 150, 126, 0.44);
   background: rgba(130, 55, 48, 0.13);
   box-shadow: inset 3px 0 0 rgba(222, 150, 126, 0.42);
+}
+
+.order-card.is-search-highlighted {
+  border-color: rgba(200, 184, 154, 0.66);
+  background: rgba(200, 184, 154, 0.08);
+  box-shadow: 0 0 0 2px rgba(200, 184, 154, 0.14);
 }
 
 .order-card.is-waiting-watch {
@@ -6031,6 +6149,8 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .incoming-order-today-pill,
 :root[data-admin-theme="light"] .order-sound-toggle,
 :root[data-admin-theme="light"] .website-ordering-control,
+:root[data-admin-theme="light"] .order-search-input,
+:root[data-admin-theme="light"] .order-search-results,
 :root[data-admin-theme="light"] .notification-item,
 :root[data-admin-theme="light"] .owner-menu-action {
   background: rgba(255, 251, 242, 0.78);
@@ -6046,6 +6166,25 @@ body.more-drawer-open {
 
 :root[data-admin-theme="light"] .owner-account-avatar {
   background: rgba(143, 118, 85, 0.12);
+}
+
+:root[data-admin-theme="light"] .order-search-input,
+:root[data-admin-theme="light"] .order-search-result-head strong,
+:root[data-admin-theme="light"] .order-search-result-customer {
+  color: var(--navy);
+}
+
+:root[data-admin-theme="light"] .order-search-input::placeholder,
+:root[data-admin-theme="light"] .order-search-result-meta,
+:root[data-admin-theme="light"] .order-search-result-address,
+:root[data-admin-theme="light"] .order-search-state {
+  color: var(--gray-mid);
+}
+
+:root[data-admin-theme="light"] .order-search-result:hover,
+:root[data-admin-theme="light"] .order-search-result.is-active {
+  background: rgba(143, 118, 85, 0.1);
+  color: var(--navy);
 }
 
 :root[data-admin-theme="light"] .admin-field input,
@@ -6753,6 +6892,16 @@ body.more-drawer-open {
 
   .website-ordering-state-row {
     justify-content: flex-end;
+  }
+
+  .order-search-results {
+    max-height: min(360px, 58vh);
+  }
+
+  .order-search-result-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.32rem;
   }
 
   .order-card-head,
