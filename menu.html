@@ -3653,6 +3653,14 @@
     return item && item.is_sold_out ? ' disabled aria-disabled="true" data-sold-out-action="true"' : '';
   }
 
+  function hasExplicitPublicUnavailableState(product) {
+    return product && Object.prototype.hasOwnProperty.call(product, 'is_available') && product.is_available === false;
+  }
+
+  function hasExplicitPublicDisabledState(product) {
+    return hasExplicitPublicUnavailableState(product) || Boolean(product && product.is_sold_out);
+  }
+
   function compareSectionedMenuItems(a, b) {
     const sortA = Number(a && a.sort_order) || 0;
     const sortB = Number(b && b.sort_order) || 0;
@@ -3913,6 +3921,7 @@
           desc: product.description || '',
           img: product.image_url || null,
           variants: variantMap.variants,
+          is_available: product.is_available,
           is_sold_out: isPublicProductSoldOut(product),
           type: variantMap.type,
           badge_labels: getPublicProductBadgeLabels(product),
@@ -3940,6 +3949,7 @@
         name,
         badge: product.is_seasonal ? 'Seasonal' : (product.is_curv_pick ? 'CURV Pick' : null),
         badge_labels: getPublicProductBadgeLabels(product),
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         desc: product.description || '',
         reg: priceMap.reg,
@@ -4042,7 +4052,10 @@
     }
 
     renderAllSupabaseEspressoPanels(mapped.items, mapped.categorySections);
-    renderSupabaseEspressoNonEspresso(mapped.nonEspressoItems);
+    if (!renderSupabaseEspressoNonEspresso(mapped.nonEspressoItems)) {
+      const nonEspressoFallback = document.getElementById('espresso-nonespresso-hardcoded-fallback');
+      if (nonEspressoFallback) nonEspressoFallback.style.display = 'none';
+    }
     return true;
   }
   // ── MATCHA / HOJICHA ITEMS CONFIG (Phase 4C) ──
@@ -4526,6 +4539,7 @@
         img: product.image_url || hardcodedItem.img,
         is_curv_pick: !!product.is_curv_pick,
         is_seasonal: !!product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
@@ -4860,6 +4874,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
@@ -4958,6 +4973,7 @@
 
   function renderProductCard(item, sectionId) {
     const soldOut = Boolean(item && item.is_sold_out);
+    const unavailable = hasExplicitPublicUnavailableState(item);
     const piecePrices = Array.isArray(item.pieces) ? item.pieces.map(piece => Number(piece.price)) : [];
     const prices = [Number(item.reg), Number(item.lrg), Number(item.price), ...piecePrices].filter(price => Number.isFinite(price) && price >= 0);
     const startingPrice = prices.length ? Math.min(...prices) : null;
@@ -4970,7 +4986,7 @@
       : '';
     const cardClass = soldOut ? 'product-card is-sold-out' : 'product-card';
     const soldOutAttrs = soldOut ? ' disabled aria-disabled="true" data-sold-out="true"' : '';
-    const actionClosed = soldOut ? 'Currently Sold Out' : 'Customize ↓';
+    const actionClosed = soldOut ? (unavailable ? 'Unavailable' : 'Currently Sold Out') : 'Customize ↓';
     const openActionHtml = soldOut
       ? ''
       : '<span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>';
@@ -5178,6 +5194,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
@@ -5575,6 +5592,7 @@
         pieces: pieceMap.pieces,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         has_spicy: expectedItem.has_spicy,
@@ -5811,6 +5829,7 @@
         img: product.image_url || expectedItem.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         category_section_id: product.category_section_id || null,
@@ -5882,6 +5901,9 @@
     });
 
     if (!variants.length) {
+      if (hasExplicitPublicDisabledState(product)) {
+        return { ok: true, variants: [] };
+      }
       return { ok: false, reason: `${product.name || 'Product'} needs at least 1 Salad Bar price variant.` };
     }
 
@@ -5934,6 +5956,7 @@
         img: product.image_url || meta.img,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         variants: variantMap.variants,
@@ -5956,7 +5979,9 @@
       : '';
     const descHtml = item.desc ? `<div class="item-desc">${item.desc}</div>` : '';
     const soldOutAttr = soldOut ? ' disabled aria-disabled="true"' : '';
-    const priceHtml = item.variants.length === 1
+    const priceHtml = !item.variants.length
+      ? `<div class="price-btn-row"><span class="price-single">${hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out'}</span><button class="add-btn" disabled aria-disabled="true">+</button></div>`
+      : item.variants.length === 1
       ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${soldOutAttr} onclick="addItem('${item.name}', '', ${item.variants[0].price}, this)">+</button></div>`
       : item.variants.map(variant =>
           `<div class="price-row"><span class="price-pieces">${variant.label} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${soldOutAttr} onclick="addItem('${item.name}', '${variant.label}', ${variant.price}, this)">+</button></div>`
@@ -6045,17 +6070,21 @@
 
   function renderProductBadges(item) {
     const labels = getPublicProductBadgeLabels(item);
-    const soldOut = Boolean(item && item.is_sold_out);
-    if (!labels.length && !soldOut) return '';
+    const unavailable = hasExplicitPublicUnavailableState(item);
+    const soldOut = !unavailable && Boolean(item && item.is_sold_out);
+    if (!labels.length && !unavailable && !soldOut) return '';
 
     const badgeHtml = labels
       .map(label => `<span class="menu-item-badge">${escapeMenuHtml(label)}</span>`)
       .join('');
+    const unavailableHtml = unavailable
+      ? '<span class="menu-item-badge is-sold-out">Unavailable</span>'
+      : '';
     const soldOutHtml = soldOut
       ? '<span class="menu-item-badge is-sold-out">Currently Sold Out</span>'
       : '';
 
-    return `<span class="menu-item-badges">${badgeHtml}${soldOutHtml}</span>`;
+    return `<span class="menu-item-badges">${badgeHtml}${unavailableHtml}${soldOutHtml}</span>`;
   }
 
   function renderMenuItemNameWithBadges(item) {
@@ -6117,6 +6146,7 @@
         img: product.image_url || null,
         is_curv_pick: product.is_curv_pick,
         is_seasonal: product.is_seasonal,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         variant_group_name: product.variant_group_name,
@@ -6454,6 +6484,7 @@
         panelId: panelInfo.panelId,
         defaultOptions: panelInfo.defaultOptions || {},
         variants: variantMap.variants,
+        is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
         sort_order: Number(product.sort_order) || 0
       });
@@ -6624,6 +6655,338 @@
     mount.style.display = '';
     fallback.style.display = 'none';
     return true;
+  }
+
+  const SPECIAL_PUBLIC_CATEGORY_SECTIONS = [
+    {
+      sectionId: 'matcha',
+      tabLabel: 'Matcha & Hojicha',
+      categoryNames: ['matcha & hojicha'],
+      render: renderSupabaseMatchaOrFallback
+    },
+    {
+      sectionId: 'espresso',
+      tabLabel: 'Espresso',
+      categoryNames: ['espresso'],
+      render: renderSupabaseEspressoOrFallback
+    },
+    {
+      sectionId: 'blended',
+      tabLabel: 'Curvccino',
+      categoryNames: ['curvccino'],
+      render: renderSupabaseCurvccinoOrFallback
+    },
+    {
+      sectionId: 'refreshers',
+      tabLabel: 'Refreshers',
+      categoryNames: ['refreshers'],
+      render: renderSupabaseRefreshersOrFallback
+    },
+    {
+      sectionId: 'bites',
+      tabLabel: 'Bites',
+      categoryNames: ['bites', 'savory'],
+      render: renderSupabaseBitesSection
+    },
+    {
+      sectionId: 'salads',
+      tabLabel: 'Salad Bar',
+      categoryNames: ['salad bar'],
+      render: renderSupabaseSaladBarOrFallback
+    },
+    {
+      sectionId: 'pastries',
+      tabLabel: 'Pastries & Desserts',
+      categoryNames: ['pastries & desserts'],
+      render: renderSupabasePastriesOrFallback,
+      allowEmpty: true
+    }
+  ];
+
+  function getPublicCategorySortOrderValue(category) {
+    const sortOrder = Number(category && category.sort_order);
+    return Number.isFinite(sortOrder) ? sortOrder : 9999;
+  }
+
+  function comparePublicCategoryRows(a, b) {
+    const safeSortA = getPublicCategorySortOrderValue(a);
+    const safeSortB = getPublicCategorySortOrderValue(b);
+    if (safeSortA !== safeSortB) return safeSortA - safeSortB;
+    return normalizePublicMenuText(a && a.name).localeCompare(normalizePublicMenuText(b && b.name));
+  }
+
+  function getPublicCategoryByName(categories, name) {
+    const expected = normalizePublicMenuText(name);
+    return (Array.isArray(categories) ? categories : []).find(category =>
+      normalizePublicMenuText(category && category.name) === expected
+    ) || null;
+  }
+
+  function getSpecialSectionCategoryRows(config, categories) {
+    return (config.categoryNames || [])
+      .map(name => getPublicCategoryByName(categories, name))
+      .filter(Boolean);
+  }
+
+  function getSpecialSectionSortOrder(config, categories) {
+    const rows = getSpecialSectionCategoryRows(config, categories);
+    if (!rows.length) return 9999;
+    return rows.reduce((min, category) => Math.min(min, getPublicCategorySortOrderValue(category)), 9999);
+  }
+
+  function getNavTabForSectionId(sectionId) {
+    return Array.from(document.querySelectorAll('.nav-tab')).find(tab => {
+      if (tab.dataset.sectionTarget === sectionId) return true;
+      const onclick = tab.getAttribute('onclick') || '';
+      return onclick.includes("'" + sectionId + "'");
+    }) || null;
+  }
+
+  function getNavTabSectionId(tab) {
+    if (!tab) return '';
+    if (tab.dataset.sectionTarget) return tab.dataset.sectionTarget;
+    const onclick = tab.getAttribute('onclick') || '';
+    const match = onclick.match(/showSection\('([^']+)'\)/);
+    return match ? match[1] : '';
+  }
+
+  function ensureNavTab(sectionId, label) {
+    if (!navTabs) return null;
+    let tab = getNavTabForSectionId(sectionId);
+    if (!tab) {
+      tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'nav-tab';
+      tab.addEventListener('click', () => showSection(sectionId));
+      navTabs.appendChild(tab);
+    }
+    tab.dataset.sectionTarget = sectionId;
+    tab.textContent = label;
+    tab.hidden = false;
+    return tab;
+  }
+
+  function setPublicSectionVisibility(sectionId, visible) {
+    const section = document.getElementById(sectionId);
+    const tab = getNavTabForSectionId(sectionId);
+    if (section) {
+      section.hidden = !visible;
+      if (!visible) section.classList.remove('active');
+    }
+    if (tab) {
+      tab.dataset.sectionTarget = sectionId;
+      tab.hidden = !visible;
+      if (!visible) tab.classList.remove('active');
+    }
+  }
+
+  function setCategoryBlockVisibility(mountId, visible) {
+    const mount = document.getElementById(mountId);
+    if (!mount) return;
+    const block = mount.closest('.category') || mount;
+    block.hidden = !visible;
+    if (!visible) mount.innerHTML = '';
+  }
+
+  function renderSupabaseBitesSection(shapedPublicMenu) {
+    const takoyakiRendered = renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
+    const savoryRendered = renderSupabaseSavoryOrFallback(shapedPublicMenu);
+    setCategoryBlockVisibility('takoyaki-mount', takoyakiRendered);
+    setCategoryBlockVisibility('savory-mount', savoryRendered);
+    return takoyakiRendered || savoryRendered;
+  }
+
+  function getGenericCategorySectionId(category) {
+    const idSource = category && category.id ? category.id : category && category.name;
+    return `public-category-${slugifyPublicMenuId(idSource)}`;
+  }
+
+  function mapGenericPublicCategoryItems(category) {
+    const products = Array.isArray(category && category.products) ? category.products : [];
+    return products
+      .map(product => {
+        const variants = [...(product.variants || [])]
+          .map(variant => ({
+            label: String(variant.label || '').trim(),
+            price: parsePublicMenuPeso(variant.price),
+            sort_order: Number(variant.sort_order) || 0
+          }))
+          .filter(variant => variant.label && variant.price !== null)
+          .sort((a, b) => a.sort_order - b.sort_order || normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label)));
+        const disabled = hasExplicitPublicDisabledState(product);
+        if (!variants.length && !disabled) return null;
+        return {
+          id: `generic-${slugifyPublicMenuId(product.id || product.name)}`,
+          name: String(product.name || '').trim(),
+          desc: product.description || '',
+          img: product.image_url || null,
+          is_curv_pick: product.is_curv_pick,
+          is_seasonal: product.is_seasonal,
+          is_available: product.is_available,
+          is_sold_out: isPublicProductSoldOut(product),
+          badge_labels: getPublicProductBadgeLabels(product),
+          category_section_id: product.category_section_id || null,
+          sort_order: Number(product.sort_order) || 0,
+          variants
+        };
+      })
+      .filter(item => item && item.name)
+      .sort(compareSectionedMenuItems);
+  }
+
+  function renderGenericPublicProduct(item) {
+    const disabled = Boolean(item && item.is_sold_out);
+    const disabledAttr = disabled ? ' disabled aria-disabled="true"' : '';
+    const imgHtml = item.img
+      ? `<img class="salad-row-img" src="${escapeMenuHtml(item.img)}" alt="" loading="lazy">`
+      : '';
+    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
+    const priceHtml = !item.variants.length
+      ? `<div class="price-btn-row"><span class="price-single">${hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out'}</span><button class="add-btn" disabled aria-disabled="true">+</button></div>`
+      : item.variants.length === 1
+        ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${disabledAttr} onclick='addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)'>+</button></div>`
+        : item.variants.map(variant =>
+            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${disabledAttr} onclick='addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)'>+</button></div>`
+          ).join('');
+
+    return `
+      <div class="menu-item generic-public-product${disabled ? ' is-sold-out' : ''}"${disabled ? ' data-sold-out="true"' : ''}>
+        ${imgHtml}
+        <div class="item-info">
+          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
+          ${descHtml}
+        </div>
+        <div class="item-right">${priceHtml}</div>
+      </div>`;
+  }
+
+  function renderGenericPublicCategoryContent(items, categorySections = []) {
+    const groups = buildPublicCategorySectionGroups(items, categorySections);
+    if (!groups) {
+      return `<div class="category">${items.map(renderGenericPublicProduct).join('')}</div>`;
+    }
+
+    const unsectionedHtml = groups.unsectionedItems.length
+      ? `<div class="category">${groups.unsectionedItems.map(renderGenericPublicProduct).join('')}</div>`
+      : '';
+    const sectionHtml = groups.sectionGroups.map(group => `
+      <div class="category">
+        <span class="category-label">${escapeMenuHtml(group.section.name)}</span>
+        ${group.items.map(renderGenericPublicProduct).join('')}
+      </div>`).join('');
+    return `${unsectionedHtml}${sectionHtml}`;
+  }
+
+  function ensureGenericPublicCategorySection(category, items, categorySections) {
+    const sectionId = getGenericCategorySectionId(category);
+    const main = document.querySelector('main');
+    let section = document.getElementById(sectionId);
+    if (!section && main) {
+      section = document.createElement('section');
+      section.className = 'section';
+      section.id = sectionId;
+      section.dataset.dynamicPublicCategorySection = 'true';
+      section.dataset.publicCategoryId = category.id || '';
+      main.appendChild(section);
+    }
+    if (!section) return null;
+    section.hidden = false;
+    section.innerHTML = `
+      <div class="section-header">
+        <div class="section-title">${escapeMenuHtml(category.name)}</div>
+      </div>
+      <div data-generic-public-category-mount>
+        ${renderGenericPublicCategoryContent(items, categorySections)}
+      </div>`;
+    ensureNavTab(sectionId, category.name);
+    return { sectionId, categoryId: category.id, label: category.name, order: getPublicCategorySortOrderValue(category) };
+  }
+
+  function removeDynamicPublicCategoryShells() {
+    document.querySelectorAll('[data-dynamic-public-category-section]').forEach(section => section.remove());
+    document.querySelectorAll('.nav-tab[data-dynamic-public-category-tab]').forEach(tab => tab.remove());
+  }
+
+  function reconcilePublicMenuNavigation(visibleEntries) {
+    if (!navTabs) return;
+    visibleEntries
+      .slice()
+      .sort((a, b) => a.order - b.order || normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label)))
+      .forEach(entry => {
+        const tab = getNavTabForSectionId(entry.sectionId);
+        if (tab) navTabs.appendChild(tab);
+        const section = document.getElementById(entry.sectionId);
+        const main = document.querySelector('main');
+        if (section && main) main.appendChild(section);
+      });
+    updateArrows();
+  }
+
+  function activateFirstVisiblePublicSection(preferredSectionId = '') {
+    const visibleTabs = Array.from(document.querySelectorAll('.nav-tab')).filter(tab => !tab.hidden);
+    const currentActiveSection = document.querySelector('.section.active');
+    const currentActiveVisible = currentActiveSection
+      && !currentActiveSection.hidden
+      && visibleTabs.some(tab => getNavTabSectionId(tab) === currentActiveSection.id);
+    if (currentActiveVisible) {
+      const activeTab = getNavTabForSectionId(currentActiveSection.id);
+      if (activeTab) activeTab.classList.add('active');
+      return;
+    }
+
+    const preferredTab = preferredSectionId ? getNavTabForSectionId(preferredSectionId) : null;
+    const nextTab = preferredTab && !preferredTab.hidden ? preferredTab : visibleTabs[0];
+    const nextSectionId = getNavTabSectionId(nextTab);
+    if (nextSectionId) showSection(nextSectionId);
+  }
+
+  function renderPublicMenuFromSupabase(shapedPublicMenu) {
+    const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories.slice().sort(comparePublicCategoryRows)
+      : [];
+    const claimedCategoryIds = new Set();
+    const visibleEntries = [];
+
+    removeDynamicPublicCategoryShells();
+
+    const curvPicksVisible = renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
+    setPublicSectionVisibility('seasonal', curvPicksVisible);
+    if (curvPicksVisible) {
+      visibleEntries.push({ sectionId: 'seasonal', label: 'CURV Picks', order: -1 });
+    }
+
+    SPECIAL_PUBLIC_CATEGORY_SECTIONS.forEach(config => {
+      const categoryRows = getSpecialSectionCategoryRows(config, categories);
+      categoryRows.forEach(category => claimedCategoryIds.add(category.id));
+      const rendered = categoryRows.length ? config.render(shapedPublicMenu) : false;
+      const hasProducts = categoryRows.some(category => Array.isArray(category.products) && category.products.length);
+      const visible = rendered && (config.allowEmpty || hasProducts);
+      setPublicSectionVisibility(config.sectionId, visible);
+      if (visible) {
+        const firstCategory = categoryRows.slice().sort(comparePublicCategoryRows)[0];
+        visibleEntries.push({
+          sectionId: config.sectionId,
+          label: config.tabLabel,
+          order: getSpecialSectionSortOrder(config, categories),
+          categoryId: firstCategory && firstCategory.id
+        });
+      }
+    });
+
+    categories.forEach(category => {
+      if (!category || !category.id || claimedCategoryIds.has(category.id)) return;
+      const items = mapGenericPublicCategoryItems(category);
+      if (!items.length) return;
+      const categorySections = getPublicCategorySectionsForCategory(shapedPublicMenu, category.id);
+      const entry = ensureGenericPublicCategorySection(category, items, categorySections);
+      if (!entry) return;
+      const tab = getNavTabForSectionId(entry.sectionId);
+      if (tab) tab.dataset.dynamicPublicCategoryTab = 'true';
+      visibleEntries.push(entry);
+    });
+
+    reconcilePublicMenuNavigation(visibleEntries);
+    activateFirstVisiblePublicSection('seasonal');
   }
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
@@ -7421,13 +7784,16 @@
   setTimeout(() => centerActiveMenuTab(document.querySelector('.nav-tab.active')), 350);
 
   function showSection(id) {
+    const targetSection = document.getElementById(id);
+    if (!targetSection || targetSection.hidden) return;
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    targetSection.classList.add('active');
     const clickEvent = typeof event !== 'undefined' ? event : null;
     const activeTab = clickEvent && clickEvent.target
       ? clickEvent.target
       : Array.from(document.querySelectorAll('.nav-tab')).find(tab => {
+        if (tab.dataset.sectionTarget === id) return true;
         const onclick = tab.getAttribute('onclick') || '';
         return onclick.includes("'" + id + "'");
       });
@@ -7449,7 +7815,7 @@
     let activeTab = null;
     document.querySelectorAll('.nav-tab').forEach(tab => {
       const onclick = tab.getAttribute('onclick') || '';
-      const isActive = onclick.includes("'" + sectionId + "'");
+      const isActive = tab.dataset.sectionTarget === sectionId || onclick.includes("'" + sectionId + "'");
       tab.classList.toggle('active', isActive);
       if (isActive) activeTab = tab;
     });
@@ -8677,6 +9043,7 @@
       image_url: product.image_url,
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
+      is_available: product.is_available,
       is_sold_out: isPublicProductSoldOut(product),
       badge_labels: getPublicProductBadgeLabels(product),
       variant_group_name: product.variant_group_name,
@@ -8934,15 +9301,7 @@
         });
       }
 
-      renderSupabaseEspressoOrFallback(shapedPublicMenu);
-      renderSupabaseRefreshersOrFallback(shapedPublicMenu);
-      renderSupabaseCurvccinoOrFallback(shapedPublicMenu);
-      renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
-      renderSupabaseSavoryOrFallback(shapedPublicMenu);
-      renderSupabaseSaladBarOrFallback(shapedPublicMenu);
-      renderSupabasePastriesOrFallback(shapedPublicMenu);
-      renderSupabaseMatchaOrFallback(shapedPublicMenu);
-      renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
+      renderPublicMenuFromSupabase(shapedPublicMenu);
     } catch (error) {
       console.warn('[CURV menu] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
     }
