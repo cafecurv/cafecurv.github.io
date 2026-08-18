@@ -5476,11 +5476,9 @@
     items.forEach(renderItem);
   }
 
-  // Phase 2D.3: Supabase Bites/Takoyaki mapping is intentionally strict.
-  // The hardcoded per-item option logic below is matched by exact product name.
-  // Admin product names must stay exactly as listed here or the whole Bites
-  // category falls back to TAKOYAKI_ITEMS so CURV Picks jump IDs and cheese
-  // pricing cannot drift silently.
+  // Phase 2D.3: Each supported Takoyaki product maps by exact name so its
+  // hardcoded option metadata and panel id cannot drift. An unsupported or
+  // incomplete product is skipped without hiding valid siblings.
   const PUBLIC_TAKOYAKI_NAME_MAP = {
     'OG Takoyaki': 'og-takoyaki',
     'Aburi Salmon': 'aburi-salmon',
@@ -5542,26 +5540,7 @@
 
     const products = Array.isArray(bitesCategory.products) ? bitesCategory.products : [];
     if (!products.length) {
-      return { ok: false, reason: 'Supabase Bites category has no published available Takoyaki products.' };
-    }
-
-    const expectedNames = Object.keys(PUBLIC_TAKOYAKI_NAME_MAP);
-    const productByName = products.reduce((map, product) => {
-      const name = String(product.name || '').trim();
-      if (name) map[name] = product;
-      return map;
-    }, {});
-
-    const unknownProducts = products
-      .map(product => String(product.name || '').trim())
-      .filter(name => !PUBLIC_TAKOYAKI_NAME_MAP[name]);
-    if (unknownProducts.length) {
-      return { ok: false, reason: `Supabase Bites has unsupported Takoyaki product names: ${unknownProducts.join(', ')}.` };
-    }
-
-    const missingNames = expectedNames.filter(name => !productByName[name]);
-    if (missingNames.length) {
-      return { ok: false, reason: `Supabase Bites is missing expected Takoyaki products: ${missingNames.join(', ')}.` };
+      return { ok: false, reason: 'Supabase Bites category has no published Takoyaki products.' };
     }
 
     const hardcodedByName = TAKOYAKI_ITEMS.reduce((map, item) => {
@@ -5569,20 +5548,37 @@
       return map;
     }, {});
     const mappedItems = [];
+    const mappedNames = new Set();
+    const warnings = [];
 
-    for (const name of expectedNames) {
-      const product = productByName[name];
+    for (const product of products) {
+      const name = String(product.name || '').trim();
       const expectedItem = hardcodedByName[name];
       const expectedId = PUBLIC_TAKOYAKI_NAME_MAP[name];
       const slugId = slugifyPublicMenuId(name);
 
+      if (!expectedId) {
+        warnings.push(`Unsupported Takoyaki product skipped: ${name || 'Unnamed product'}.`);
+        continue;
+      }
+
+      if (mappedNames.has(name)) {
+        warnings.push(`Duplicate Takoyaki product skipped: ${name}.`);
+        continue;
+      }
+
       if (!expectedItem || slugId !== expectedId || expectedItem.id !== expectedId) {
-        return { ok: false, reason: `${name} cannot safely map to the hardcoded Takoyaki panel id.` };
+        warnings.push(`${name} was skipped because its panel metadata is invalid.`);
+        continue;
       }
 
       const pieceMap = mapPublicTakoyakiPieces(product, expectedItem);
-      if (!pieceMap.ok) return pieceMap;
+      if (!pieceMap.ok) {
+        warnings.push(pieceMap.reason);
+        continue;
+      }
 
+      mappedNames.add(name);
       mappedItems.push({
         id: expectedId,
         name,
@@ -5603,6 +5599,10 @@
       });
     }
 
+    if (!mappedItems.length) {
+      return { ok: false, reason: warnings.join(' ') || 'Supabase Bites has no renderable Takoyaki products.' };
+    }
+
     mappedItems.sort((a, b) => {
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
       return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
@@ -5611,6 +5611,7 @@
     return {
       ok: true,
       items: mappedItems,
+      warnings,
       categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, bitesCategory.id)
     };
   }
@@ -5618,8 +5619,12 @@
   function renderSupabaseTakoyakiOrFallback(shapedPublicMenu) {
     const mapped = mapPublicTakoyakiItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV menu] Bites/Takoyaki using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Bites/Takoyaki has no renderable public products.', mapped.reason);
       return false;
+    }
+
+    if (mapped.warnings.length) {
+      console.warn('[CURV menu] Some Bites/Takoyaki products were skipped.', mapped.warnings.join(' '));
     }
 
     renderAllTakoyakiPanels(mapped.items, mapped.categorySections);
@@ -5779,26 +5784,7 @@
 
     const products = Array.isArray(savoryCategory.products) ? savoryCategory.products : [];
     if (!products.length) {
-      return { ok: false, reason: 'Supabase Savory category has no published available products.' };
-    }
-
-    const expectedNames = Object.keys(PUBLIC_SAVORY_NAME_MAP);
-    const productByName = products.reduce((map, product) => {
-      const name = String(product.name || '').trim();
-      if (name) map[name] = product;
-      return map;
-    }, {});
-
-    const unknownProducts = products
-      .map(product => String(product.name || '').trim())
-      .filter(name => !PUBLIC_SAVORY_NAME_MAP[name]);
-    if (unknownProducts.length) {
-      return { ok: false, reason: `Supabase Savory has unsupported product names: ${unknownProducts.join(', ')}.` };
-    }
-
-    const missingNames = expectedNames.filter(name => !productByName[name]);
-    if (missingNames.length) {
-      return { ok: false, reason: `Supabase Savory is missing expected products: ${missingNames.join(', ')}.` };
+      return { ok: false, reason: 'Supabase Savory category has no published products.' };
     }
 
     const hardcodedByName = SAVORY_ITEMS.reduce((map, item) => {
@@ -5806,20 +5792,37 @@
       return map;
     }, {});
     const mappedItems = [];
+    const mappedNames = new Set();
+    const warnings = [];
 
-    for (const name of expectedNames) {
-      const product = productByName[name];
+    for (const product of products) {
+      const name = String(product.name || '').trim();
       const expectedItem = hardcodedByName[name];
       const expectedId = PUBLIC_SAVORY_NAME_MAP[name];
       const slugId = slugifyPublicMenuId(name);
 
+      if (!expectedId) {
+        warnings.push(`Unsupported Savory product skipped: ${name || 'Unnamed product'}.`);
+        continue;
+      }
+
+      if (mappedNames.has(name)) {
+        warnings.push(`Duplicate Savory product skipped: ${name}.`);
+        continue;
+      }
+
       if (!expectedItem || slugId !== expectedId || expectedItem.id !== expectedId || !expectedItem.default_sauce) {
-        return { ok: false, reason: `${name} cannot safely map to the hardcoded Savory panel metadata.` };
+        warnings.push(`${name} was skipped because its panel metadata is invalid.`);
+        continue;
       }
 
       const priceMap = mapPublicSavoryPrice(product);
-      if (!priceMap.ok) return priceMap;
+      if (!priceMap.ok) {
+        warnings.push(priceMap.reason);
+        continue;
+      }
 
+      mappedNames.add(name);
       mappedItems.push({
         id: expectedId,
         name,
@@ -5837,6 +5840,10 @@
       });
     }
 
+    if (!mappedItems.length) {
+      return { ok: false, reason: warnings.join(' ') || 'Supabase Savory has no renderable products.' };
+    }
+
     mappedItems.sort((a, b) => {
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
       return normalizePublicMenuText(a.name).localeCompare(normalizePublicMenuText(b.name));
@@ -5845,6 +5852,7 @@
     return {
       ok: true,
       items: mappedItems,
+      warnings,
       categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, savoryCategory.id)
     };
   }
@@ -5852,8 +5860,12 @@
   function renderSupabaseSavoryOrFallback(shapedPublicMenu) {
     const mapped = mapPublicSavoryItems(shapedPublicMenu);
     if (!mapped.ok) {
-      console.warn('[CURV menu] Savory using hardcoded fallback.', mapped.reason);
+      console.warn('[CURV menu] Savory has no renderable public products.', mapped.reason);
       return false;
+    }
+
+    if (mapped.warnings.length) {
+      console.warn('[CURV menu] Some Savory products were skipped.', mapped.warnings.join(' '));
     }
 
     renderAllSavoryPanels(mapped.items, shapedPublicMenu, mapped.categorySections);

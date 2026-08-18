@@ -1098,6 +1098,7 @@
   let optionChoicesList = [];
   let latestCategorySections = [];
   let latestDraftCategorySections = [];
+  let draftCategorySectionsLoaded = true;
   let latestVisibleProducts = [];
   let selectedCategoryFilter = 'all';
   let selectedSectionFilter = 'all';
@@ -1107,6 +1108,7 @@
   let productBadgeLabels = [];
   let productBadgesDisabled = true;
   let editingProductId = null;
+  let editingProductSnapshot = null;
   let draftFormBaseline = '';
   let draftFormSavedLabelActive = false;
   let editorPublishSaving = false;
@@ -1325,6 +1327,9 @@
 
   const getEditingProduct = () => {
     if (!editingProductId) return null;
+    if (editingProductSnapshot && editingProductSnapshot.id === editingProductId) {
+      return editingProductSnapshot;
+    }
     return latestProducts.find((item) => item.id === editingProductId) || null;
   };
 
@@ -1332,6 +1337,7 @@
     if (!draftForm) return '';
     const formData = new FormData(draftForm);
     const variants = getVariantRows().map((row) => ({
+      id: row.dataset.productSizeId || null,
       label: row.querySelector('[data-variant-label]') ? row.querySelector('[data-variant-label]').value.trim() : '',
       price: row.querySelector('[data-variant-price]') ? row.querySelector('[data-variant-price]').value.trim() : '',
       cost: row.querySelector('[data-variant-cost]') ? row.querySelector('[data-variant-cost]').value.trim() : '',
@@ -1499,6 +1505,7 @@
 
   const setCreateMode = () => {
     editingProductId = null;
+    editingProductSnapshot = null;
     draftFormBaseline = '';
     draftFormSavedLabelActive = false;
     if (productEditorViewTitle) productEditorViewTitle.textContent = 'Create Item';
@@ -1511,8 +1518,14 @@
     syncEditorSaveLabels();
   };
 
-  const setEditMode = (productId) => {
-    editingProductId = productId;
+  const setEditMode = (product) => {
+    editingProductId = product.id;
+    editingProductSnapshot = {
+      ...product,
+      product_sizes: Array.isArray(product.product_sizes)
+        ? product.product_sizes.map((size) => ({ ...size }))
+        : [],
+    };
     draftFormSavedLabelActive = false;
     showProductEditorView('edit');
     openCollapsibleById('draft-product-content');
@@ -1579,11 +1592,12 @@
     });
   };
 
-  const createVariantRow = ({ label = '', price = '', cost = '', touched = false } = {}) => {
+  const createVariantRow = ({ id = '', label = '', price = '', cost = '', touched = false } = {}) => {
     variantRowCount += 1;
     const row = document.createElement('div');
     row.className = 'variant-row';
     row.dataset.variantRow = '';
+    row.dataset.productSizeId = id || '';
     row.dataset.touched = touched ? 'true' : 'false';
     row.innerHTML = `
       <label class="admin-field" for="draft-variant-label-${variantRowCount}">
@@ -2426,6 +2440,7 @@
       draftCategorySelect.innerHTML = '<option value="">Sign in to load categories</option>';
     }
     latestDraftCategorySections = [];
+    draftCategorySectionsLoaded = true;
     previousDraftSectionValue = '';
     renderDraftProductSections([], '');
     hideInlineDraftSectionCreate(false);
@@ -2644,10 +2659,12 @@
 
   const loadDraftCategorySections = async (categoryId, selectedValue = '') => {
     if (!categoryId) {
+      draftCategorySectionsLoaded = true;
       renderDraftProductSections([], '');
-      return;
+      return true;
     }
 
+    draftCategorySectionsLoaded = false;
     if (draftSectionSelect) {
       draftSectionSelect.disabled = true;
       draftSectionSelect.innerHTML = '<option value="">Loading sections...</option>';
@@ -2664,10 +2681,12 @@
       latestDraftCategorySections = [];
       renderDraftProductSections([], '');
       setStatus('Unable to load product sections. ' + error.message);
-      return;
+      return false;
     }
 
     renderDraftProductSections(data || [], selectedValue);
+    draftCategorySectionsLoaded = true;
+    return true;
   };
 
   const createInlineDraftSection = async () => {
@@ -4086,6 +4105,7 @@
     const rows = variants.length ? variants : [{ label: 'Each', price: '', cost: '', touched: false }];
     rows.forEach((variant) => {
       const row = createVariantRow({
+        id: variant.id || '',
         label: variant.label || '',
         price: variant.price ?? '',
         cost: variant.cost ?? '',
@@ -4104,14 +4124,40 @@
       return;
     }
 
+    const requiredBooleanFields = ['is_published', 'is_available', 'is_sold_out'];
+    if (requiredBooleanFields.some((field) => typeof product[field] !== 'boolean')) {
+      setStatus('This item could not be opened safely because its saved menu state is incomplete. Refresh products and try again.');
+      return;
+    }
+
+    if (!product.category_id) {
+      setStatus('This item could not be opened safely because its saved category is missing.');
+      return;
+    }
+
+    if (Array.isArray(product.product_sizes) && product.product_sizes.some((size) => !size.id)) {
+      setStatus('This item could not be opened safely because a saved variant ID is missing. Refresh products and try again.');
+      return;
+    }
+
     resetDraftProductForm();
     populateDraftCategorySelect(latestCategories);
     setDraftFormDisabled(false);
 
     draftForm.elements.name.value = product.name || '';
     draftForm.elements.category_id.value = product.category_id || '';
+    if (draftForm.elements.category_id.value !== String(product.category_id)) {
+      setDraftFormDisabled(true);
+      setStatus('This item could not be opened safely because its saved category is unavailable. Refresh categories and try again.');
+      return;
+    }
     previousDraftCategoryValue = product.category_id || '';
-    await loadDraftCategorySections(product.category_id || '', product.category_section_id || '');
+    const sectionsLoaded = await loadDraftCategorySections(product.category_id || '', product.category_section_id || '');
+    if (!sectionsLoaded || (product.category_section_id && (!draftSectionSelect || draftSectionSelect.value !== String(product.category_section_id)))) {
+      setDraftFormDisabled(true);
+      setStatus('This item could not be opened safely because its saved section could not be loaded. Refresh products and try again.');
+      return;
+    }
     updateCategoryActionButtons();
     draftForm.elements.image_url.value = product.image_url || '';
     draftForm.elements.description.value = product.description || '';
@@ -4129,13 +4175,14 @@
     const variants = Array.isArray(product.product_sizes) ? product.product_sizes.slice() : [];
     variants.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
     setVariantRows(variants.map((variant) => ({
+      id: variant.id,
       label: variant.label,
       price: variant.price,
       cost: variant.cost,
       touched: true,
     })));
 
-    setEditMode(product.id);
+    setEditMode(product);
     markDraftFormClean();
     loadProductOptionAttachments(product.id);
     draftForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -4952,6 +4999,7 @@
   const validateDraftProductForm = () => {
     if (!draftForm) return null;
     const formData = new FormData(draftForm);
+    const availableInput = draftForm.elements.is_available;
     const name = String(formData.get('name') || '').trim();
     const categoryId = String(formData.get('category_id') || '').trim();
     const variantGroupName = getSelectedVariantGroup();
@@ -4964,6 +5012,14 @@
 
     if (!categoryId) {
       return { error: 'Category is required.' };
+    }
+
+    if (!availableInput || availableInput.type !== 'checkbox') {
+      return { error: 'Availability state could not be read safely. Refresh products and try again.' };
+    }
+
+    if (!draftCategorySectionsLoaded) {
+      return { error: 'Category sections did not load safely. Refresh products and try again.' };
     }
 
     if (!variantGroupName) {
@@ -4993,7 +5049,13 @@
         return { error: 'Variant cost must be 0 or greater for row ' + (index + 1) + '.' };
       }
 
-      sizeRows.push({ label, price, cost, sort_order: index });
+      sizeRows.push({
+        id: row.dataset.productSizeId || null,
+        label,
+        price,
+        cost,
+        sort_order: index,
+      });
     }
 
     if (productBadgeLabels.length > PRODUCT_BADGE_MAX_COUNT) {
@@ -5015,7 +5077,7 @@
         image_url: String(formData.get('image_url') || '').trim() || null,
         notes: String(formData.get('notes') || '').trim() || null,
         badge_labels: productBadgeLabels.slice(),
-        is_available: formData.get('is_available') === 'on',
+        is_available: availableInput.checked,
         is_sold_out: false,
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
@@ -5049,9 +5111,35 @@
     const draft = validation.value;
     const isEditing = Boolean(editingProductId);
     const existingProduct = getEditingProduct();
+    if (isEditing && !existingProduct) {
+      setStatus('This item could not be saved safely because its original state is unavailable. Refresh products and try again.');
+      return;
+    }
+
+    if (isEditing && ['is_published', 'is_available', 'is_sold_out'].some((field) => typeof existingProduct[field] !== 'boolean')) {
+      setStatus('This item could not be saved safely because its original menu state is incomplete. Refresh products and try again.');
+      return;
+    }
+
+    if (isEditing) {
+      const savedSizeIds = new Set((existingProduct.product_sizes || []).map((size) => size.id).filter(Boolean));
+      const unknownSavedSize = draft.sizeRows.find((size) => size.id && !savedSizeIds.has(size.id));
+      if (unknownSavedSize) {
+        setStatus('A variant could not be matched to this item safely. Refresh products and try again.');
+        return;
+      }
+
+      const submittedSizeIds = new Set(draft.sizeRows.map((size) => size.id).filter(Boolean));
+      const removedSavedSize = (existingProduct.product_sizes || []).find((size) => size.id && !submittedSizeIds.has(size.id));
+      if (removedSavedSize) {
+        setStatus('Removing saved variants is temporarily disabled. Restore the removed variant before saving this item.');
+        return;
+      }
+    }
+
     const finalPublishedState = typeof options.publishState === 'boolean'
       ? options.publishState
-      : Boolean(existingProduct && existingProduct.is_published);
+      : (isEditing ? existingProduct.is_published : false);
     if (createDraftButton) createDraftButton.disabled = true;
     if (editorPublishActionButton) editorPublishActionButton.disabled = true;
     if (undoProductChangesButton) undoProductChangesButton.disabled = true;
@@ -5069,7 +5157,7 @@
       notes: draft.notes,
       badge_labels: draft.badge_labels,
       is_available: draft.is_available,
-      is_sold_out: draft.is_sold_out,
+      is_sold_out: isEditing ? existingProduct.is_sold_out : draft.is_sold_out,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
       is_published: finalPublishedState,
@@ -5094,20 +5182,6 @@
         return;
       }
 
-      const { error: deleteSizesError } = await client
-        .from('product_sizes')
-        .delete()
-        .eq('product_id', editingProductId);
-
-      if (deleteSizesError) {
-        await loadProducts();
-        setStatus('Item was updated, but existing variants could not be replaced. ' + deleteSizesError.message);
-        if (createDraftButton) createDraftButton.disabled = false;
-        if (editorPublishActionButton) editorPublishActionButton.disabled = false;
-        updateUndoChangesAction();
-        if (cancelEditButton) cancelEditButton.disabled = false;
-        return;
-      }
     } else {
       const { data: product, error: productError } = await client
         .from('products')
@@ -5126,21 +5200,73 @@
       productId = product.id;
     }
 
-    const sizePayload = draft.sizeRows.map((variant) => ({
-      product_id: productId,
-      label: variant.label,
-      price: variant.price,
-      cost: variant.cost,
-      sort_order: variant.sort_order,
-    }));
+    let sizeError = null;
+    if (isEditing) {
+      const savedSizes = Array.isArray(existingProduct.product_sizes) ? existingProduct.product_sizes : [];
+      const normalizeSize = (size, index) => ({
+        id: size.id || null,
+        label: String(size.label || '').trim(),
+        price: Number(size.price),
+        cost: size.cost === null || size.cost === '' || typeof size.cost === 'undefined' ? null : Number(size.cost),
+        sort_order: Number.isFinite(Number(size.sort_order)) ? Number(size.sort_order) : index,
+      });
+      const savedSizeState = savedSizes
+        .map(normalizeSize)
+        .sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label) || String(a.id).localeCompare(String(b.id)));
+      const submittedSizeState = draft.sizeRows.map(normalizeSize);
+      const savedSizeById = new Map(savedSizeState.map((size) => [size.id, size]));
+      const changedSavedSizes = submittedSizeState.filter((size) => (
+        size.id && JSON.stringify(size) !== JSON.stringify(savedSizeById.get(size.id))
+      ));
+      const newSizes = submittedSizeState.filter((size) => !size.id);
 
-    const { error: sizeError } = await client
-      .from('product_sizes')
-      .insert(sizePayload);
+      for (const variant of changedSavedSizes) {
+        const { error } = await client
+          .from('product_sizes')
+          .update({
+            label: variant.label,
+            price: variant.price,
+            cost: variant.cost,
+            sort_order: variant.sort_order,
+          })
+          .eq('id', variant.id)
+          .eq('product_id', productId);
+        if (error) {
+          sizeError = error;
+          break;
+        }
+      }
+
+      if (!sizeError && newSizes.length) {
+        const { error } = await client
+          .from('product_sizes')
+          .insert(newSizes.map((variant) => ({
+            product_id: productId,
+            label: variant.label,
+            price: variant.price,
+            cost: variant.cost,
+            sort_order: variant.sort_order,
+          })));
+        sizeError = error;
+      }
+    } else {
+      const sizePayload = draft.sizeRows.map((variant) => ({
+        product_id: productId,
+        label: variant.label,
+        price: variant.price,
+        cost: variant.cost,
+        sort_order: variant.sort_order,
+      }));
+      const { error } = await client
+        .from('product_sizes')
+        .insert(sizePayload);
+      sizeError = error;
+    }
 
     if (sizeError) {
       await loadProducts();
-      setStatus((isEditing ? 'Item was updated, but variants could not be saved. ' : 'Item row was created, but variants could not be saved. ') + sizeError.message);
+      if (isEditing && productId) await loadProductIntoForm(productId);
+      setStatus((isEditing ? 'Item details were saved, but the variant update did not fully complete. Existing variant IDs were preserved. ' : 'Item row was created, but variants could not be saved. ') + sizeError.message);
       if (createDraftButton) createDraftButton.disabled = false;
       if (editorPublishActionButton) editorPublishActionButton.disabled = false;
       updateUndoChangesAction();
