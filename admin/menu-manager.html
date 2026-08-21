@@ -14,9 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=u2-light-menu-manager-fix">
+  <link rel="stylesheet" href="admin.css?v=mp2c2-category-management">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=u1-text-cleanup" defer></script>
+  <script src="admin.js?v=mp2c2-category-management" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -329,6 +329,7 @@
               <button type="button" class="auth-button auth-button-secondary" data-undo-product-changes hidden disabled>Undo changes</button>
               <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel</button>
             </div>
+            <p class="product-option-status draft-field-wide" data-product-editor-status role="status" aria-live="polite">Ready to edit.</p>
           </form>
         </div>
       </section>
@@ -498,16 +499,35 @@
               </div>
               <button type="button" class="auth-button product-list-add-button" data-open-product-editor disabled>+ Add Item</button>
             </div>
+            <section class="category-management" aria-labelledby="category-management-title">
+              <div class="category-management-heading">
+                <div>
+                  <p class="eyebrow">Categories</p>
+                  <h3 id="category-management-title">Category Management</h3>
+                </div>
+                <button type="button" class="admin-collapsible-toggle category-management-toggle" data-collapsible-toggle data-collapsible-target="category-management-content" data-label-collapsed="Manage Categories" data-label-expanded="Close Categories" aria-expanded="false" aria-controls="category-management-content">Manage Categories</button>
+              </div>
+              <div id="category-management-content" class="category-management-content" data-collapsible-content hidden>
+                <div class="category-management-list" data-category-list data-category-management-list>
+                  <p class="empty-message">Sign in to manage categories.</p>
+                </div>
+                <div class="inline-category-create category-management-rename" data-inline-category-rename hidden>
+                  <label class="admin-field" for="inline-category-rename-name">
+                    <span>Rename category</span>
+                    <input id="inline-category-rename-name" type="text" autocomplete="off" placeholder="Category name" data-inline-category-rename-name disabled>
+                  </label>
+                  <div class="inline-category-actions">
+                    <button type="button" class="auth-button" data-save-inline-category-rename disabled>Save</button>
+                    <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category-rename disabled>Cancel</button>
+                  </div>
+                </div>
+                <p class="category-management-status" data-category-status data-category-management-status role="status" aria-live="polite">Sign in to manage categories.</p>
+              </div>
+            </section>
             <div class="product-filter-bar" data-product-filter-bar hidden>
               <label class="admin-field product-filter-field" for="product-category-filter">
                 <span>Category</span>
-                <span class="category-select-row">
-                  <select id="product-category-filter" data-product-filter-list aria-label="Filter products by category"></select>
-                  <span class="category-inline-actions">
-                    <button type="button" class="category-icon-button" data-rename-selected-category title="Rename selected category" aria-label="Rename selected category" disabled>&#9998;</button>
-                    <button type="button" class="category-icon-button is-danger" data-delete-selected-category title="Delete selected category" aria-label="Delete selected category" disabled>&#128465;</button>
-                  </span>
-                </span>
+                <select id="product-category-filter" data-product-filter-list aria-label="Filter products by category"></select>
               </label>
               <label class="admin-field product-filter-field" for="product-section-filter">
                 <span>Section</span>
@@ -543,16 +563,6 @@
                   <option value="draft_first">Draft first</option>
                 </select>
               </label>
-              <div class="inline-category-create product-filter-rename" data-inline-category-rename hidden>
-                <label class="admin-field" for="inline-category-rename-name">
-                  <span>Rename category</span>
-                  <input id="inline-category-rename-name" type="text" autocomplete="off" placeholder="Category name" data-inline-category-rename-name disabled>
-                </label>
-                <div class="inline-category-actions">
-                  <button type="button" class="auth-button" data-save-inline-category-rename disabled>Save</button>
-                  <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category-rename disabled>Cancel</button>
-                </div>
-              </div>
               <div class="inline-category-create product-filter-section-create" data-inline-section-create hidden>
                 <label class="admin-field" for="inline-section-name">
                   <span>New section</span>

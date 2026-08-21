@@ -986,6 +986,7 @@
   const signInButton = document.querySelector('[data-sign-in]');
   const signOutButton = document.querySelector('[data-sign-out]');
   const authStatus = menuManagerRoot.querySelector('[data-auth-status]');
+  const productEditorStatus = menuManagerRoot.querySelector('[data-product-editor-status]');
   const ownerAccount = document.querySelector('[data-owner-account]');
   const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
   const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
@@ -1112,6 +1113,7 @@
   let draftFormBaseline = '';
   let draftFormSavedLabelActive = false;
   let editorPublishSaving = false;
+  let productSaveInProgress = false;
   let bulkPublishSaving = false;
   let productOptionAttachments = [];
   let availableProductOptionGroups = [];
@@ -1130,6 +1132,7 @@
   let inlineDraftSectionSaving = false;
   let inlineCategoryRenameSaving = false;
   let inlineCategoryDeleteSaving = false;
+  let categoryLifecycleSaving = false;
   let inlineSectionSaving = false;
   let inlineSectionRenameSaving = false;
   let inlineSectionDeleteSaving = false;
@@ -1164,6 +1167,22 @@
   const getRealMenuCategories = (categories = latestCategories) => (Array.isArray(categories) ? categories : [])
     .filter((category) => !isCurvPicksCategory(category));
 
+  const getOrderedMenuCategories = (categories = latestCategories) => getRealMenuCategories(categories)
+    .slice()
+    .sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left && left.sort_order)) ? Number(left.sort_order) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(right && right.sort_order)) ? Number(right.sort_order) : Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      const nameComparison = String(left && left.name || '').localeCompare(String(right && right.name || ''));
+      if (nameComparison !== 0) return nameComparison;
+      return String(left && left.id || '').localeCompare(String(right && right.id || ''));
+    });
+
+  const isCategoryManagementBusy = () => inlineCategorySaving
+    || inlineCategoryRenameSaving
+    || inlineCategoryDeleteSaving
+    || categoryLifecycleSaving;
+
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
     && SUPABASE_PUBLISHABLE_KEY !== 'SUPABASE_PUBLISHABLE_KEY'
     && SUPABASE_URL.startsWith('https://')
@@ -1171,6 +1190,12 @@
 
   const setStatus = (message) => {
     if (authStatus) authStatus.textContent = message;
+    if (productEditorStatus) productEditorStatus.textContent = message;
+  };
+
+  const setCategoryManagementStatus = (message) => {
+    if (categoryStatus) categoryStatus.textContent = message;
+    setStatus(message);
   };
 
   const setOptionManagerStatus = (message) => {
@@ -1237,6 +1262,7 @@
     updateEditorPublishAction();
     updateUndoChangesAction();
     updateBulkPublishControls();
+    updateCategoryActionButtons();
   };
 
   const setCollapsibleExpanded = (toggle, shouldExpand) => {
@@ -1368,7 +1394,7 @@
   const updateUndoChangesAction = () => {
     if (!undoProductChangesButton) return;
     undoProductChangesButton.hidden = !editingProductId;
-    undoProductChangesButton.disabled = !editingProductId || !isOwnerSignedIn || !isDraftFormDirty() || editorPublishSaving;
+    undoProductChangesButton.disabled = !editingProductId || !isOwnerSignedIn || !isDraftFormDirty() || editorPublishSaving || productSaveInProgress;
   };
 
   const markDraftFormClean = () => {
@@ -1474,13 +1500,13 @@
     editorPublishActionButton.hidden = false;
     if (!editingProductId) {
       editorPublishActionButton.textContent = 'Publish Item';
-      editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving;
+      editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving || productSaveInProgress;
       if (editorPublishNote) editorPublishNote.hidden = true;
       return;
     }
 
     editorPublishActionButton.textContent = isPublished ? 'Unpublish Item' : 'Publish Item';
-    editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving;
+    editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving || productSaveInProgress;
     if (editorPublishNote) editorPublishNote.hidden = !isPublished;
   };
 
@@ -1489,7 +1515,7 @@
     const isPublished = Boolean(product && product.is_published);
     if (createDraftButton) {
       createDraftButton.textContent = draftFormSavedLabelActive ? 'Saved' : (isPublished ? 'Save Changes' : 'Save Draft');
-      createDraftButton.disabled = !isOwnerSignedIn || draftFormSavedLabelActive;
+      createDraftButton.disabled = !isOwnerSignedIn || draftFormSavedLabelActive || productSaveInProgress;
     }
     updateEditorPublishAction();
     updateUndoChangesAction();
@@ -2452,13 +2478,13 @@
 
   const populateDraftCategorySelect = (categories) => {
     if (!draftCategorySelect) return;
-    const realCategories = getRealMenuCategories(categories);
+    const realCategories = getOrderedMenuCategories(categories);
     const currentValue = draftCategorySelect.value;
     draftCategorySelect.innerHTML = '<option value="">Select a category</option>';
     realCategories.forEach((category) => {
       const option = document.createElement('option');
       option.value = category.id;
-      option.textContent = category.name;
+      option.textContent = category.is_active === false ? category.name + ' (Hidden)' : category.name;
       draftCategorySelect.appendChild(option);
     });
     const createOption = document.createElement('option');
@@ -2473,7 +2499,7 @@
 
   const getSelectedProductListCategoryId = () => {
     if (!selectedCategoryFilter || selectedCategoryFilter === 'all') return '';
-    return getRealMenuCategories().some((category) => category.id === selectedCategoryFilter && category.is_active !== false)
+    return getRealMenuCategories().some((category) => category.id === selectedCategoryFilter)
       ? selectedCategoryFilter
       : '';
   };
@@ -2483,12 +2509,23 @@
     return categoryId ? latestCategories.find((category) => category.id === categoryId) || null : null;
   };
 
+  const syncCategoryManagementActionState = () => {
+    if (!categoryList) return;
+    const isBusy = isCategoryManagementBusy();
+    categoryList.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+    categoryList.querySelectorAll('[data-category-action]').forEach((button) => {
+      const isBoundary = button.dataset.categoryBoundary === 'true';
+      button.disabled = !isOwnerSignedIn || isBusy || isBoundary;
+    });
+  };
+
   const updateCategoryActionButtons = () => {
     const hasCategory = Boolean(getSelectedProductListCategoryId());
-    const isBusy = inlineCategorySaving || inlineCategoryRenameSaving || inlineCategoryDeleteSaving;
+    const isBusy = isCategoryManagementBusy();
     const isDisabled = !isOwnerSignedIn || isBusy || !hasCategory;
     if (renameSelectedCategoryButton) renameSelectedCategoryButton.disabled = isDisabled;
     if (deleteSelectedCategoryButton) deleteSelectedCategoryButton.disabled = isDisabled;
+    syncCategoryManagementActionState();
     updateSectionActionButtons();
   };
 
@@ -2563,7 +2600,7 @@
   const showInlineCategoryRename = () => {
     const category = getSelectedProductListCategory();
     if (!category) {
-      setStatus('Choose a category filter before renaming.');
+      setCategoryManagementStatus('Choose a category before renaming.');
       return;
     }
     hideInlineCategoryCreate(false);
@@ -2906,12 +2943,12 @@
 
   const populateDisplayOrderCategorySelect = (categories) => {
     if (!displayOrderCategorySelect) return;
-    const realCategories = getRealMenuCategories(categories);
+    const realCategories = getOrderedMenuCategories(categories);
     displayOrderCategorySelect.innerHTML = '<option value="">Select a category</option>';
     realCategories.forEach((category) => {
       const option = document.createElement('option');
       option.value = category.id;
-      option.textContent = category.name;
+      option.textContent = category.is_active === false ? category.name + ' (Hidden)' : category.name;
       displayOrderCategorySelect.appendChild(option);
     });
     displayOrderCategorySelect.disabled = !realCategories.length;
@@ -3390,7 +3427,7 @@
 
   const renderProductFilters = (categories) => {
     if (!productFilterBar || !productFilterList) return;
-    const realCategories = getRealMenuCategories(categories);
+    const realCategories = getOrderedMenuCategories(categories);
     productFilterList.innerHTML = '';
     productFilterBar.hidden = !realCategories.length;
     if (!realCategories.length) {
@@ -3407,7 +3444,8 @@
 
     productFilterList.appendChild(makeFilterOption('All categories', 'all'));
     realCategories.forEach((category) => {
-      productFilterList.appendChild(makeFilterOption(category.name, category.id));
+      const label = category.is_active === false ? category.name + ' (Hidden)' : category.name;
+      productFilterList.appendChild(makeFilterOption(label, category.id));
     });
     if (selectedCategoryFilter !== 'all' && !realCategories.some((category) => category.id === selectedCategoryFilter)) {
       selectedCategoryFilter = 'all';
@@ -3430,7 +3468,7 @@
 
   const restoreStaticCategories = () => {
     if (categoryList && staticCategoryMarkup) categoryList.innerHTML = staticCategoryMarkup;
-    if (categoryStatus) categoryStatus.textContent = 'Static shell';
+    if (categoryStatus) categoryStatus.textContent = 'Sign in to manage categories.';
   };
 
   const renderProductEmptyState = (title, message) => {
@@ -3567,7 +3605,7 @@
 
   const renderCategories = (categories) => {
     latestCategories = categories;
-    const realCategories = getRealMenuCategories(categories);
+    const realCategories = getOrderedMenuCategories(categories);
     populateDraftCategorySelect(realCategories);
     populateDisplayOrderCategorySelect(realCategories);
     renderProductFilters(realCategories);
@@ -3584,13 +3622,69 @@
     }
 
     realCategories.forEach((category, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = index === 0 ? 'category-item is-selected' : 'category-item';
-      button.textContent = category.name;
-      button.dataset.categoryId = category.id;
-      categoryList.appendChild(button);
+      const row = document.createElement('div');
+      row.className = 'category-management-row';
+      row.dataset.categoryId = category.id;
+
+      const orderControls = document.createElement('div');
+      orderControls.className = 'category-order-controls';
+
+      const makeMoveButton = (direction, isBoundary) => {
+        const button = document.createElement('button');
+        const directionLabel = direction === 'up' ? 'up' : 'down';
+        button.type = 'button';
+        button.className = 'category-move-button';
+        button.dataset.categoryAction = direction;
+        button.dataset.categoryId = category.id;
+        button.dataset.categoryBoundary = isBoundary ? 'true' : 'false';
+        button.textContent = direction === 'up' ? '\u2191' : '\u2193';
+        button.setAttribute('aria-label', 'Move ' + category.name + ' ' + directionLabel);
+        button.title = 'Move ' + category.name + ' ' + directionLabel;
+        return button;
+      };
+
+      orderControls.append(
+        makeMoveButton('up', index === 0),
+        makeMoveButton('down', index === realCategories.length - 1)
+      );
+
+      const identity = document.createElement('div');
+      identity.className = 'category-management-identity';
+      const name = document.createElement('strong');
+      name.className = 'category-management-name';
+      name.textContent = category.name;
+      const status = document.createElement('span');
+      status.className = category.is_active === false
+        ? 'category-state-badge is-hidden'
+        : 'category-state-badge is-active';
+      status.textContent = category.is_active === false ? 'Hidden' : 'Active';
+      identity.append(name, status);
+
+      const actions = document.createElement('div');
+      actions.className = 'category-management-actions';
+
+      const makeActionButton = (label, action, extraClass = '') => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'category-management-action' + (extraClass ? ' ' + extraClass : '');
+        button.dataset.categoryAction = action;
+        button.dataset.categoryId = category.id;
+        button.textContent = label;
+        button.setAttribute('aria-label', label + ' ' + category.name);
+        return button;
+      };
+
+      actions.append(
+        makeActionButton(category.is_active === false ? 'Show' : 'Hide', 'visibility'),
+        makeActionButton('Rename', 'rename'),
+        makeActionButton('Delete', 'delete', 'is-danger')
+      );
+
+      row.append(orderControls, identity, actions);
+      categoryList.appendChild(row);
     });
+
+    syncCategoryManagementActionState();
   };
 
   const renderOptionEmptyState = (container, title, message, titleLevel = 'h3') => {
@@ -4604,7 +4698,8 @@
     const { data, error } = await client
       .from('categories')
       .select('id,name,sort_order,is_active')
-      .order('sort_order', { ascending: true });
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
 
     if (error) {
       latestCategories = [];
@@ -4612,12 +4707,13 @@
       resetProductPreview();
       resetDraftProductForm();
       setStatus('Unable to load categories. ' + error.message);
-      return;
+      return false;
     }
 
     renderCategories(data || []);
-    if (categoryStatus) categoryStatus.textContent = 'Supabase read-only';
+    if (categoryStatus) categoryStatus.textContent = 'Categories loaded.';
     setStatus('Connected as owner. Categories loaded.');
+    return true;
   };
 
   const createInlineCategory = async () => {
@@ -4669,13 +4765,144 @@
     setStatus('Category created and selected.');
   };
 
+  const getMenuCategoryById = (categoryId) => getRealMenuCategories()
+    .find((category) => category.id === categoryId) || null;
+
+  const focusCategoryManagementAction = (categoryId, action) => {
+    if (!categoryList) return;
+    const buttons = Array.from(categoryList.querySelectorAll('[data-category-action]'));
+    const preferredTarget = buttons
+      .find((button) => button.dataset.categoryId === categoryId && button.dataset.categoryAction === action);
+    const sameRowFallback = buttons
+      .find((button) => button.dataset.categoryId === categoryId && !button.disabled);
+    const target = preferredTarget && !preferredTarget.disabled
+      ? preferredTarget
+      : sameRowFallback || buttons.find((button) => !button.disabled);
+    if (target && typeof target.focus === 'function') {
+      target.focus();
+      return;
+    }
+    const managementToggle = document.querySelector('[data-collapsible-target="category-management-content"]');
+    if (managementToggle && typeof managementToggle.focus === 'function') managementToggle.focus();
+  };
+
+  const setCategoryLifecycleSaving = (isSaving) => {
+    categoryLifecycleSaving = isSaving;
+    updateCategoryActionButtons();
+  };
+
+  const moveManagedCategory = async (categoryId, direction) => {
+    if (!isOwnerSignedIn || isCategoryManagementBusy()) return;
+    const category = getMenuCategoryById(categoryId);
+    if (!category || !['up', 'down'].includes(direction)) {
+      setCategoryManagementStatus('Refresh categories and try that move again.');
+      return;
+    }
+
+    setCategoryLifecycleSaving(true);
+    setCategoryManagementStatus('Moving ' + category.name + ' ' + direction + '...');
+
+    const { data, error } = await client.rpc('menu_manager_move_category', {
+      p_category_id: categoryId,
+      p_direction: direction,
+    });
+
+    if (error) {
+      setCategoryLifecycleSaving(false);
+      setCategoryManagementStatus('Unable to move ' + category.name + '. ' + error.message);
+      focusCategoryManagementAction(categoryId, direction);
+      return;
+    }
+
+    const refreshed = await loadCategories();
+    setCategoryLifecycleSaving(false);
+    if (!refreshed) {
+      setCategoryManagementStatus(category.name + ' moved, but the category list could not be refreshed. Reload Menu Manager.');
+      return;
+    }
+
+    const wasNoOp = data && data.operation === 'no_op';
+    setCategoryManagementStatus(wasNoOp
+      ? category.name + ' is already at the ' + (direction === 'up' ? 'top' : 'bottom') + ' of the category list.'
+      : category.name + ' moved ' + direction + '.');
+    focusCategoryManagementAction(categoryId, direction);
+  };
+
+  const toggleManagedCategoryVisibility = async (categoryId) => {
+    if (!isOwnerSignedIn || isCategoryManagementBusy()) return;
+    const category = getMenuCategoryById(categoryId);
+    if (!category) {
+      setCategoryManagementStatus('Refresh categories and try that action again.');
+      return;
+    }
+
+    const shouldShow = category.is_active === false;
+    if (!shouldShow) {
+      const confirmed = window.confirm(
+        'Hide "' + category.name + '"?\n\nThis hides the category and its products from the public menu without deleting them.'
+      );
+      if (!confirmed) {
+        setCategoryManagementStatus('Category hide cancelled.');
+        focusCategoryManagementAction(categoryId, 'visibility');
+        return;
+      }
+    }
+
+    setCategoryLifecycleSaving(true);
+    setCategoryManagementStatus((shouldShow ? 'Showing ' : 'Hiding ') + category.name + '...');
+
+    const { error } = await client
+      .from('categories')
+      .update({ is_active: shouldShow })
+      .eq('id', categoryId)
+      .select('id')
+      .single();
+
+    if (error) {
+      setCategoryLifecycleSaving(false);
+      setCategoryManagementStatus('Unable to ' + (shouldShow ? 'show ' : 'hide ') + category.name + '. ' + error.message);
+      focusCategoryManagementAction(categoryId, 'visibility');
+      return;
+    }
+
+    const refreshed = await loadCategories();
+    setCategoryLifecycleSaving(false);
+    if (!refreshed) {
+      setCategoryManagementStatus(category.name + ' was updated, but the category list could not be refreshed. Reload Menu Manager.');
+      return;
+    }
+
+    renderProducts(latestProducts);
+    setCategoryManagementStatus(category.name + (shouldShow ? ' is visible on the public menu.' : ' is hidden from the public menu.'));
+    focusCategoryManagementAction(categoryId, 'visibility');
+  };
+
+  const beginManagedCategoryRename = async (categoryId) => {
+    if (!isOwnerSignedIn || isCategoryManagementBusy()) return;
+    const category = getMenuCategoryById(categoryId);
+    if (!category) {
+      setCategoryManagementStatus('Refresh categories and try renaming again.');
+      return;
+    }
+
+    selectedCategoryFilter = categoryId;
+    selectedSectionFilter = 'all';
+    if (productFilterList) productFilterList.value = categoryId;
+    hideInlineSectionCreate();
+    hideInlineSectionRename();
+    await loadCategorySections(categoryId);
+    renderProducts(latestProducts);
+    showInlineCategoryRename();
+    setCategoryManagementStatus('Renaming ' + category.name + '.');
+  };
+
   const renameSelectedCategory = async () => {
     if (!isOwnerSignedIn || inlineCategoryRenameSaving) return;
 
     const categoryId = getSelectedProductListCategoryId();
     const name = inlineCategoryRenameInput ? inlineCategoryRenameInput.value.trim() : '';
     if (!categoryId) {
-      setStatus('Choose a category filter before renaming.');
+      setCategoryManagementStatus('Choose a category before renaming.');
       return;
     }
     if (!name) {
@@ -4704,7 +4931,8 @@
       setInlineCategoryRenameDisabled(false);
       updateCategoryActionButtons();
       const duplicateHint = error.code === '23505' ? ' A category with this name may already exist.' : '';
-      setStatus('Unable to rename category.' + duplicateHint + ' ' + error.message);
+      setCategoryManagementStatus('Unable to rename category.' + duplicateHint + ' ' + error.message);
+      if (inlineCategoryRenameInput) inlineCategoryRenameInput.focus();
       return;
     }
 
@@ -4714,60 +4942,60 @@
     inlineCategoryRenameSaving = false;
     hideInlineCategoryRename();
     renderProducts(latestProducts);
-    setStatus('Category renamed.');
+    setCategoryManagementStatus('Category renamed to ' + name + '.');
+    focusCategoryManagementAction(categoryId, 'rename');
   };
 
-  const deleteSelectedCategoryIfUnused = async () => {
-    if (!isOwnerSignedIn || inlineCategoryDeleteSaving) return;
+  const getCategoryDeleteErrorMessage = (error, categoryName) => {
+    const errorDetail = String(error && error.details || '');
+    if (errorDetail.includes('MM_CATEGORY_NOT_EMPTY')) {
+      return error && error.message
+        ? error.message
+        : 'This category still contains products. Move, archive, or remove them before deleting the category.';
+    }
+    if (errorDetail.includes('MM_CATEGORY_NOT_FOUND')) {
+      return 'That category no longer exists. Refresh Menu Manager.';
+    }
+    if (errorDetail.includes('MM_CATEGORY_AUTH_REQUIRED') || errorDetail.includes('MM_CATEGORY_ADMIN_REQUIRED')) {
+      return 'Owner access is required to delete categories.';
+    }
+    return 'Unable to delete ' + categoryName + '. ' + (error && error.message ? error.message : 'Try again.');
+  };
 
-    const categoryId = getSelectedProductListCategoryId();
-    const category = getSelectedProductListCategory();
+  const deleteSelectedCategoryIfUnused = async (requestedCategoryId = '') => {
+    if (!isOwnerSignedIn || isCategoryManagementBusy()) return;
+
+    const categoryId = typeof requestedCategoryId === 'string' && requestedCategoryId
+      ? requestedCategoryId
+      : getSelectedProductListCategoryId();
+    const category = getMenuCategoryById(categoryId);
     if (!categoryId || !category) {
-      setStatus('Choose a category filter before deleting.');
+      setCategoryManagementStatus('Choose a category before deleting.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Permanently delete "' + category.name + '"?\n\nThis removes the empty category permanently. This action cannot be undone.'
+    );
+    if (!confirmed) {
+      setCategoryManagementStatus('Category deletion cancelled.');
+      focusCategoryManagementAction(categoryId, 'delete');
       return;
     }
 
     inlineCategoryDeleteSaving = true;
     updateCategoryActionButtons();
-    setStatus('Checking category products...');
+    setCategoryManagementStatus('Deleting ' + category.name + '...');
 
-    const { count, error: countError } = await client
-      .from('products')
-      .select('id', { count: 'exact', head: true })
-      .eq('category_id', categoryId);
-
-    if (countError) {
-      inlineCategoryDeleteSaving = false;
-      updateCategoryActionButtons();
-      setStatus('Unable to check category products. ' + countError.message);
-      return;
-    }
-
-    if ((count || 0) > 0) {
-      inlineCategoryDeleteSaving = false;
-      updateCategoryActionButtons();
-      setStatus('This category has products. Move or delete those products before deleting the category.');
-      return;
-    }
-
-    const confirmed = window.confirm('Delete this category permanently? This cannot be undone.');
-    if (!confirmed) {
-      inlineCategoryDeleteSaving = false;
-      updateCategoryActionButtons();
-      setStatus('Category deletion cancelled.');
-      return;
-    }
-
-    setStatus('Deleting category...');
-    const { error } = await client
-      .from('categories')
-      .delete()
-      .eq('id', categoryId);
+    const { error } = await client.rpc('menu_manager_delete_empty_category', {
+      p_category_id: categoryId,
+    });
 
     if (error) {
       inlineCategoryDeleteSaving = false;
       updateCategoryActionButtons();
-      setStatus('Unable to delete category. ' + error.message);
+      setCategoryManagementStatus(getCategoryDeleteErrorMessage(error, category.name));
+      focusCategoryManagementAction(categoryId, 'delete');
       return;
     }
 
@@ -4778,11 +5006,16 @@
     hideInlineCategoryCreate(false);
     hideInlineCategoryRename();
     renderProductSections([]);
-    await loadCategories();
+    const refreshed = await loadCategories();
     await loadProducts();
     inlineCategoryDeleteSaving = false;
     updateCategoryActionButtons();
-    setStatus('Category deleted.');
+    if (!refreshed) {
+      setCategoryManagementStatus(category.name + ' was deleted, but the category list could not be refreshed. Reload Menu Manager.');
+      return;
+    }
+    setCategoryManagementStatus(category.name + ' deleted permanently.');
+    focusCategoryManagementAction('', '');
   };
 
   const createInlineSection = async () => {
@@ -5089,6 +5322,51 @@
     };
   };
 
+  const normalizeProductSizeState = (size, index) => ({
+    id: size.id || null,
+    label: String(size.label || '').trim(),
+    price: Number(size.price),
+    cost: size.cost === null || size.cost === '' || typeof size.cost === 'undefined' ? null : Number(size.cost),
+    sort_order: Number.isFinite(Number(size.sort_order)) ? Number(size.sort_order) : index,
+  });
+
+  const getProductSizeReconciliationErrorMessage = (error) => {
+    const detail = String(error && error.details ? error.details : '').trim();
+    const message = String(error && error.message ? error.message : '').trim();
+
+    if (detail === 'MM_SIZE_RECIPE_PROTECTED') {
+      const labelMatch = message.match(/size "([^"]+)"/i);
+      const label = labelMatch ? labelMatch[1] : '';
+      return label
+        ? label + ' is used by a recipe and cannot be removed yet.'
+        : 'This size is used by a recipe and cannot be removed yet.';
+    }
+
+    if (detail === 'MM_SIZE_AUTH_REQUIRED') return 'Sign in again before saving variants.';
+    if (detail === 'MM_SIZE_ADMIN_REQUIRED') return 'Owner access is required to save variants.';
+    if (detail === 'MM_SIZE_PRODUCT_NOT_FOUND' || detail === 'MM_SIZE_ID_NOT_FOUND') {
+      return 'A saved variant changed after this editor was opened. Refresh products and try again.';
+    }
+    if (detail === 'MM_SIZE_ID_INVALID' || detail === 'MM_SIZE_ID_DUPLICATE') {
+      return 'A saved variant could not be matched safely. Refresh products and try again.';
+    }
+    if (detail === 'MM_SIZE_LABEL_DUPLICATE') return 'Each variant label must be unique.';
+    if (detail === 'MM_SIZE_EXISTING_LABEL_AMBIGUOUS' || detail === 'MM_SIZE_NEW_LABEL_CONFLICT') {
+      return 'A variant with that label already exists. Refresh products before saving again.';
+    }
+    if (detail === 'MM_SIZE_AT_LEAST_ONE_REQUIRED') return 'Keep at least one variant.';
+    if (detail === 'MM_SIZE_LIMIT_EXCEEDED') return 'Use no more than 50 variants.';
+    if (detail === 'MM_SIZE_LABEL_REQUIRED' || detail === 'MM_SIZE_LABEL_TOO_LONG') {
+      return 'Every variant needs a label of 120 characters or fewer.';
+    }
+    if (detail === 'MM_SIZE_PRICE_INVALID') return 'Every variant needs a valid price of 0 or greater.';
+    if (detail === 'MM_SIZE_COST_INVALID') return 'Variant cost must be empty or 0 or greater.';
+    if (detail === 'MM_SIZE_SORT_ORDER_INVALID') return 'Variant order could not be saved safely.';
+
+    return 'Variant changes could not be saved. Existing variants were left unchanged.'
+      + (message ? ' ' + message : '');
+  };
+
   const saveDraftProduct = async (eventOrOptions = {}) => {
     const options = eventOrOptions && typeof eventOrOptions.preventDefault === 'function'
       ? {}
@@ -5096,6 +5374,8 @@
     if (eventOrOptions && typeof eventOrOptions.preventDefault === 'function') {
       eventOrOptions.preventDefault();
     }
+
+    if (productSaveInProgress) return;
 
     if (!getRealMenuCategories().length) {
       setStatus('Load categories before saving this item.');
@@ -5128,18 +5408,13 @@
         setStatus('A variant could not be matched to this item safely. Refresh products and try again.');
         return;
       }
-
-      const submittedSizeIds = new Set(draft.sizeRows.map((size) => size.id).filter(Boolean));
-      const removedSavedSize = (existingProduct.product_sizes || []).find((size) => size.id && !submittedSizeIds.has(size.id));
-      if (removedSavedSize) {
-        setStatus('Removing saved variants is temporarily disabled. Restore the removed variant before saving this item.');
-        return;
-      }
     }
 
     const finalPublishedState = typeof options.publishState === 'boolean'
       ? options.publishState
       : (isEditing ? existingProduct.is_published : false);
+    const publishAfterSizeSave = finalPublishedState && (!isEditing || !existingProduct.is_published);
+    productSaveInProgress = true;
     if (createDraftButton) createDraftButton.disabled = true;
     if (editorPublishActionButton) editorPublishActionButton.disabled = true;
     if (undoProductChangesButton) undoProductChangesButton.disabled = true;
@@ -5160,7 +5435,7 @@
       is_sold_out: isEditing ? existingProduct.is_sold_out : draft.is_sold_out,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
-      is_published: finalPublishedState,
+      is_published: publishAfterSizeSave ? false : finalPublishedState,
       variant_group_name: draft.variant_group_name,
       sort_order: isEditing && existingProduct ? Number(existingProduct.sort_order || 0) : 0,
     };
@@ -5174,6 +5449,7 @@
         .eq('id', editingProductId);
 
       if (productError) {
+        productSaveInProgress = false;
         setStatus('Unable to update item. ' + productError.message);
         if (createDraftButton) createDraftButton.disabled = false;
         if (editorPublishActionButton) editorPublishActionButton.disabled = false;
@@ -5190,88 +5466,72 @@
         .single();
 
       if (productError) {
+        productSaveInProgress = false;
         setStatus('Unable to save item. ' + productError.message);
         if (createDraftButton) createDraftButton.disabled = false;
         if (editorPublishActionButton) editorPublishActionButton.disabled = false;
         updateUndoChangesAction();
+        if (cancelEditButton) cancelEditButton.disabled = false;
         return;
       }
 
       productId = product.id;
     }
 
+    const savedSizeState = isEditing && Array.isArray(existingProduct.product_sizes)
+      ? existingProduct.product_sizes
+          .map(normalizeProductSizeState)
+          .sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label) || String(a.id).localeCompare(String(b.id)))
+      : [];
+    const submittedSizeState = draft.sizeRows.map(normalizeProductSizeState);
+    const sizesChanged = !isEditing || JSON.stringify(savedSizeState) !== JSON.stringify(submittedSizeState);
     let sizeError = null;
-    if (isEditing) {
-      const savedSizes = Array.isArray(existingProduct.product_sizes) ? existingProduct.product_sizes : [];
-      const normalizeSize = (size, index) => ({
-        id: size.id || null,
-        label: String(size.label || '').trim(),
-        price: Number(size.price),
-        cost: size.cost === null || size.cost === '' || typeof size.cost === 'undefined' ? null : Number(size.cost),
-        sort_order: Number.isFinite(Number(size.sort_order)) ? Number(size.sort_order) : index,
+
+    if (sizesChanged) {
+      const result = await client.rpc('menu_manager_reconcile_product_sizes', {
+        p_product_id: productId,
+        p_sizes: submittedSizeState,
       });
-      const savedSizeState = savedSizes
-        .map(normalizeSize)
-        .sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label) || String(a.id).localeCompare(String(b.id)));
-      const submittedSizeState = draft.sizeRows.map(normalizeSize);
-      const savedSizeById = new Map(savedSizeState.map((size) => [size.id, size]));
-      const changedSavedSizes = submittedSizeState.filter((size) => (
-        size.id && JSON.stringify(size) !== JSON.stringify(savedSizeById.get(size.id))
-      ));
-      const newSizes = submittedSizeState.filter((size) => !size.id);
-
-      for (const variant of changedSavedSizes) {
-        const { error } = await client
-          .from('product_sizes')
-          .update({
-            label: variant.label,
-            price: variant.price,
-            cost: variant.cost,
-            sort_order: variant.sort_order,
-          })
-          .eq('id', variant.id)
-          .eq('product_id', productId);
-        if (error) {
-          sizeError = error;
-          break;
-        }
-      }
-
-      if (!sizeError && newSizes.length) {
-        const { error } = await client
-          .from('product_sizes')
-          .insert(newSizes.map((variant) => ({
-            product_id: productId,
-            label: variant.label,
-            price: variant.price,
-            cost: variant.cost,
-            sort_order: variant.sort_order,
-          })));
-        sizeError = error;
-      }
-    } else {
-      const sizePayload = draft.sizeRows.map((variant) => ({
-        product_id: productId,
-        label: variant.label,
-        price: variant.price,
-        cost: variant.cost,
-        sort_order: variant.sort_order,
-      }));
-      const { error } = await client
-        .from('product_sizes')
-        .insert(sizePayload);
-      sizeError = error;
+      sizeError = result.error;
     }
 
     if (sizeError) {
-      await loadProducts();
-      if (isEditing && productId) await loadProductIntoForm(productId);
-      setStatus((isEditing ? 'Item details were saved, but the variant update did not fully complete. Existing variant IDs were preserved. ' : 'Item row was created, but variants could not be saved. ') + sizeError.message);
+      productSaveInProgress = false;
+      if (!isEditing && productId) {
+        setEditMode({
+          id: productId,
+          ...productPayload,
+          product_sizes: [],
+        });
+      }
+      const savePrefix = publishAfterSizeSave
+        ? 'Item details were saved as a draft and the item was not published. '
+        : 'Item details were saved. ';
+      setStatus(savePrefix + getProductSizeReconciliationErrorMessage(sizeError));
       if (createDraftButton) createDraftButton.disabled = false;
       if (editorPublishActionButton) editorPublishActionButton.disabled = false;
       updateUndoChangesAction();
-      if (cancelEditButton) cancelEditButton.disabled = !isEditing;
+      if (cancelEditButton) cancelEditButton.disabled = false;
       return;
+    }
+
+    if (publishAfterSizeSave) {
+      const { error: publishError } = await client
+        .from('products')
+        .update({ is_published: true })
+        .eq('id', productId);
+
+      if (publishError) {
+        productSaveInProgress = false;
+        await loadProducts();
+        if (productId) await loadProductIntoForm(productId);
+        setStatus('Item and variants were saved as a draft, but the item could not be published. ' + publishError.message);
+        if (createDraftButton) createDraftButton.disabled = false;
+        if (editorPublishActionButton) editorPublishActionButton.disabled = false;
+        updateUndoChangesAction();
+        if (cancelEditButton) cancelEditButton.disabled = false;
+        return;
+      }
     }
 
     await loadProducts();
@@ -5279,11 +5539,13 @@
       await loadProductIntoForm(productId);
       draftFormSavedLabelActive = true;
       markDraftFormClean();
+      productSaveInProgress = false;
       syncEditorSaveLabels();
     }
     setStatus(finalPublishedState
       ? (isEditing ? 'Live item updated.' : 'Item saved and published.')
       : (isEditing ? 'Draft item saved.' : 'Draft item saved.'));
+    productSaveInProgress = false;
   };
 
   const updateProductPublishedState = async (productId, shouldPublish, options = {}) => {
@@ -5643,6 +5905,31 @@
     cancelInlineDraftSectionButton.addEventListener('click', () => {
       hideInlineDraftSectionCreate(true);
       setStatus('Section creation cancelled.');
+    });
+  }
+
+  if (categoryList) {
+    categoryList.addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-category-action]');
+      if (!button || button.disabled || !categoryList.contains(button)) return;
+      const categoryId = button.dataset.categoryId || '';
+      const action = button.dataset.categoryAction || '';
+
+      if (action === 'up' || action === 'down') {
+        await moveManagedCategory(categoryId, action);
+        return;
+      }
+      if (action === 'visibility') {
+        await toggleManagedCategoryVisibility(categoryId);
+        return;
+      }
+      if (action === 'rename') {
+        await beginManagedCategoryRename(categoryId);
+        return;
+      }
+      if (action === 'delete') {
+        await deleteSelectedCategoryIfUnused(categoryId);
+      }
     });
   }
 

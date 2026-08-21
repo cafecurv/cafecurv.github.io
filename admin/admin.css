@@ -4380,6 +4380,165 @@ body.more-drawer-open {
   cursor: not-allowed;
 }
 
+.category-management {
+  margin: 1rem 0;
+  border-top: 1px solid rgba(189, 196, 212, 0.16);
+  border-bottom: 1px solid rgba(189, 196, 212, 0.16);
+}
+
+.category-management-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+}
+
+.category-management-heading h3,
+.category-management-heading p,
+.category-management-status {
+  margin: 0;
+}
+
+.category-management-heading h3 {
+  margin-top: 0.15rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.category-management-toggle {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.category-management-content {
+  padding: 0 0 1rem;
+}
+
+.category-management-content[hidden] {
+  display: none;
+}
+
+.category-management-list {
+  display: grid;
+  border-top: 1px solid rgba(189, 196, 212, 0.14);
+}
+
+.category-management-list .empty-message {
+  margin: 0;
+  padding: 1rem 0;
+}
+
+.category-management-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(189, 196, 212, 0.12);
+}
+
+.category-order-controls,
+.category-management-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.category-move-button,
+.category-management-action {
+  min-height: 44px;
+  border: 1px solid rgba(200, 184, 154, 0.28);
+  border-radius: 8px;
+  background: rgba(200, 184, 154, 0.08);
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.category-move-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 1.05rem;
+}
+
+.category-management-action {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.76rem;
+}
+
+.category-move-button:hover,
+.category-move-button:focus-visible,
+.category-management-action:hover,
+.category-management-action:focus-visible {
+  border-color: rgba(200, 184, 154, 0.58);
+  background: rgba(200, 184, 154, 0.14);
+}
+
+.category-management-action.is-danger {
+  border-color: rgba(207, 132, 119, 0.3);
+  background: rgba(143, 52, 44, 0.12);
+  color: #E5B8AF;
+}
+
+.category-move-button:disabled,
+.category-management-action:disabled {
+  opacity: 0.44;
+  cursor: not-allowed;
+}
+
+.category-management-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.category-management-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.category-state-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(200, 184, 154, 0.28);
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.category-state-badge.is-hidden {
+  border-color: rgba(189, 196, 212, 0.18);
+  color: var(--slate);
+}
+
+.category-management-rename {
+  margin-top: 0.85rem;
+}
+
+.category-management-status {
+  padding-top: 0.75rem;
+  color: var(--slate);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .inline-category-create {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -4541,6 +4700,37 @@ body.more-drawer-open {
 @media (max-width: 600px) {
   .draft-product-form {
     grid-template-columns: 1fr;
+  }
+
+  .category-management-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-management-toggle {
+    width: 100%;
+  }
+
+  .category-management-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .category-management-identity {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .category-management-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .category-management-action {
+    min-width: 0;
+    padding-inline: 0.35rem;
   }
 
   .category-select-row {
@@ -6479,6 +6669,12 @@ body.more-drawer-open {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
 }
 
+:root[data-admin-theme="light"] .menu-manager-main .category-management,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-list,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-row {
+  border-color: rgba(87, 74, 55, 0.16);
+}
+
 :root[data-admin-theme="light"] .menu-manager-main .product-preview-card.is-published {
   background: linear-gradient(135deg, rgba(249, 243, 234, 0.98), rgba(255, 253, 247, 0.96));
   border-color: rgba(143, 118, 85, 0.34);
@@ -6491,6 +6687,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .product-card-title,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-name,
 :root[data-admin-theme="light"] .menu-manager-main .option-group-name,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-name,
 :root[data-admin-theme="light"] .menu-manager-main .product-option-meta dd,
 :root[data-admin-theme="light"] .menu-manager-main .option-detail-list dd {
   color: #1C2235;
@@ -6507,6 +6704,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .product-bulk-actions span,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-head p,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-status,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-status,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-empty p,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-meta,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-sort,
@@ -6594,6 +6792,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .product-badge.is-available,
 :root[data-admin-theme="light"] .menu-manager-main .product-badge.is-special,
 :root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-active,
+:root[data-admin-theme="light"] .menu-manager-main .category-state-badge.is-active,
 :root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-type {
   background: rgba(143, 118, 85, 0.12);
   border-color: rgba(143, 118, 85, 0.36);
@@ -6602,6 +6801,7 @@ body.more-drawer-open {
 
 :root[data-admin-theme="light"] .menu-manager-main .product-badge.is-muted,
 :root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-inactive,
+:root[data-admin-theme="light"] .menu-manager-main .category-state-badge.is-hidden,
 :root[data-admin-theme="light"] .menu-manager-main .option-mini-button.is-muted {
   background: #ECE3D4;
   border-color: rgba(143, 118, 85, 0.16);
@@ -6611,6 +6811,8 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear,
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle,
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button,
+:root[data-admin-theme="light"] .menu-manager-main .category-move-button,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-action,
 :root[data-admin-theme="light"] .menu-manager-main .variant-remove-button,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-move-button,
@@ -6627,6 +6829,10 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle:focus-visible,
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button:hover,
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .category-move-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .category-move-button:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-action:hover,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-action:focus-visible,
 :root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:hover,
 :root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:focus-visible,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button:hover,
@@ -6645,6 +6851,7 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button.is-danger,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-action.is-danger,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button.is-danger,
 :root[data-admin-theme="light"] .menu-manager-main .product-option-detach-button {
   background: rgba(174, 83, 68, 0.08);
@@ -6653,6 +6860,8 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .category-move-button:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .category-management-action:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button:disabled,
