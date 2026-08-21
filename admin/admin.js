@@ -6516,6 +6516,7 @@
   let searchIndex = [];
   let searchIndexFetchedAt = 0;
   let searchIndexLoading = false;
+  let searchIndexLoadPromise = null;
   let searchIndexGeneration = 0;
   let searchQuery = '';
   let searchResults = [];
@@ -7030,7 +7031,7 @@
   const getOrderSearchRank = (entry, query) => {
     const textQuery = normalizeSearchText(query);
     const orderQuery = normalizeSearchOrderNumber(query);
-    const digitQuery = normalizeSearchDigits(query);
+    const digitQuery = /[a-z]/i.test(textQuery) ? '' : normalizeSearchDigits(query);
     const aliases = getSearchAliasValues(query);
     if (orderQuery && entry.normalizedOrderNumber === orderQuery) return 1;
     if (digitQuery && entry.orderNumberDigits && entry.orderNumberDigits === digitQuery) return 1;
@@ -7051,8 +7052,9 @@
   const getMaskedPhone = (value) => {
     const digits = normalizeSearchDigits(value);
     if (!digits) return 'No phone';
+    if (digits.length <= 7) return digits.length > 2 ? 'Phone ending ' + digits.slice(-2) : 'Phone on file';
     const lastDigits = digits.slice(-3);
-    return digits.slice(0, 4) + ' .... ' + lastDigits;
+    return digits.slice(0, 4) + ' \u00B7\u00B7\u00B7\u00B7 ' + lastDigits;
   };
 
   const getOrderSearchDateLabel = (value) => {
@@ -7071,7 +7073,7 @@
     if (getFulfillmentType(order) !== 'delivery') return '';
     const address = String(order && order.delivery_address || '').trim();
     if (!address) return '';
-    return address.length > 64 ? address.slice(0, 61).trimEnd() + '...' : address;
+    return address.length > 64 ? address.slice(0, 61).trimEnd() + '\u2026' : address;
   };
 
   const clearSearchedOrderHighlight = () => {
@@ -7107,6 +7109,7 @@
     searchIndex = [];
     searchIndexFetchedAt = 0;
     searchIndexLoading = false;
+    searchIndexLoadPromise = null;
     searchQuery = '';
     searchResults = [];
     searchResultsOpen = false;
@@ -7121,42 +7124,50 @@
   };
 
   const isSearchIndexFresh = () => {
-    return searchIndex.length > 0
-      && searchIndexFetchedAt > 0
+    return searchIndexFetchedAt > 0
       && Date.now() - searchIndexFetchedAt < ORDER_SEARCH_INDEX_MAX_AGE_MS;
   };
 
   const loadOrderSearchIndex = async ({ force = false } = {}) => {
     if (!isOwnerSignedIn) return false;
     if (!force && isSearchIndexFresh()) return true;
-    if (searchIndexLoading) return false;
+    if (searchIndexLoadPromise) return searchIndexLoadPromise;
 
     const generation = ++searchIndexGeneration;
     searchIndexLoading = true;
     searchErrorMessage = '';
     renderOrderSearchResults();
 
-    const { data, error } = await client
-      .from('orders')
-      .select(ORDER_SEARCH_SELECT)
-      .order('created_at', { ascending: false })
-      .limit(ORDER_SEARCH_INDEX_LIMIT);
+    const loadPromise = (async () => {
+      const { data, error } = await client
+        .from('orders')
+        .select(ORDER_SEARCH_SELECT)
+        .order('created_at', { ascending: false })
+        .limit(ORDER_SEARCH_INDEX_LIMIT);
 
-    if (generation !== searchIndexGeneration) return false;
+      if (generation !== searchIndexGeneration) return false;
 
-    searchIndexLoading = false;
-    if (error) {
-      searchErrorMessage = "Couldn't load order search. Check your connection and try again.";
-      searchIndex = [];
-      searchIndexFetchedAt = 0;
+      searchIndexLoading = false;
+      if (error) {
+        searchErrorMessage = "Couldn't load order search. Check your connection and try again.";
+        searchIndex = [];
+        searchIndexFetchedAt = 0;
+        renderOrderSearchResults();
+        return false;
+      }
+
+      searchIndex = (data || []).map(normalizeSearchOrder);
+      searchIndexFetchedAt = Date.now();
       renderOrderSearchResults();
-      return false;
-    }
+      return true;
+    })();
 
-    searchIndex = (data || []).map(normalizeSearchOrder);
-    searchIndexFetchedAt = Date.now();
-    renderOrderSearchResults();
-    return true;
+    searchIndexLoadPromise = loadPromise;
+    try {
+      return await loadPromise;
+    } finally {
+      if (searchIndexLoadPromise === loadPromise) searchIndexLoadPromise = null;
+    }
   };
 
   const updateOrderSearchResults = async ({ forceIndex = false } = {}) => {
@@ -8469,13 +8480,19 @@
     return data || null;
   };
 
-  const integrateExactOrderIntoCurrentList = async (order) => {
+  const integrateExactOrderIntoCurrentList = async (order, routeGeneration, loadGeneration) => {
     const routeFilter = getSearchOrderFilterForStatus(order && order.status);
     if (!order || !order.id || (!doesOrderMatchFilter(order, activeFilter) && !(activeFilter === 'active' && routeFilter === 'active'))) return false;
+    const itemLoadResult = await loadItemCounts([order]);
+    if (
+      routeGeneration !== orderRouteGeneration
+      || loadGeneration !== orderLoadGeneration
+      || !isOwnerSignedIn
+    ) return false;
+    if (!doesOrderMatchFilter(order, activeFilter) && !(activeFilter === 'active' && routeFilter === 'active')) return false;
+
     latestOrders = latestOrders.filter(existingOrder => existingOrder.id !== order.id);
     latestOrders.unshift(order);
-
-    const itemLoadResult = await loadItemCounts([order]);
     const nextItemCountByOrderId = new Map(itemCountByOrderId);
     const nextOrderItemsByOrderId = new Map(orderItemsByOrderId);
     nextItemCountByOrderId.set(order.id, itemLoadResult.itemCounts.get(order.id) || 0);
@@ -8527,8 +8544,13 @@
         if (allowReroute && exactFilter !== activeFilter) {
           return routeToOrder(exactOrder, { highlight, clearNotificationKey, allowReroute: false });
         }
-        const integrated = await integrateExactOrderIntoCurrentList(exactOrder);
-        if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+        const loadGeneration = orderLoadGeneration;
+        const integrated = await integrateExactOrderIntoCurrentList(exactOrder, routeGeneration, loadGeneration);
+        if (
+          routeGeneration !== orderRouteGeneration
+          || loadGeneration !== orderLoadGeneration
+          || !isOwnerSignedIn
+        ) return false;
         if (!integrated) {
           setStatus('This order is no longer available in the selected queue.');
           return false;
@@ -8711,7 +8733,6 @@
   if (orderSearchInput) {
     orderSearchInput.addEventListener('focus', () => {
       if (!isOwnerSignedIn) return;
-      if (!isSearchIndexFresh()) loadOrderSearchIndex();
       searchQuery = orderSearchInput.value.trim();
       if (searchQuery.length >= ORDER_SEARCH_MIN_QUERY_LENGTH) updateOrderSearchResults();
     });
