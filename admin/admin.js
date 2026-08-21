@@ -1060,6 +1060,8 @@
   const productFilterBar = document.querySelector('[data-product-filter-bar]');
   const productFilterList = document.querySelector('[data-product-filter-list]');
   const productStatusFilter = document.querySelector('[data-product-status-filter]');
+  const productLifecycleScopeControls = document.querySelector('[data-product-lifecycle-scope-controls]');
+  const productLifecycleScopeButtons = Array.from(document.querySelectorAll('[data-product-lifecycle-scope]'));
   const productListSortSelect = document.querySelector('[data-product-list-sort]');
   const productSearchBar = document.querySelector('[data-product-search-bar]');
   const productSearchInput = document.querySelector('[data-product-search]');
@@ -1104,6 +1106,7 @@
   let selectedCategoryFilter = 'all';
   let selectedSectionFilter = 'all';
   let selectedProductStatusFilter = 'all';
+  let selectedProductLifecycleScope = 'active';
   let selectedProductListSort = 'menu';
   let productSearchQuery = '';
   let productBadgeLabels = [];
@@ -1115,6 +1118,7 @@
   let editorPublishSaving = false;
   let productSaveInProgress = false;
   let bulkPublishSaving = false;
+  let productLifecycleSaving = false;
   let productOptionAttachments = [];
   let availableProductOptionGroups = [];
   let activeProductOptionGroupCount = 0;
@@ -3229,6 +3233,7 @@
   const getDisplayOrderProductsForSelection = () => {
     if (!selectedDisplayOrderCategory || selectedDisplayOrderSection === 'all') return [];
     return sortProductsForDisplayOrder(latestProducts.filter((product) => {
+      if (product.archived_at) return false;
       if (product.category_id !== selectedDisplayOrderCategory) return false;
       if (selectedDisplayOrderSection === '__none__') return !product.category_section_id;
       return product.category_section_id === selectedDisplayOrderSection;
@@ -3492,11 +3497,14 @@
     selectedCategoryFilter = 'all';
     selectedSectionFilter = 'all';
     selectedProductStatusFilter = 'all';
+    selectedProductLifecycleScope = 'active';
     if (productStatus) productStatus.textContent = 'Locked';
     if (productCount) productCount.textContent = 'Sign in to load products.';
     productSearchQuery = '';
     if (productFilterBar) productFilterBar.hidden = true;
     if (productFilterList) productFilterList.innerHTML = '';
+    if (productLifecycleScopeControls) productLifecycleScopeControls.hidden = true;
+    syncProductLifecycleScopeControls();
     renderProductSections([]);
     if (productStatusFilter) productStatusFilter.value = 'all';
     if (productSearchBar) productSearchBar.hidden = true;
@@ -3522,6 +3530,24 @@
     return badge;
   };
 
+  const getProductsForLifecycleScope = (products = latestProducts) => {
+    const sourceProducts = products || [];
+    return sourceProducts.filter((product) => selectedProductLifecycleScope === 'archived'
+      ? Boolean(product.archived_at)
+      : !product.archived_at);
+  };
+
+  const syncProductLifecycleScopeControls = () => {
+    if (productLifecycleScopeControls) productLifecycleScopeControls.hidden = !latestProducts.length;
+    productLifecycleScopeButtons.forEach((button) => {
+      const isActive = button.dataset.productLifecycleScope === selectedProductLifecycleScope;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+      button.disabled = productLifecycleSaving || bulkPublishSaving;
+    });
+    if (productStatusFilter) productStatusFilter.disabled = selectedProductLifecycleScope === 'archived';
+  };
+
   const getProductSearchText = (product) => {
     const variants = Array.isArray(product.product_sizes) ? product.product_sizes : [];
     const section = product.category_section_id
@@ -3537,7 +3563,7 @@
   };
 
   const getFilteredProductsForPreview = (products = latestProducts) => {
-    const sourceProducts = products || [];
+    const sourceProducts = getProductsForLifecycleScope(products);
     const categoryFilteredProducts = selectedCategoryFilter === 'all'
       ? sourceProducts
       : sourceProducts.filter((product) => product.category_id === selectedCategoryFilter);
@@ -3563,11 +3589,12 @@
 
   const updateBulkPublishControls = () => {
     const count = latestVisibleProducts.length;
-    if (productBulkActions) productBulkActions.hidden = !latestProducts.length;
+    const archivedScope = selectedProductLifecycleScope === 'archived';
+    if (productBulkActions) productBulkActions.hidden = archivedScope || !getProductsForLifecycleScope().length;
     if (bulkPublishCount) {
       bulkPublishCount.textContent = count === 1 ? '1 filtered product' : count + ' filtered products';
     }
-    const shouldDisable = !isOwnerSignedIn || bulkPublishSaving || count === 0;
+    const shouldDisable = archivedScope || !isOwnerSignedIn || bulkPublishSaving || productLifecycleSaving || count === 0;
     if (bulkPublishFilteredButton) bulkPublishFilteredButton.disabled = shouldDisable;
     if (bulkUnpublishFilteredButton) bulkUnpublishFilteredButton.disabled = shouldDisable;
   };
@@ -4066,8 +4093,10 @@
     if (productStatusFilter) productStatusFilter.value = selectedProductStatusFilter;
     if (productListSortSelect) productListSortSelect.value = selectedProductListSort;
     if (clearProductSearchButton) clearProductSearchButton.disabled = !productSearchQuery;
+    syncProductLifecycleScopeControls();
 
     const query = productSearchQuery.trim().toLowerCase();
+    const scopedProducts = getProductsForLifecycleScope(latestProducts);
     const visibleProducts = getFilteredProductsForPreview(latestProducts);
     latestVisibleProducts = visibleProducts;
     updateBulkPublishControls();
@@ -4079,24 +4108,42 @@
       return;
     }
 
+    if (!scopedProducts.length) {
+      const archivedScope = selectedProductLifecycleScope === 'archived';
+      if (productStatus) productStatus.textContent = archivedScope ? 'Archived product list' : 'Active product list';
+      if (productCount) productCount.textContent = '0 ' + (archivedScope ? 'archived' : 'active') + ' products';
+      renderProductEmptyState(
+        archivedScope ? 'No archived products.' : 'No active products.',
+        archivedScope
+          ? 'Archived products will appear here when an owner retires them.'
+          : 'Create a product when you are ready, or restore one from Archived Products.'
+      );
+      return;
+    }
+
     if (!visibleProducts.length) {
-      if (productStatus) productStatus.textContent = 'Supabase draft list';
-      if (productCount) productCount.textContent = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
+      const scopeLabel = selectedProductLifecycleScope === 'archived' ? 'archived' : 'active';
+      if (productStatus) productStatus.textContent = selectedProductLifecycleScope === 'archived' ? 'Archived product list' : 'Active product list';
+      if (productCount) productCount.textContent = scopedProducts.length === 1 ? '1 ' + scopeLabel + ' product' : scopedProducts.length + ' ' + scopeLabel + ' products';
       renderProductEmptyState('No products match this filter.', 'Try All categories, All statuses, clear search, or use a different product name, category, sold-by value, or variant label.');
       return;
     }
 
-    if (productStatus) productStatus.textContent = 'Supabase draft list';
+    if (productStatus) productStatus.textContent = selectedProductLifecycleScope === 'archived' ? 'Archived product list' : 'Active product list';
     if (productCount) {
-      const totalText = latestProducts.length === 1 ? '1 product total' : latestProducts.length + ' products total';
+      const scopeLabel = selectedProductLifecycleScope === 'archived' ? 'archived' : 'active';
+      const totalText = scopedProducts.length === 1 ? '1 ' + scopeLabel + ' product' : scopedProducts.length + ' ' + scopeLabel + ' products';
       productCount.textContent = selectedCategoryFilter === 'all' && selectedSectionFilter === 'all' && selectedProductStatusFilter === 'all' && !query
         ? totalText
         : visibleProducts.length + ' shown - ' + totalText;
     }
 
     visibleProducts.forEach((product) => {
+      const isArchived = Boolean(product.archived_at);
       const card = document.createElement('article');
-      card.className = product.is_published ? 'product-preview-card is-published' : 'product-preview-card is-draft';
+      card.className = isArchived
+        ? 'product-preview-card is-archived'
+        : (product.is_published ? 'product-preview-card is-published' : 'product-preview-card is-draft');
 
       const top = document.createElement('div');
       top.className = 'product-card-top';
@@ -4121,9 +4168,14 @@
 
       const badges = document.createElement('div');
       badges.className = 'product-badge-row';
-      badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
-      badges.appendChild(makeBadge(product.is_available ? 'Available' : 'Sold out', product.is_available ? 'is-available' : 'is-muted'));
-      if (product.is_curv_pick) badges.appendChild(makeBadge('CURV Pick', 'is-special'));
+      if (isArchived) {
+        badges.appendChild(makeBadge('Archived', 'is-archived'));
+      } else {
+        badges.appendChild(makeBadge(product.is_published ? 'Published' : 'Draft', product.is_published ? 'is-live' : 'is-muted'));
+        const availabilityLabel = product.is_sold_out ? 'Sold Out' : (product.is_available ? 'Available' : 'Unavailable');
+        badges.appendChild(makeBadge(availabilityLabel, product.is_available && !product.is_sold_out ? 'is-available' : 'is-muted'));
+        if (product.is_curv_pick) badges.appendChild(makeBadge('CURV Pick', 'is-special'));
+      }
       if (product.is_seasonal) badges.appendChild(makeBadge('Seasonal', 'is-special'));
       top.append(titleWrap, badges);
       card.appendChild(top);
@@ -4164,28 +4216,30 @@
 
       const actions = document.createElement('div');
       actions.className = 'product-card-actions';
-      if (true) {
+      if (isArchived) {
+        const restoreButton = document.createElement('button');
+        restoreButton.type = 'button';
+        restoreButton.className = 'product-action-button is-restore';
+        restoreButton.textContent = 'Restore Product';
+        restoreButton.disabled = productLifecycleSaving || bulkPublishSaving;
+        restoreButton.addEventListener('click', () => restoreArchivedProduct(product.id));
+        actions.append(restoreButton);
+      } else {
         const editButton = document.createElement('button');
         editButton.type = 'button';
         editButton.className = 'product-action-button';
         editButton.textContent = 'Edit';
+        editButton.disabled = productLifecycleSaving || bulkPublishSaving;
         editButton.addEventListener('click', () => loadProductIntoForm(product.id));
 
-        const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'product-action-button is-danger';
-        deleteButton.textContent = 'Delete';
-        deleteButton.title = 'Delete draft product';
-        deleteButton.setAttribute('aria-label', 'Delete draft product');
-        deleteButton.addEventListener('click', () => deleteDraftProduct(product.id));
+        const archiveButton = document.createElement('button');
+        archiveButton.type = 'button';
+        archiveButton.className = 'product-action-button is-danger';
+        archiveButton.textContent = 'Archive Product';
+        archiveButton.disabled = productLifecycleSaving || bulkPublishSaving;
+        archiveButton.addEventListener('click', () => archiveActiveProduct(product.id));
 
-        const publishButton = document.createElement('button');
-        publishButton.type = 'button';
-        publishButton.className = 'product-action-button is-publish';
-        publishButton.textContent = 'Publish';
-        publishButton.addEventListener('click', () => updateProductPublishedState(product.id, true));
-
-        actions.append(editButton);
+        actions.append(editButton, archiveButton);
       }
       card.appendChild(actions);
       productList.appendChild(card);
@@ -4215,6 +4269,11 @@
     const product = latestProducts.find((item) => item.id === productId);
     if (!product) {
       setStatus('Product could not be found in the current preview.');
+      return;
+    }
+
+    if (product.archived_at) {
+      setStatus('Archived products are read-only. Restore this product before editing it.');
       return;
     }
 
@@ -4949,9 +5008,7 @@
   const getCategoryDeleteErrorMessage = (error, categoryName) => {
     const errorDetail = String(error && error.details || '');
     if (errorDetail.includes('MM_CATEGORY_NOT_EMPTY')) {
-      return error && error.message
-        ? error.message
-        : 'This category still contains products. Move, archive, or remove them before deleting the category.';
+      return 'This category still contains products. Move every active or archived product to another category before deleting it.';
     }
     if (errorDetail.includes('MM_CATEGORY_NOT_FOUND')) {
       return 'That category no longer exists. Refresh Menu Manager.';
@@ -5185,7 +5242,7 @@
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_sold_out,is_published,is_curv_pick,is_seasonal,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_sold_out,is_published,is_curv_pick,is_seasonal,archived_at,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
@@ -5362,6 +5419,7 @@
     if (detail === 'MM_SIZE_PRICE_INVALID') return 'Every variant needs a valid price of 0 or greater.';
     if (detail === 'MM_SIZE_COST_INVALID') return 'Variant cost must be empty or 0 or greater.';
     if (detail === 'MM_SIZE_SORT_ORDER_INVALID') return 'Variant order could not be saved safely.';
+    if (detail === 'MM_ARCHIVED_PRODUCT_READ_ONLY') return 'This product was archived before its variants could be saved. Restore it before editing.';
 
     return 'Variant changes could not be saved. Existing variants were left unchanged.'
       + (message ? ' ' + message : '');
@@ -5393,6 +5451,11 @@
     const existingProduct = getEditingProduct();
     if (isEditing && !existingProduct) {
       setStatus('This item could not be saved safely because its original state is unavailable. Refresh products and try again.');
+      return;
+    }
+
+    if (isEditing && existingProduct.archived_at) {
+      setStatus('Archived products are read-only. Restore this product before editing it.');
       return;
     }
 
@@ -5443,14 +5506,19 @@
     let productId = editingProductId;
 
     if (isEditing) {
-      const { error: productError } = await client
+      const { data: updatedProduct, error: productError } = await client
         .from('products')
         .update(productPayload)
-        .eq('id', editingProductId);
+        .eq('id', editingProductId)
+        .is('archived_at', null)
+        .select('id')
+        .maybeSingle();
 
-      if (productError) {
+      if (productError || !updatedProduct) {
         productSaveInProgress = false;
-        setStatus('Unable to update item. ' + productError.message);
+        setStatus(productError
+          ? 'Unable to update item. ' + productError.message
+          : 'This item was archived before the save completed. Restore it before editing.');
         if (createDraftButton) createDraftButton.disabled = false;
         if (editorPublishActionButton) editorPublishActionButton.disabled = false;
         updateUndoChangesAction();
@@ -5516,16 +5584,23 @@
     }
 
     if (publishAfterSizeSave) {
-      const { error: publishError } = await client
+      const { data: publishedProduct, error: publishError } = await client
         .from('products')
         .update({ is_published: true })
-        .eq('id', productId);
+        .eq('id', productId)
+        .is('archived_at', null)
+        .select('id')
+        .maybeSingle();
 
-      if (publishError) {
+      if (publishError || !publishedProduct) {
         productSaveInProgress = false;
         await loadProducts();
-        if (productId) await loadProductIntoForm(productId);
-        setStatus('Item and variants were saved as a draft, but the item could not be published. ' + publishError.message);
+        if (productId && !latestProducts.find((product) => product.id === productId && product.archived_at)) {
+          await loadProductIntoForm(productId);
+        }
+        setStatus(publishError
+          ? 'Item and variants were saved as a draft, but the item could not be published. ' + publishError.message
+          : 'The item was archived before publishing completed. Restore it before editing.');
         if (createDraftButton) createDraftButton.disabled = false;
         if (editorPublishActionButton) editorPublishActionButton.disabled = false;
         updateUndoChangesAction();
@@ -5555,18 +5630,28 @@
       return;
     }
 
+    if (product.archived_at) {
+      setStatus('Archived products cannot be published. Restore this product first.');
+      return;
+    }
+
     const actionLabel = shouldPublish ? 'publish' : 'unpublish';
     const confirmed = window.confirm((shouldPublish ? 'Publish' : 'Unpublish') + ' this product? This only changes the admin Supabase publish state.');
     if (!confirmed) return;
 
     setStatus((shouldPublish ? 'Publishing' : 'Unpublishing') + ' product...');
-    const { error } = await client
+    const { data: updatedProduct, error } = await client
       .from('products')
       .update({ is_published: shouldPublish })
-      .eq('id', productId);
+      .eq('id', productId)
+      .is('archived_at', null)
+      .select('id')
+      .maybeSingle();
 
-    if (error) {
-      setStatus('Unable to ' + actionLabel + ' product. ' + error.message);
+    if (error || !updatedProduct) {
+      setStatus(error
+        ? 'Unable to ' + actionLabel + ' product. ' + error.message
+        : 'This product was archived before the update completed. Restore it first.');
       return;
     }
 
@@ -5638,8 +5723,15 @@
   };
 
   const bulkUpdateFilteredPublishedState = async (shouldPublish) => {
-    if (bulkPublishSaving) return;
-    const ids = latestVisibleProducts.map((product) => product.id).filter(Boolean);
+    if (bulkPublishSaving || productLifecycleSaving) return;
+    if (selectedProductLifecycleScope === 'archived') {
+      setStatus('Archived products cannot be bulk published. Restore products individually first.');
+      return;
+    }
+    const ids = latestVisibleProducts
+      .filter((product) => !product.archived_at)
+      .map((product) => product.id)
+      .filter(Boolean);
     const count = ids.length;
     if (!count) {
       setStatus('No filtered products to update.');
@@ -5654,7 +5746,7 @@
     if (!confirmed) return;
 
     bulkPublishSaving = true;
-    updateBulkPublishControls();
+    renderProducts(latestProducts);
     setStatus(shouldPublish ? 'Publishing filtered products...' : 'Unpublishing filtered products...');
 
     const { error } = await client
@@ -5664,7 +5756,7 @@
 
     if (error) {
       bulkPublishSaving = false;
-      updateBulkPublishControls();
+      renderProducts(latestProducts);
       setStatus('Unable to ' + (shouldPublish ? 'publish' : 'unpublish') + ' filtered products. ' + error.message);
       return;
     }
@@ -5674,41 +5766,36 @@
     setStatus((shouldPublish ? 'Published ' : 'Unpublished ') + count + ' filtered products.');
   };
 
-  const deleteDraftProduct = async (productId) => {
+  const archiveActiveProduct = async (productId) => {
+    if (productLifecycleSaving || bulkPublishSaving) return;
     const product = latestProducts.find((item) => item.id === productId);
     if (!product) {
       setStatus('Product could not be found in the current preview.');
       return;
     }
 
-    if (product.is_published) {
-      setStatus('Published products cannot be deleted yet.');
+    if (product.archived_at) {
+      setStatus('This product is already archived.');
       return;
     }
 
-    const confirmed = window.confirm('Delete this draft product? This cannot be undone.');
+    const confirmed = window.confirm(
+      'Archive \u201c' + product.name + '\u201d?\n\n'
+      + 'This removes the product from the active/public menu without deleting its sizes, recipes, or history.'
+    );
     if (!confirmed) return;
 
-    setStatus('Deleting draft product...');
-    const { error: sizeError } = await client
-      .from('product_sizes')
-      .delete()
-      .eq('product_id', productId);
+    productLifecycleSaving = true;
+    renderProducts(latestProducts);
+    setStatus('Archiving product...');
+    const { error } = await client.rpc('menu_manager_archive_product', {
+      p_product_id: productId,
+    });
 
-    if (sizeError) {
-      setStatus('Unable to delete draft product variants. ' + sizeError.message);
-      return;
-    }
-
-    const { error: productError } = await client
-      .from('products')
-      .delete()
-      .eq('id', productId)
-      .eq('is_published', false);
-
-    if (productError) {
-      setStatus('Draft variants were deleted, but the product could not be deleted. ' + productError.message);
-      await loadProducts();
+    if (error) {
+      productLifecycleSaving = false;
+      renderProducts(latestProducts);
+      setStatus('Unable to archive product. ' + error.message);
       return;
     }
 
@@ -5719,7 +5806,42 @@
     }
 
     await loadProducts();
-    setStatus('Draft product deleted.');
+    productLifecycleSaving = false;
+    renderProducts(latestProducts);
+    setStatus('Product archived. Its sizes, recipes, options, and history were preserved.');
+  };
+
+  const restoreArchivedProduct = async (productId) => {
+    if (productLifecycleSaving || bulkPublishSaving) return;
+    const product = latestProducts.find((item) => item.id === productId);
+    if (!product) {
+      setStatus('Product could not be found in the current preview.');
+      return;
+    }
+
+    if (!product.archived_at) {
+      setStatus('This product is already active.');
+      return;
+    }
+
+    productLifecycleSaving = true;
+    renderProducts(latestProducts);
+    setStatus('Restoring product...');
+    const { error } = await client.rpc('menu_manager_restore_product', {
+      p_product_id: productId,
+    });
+
+    if (error) {
+      productLifecycleSaving = false;
+      renderProducts(latestProducts);
+      setStatus('Unable to restore product. ' + error.message);
+      return;
+    }
+
+    await loadProducts();
+    productLifecycleSaving = false;
+    renderProducts(latestProducts);
+    setStatus('Product restored as unpublished and unavailable. Review it before publishing.');
   };
 
   if (variantGroupSelect) {
@@ -5812,6 +5934,18 @@
       renderProducts(latestProducts);
     });
   }
+
+  productLifecycleScopeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (productLifecycleSaving || bulkPublishSaving) return;
+      const nextScope = button.dataset.productLifecycleScope === 'archived' ? 'archived' : 'active';
+      if (nextScope === selectedProductLifecycleScope) return;
+      selectedProductLifecycleScope = nextScope;
+      selectedProductStatusFilter = 'all';
+      if (productStatusFilter) productStatusFilter.value = 'all';
+      renderProducts(latestProducts);
+    });
+  });
 
   if (productListSortSelect) {
     productListSortSelect.addEventListener('change', () => {

@@ -3305,6 +3305,54 @@ body.more-drawer-open {
   flex-wrap: wrap;
 }
 
+.product-lifecycle-scope {
+  width: min(100%, 420px);
+  margin: 0 0 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid rgba(189, 196, 212, 0.18);
+  border-radius: 8px;
+  background: rgba(20, 24, 36, 0.32);
+  padding: 0.22rem;
+}
+
+.product-lifecycle-scope[hidden] {
+  display: none;
+}
+
+.product-lifecycle-scope-button {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--slate);
+  padding: 0.58rem 0.72rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.product-lifecycle-scope-button:hover,
+.product-lifecycle-scope-button:focus-visible {
+  color: var(--cream);
+  background: rgba(200, 184, 154, 0.08);
+}
+
+.product-lifecycle-scope-button.is-active {
+  background: rgba(200, 184, 154, 0.14);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(200, 184, 154, 0.32);
+}
+
+.product-lifecycle-scope-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .product-search-bar {
   align-items: flex-end;
 }
@@ -3429,6 +3477,11 @@ body.more-drawer-open {
   border-color: rgba(189, 196, 212, 0.18);
 }
 
+.product-preview-card.is-archived {
+  border-color: rgba(189, 196, 212, 0.2);
+  background: rgba(20, 24, 36, 0.46);
+}
+
 .product-card-top {
   display: flex;
   align-items: flex-start;
@@ -3483,6 +3536,12 @@ body.more-drawer-open {
 .product-badge.is-muted {
   color: rgba(189, 196, 212, 0.56);
   border-color: rgba(189, 196, 212, 0.14);
+}
+
+.product-badge.is-archived {
+  color: rgba(255, 223, 207, 0.82);
+  border-color: rgba(188, 103, 84, 0.34);
+  background: rgba(151, 66, 52, 0.14);
 }
 
 .product-image-preview {
@@ -3553,6 +3612,12 @@ body.more-drawer-open {
 }
 
 .product-action-button.is-publish {
+  border-color: rgba(200, 184, 154, 0.48);
+  background: rgba(200, 184, 154, 0.14);
+  color: var(--accent);
+}
+
+.product-action-button.is-restore {
   border-color: rgba(200, 184, 154, 0.48);
   background: rgba(200, 184, 154, 0.14);
   color: var(--accent);
@@ -4143,6 +4208,15 @@ body.more-drawer-open {
 }
 
 @media (max-width: 600px) {
+  .product-lifecycle-scope {
+    width: 100%;
+  }
+
+  .product-action-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
   .product-preview-heading,
   .product-card-top,
   .product-card-actions,
@@ -6640,6 +6714,7 @@ body.more-drawer-open {
 
 :root[data-admin-theme="light"] .menu-manager-main .product-preview,
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-content,
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope,
 :root[data-admin-theme="light"] .menu-manager-main .product-filter-bar,
 :root[data-admin-theme="light"] .menu-manager-main .product-search-bar,
 :root[data-admin-theme="light"] .menu-manager-main .inline-category-create,
@@ -6678,6 +6753,11 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .product-preview-card.is-published {
   background: linear-gradient(135deg, rgba(249, 243, 234, 0.98), rgba(255, 253, 247, 0.96));
   border-color: rgba(143, 118, 85, 0.34);
+}
+
+:root[data-admin-theme="light"] .menu-manager-main .product-preview-card.is-archived {
+  background: #F3EBDC;
+  border-color: rgba(143, 118, 85, 0.24);
 }
 
 :root[data-admin-theme="light"] .menu-manager-main h2,
@@ -6800,6 +6880,7 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .menu-manager-main .product-badge.is-muted,
+:root[data-admin-theme="light"] .menu-manager-main .product-badge.is-archived,
 :root[data-admin-theme="light"] .menu-manager-main .option-status-pill.is-inactive,
 :root[data-admin-theme="light"] .menu-manager-main .category-state-badge.is-hidden,
 :root[data-admin-theme="light"] .menu-manager-main .option-mini-button.is-muted {
@@ -6809,6 +6890,7 @@ body.more-drawer-open {
 }
 
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear,
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope-button,
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle,
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button,
 :root[data-admin-theme="light"] .menu-manager-main .category-move-button,
@@ -6825,6 +6907,8 @@ body.more-drawer-open {
 
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear:hover,
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear:focus-visible,
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope-button:hover,
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope-button:focus-visible,
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle:hover,
 :root[data-admin-theme="light"] .menu-manager-main .admin-collapsible-toggle:focus-visible,
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button:hover,
@@ -6850,6 +6934,13 @@ body.more-drawer-open {
   color: #F8F1E4;
 }
 
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope-button.is-active,
+:root[data-admin-theme="light"] .menu-manager-main .product-action-button.is-restore {
+  background: #273149;
+  border-color: #273149;
+  color: #F8F1E4;
+}
+
 :root[data-admin-theme="light"] .menu-manager-main .category-icon-button.is-danger,
 :root[data-admin-theme="light"] .menu-manager-main .category-management-action.is-danger,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button.is-danger,
@@ -6863,6 +6954,7 @@ body.more-drawer-open {
 :root[data-admin-theme="light"] .menu-manager-main .category-move-button:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .category-management-action:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .product-search-clear:disabled,
+:root[data-admin-theme="light"] .menu-manager-main .product-lifecycle-scope-button:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .variant-remove-button:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .product-action-button:disabled,
 :root[data-admin-theme="light"] .menu-manager-main .display-order-move-button:disabled {

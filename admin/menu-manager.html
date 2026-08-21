@@ -14,9 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=mp2c2-category-management">
+  <link rel="stylesheet" href="admin.css?v=mp2c3-product-archive">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=mp2c2-category-management" defer></script>
+  <script src="admin.js?v=mp2c3-product-archive" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -524,6 +524,10 @@
                 <p class="category-management-status" data-category-status data-category-management-status role="status" aria-live="polite">Sign in to manage categories.</p>
               </div>
             </section>
+            <div class="product-lifecycle-scope" data-product-lifecycle-scope-controls role="group" aria-label="Product lifecycle" hidden>
+              <button type="button" class="product-lifecycle-scope-button is-active" data-product-lifecycle-scope="active" aria-pressed="true">Active Products</button>
+              <button type="button" class="product-lifecycle-scope-button" data-product-lifecycle-scope="archived" aria-pressed="false">Archived Products</button>
+            </div>
             <div class="product-filter-bar" data-product-filter-bar hidden>
               <label class="admin-field product-filter-field" for="product-category-filter">
                 <span>Category</span>
