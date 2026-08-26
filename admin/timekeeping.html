@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CURV Timekeeping</title>
+  <meta name="description" content="CURV staff clock in, break, and clock out kiosk.">
+  <link rel="icon" type="image/png" href="../favicon1.png">
+  <link rel="apple-touch-icon" href="../favicon1.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="timekeeping.css?v=t2-1b-kiosk">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="timekeeping.js?v=t2-1b-kiosk" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#timekeeping-main">Skip to timekeeping</a>
+
+  <div class="kiosk-shell">
+    <header class="kiosk-brand" aria-label="CURV Timekeeping">
+      <img class="kiosk-brand-mark" src="../favicon1.png" alt="" width="44" height="44">
+      <div>
+        <p class="kiosk-brand-name">CURV</p>
+        <p class="kiosk-brand-section">Timekeeping</p>
+      </div>
+    </header>
+
+    <main id="timekeeping-main" class="kiosk-main">
+      <section class="kiosk-stage" data-kiosk-stage aria-busy="true">
+        <div data-kiosk-content></div>
+        <p class="kiosk-live" data-kiosk-live role="status" aria-live="polite" aria-atomic="true"></p>
+      </section>
+    </main>
+
+    <footer class="kiosk-footer">
+      Attendance times are recorded by CURV's server.
+    </footer>
+  </div>
+
+  <noscript>
+    <div class="kiosk-noscript">JavaScript is required to use CURV Timekeeping.</div>
+  </noscript>
+</body>
+</html>
