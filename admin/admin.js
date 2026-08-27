@@ -21,9 +21,7 @@
       ? 'menu-manager'
       : currentAdminPage === 'team.html'
         ? 'team'
-        : currentAdminPage === 'attendance.html'
-          ? 'attendance'
-          : 'dashboard';
+        : 'dashboard';
 
   document.querySelectorAll('[data-nav-item]').forEach((item) => {
     const isCurrent = item.dataset.navItem === currentNavItem;
@@ -124,7 +122,7 @@
 
 (() => {
   const notificationButton = document.querySelector('.notification-button');
-  const ownerTeamNavLinks = document.querySelectorAll('[data-owner-team-nav], [data-owner-attendance-nav]');
+  const ownerTeamNavLinks = document.querySelectorAll('[data-owner-team-nav]');
   const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
   const notificationBadges = Array.from(document.querySelectorAll('.notification-badge'));
   const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
@@ -851,8 +849,103 @@
 })();
 
 (() => {
+  const teamRoot = document.querySelector('[data-team-consolidated]');
+  if (!teamRoot) return;
+
+  const tabs = Array.from(teamRoot.querySelectorAll('[data-team-tab]'));
+  const membersPanel = teamRoot.querySelector('[data-team-members-panel]');
+  const attendancePanel = teamRoot.querySelector('[data-attendance-page]');
+  const confirmPanel = teamRoot.querySelector('[data-team-tab-confirm]');
+  const keepButton = teamRoot.querySelector('[data-team-tab-keep]');
+  const discardButton = teamRoot.querySelector('[data-team-tab-discard]');
+  let activeTab = window.location.hash.toLowerCase() === '#attendance' ? 'attendance' : 'team-members';
+  let pendingTab = '';
+
+  const tabFromLocation = () => window.location.hash.toLowerCase() === '#attendance' ? 'attendance' : 'team-members';
+
+  const writeLocation = (tab, { replace = false } = {}) => {
+    const url = window.location.pathname + window.location.search + (tab === 'attendance' ? '#attendance' : '');
+    window.history[replace ? 'replaceState' : 'pushState'](null, '', url);
+  };
+
+  const hideConfirmation = () => {
+    pendingTab = '';
+    if (confirmPanel) confirmPanel.hidden = true;
+  };
+
+  const applyTab = (tab, { focus = false } = {}) => {
+    activeTab = tab;
+    tabs.forEach(button => {
+      const selected = button.dataset.teamTab === tab;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+      button.tabIndex = selected ? 0 : -1;
+      if (selected && focus) button.focus();
+    });
+    if (membersPanel) membersPanel.hidden = tab !== 'team-members';
+    if (attendancePanel) attendancePanel.hidden = tab !== 'attendance';
+    attendancePanel?.curvSetViewActive?.(tab === 'attendance');
+  };
+
+  const requestTab = (tab, { fromLocation = false, focus = false } = {}) => {
+    if (tab === activeTab) {
+      if (focus) tabs.find(button => button.dataset.teamTab === tab)?.focus();
+      return;
+    }
+    if (activeTab === 'team-members' && teamRoot.curvCanLeaveTeam?.() === false) return;
+    if (activeTab === 'attendance' && attendancePanel?.curvHasUnsavedCorrection?.()) {
+      pendingTab = tab;
+      if (confirmPanel) confirmPanel.hidden = false;
+      if (fromLocation) writeLocation('attendance', { replace: true });
+      keepButton?.focus();
+      return;
+    }
+    if (activeTab === 'team-members') teamRoot.curvDiscardTeamTransient?.();
+    if (activeTab === 'attendance') attendancePanel?.curvDiscardTransient?.();
+    hideConfirmation();
+    if (!fromLocation) writeLocation(tab);
+    applyTab(tab, { focus });
+  };
+
+  tabs.forEach((button, index) => {
+    button.addEventListener('click', () => requestTab(button.dataset.teamTab));
+    button.addEventListener('keydown', event => {
+      let nextIndex = null;
+      if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+      if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+      if (event.key === 'Home') nextIndex = 0;
+      if (event.key === 'End') nextIndex = tabs.length - 1;
+      if (nextIndex === null) return;
+      event.preventDefault();
+      requestTab(tabs[nextIndex].dataset.teamTab, { focus: true });
+    });
+  });
+
+  keepButton?.addEventListener('click', () => {
+    hideConfirmation();
+    tabs.find(button => button.dataset.teamTab === activeTab)?.focus();
+  });
+  discardButton?.addEventListener('click', () => {
+    if (!pendingTab || attendancePanel?.curvCanDiscardTransient?.() === false) return;
+    const nextTab = pendingTab;
+    attendancePanel?.curvDiscardTransient?.();
+    hideConfirmation();
+    writeLocation(nextTab);
+    applyTab(nextTab, { focus: true });
+  });
+  window.addEventListener('popstate', () => requestTab(tabFromLocation(), { fromLocation: true }));
+  window.addEventListener('hashchange', () => requestTab(tabFromLocation(), { fromLocation: true }));
+
+  if (window.location.hash && window.location.hash.toLowerCase() !== '#attendance') {
+    writeLocation('team-members', { replace: true });
+  }
+  applyTab(activeTab);
+})();
+
+(() => {
   const attendanceRoot = document.querySelector('[data-attendance-page]');
   if (!attendanceRoot) return;
+  const isConsolidated = Boolean(attendanceRoot.closest('[data-team-consolidated]'));
 
   const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
@@ -939,6 +1032,9 @@
   let correctionGeneration = 0;
   let selectedCorrectionRecord = null;
   let correctionReturnFocus = null;
+  let correctionInitialValues = null;
+  let attendanceViewActive = !attendanceRoot.hidden;
+  let authSubscription = null;
 
   const clearElement = element => {
     while (element && element.firstChild) element.removeChild(element.firstChild);
@@ -1069,7 +1165,9 @@
   const startLiveTimer = () => {
     stopLiveTimer();
     updateLiveDurations();
-    if (openSessions.length && !document.hidden) liveTimer = window.setInterval(updateLiveDurations, 60000);
+    if (attendanceViewActive && openSessions.length && !document.hidden) {
+      liveTimer = window.setInterval(updateLiveDurations, 60000);
+    }
   };
 
   const setControlsDisabled = disabled => {
@@ -1092,6 +1190,7 @@
     const returnTarget = correctionReturnFocus;
     selectedCorrectionRecord = null;
     correctionReturnFocus = null;
+    correctionInitialValues = null;
     if (correctionForm) correctionForm.reset();
     if (correctionInInput) correctionInInput.value = '';
     if (correctionOutInput) correctionOutInput.value = '';
@@ -1240,6 +1339,10 @@
     if (correctionInInput) correctionInInput.value = toManilaDateTimeLocal(record.effective_clocked_in_at);
     if (correctionOutInput) correctionOutInput.value = toManilaDateTimeLocal(record.effective_clocked_out_at);
     if (correctionReasonInput) correctionReasonInput.value = '';
+    correctionInitialValues = {
+      clockedIn: correctionInInput ? correctionInInput.value : '',
+      clockedOut: correctionOutInput ? correctionOutInput.value : '',
+    };
     if (correctionEditor) correctionEditor.hidden = false;
     setCorrectionControlsDisabled(false);
     window.requestAnimationFrame(() => {
@@ -1420,7 +1523,7 @@
   };
 
   const loadAttendance = async ({ announce = true, supersede = false } = {}) => {
-    if (!sessionUser || (loadBusy && !supersede)) return false;
+    if (!attendanceViewActive || !sessionUser || (loadBusy && !supersede)) return false;
     const filters = validateFilters();
     if (filters.error) {
       setFilterError(filters.error);
@@ -1567,50 +1670,9 @@
   refreshButton?.addEventListener('click', () => loadAttendance());
   retryButton?.addEventListener('click', () => loadAttendance());
 
-  ownerAccountToggle?.addEventListener('click', event => {
-    event.stopPropagation();
-    if (!ownerAccountMenu) return;
-    const opening = ownerAccountMenu.hidden;
-    ownerAccountMenu.hidden = !opening;
-    ownerAccountToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
-    if (opening) ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)')?.focus();
-  });
-  document.addEventListener('click', event => { if (!ownerAccount.contains(event.target)) closeAccountMenu(); });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor();
-    else closeAccountMenu();
-  });
-
-  authForm?.addEventListener('submit', async event => {
-    event.preventDefault();
-    if (!emailInput || !passwordInput || signInButton?.disabled) return;
-    if (signInButton) signInButton.disabled = true;
-    setStatus('Signing in…');
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
-      if (error) throw error;
-      sessionUser = data.user;
-      passwordInput.value = '';
-      updateAccountUi();
-      closeAccountMenu();
-      await loadAttendance({ announce: false });
-    } catch (error) {
-      passwordInput.value = '';
-      setStatus('Owner sign in failed. Check the account details and try again.', true);
-    } finally {
-      if (signInButton) signInButton.disabled = false;
-    }
-  });
-
-  signOutButton?.addEventListener('click', async () => {
-    signOutButton.disabled = true;
-    sessionUser = null;
-    clearPrivateState();
-    setDefaultDates();
-    updateAccountUi();
-    closeAccountMenu();
-    await supabaseClient.auth.signOut({ scope: 'local' });
   });
 
   const applySession = session => {
@@ -1619,26 +1681,94 @@
     if (!nextUser) {
       sessionUser = null;
       clearPrivateState();
-      updateAccountUi();
+      if (!isConsolidated) updateAccountUi();
       return;
     }
     sessionUser = nextUser;
-    updateAccountUi();
-    if (nextUser.id !== previousId || !hasOwnerAccess) loadAttendance({ announce: false });
+    if (!isConsolidated) updateAccountUi();
+    if (attendanceViewActive && (nextUser.id !== previousId || !hasOwnerAccess)) loadAttendance({ announce: false });
   };
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopLiveTimer();
-    else if (sessionUser && hasOwnerAccess) startLiveTimer();
+    else if (attendanceViewActive && sessionUser && hasOwnerAccess) startLiveTimer();
   });
 
   setDefaultDates();
   clearPrivateState();
-  updateAccountUi();
-  const { data: authSubscription } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-    window.setTimeout(() => applySession(session), 0);
-  });
-  supabaseClient.auth.getSession().then(({ data }) => applySession(data && data.session));
+  if (isConsolidated) {
+    attendanceRoot.curvSetViewActive = isActive => {
+      attendanceViewActive = Boolean(isActive);
+      if (!attendanceViewActive) {
+        stopLiveTimer();
+        return;
+      }
+      updateLiveDurations();
+      if (sessionUser && !hasOwnerAccess) loadAttendance({ announce: false });
+      else if (sessionUser && hasOwnerAccess) startLiveTimer();
+    };
+    attendanceRoot.curvHasUnsavedCorrection = () => {
+      if (correctionBusy) return true;
+      if (!correctionEditor || correctionEditor.hidden || !correctionInitialValues) return false;
+      return String(correctionInInput && correctionInInput.value || '') !== correctionInitialValues.clockedIn
+        || String(correctionOutInput && correctionOutInput.value || '') !== correctionInitialValues.clockedOut
+        || Boolean(String(correctionReasonInput && correctionReasonInput.value || '').trim());
+    };
+    attendanceRoot.curvCanDiscardTransient = () => !correctionBusy;
+    attendanceRoot.curvDiscardTransient = () => {
+      if (correctionBusy) return false;
+      closeCorrectionEditor({ restoreFocus: false });
+      return true;
+    };
+    attendanceRoot.addEventListener('curv-owner-session-change', event => {
+      applySession(event.detail && event.detail.user ? { user: event.detail.user } : null);
+    });
+  } else {
+    ownerAccountToggle?.addEventListener('click', event => {
+      event.stopPropagation();
+      if (!ownerAccountMenu) return;
+      const opening = ownerAccountMenu.hidden;
+      ownerAccountMenu.hidden = !opening;
+      ownerAccountToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+      if (opening) ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)')?.focus();
+    });
+    document.addEventListener('click', event => { if (!ownerAccount.contains(event.target)) closeAccountMenu(); });
+    authForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!emailInput || !passwordInput || signInButton?.disabled) return;
+      if (signInButton) signInButton.disabled = true;
+      setStatus('Signing in…');
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
+        if (error) throw error;
+        sessionUser = data.user;
+        passwordInput.value = '';
+        updateAccountUi();
+        closeAccountMenu();
+        await loadAttendance({ announce: false });
+      } catch (error) {
+        passwordInput.value = '';
+        setStatus('Owner sign in failed. Check the account details and try again.', true);
+      } finally {
+        if (signInButton) signInButton.disabled = false;
+      }
+    });
+    signOutButton?.addEventListener('click', async () => {
+      signOutButton.disabled = true;
+      sessionUser = null;
+      clearPrivateState();
+      setDefaultDates();
+      updateAccountUi();
+      closeAccountMenu();
+      await supabaseClient.auth.signOut({ scope: 'local' });
+    });
+    updateAccountUi();
+    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => applySession(session), 0);
+    });
+    authSubscription = data;
+    supabaseClient.auth.getSession().then(({ data: sessionData }) => applySession(sessionData && sessionData.session));
+  }
   window.addEventListener('pagehide', () => {
     authGeneration += 1;
     loadGeneration += 1;
@@ -1696,6 +1826,7 @@
   const formError = teamRoot.querySelector('[data-team-form-error]');
   const submitButton = teamRoot.querySelector('[data-team-submit]');
   const cancelButton = teamRoot.querySelector('[data-team-cancel]');
+  const attendancePanel = teamRoot.querySelector('[data-attendance-page]');
 
   if (!ownerAccount || !window.supabase) return;
 
@@ -1711,6 +1842,12 @@
   let authGeneration = 0;
   let loadGeneration = 0;
   let actionGeneration = 0;
+
+  const broadcastOwnerSession = user => {
+    attendancePanel?.dispatchEvent(new CustomEvent('curv-owner-session-change', {
+      detail: { user: user || null },
+    }));
+  };
 
   const clearElement = (element) => {
     while (element && element.firstChild) element.removeChild(element.firstChild);
@@ -1766,6 +1903,18 @@
     const returnTarget = editorReturnFocus;
     editorReturnFocus = null;
     if (restoreFocus && returnTarget && document.contains(returnTarget)) returnTarget.focus();
+  };
+
+  teamRoot.curvCanLeaveTeam = () => {
+    const canLeave = !actionBusy && !loadBusy;
+    if (!canLeave) setStatus('Wait for the current team action to finish before switching tabs.');
+    return canLeave;
+  };
+  teamRoot.curvDiscardTeamTransient = () => {
+    if (actionBusy || loadBusy) return false;
+    closeEditor(false);
+    clearPins();
+    return true;
   };
 
   const clearPrivateState = () => {
@@ -2114,6 +2263,7 @@
       if (error) throw error;
       sessionUser = data.user;
       updateAccountUi();
+      broadcastOwnerSession(sessionUser);
       clearPins();
       closeAccountMenu();
       await loadStaff({ announce: false });
@@ -2130,6 +2280,7 @@
     clearPrivateState();
     sessionUser = null;
     updateAccountUi();
+    broadcastOwnerSession(null);
     setStatus('Signed out.');
     closeAccountMenu();
     await supabaseClient.auth.signOut({ scope: 'local' });
@@ -2142,10 +2293,12 @@
       sessionUser = null;
       clearPrivateState();
       updateAccountUi();
+      broadcastOwnerSession(null);
       return;
     }
     sessionUser = nextUser;
     updateAccountUi();
+    broadcastOwnerSession(sessionUser);
     if (nextUser.id !== previousId || !hasOwnerAccess) loadStaff({ announce: false });
   };
 

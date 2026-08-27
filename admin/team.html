@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team | CURV Control</title>
-  <meta name="description" content="Manage CURV staff access and kiosk ordering.">
+  <meta name="description" content="Manage CURV team access and review attendance.">
   <script>
     (() => {
       const theme = localStorage.getItem('curvControlTheme') === 'light' ? 'light' : 'dark';
@@ -14,9 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=t4b-team-management">
+  <link rel="stylesheet" href="admin.css?v=team-consolidation">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=t4b-team-management" defer></script>
+  <script src="admin.js?v=team-consolidation" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -68,51 +68,51 @@
         <a href="inventory.html" class="admin-nav-link" data-nav-item="inventory" aria-label="Inventory"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span class="nav-label">Inventory</span></a>
         <a href="recipes.html" class="admin-nav-link" data-nav-item="recipes" aria-label="Recipes"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg><span class="nav-label">Recipes</span></a>
         <a href="team.html" class="admin-nav-link is-active" data-nav-item="team" data-owner-team-nav hidden aria-label="Team" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6"/><path d="M15 15c3 0 5 1.5 5 4"/></svg><span class="nav-label">Team</span></a>
-        <a href="attendance.html" class="admin-nav-link" data-nav-item="attendance" data-owner-attendance-nav hidden aria-label="Attendance"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 18h6"/></svg><span class="nav-label">Attendance</span></a>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="sales" aria-label="Sales" aria-disabled="true"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></svg><span class="nav-label">Sales</span></button>
         <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-label="Settings" aria-disabled="true"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0"/></svg><span class="nav-label">Settings</span></button>
       </nav>
       <div class="sidebar-profile" aria-label="Current admin profile"><div class="profile-avatar" aria-hidden="true">CO</div><div class="profile-copy"><p class="profile-name">CURV Owner</p><p class="profile-role">Owner access</p></div></div>
     </aside>
 
-    <main class="control-main team-main" id="main-content" data-team-page>
+    <main class="control-main team-main" id="main-content" data-team-page data-team-consolidated>
       <section class="dashboard-header team-header" aria-labelledby="team-title">
-        <div class="team-header-copy"><p class="eyebrow">CURV Control</p><h1 id="team-title" class="dashboard-title">Team</h1><p>Manage CURV staff access and kiosk ordering.</p></div>
-        <div class="team-header-actions" data-team-actions hidden>
-          <button type="button" class="auth-button" data-team-add>Add Team Member</button>
-          <button type="button" class="auth-button auth-button-secondary" data-team-refresh>Refresh</button>
+        <div class="team-header-copy"><p class="eyebrow">CURV Control</p><h1 id="team-title" class="dashboard-title">Team</h1><p>Manage team access and review attendance.</p></div>
+      </section>
+
+      <div class="team-tabs" role="tablist" aria-label="Team views" data-team-tabs>
+        <button type="button" class="team-tab is-active" id="team-members-tab" role="tab" aria-selected="true" aria-controls="team-members-panel" tabindex="0" data-team-tab="team-members">Team Members</button>
+        <button type="button" class="team-tab" id="team-attendance-tab" role="tab" aria-selected="false" aria-controls="team-attendance-panel" tabindex="-1" data-team-tab="attendance">Attendance</button>
+      </div>
+      <div class="team-tab-confirm" data-team-tab-confirm role="alertdialog" aria-modal="false" aria-labelledby="team-tab-discard-title" hidden>
+        <p id="team-tab-discard-title">Discard this unsaved attendance correction?</p>
+        <div><button type="button" class="auth-button auth-button-secondary" data-team-tab-keep>Keep Editing</button><button type="button" class="auth-button" data-team-tab-discard>Discard</button></div>
+      </div>
+
+      <section id="team-members-panel" class="team-view-panel" role="tabpanel" aria-labelledby="team-members-tab" data-team-members-panel>
+        <div class="team-view-toolbar" data-team-actions hidden><button type="button" class="auth-button" data-team-add>Add Team Member</button><button type="button" class="auth-button auth-button-secondary" data-team-refresh>Refresh</button></div>
+        <p class="team-status" data-team-status role="status" aria-live="polite"></p>
+        <section class="team-locked" data-team-locked aria-labelledby="team-locked-title"><p class="eyebrow">Owner Access</p><h2 id="team-locked-title">Sign in to manage the team</h2><p>Team names, kiosk access, and staff status are available to the CURV owner only.</p></section>
+        <div data-team-content hidden>
+          <section class="team-summary" aria-label="Team summary"><div class="team-summary-item"><span>Active</span><strong data-team-active-count>0</strong></div><div class="team-summary-item"><span>Inactive</span><strong data-team-inactive-count>0</strong></div><div class="team-summary-item"><span>Clocked In</span><strong data-team-clocked-count>0</strong></div><div class="team-summary-item"><span>On Break</span><strong data-team-break-count>0</strong></div></section>
+          <section class="team-editor" data-team-editor hidden aria-labelledby="team-editor-title">
+            <div class="team-editor-header"><div><p class="eyebrow">Team Member</p><h2 id="team-editor-title" data-team-editor-title>Add Team Member</h2></div><button type="button" class="team-action-button" data-team-editor-close>Cancel</button></div>
+            <form class="team-form" data-team-form novalidate><div class="team-form-grid"><label class="admin-field" data-team-name-field><span>Name</span><input type="text" name="staff-name" data-team-name autocomplete="off" maxlength="80"></label><label class="admin-field" data-team-pin-field><span data-team-pin-label>4-digit PIN</span><input type="password" name="staff-pin" data-team-pin inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label><label class="admin-field" data-team-pin-confirm-field><span>Confirm PIN</span><input type="password" name="staff-pin-confirm" data-team-pin-confirm inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label></div><p class="team-confirm-copy" data-team-confirm-copy hidden></p><p class="team-form-error" data-team-form-error role="alert" hidden></p><div class="team-form-actions"><button type="submit" class="auth-button" data-team-submit>Save</button><button type="button" class="auth-button auth-button-secondary" data-team-cancel>Cancel</button></div></form>
+          </section>
+          <section class="team-list-panel" aria-labelledby="team-list-title"><div class="team-list-heading"><div><p class="eyebrow">Kiosk Access</p><h2 id="team-list-title" tabindex="-1">Team Members</h2></div><p>Use the arrows to set the kiosk order.</p></div><div class="team-list" data-team-list></div><p class="team-empty" data-team-empty hidden>No team members yet.</p></section>
         </div>
       </section>
-      <p class="team-status" data-team-status role="status" aria-live="polite"></p>
-      <section class="team-locked" data-team-locked aria-labelledby="team-locked-title">
-        <p class="eyebrow">Owner Access</p><h2 id="team-locked-title">Sign in to manage the team</h2><p>Team names, kiosk access, and staff status are available to the CURV owner only.</p>
+
+      <section id="team-attendance-panel" class="team-view-panel attendance-main" role="tabpanel" aria-labelledby="team-attendance-tab" data-attendance-page hidden>
+        <section class="attendance-header" aria-labelledby="attendance-title"><div><p class="eyebrow">Attendance</p><h2 id="attendance-title">Attendance Records</h2><p>Track team shifts, breaks, and worked hours.</p></div><button type="button" class="auth-button auth-button-secondary" data-attendance-refresh hidden>Refresh</button></section>
+        <p class="attendance-status" data-attendance-status role="status" aria-live="polite"></p>
+        <section class="attendance-locked" data-attendance-locked aria-labelledby="attendance-locked-title"><p class="eyebrow">Owner Access</p><h2 id="attendance-locked-title">Sign in to review attendance</h2><p>Shift and break records are available to the CURV owner only.</p><button type="button" class="auth-button auth-button-secondary" data-attendance-retry hidden>Retry</button></section>
+        <div class="attendance-content" data-attendance-content hidden>
+          <section class="attendance-correction" data-attendance-correction hidden aria-labelledby="attendance-correction-title"><div class="attendance-correction-header"><div><p class="eyebrow">Owner Correction</p><h2 id="attendance-correction-title" data-correction-title>Correct Attendance</h2><p data-correction-date></p></div><button type="button" class="team-action-button" data-correction-close>Cancel</button></div><div class="attendance-correction-current" data-correction-current></div><p class="attendance-correction-help" id="attendance-correction-help">Only change the time that needs correcting. Original attendance records will be preserved.</p><form class="attendance-correction-form" data-correction-form novalidate><div class="attendance-correction-fields"><label class="admin-field" for="corrected-clock-in"><span>Corrected Clock In</span><input id="corrected-clock-in" data-correction-in type="datetime-local" step="1" aria-describedby="attendance-correction-help correction-form-error" required></label><label class="admin-field" for="corrected-clock-out"><span>Corrected Clock Out</span><input id="corrected-clock-out" data-correction-out type="datetime-local" step="1" aria-describedby="attendance-correction-help correction-form-error" required></label><label class="admin-field attendance-correction-reason" for="correction-reason"><span>Reason</span><textarea id="correction-reason" data-correction-reason rows="3" maxlength="500" placeholder="Forgot to clock in at start of shift" aria-describedby="attendance-correction-help correction-form-error" required></textarea></label></div><p class="attendance-filter-error" id="correction-form-error" data-correction-error role="alert" hidden></p><div class="attendance-correction-actions"><button type="button" class="auth-button auth-button-secondary" data-correction-cancel>Cancel</button><button type="submit" class="auth-button" data-correction-save>Save Correction</button></div></form></section>
+          <section class="attendance-panel" aria-labelledby="working-now-title"><div class="attendance-section-heading"><div><p class="eyebrow">Live Status</p><h2 id="working-now-title">Working Now</h2></div><p data-working-summary>No one clocked in</p></div><div class="attendance-records attendance-working-records" data-working-list></div><p class="attendance-empty" data-working-empty>No one is clocked in right now.</p></section>
+          <section aria-labelledby="today-title"><div class="attendance-section-heading attendance-band-heading"><div><p class="eyebrow">Manila Today</p><h2 id="today-title">Today</h2></div><p data-today-date></p></div><div class="attendance-summary" aria-label="Today's attendance summary"><div class="attendance-summary-item"><span>Clocked In Today</span><strong data-today-staff-count>0</strong></div><div class="attendance-summary-item"><span>Completed Shifts</span><strong data-today-completed-count>0</strong></div><div class="attendance-summary-item"><span>Worked Hours</span><strong data-today-worked>0 min</strong><small>Completed shifts</small></div><div class="attendance-summary-item"><span>Break Time</span><strong data-today-break>0 min</strong><small>Completed breaks</small></div></div><div class="attendance-records" data-today-list></div><p class="attendance-empty" data-today-empty>No attendance recorded today yet.</p></section>
+          <section class="attendance-panel" aria-labelledby="history-title"><div class="attendance-section-heading"><div><p class="eyebrow">Attendance Records</p><h2 id="history-title">History</h2></div><p>Maximum 31 days</p></div><form class="attendance-filters" data-attendance-filters novalidate><label class="admin-field" for="attendance-staff"><span>Staff</span><select id="attendance-staff" data-attendance-staff><option value="">All Team</option></select></label><label class="admin-field" for="attendance-from"><span>Date From</span><input id="attendance-from" data-attendance-from type="date" required></label><label class="admin-field" for="attendance-to"><span>Date To</span><input id="attendance-to" data-attendance-to type="date" required></label><button type="submit" class="auth-button" data-attendance-apply>Apply</button></form><p class="attendance-filter-error" data-attendance-filter-error role="alert" hidden></p><div class="attendance-records attendance-history-records" data-history-list></div><p class="attendance-empty" data-history-empty>No attendance records match these filters.</p></section>
+        </div>
       </section>
-      <div data-team-content hidden>
-        <section class="team-summary" aria-label="Team summary">
-          <div class="team-summary-item"><span>Active</span><strong data-team-active-count>0</strong></div>
-          <div class="team-summary-item"><span>Inactive</span><strong data-team-inactive-count>0</strong></div>
-          <div class="team-summary-item"><span>Clocked In</span><strong data-team-clocked-count>0</strong></div>
-          <div class="team-summary-item"><span>On Break</span><strong data-team-break-count>0</strong></div>
-        </section>
-        <section class="team-editor" data-team-editor hidden aria-labelledby="team-editor-title">
-          <div class="team-editor-header"><div><p class="eyebrow">Team Member</p><h2 id="team-editor-title" data-team-editor-title>Add Team Member</h2></div><button type="button" class="team-action-button" data-team-editor-close>Cancel</button></div>
-          <form class="team-form" data-team-form novalidate>
-            <div class="team-form-grid">
-              <label class="admin-field" data-team-name-field><span>Name</span><input type="text" name="staff-name" data-team-name autocomplete="off" maxlength="80"></label>
-              <label class="admin-field" data-team-pin-field><span data-team-pin-label>4-digit PIN</span><input type="password" name="staff-pin" data-team-pin inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label>
-              <label class="admin-field" data-team-pin-confirm-field><span>Confirm PIN</span><input type="password" name="staff-pin-confirm" data-team-pin-confirm inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label>
-            </div>
-            <p class="team-confirm-copy" data-team-confirm-copy hidden></p>
-            <p class="team-form-error" data-team-form-error role="alert" hidden></p>
-            <div class="team-form-actions"><button type="submit" class="auth-button" data-team-submit>Save</button><button type="button" class="auth-button auth-button-secondary" data-team-cancel>Cancel</button></div>
-          </form>
-        </section>
-        <section class="team-list-panel" aria-labelledby="team-list-title">
-          <div class="team-list-heading"><div><p class="eyebrow">Kiosk Access</p><h2 id="team-list-title" tabindex="-1">Team Members</h2></div><p>Use the arrows to set the kiosk order.</p></div>
-          <div class="team-list" data-team-list></div>
-          <p class="team-empty" data-team-empty hidden>No team members yet.</p>
-        </section>
-      </div>
     </main>
 
     <nav class="mobile-bottom-nav" aria-label="Mobile admin navigation">
@@ -125,7 +125,7 @@
     <section class="mobile-more-drawer" id="mobile-more-drawer" aria-labelledby="mobile-more-title" aria-hidden="true">
       <div class="mobile-more-header"><h2 id="mobile-more-title">More</h2><button type="button" class="mobile-more-close" data-more-close aria-label="Close more navigation">Close</button></div>
       <div class="mobile-more-list">
-        <a href="menu-manager.html" class="mobile-more-item">Menu Manager</a><a href="inventory.html" class="mobile-more-item">Inventory</a><a href="recipes.html" class="mobile-more-item">Recipes</a><a href="team.html" class="mobile-more-item is-active" data-owner-team-nav hidden aria-current="page">Team</a><a href="attendance.html" class="mobile-more-item" data-owner-attendance-nav hidden>Attendance</a>
+        <a href="menu-manager.html" class="mobile-more-item">Menu Manager</a><a href="inventory.html" class="mobile-more-item">Inventory</a><a href="recipes.html" class="mobile-more-item">Recipes</a><a href="team.html" class="mobile-more-item is-active" data-owner-team-nav hidden aria-current="page">Team</a>
         <button type="button" class="mobile-more-item" aria-label="Sales">Sales</button><button type="button" class="mobile-more-item" aria-label="Settings">Settings</button>
       </div>
     </section>
