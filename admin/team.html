@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team | CURV Control</title>
+  <meta name="description" content="Manage CURV staff access and kiosk ordering.">
+  <script>
+    (() => {
+      const theme = localStorage.getItem('curvControlTheme') === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.adminTheme = theme;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css?v=t4b-team-management">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js?v=t4b-team-management" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="admin-shell">
+    <header class="topbar" aria-label="CURV Control header">
+      <div class="brand-lockup" aria-label="CURV Control">
+        <span class="brand-mark">CURV</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-section">Control</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="notification-button" type="button" aria-label="Notifications">
+          <svg class="topbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <span class="notification-badge" hidden aria-hidden="true"></span>
+        </button>
+        <button class="theme-toggle-button" type="button" data-admin-theme-toggle aria-pressed="false">Light</button>
+        <div class="owner-account owner-account-topbar" data-owner-account>
+          <button type="button" class="owner-account-button" data-owner-account-toggle aria-expanded="false" aria-controls="owner-account-menu">
+            <span class="owner-account-copy" data-owner-account-label>Owner Login</span>
+            <span class="owner-account-avatar" data-owner-account-initials aria-hidden="true">CO</span>
+            <span class="owner-account-caret" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="owner-account-menu" id="owner-account-menu" data-owner-account-menu hidden>
+            <div class="owner-account-panel" data-owner-signed-out>
+              <p class="eyebrow">Owner Access</p><h2>Owner Login</h2>
+              <form class="owner-account-form" data-auth-form>
+                <label class="admin-field" for="owner-email"><span>Email</span><input id="owner-email" name="email" type="email" autocomplete="email" required></label>
+                <label class="admin-field" for="owner-password"><span>Password</span><input id="owner-password" name="password" type="password" autocomplete="current-password" required></label>
+                <button type="submit" class="auth-button" data-sign-in>Sign In</button>
+              </form>
+            </div>
+            <div class="owner-account-panel" data-owner-signed-in hidden>
+              <p class="eyebrow">Owner Account</p><h2>Signed In</h2>
+              <p class="owner-account-email" data-owner-account-email>Owner access active.</p>
+              <button type="button" class="auth-button auth-button-secondary" data-sign-out>Sign Out</button>
+            </div>
+          </div>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="admin-navigation">
+          <span class="nav-toggle-line" aria-hidden="true"></span><span class="nav-toggle-line" aria-hidden="true"></span><span class="nav-toggle-line" aria-hidden="true"></span><span class="sr-only">Toggle navigation</span>
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="Admin navigation">
+      <nav class="admin-nav" id="admin-navigation">
+        <a href="index.html" class="admin-nav-link" data-nav-item="dashboard" aria-label="Dashboard"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span class="nav-label">Dashboard</span></a>
+        <a href="incoming-orders.html" class="admin-nav-link" data-nav-item="incoming-orders" aria-label="Incoming Orders"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg><span class="nav-label">Incoming Orders</span><span class="nav-badge" hidden aria-hidden="true"></span></a>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="pos" aria-label="POS" aria-disabled="true"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg><span class="nav-label">POS</span></button>
+        <a href="menu-manager.html" class="admin-nav-link" data-nav-item="menu-manager" aria-label="Menu Manager"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h10"/><path d="M17 17l2 2 4-4"/></svg><span class="nav-label">Menu Manager</span></a>
+        <a href="inventory.html" class="admin-nav-link" data-nav-item="inventory" aria-label="Inventory"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span class="nav-label">Inventory</span></a>
+        <a href="recipes.html" class="admin-nav-link" data-nav-item="recipes" aria-label="Recipes"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H7a2 2 0 0 1-2-2V4z"/><path d="M7 4v14"/><path d="M10 8h5"/><path d="M10 12h5"/></svg><span class="nav-label">Recipes</span></a>
+        <a href="team.html" class="admin-nav-link is-active" data-nav-item="team" data-owner-team-nav hidden aria-label="Team" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6"/><path d="M15 15c3 0 5 1.5 5 4"/></svg><span class="nav-label">Team</span></a>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="sales" aria-label="Sales" aria-disabled="true"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/></svg><span class="nav-label">Sales</span></button>
+        <button type="button" class="admin-nav-link admin-nav-button" data-nav-item="settings" aria-label="Settings" aria-disabled="true"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0"/></svg><span class="nav-label">Settings</span></button>
+      </nav>
+      <div class="sidebar-profile" aria-label="Current admin profile"><div class="profile-avatar" aria-hidden="true">CO</div><div class="profile-copy"><p class="profile-name">CURV Owner</p><p class="profile-role">Owner access</p></div></div>
+    </aside>
+
+    <main class="control-main team-main" id="main-content" data-team-page>
+      <section class="dashboard-header team-header" aria-labelledby="team-title">
+        <div class="team-header-copy"><p class="eyebrow">CURV Control</p><h1 id="team-title" class="dashboard-title">Team</h1><p>Manage CURV staff access and kiosk ordering.</p></div>
+        <div class="team-header-actions" data-team-actions hidden>
+          <button type="button" class="auth-button" data-team-add>Add Team Member</button>
+          <button type="button" class="auth-button auth-button-secondary" data-team-refresh>Refresh</button>
+        </div>
+      </section>
+      <p class="team-status" data-team-status role="status" aria-live="polite"></p>
+      <section class="team-locked" data-team-locked aria-labelledby="team-locked-title">
+        <p class="eyebrow">Owner Access</p><h2 id="team-locked-title">Sign in to manage the team</h2><p>Team names, kiosk access, and staff status are available to the CURV owner only.</p>
+      </section>
+      <div data-team-content hidden>
+        <section class="team-summary" aria-label="Team summary">
+          <div class="team-summary-item"><span>Active</span><strong data-team-active-count>0</strong></div>
+          <div class="team-summary-item"><span>Inactive</span><strong data-team-inactive-count>0</strong></div>
+          <div class="team-summary-item"><span>Clocked In</span><strong data-team-clocked-count>0</strong></div>
+          <div class="team-summary-item"><span>On Break</span><strong data-team-break-count>0</strong></div>
+        </section>
+        <section class="team-editor" data-team-editor hidden aria-labelledby="team-editor-title">
+          <div class="team-editor-header"><div><p class="eyebrow">Team Member</p><h2 id="team-editor-title" data-team-editor-title>Add Team Member</h2></div><button type="button" class="team-action-button" data-team-editor-close>Cancel</button></div>
+          <form class="team-form" data-team-form novalidate>
+            <div class="team-form-grid">
+              <label class="admin-field" data-team-name-field><span>Name</span><input type="text" name="staff-name" data-team-name autocomplete="off" maxlength="80"></label>
+              <label class="admin-field" data-team-pin-field><span data-team-pin-label>4-digit PIN</span><input type="password" name="staff-pin" data-team-pin inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label>
+              <label class="admin-field" data-team-pin-confirm-field><span>Confirm PIN</span><input type="password" name="staff-pin-confirm" data-team-pin-confirm inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password"></label>
+            </div>
+            <p class="team-confirm-copy" data-team-confirm-copy hidden></p>
+            <p class="team-form-error" data-team-form-error role="alert" hidden></p>
+            <div class="team-form-actions"><button type="submit" class="auth-button" data-team-submit>Save</button><button type="button" class="auth-button auth-button-secondary" data-team-cancel>Cancel</button></div>
+          </form>
+        </section>
+        <section class="team-list-panel" aria-labelledby="team-list-title">
+          <div class="team-list-heading"><div><p class="eyebrow">Kiosk Access</p><h2 id="team-list-title" tabindex="-1">Team Members</h2></div><p>Use the arrows to set the kiosk order.</p></div>
+          <div class="team-list" data-team-list></div>
+          <p class="team-empty" data-team-empty hidden>No team members yet.</p>
+        </section>
+      </div>
+    </main>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile admin navigation">
+      <a href="index.html" class="mobile-nav-item" aria-label="Dashboard"><svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Dashboard</span></a>
+      <a href="incoming-orders.html" class="mobile-nav-item" aria-label="Orders"><svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12l2 7H4l2-7z"/><path d="M4 9v11h16V9"/><path d="M9 14h6"/></svg><span>Orders</span><span class="mobile-nav-badge" hidden aria-hidden="true"></span></a>
+      <button type="button" class="mobile-nav-item" aria-label="POS"><svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h2"/><path d="M14 15h2"/></svg><span>POS</span></button>
+      <button type="button" class="mobile-nav-item mobile-more-button is-active" aria-label="More" aria-expanded="false" aria-controls="mobile-more-drawer"><svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01"/><path d="M12 12h.01"/><path d="M19 12h.01"/></svg><span>More</span></button>
+    </nav>
+    <div class="mobile-more-overlay" data-more-close hidden></div>
+    <section class="mobile-more-drawer" id="mobile-more-drawer" aria-labelledby="mobile-more-title" aria-hidden="true">
+      <div class="mobile-more-header"><h2 id="mobile-more-title">More</h2><button type="button" class="mobile-more-close" data-more-close aria-label="Close more navigation">Close</button></div>
+      <div class="mobile-more-list">
+        <a href="menu-manager.html" class="mobile-more-item">Menu Manager</a><a href="inventory.html" class="mobile-more-item">Inventory</a><a href="recipes.html" class="mobile-more-item">Recipes</a><a href="team.html" class="mobile-more-item is-active" data-owner-team-nav hidden aria-current="page">Team</a>
+        <button type="button" class="mobile-more-item" aria-label="Sales">Sales</button><button type="button" class="mobile-more-item" aria-label="Settings">Settings</button>
+      </div>
+    </section>
+    <footer class="admin-footer"><span>CURV Control</span><span aria-hidden="true">&middot;</span><span>&copy; <span id="current-year"></span></span></footer>
+  </div>
+</body>
+</html>

@@ -19,7 +19,9 @@
     ? 'incoming-orders'
     : currentAdminPage === 'menu-manager.html'
       ? 'menu-manager'
-      : 'dashboard';
+      : currentAdminPage === 'team.html'
+        ? 'team'
+        : 'dashboard';
 
   document.querySelectorAll('[data-nav-item]').forEach((item) => {
     const isCurrent = item.dataset.navItem === currentNavItem;
@@ -120,6 +122,7 @@
 
 (() => {
   const notificationButton = document.querySelector('.notification-button');
+  const ownerTeamNavLinks = document.querySelectorAll('[data-owner-team-nav]');
   const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
   const notificationBadges = Array.from(document.querySelectorAll('.notification-badge'));
   const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
@@ -809,6 +812,12 @@
 
   window.addEventListener('curv-close-notification-panel', closeNotificationPanel);
 
+  const setOwnerTeamNavVisible = (isVisible) => {
+    ownerTeamNavLinks.forEach(link => { link.hidden = !isVisible; });
+  };
+
+  setOwnerTeamNavVisible(false);
+
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
     hideIncomingOrderBadge();
     return;
@@ -816,6 +825,7 @@
 
   badgeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   badgeClient.auth.onAuthStateChange((_event, session) => {
+    setOwnerTeamNavVisible(Boolean(session && session.user));
     if (session && session.user) {
       refreshIncomingOrderBadge();
       subscribeToBadgeRealtime();
@@ -828,14 +838,530 @@
   refreshIncomingOrderBadge().then((isSignedIn) => {
     if (isSignedIn) subscribeToBadgeRealtime();
   });
+  badgeClient.auth.getSession().then(({ data }) => {
+    setOwnerTeamNavVisible(Boolean(data && data.session && data.session.user));
+  });
   window.addEventListener('pagehide', () => {
     unsubscribeFromBadgeRealtime();
     stopNewOrderAlert();
     dismissOrderToast();
   });
 })();
+
 (() => {
-  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page])');
+  const teamRoot = document.querySelector('[data-team-page]');
+  if (!teamRoot) return;
+
+  const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  const ownerAccount = document.querySelector('[data-owner-account]');
+  const authForm = document.querySelector('[data-auth-form]');
+  const emailInput = document.getElementById('owner-email');
+  const passwordInput = document.getElementById('owner-password');
+  const signInButton = document.querySelector('[data-sign-in]');
+  const signOutButton = document.querySelector('[data-sign-out]');
+  const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = document.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = document.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
+  const lockedPanel = teamRoot.querySelector('[data-team-locked]');
+  const content = teamRoot.querySelector('[data-team-content]');
+  const actions = teamRoot.querySelector('[data-team-actions]');
+  const status = teamRoot.querySelector('[data-team-status]');
+  const addButton = teamRoot.querySelector('[data-team-add]');
+  const refreshButton = teamRoot.querySelector('[data-team-refresh]');
+  const list = teamRoot.querySelector('[data-team-list]');
+  const empty = teamRoot.querySelector('[data-team-empty]');
+  const activeCount = teamRoot.querySelector('[data-team-active-count]');
+  const inactiveCount = teamRoot.querySelector('[data-team-inactive-count]');
+  const clockedCount = teamRoot.querySelector('[data-team-clocked-count]');
+  const breakCount = teamRoot.querySelector('[data-team-break-count]');
+  const editor = teamRoot.querySelector('[data-team-editor]');
+  const editorTitle = teamRoot.querySelector('[data-team-editor-title]');
+  const editorClose = teamRoot.querySelector('[data-team-editor-close]');
+  const form = teamRoot.querySelector('[data-team-form]');
+  const nameField = teamRoot.querySelector('[data-team-name-field]');
+  const nameInput = teamRoot.querySelector('[data-team-name]');
+  const pinField = teamRoot.querySelector('[data-team-pin-field]');
+  const pinConfirmField = teamRoot.querySelector('[data-team-pin-confirm-field]');
+  const pinInput = teamRoot.querySelector('[data-team-pin]');
+  const pinConfirmInput = teamRoot.querySelector('[data-team-pin-confirm]');
+  const confirmCopy = teamRoot.querySelector('[data-team-confirm-copy]');
+  const formError = teamRoot.querySelector('[data-team-form-error]');
+  const submitButton = teamRoot.querySelector('[data-team-submit]');
+  const cancelButton = teamRoot.querySelector('[data-team-cancel]');
+
+  if (!ownerAccount || !window.supabase) return;
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let staff = [];
+  let sessionUser = null;
+  let hasOwnerAccess = false;
+  let actionBusy = false;
+  let loadBusy = false;
+  let editorMode = '';
+  let selectedStaffId = '';
+  let editorReturnFocus = null;
+  let authGeneration = 0;
+  let loadGeneration = 0;
+  let actionGeneration = 0;
+
+  const clearElement = (element) => {
+    while (element && element.firstChild) element.removeChild(element.firstChild);
+  };
+
+  const setStatus = (message, isError = false) => {
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('is-error', Boolean(isError));
+  };
+
+  const setFormError = (message) => {
+    if (!formError) return;
+    formError.textContent = message || '';
+    formError.hidden = !message;
+  };
+
+  const getInitials = (email) => {
+    const localPart = String(email || '').trim().split('@')[0];
+    return localPart.split(/[._\-\s]+/).filter(Boolean).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('') || 'CO';
+  };
+
+  const updateAccountUi = () => {
+    const signedIn = Boolean(sessionUser);
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = signedIn;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !signedIn;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = signedIn ? 'Owner' : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = signedIn ? 'Signed in as ' + (sessionUser.email || 'owner') : 'Owner access active.';
+    if (ownerAccountInitials) ownerAccountInitials.textContent = getInitials(sessionUser && sessionUser.email);
+    if (signOutButton) signOutButton.disabled = !signedIn;
+  };
+
+  const closeAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    ownerAccountMenu.hidden = true;
+    ownerAccountToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const clearPins = () => {
+    if (pinInput) pinInput.value = '';
+    if (pinConfirmInput) pinConfirmInput.value = '';
+    if (passwordInput) passwordInput.value = '';
+  };
+
+  const closeEditor = (restoreFocus = true) => {
+    clearPins();
+    if (nameInput) nameInput.value = '';
+    if (editor) editor.hidden = true;
+    if (form) form.reset();
+    setFormError('');
+    editorMode = '';
+    selectedStaffId = '';
+    const returnTarget = editorReturnFocus;
+    editorReturnFocus = null;
+    if (restoreFocus && returnTarget && document.contains(returnTarget)) returnTarget.focus();
+  };
+
+  const clearPrivateState = () => {
+    authGeneration += 1;
+    loadGeneration += 1;
+    actionGeneration += 1;
+    staff = [];
+    hasOwnerAccess = false;
+    actionBusy = false;
+    loadBusy = false;
+    closeEditor(false);
+    clearElement(list);
+    if (empty) empty.hidden = true;
+    if (content) content.hidden = true;
+    if (actions) actions.hidden = true;
+    if (lockedPanel) lockedPanel.hidden = false;
+    [activeCount, inactiveCount, clockedCount, breakCount].forEach(node => { if (node) node.textContent = '0'; });
+  };
+
+  const knownErrorCode = (value) => {
+    const match = String(value || '').match(/TIMEKEEPING_[A-Z_]+/);
+    return match ? match[0] : '';
+  };
+
+  const readRpcFailure = (data, error) => {
+    const code = knownErrorCode(data && data.error_code)
+      || knownErrorCode(error && error.code)
+      || knownErrorCode(error && error.details)
+      || knownErrorCode(error && error.message);
+    const messages = {
+      TIMEKEEPING_STAFF_NAME_DUPLICATE: 'A team member with this name already exists.',
+      TIMEKEEPING_STAFF_CLOCKED_IN: 'Clock this team member out before deactivating them.',
+      TIMEKEEPING_FORBIDDEN: 'Owner access is required to manage the team.',
+      TIMEKEEPING_INVALID_STAFF_NAME: 'Enter a valid team member name.',
+      TIMEKEEPING_INVALID_PIN: 'Enter matching 4-digit PINs.',
+      TIMEKEEPING_STAFF_NOT_FOUND: 'This team member no longer exists. Refresh and try again.',
+      TIMEKEEPING_INVALID_ACTIVE_STATE: 'That team status change is not valid.',
+      TIMEKEEPING_INVALID_MOVE_DIRECTION: 'That team order change is not valid.',
+    };
+    return {
+      code,
+      message: messages[code] || (data && data.message) || (error && error.message) || 'Something went wrong. Try again.',
+    };
+  };
+
+  const normalizeStaff = (rows) => {
+    if (!Array.isArray(rows)) return [];
+    return rows.map(row => ({
+      id: String(row.id || ''),
+      name: String(row.name || '').trim(),
+      is_active: row.is_active === true,
+      display_order: Number(row.display_order) || 0,
+      created_at: row.created_at || null,
+      is_clocked_in: row.is_clocked_in === true,
+      is_on_break: row.is_on_break === true,
+    })).filter(row => row.id && row.name).sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
+  };
+
+  const makeButton = (label, className, onClick) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  };
+
+  const updateSummary = () => {
+    if (activeCount) activeCount.textContent = String(staff.filter(item => item.is_active).length);
+    if (inactiveCount) inactiveCount.textContent = String(staff.filter(item => !item.is_active).length);
+    if (clockedCount) clockedCount.textContent = String(staff.filter(item => item.is_clocked_in || item.is_on_break).length);
+    if (breakCount) breakCount.textContent = String(staff.filter(item => item.is_on_break).length);
+  };
+
+  const setControlsDisabled = (disabled) => {
+    [addButton, refreshButton].forEach(button => { if (button) button.disabled = disabled; });
+    teamRoot.querySelectorAll('[data-team-row-action], [data-team-move]').forEach(button => { button.disabled = disabled || button.dataset.boundary === 'true' || button.dataset.clocked === 'true'; });
+    [submitButton, cancelButton, editorClose].forEach(button => { if (button) button.disabled = disabled; });
+  };
+
+  const openEditor = (mode, member, trigger) => {
+    if (actionBusy || loadBusy) return;
+    editorMode = mode;
+    selectedStaffId = member ? member.id : '';
+    editorReturnFocus = trigger || document.activeElement;
+    setFormError('');
+    clearPins();
+    if (nameInput) nameInput.value = member ? member.name : '';
+    const usesName = mode === 'add' || mode === 'rename';
+    const usesPin = mode === 'add' || mode === 'reset';
+    if (nameField) nameField.hidden = !usesName;
+    if (pinField) pinField.hidden = !usesPin;
+    if (pinConfirmField) pinConfirmField.hidden = !usesPin;
+    if (confirmCopy) confirmCopy.hidden = mode !== 'deactivate' && mode !== 'reset';
+    if (editorTitle) editorTitle.textContent = mode === 'add' ? 'Add Team Member' : mode === 'rename' ? 'Rename Team Member' : mode === 'reset' ? 'Reset PIN' : 'Deactivate ' + member.name;
+    if (confirmCopy) {
+      confirmCopy.textContent = mode === 'reset'
+        ? 'This replaces the current PIN.'
+        : member
+          ? 'Deactivate “' + member.name + '”? They will disappear from the Clock In / Out kiosk. Attendance history will be preserved.'
+          : '';
+    }
+    if (submitButton) submitButton.textContent = mode === 'add' ? 'Add Team Member' : mode === 'rename' ? 'Save Name' : mode === 'reset' ? 'Update PIN' : 'Deactivate';
+    if (editor) editor.hidden = false;
+    window.requestAnimationFrame(() => {
+      const firstTarget = mode === 'deactivate' ? submitButton : usesName ? nameInput : pinInput;
+      if (firstTarget) firstTarget.focus();
+      editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
+
+  const renderStaff = (focusRequest = null) => {
+    clearElement(list);
+    updateSummary();
+    if (empty) empty.hidden = staff.length !== 0;
+    staff.forEach((member, index) => {
+      const row = document.createElement('article');
+      row.className = 'team-row';
+      row.dataset.staffId = member.id;
+
+      const orderControls = document.createElement('div');
+      orderControls.className = 'team-order-controls';
+      const up = makeButton('↑', 'team-order-button', event => moveStaff(member, 'up', event.currentTarget));
+      const down = makeButton('↓', 'team-order-button', event => moveStaff(member, 'down', event.currentTarget));
+      up.dataset.teamMove = 'up';
+      down.dataset.teamMove = 'down';
+      up.dataset.boundary = index === 0 ? 'true' : 'false';
+      down.dataset.boundary = index === staff.length - 1 ? 'true' : 'false';
+      up.disabled = index === 0 || actionBusy || loadBusy;
+      down.disabled = index === staff.length - 1 || actionBusy || loadBusy;
+      up.setAttribute('aria-label', 'Move ' + member.name + ' up');
+      down.setAttribute('aria-label', 'Move ' + member.name + ' down');
+      up.title = 'Move up';
+      down.title = 'Move down';
+      orderControls.append(up, down);
+
+      const main = document.createElement('div');
+      main.className = 'team-row-main';
+      const name = document.createElement('h3');
+      name.className = 'team-name';
+      name.textContent = member.name;
+      const state = document.createElement('p');
+      state.className = 'team-state';
+      const workState = member.is_on_break ? 'On Break' : member.is_clocked_in ? 'Working now' : 'Not clocked in';
+      state.textContent = (member.is_active ? 'Active' : 'Inactive') + ' · ' + workState
+        + (member.is_active && (member.is_clocked_in || member.is_on_break) ? ' · Clock out before deactivating' : '');
+      main.append(name, state);
+
+      const rowActions = document.createElement('div');
+      rowActions.className = 'team-row-actions';
+      const rename = makeButton('Rename', 'team-action-button', event => openEditor('rename', member, event.currentTarget));
+      const reset = makeButton('Reset PIN', 'team-action-button', event => openEditor('reset', member, event.currentTarget));
+      const activeLabel = member.is_active ? 'Deactivate' : 'Activate';
+      const activeButton = makeButton(activeLabel, 'team-action-button' + (member.is_active ? ' team-action-danger' : ''), event => {
+        if (member.is_active) openEditor('deactivate', member, event.currentTarget);
+        else setStaffActive(member, true, event.currentTarget);
+      });
+      [rename, reset, activeButton].forEach(button => { button.dataset.teamRowAction = 'true'; });
+      if (member.is_active && (member.is_clocked_in || member.is_on_break)) {
+        activeButton.disabled = true;
+        activeButton.dataset.clocked = 'true';
+        activeButton.title = 'Clock this team member out before deactivating them.';
+        activeButton.setAttribute('aria-label', 'Deactivate ' + member.name + ' unavailable. Clock this team member out before deactivating them.');
+      }
+      rowActions.append(rename, reset, activeButton);
+      row.append(orderControls, main, rowActions);
+      list.appendChild(row);
+    });
+    setControlsDisabled(actionBusy || loadBusy);
+    if (focusRequest) {
+      const target = list.querySelector('[data-staff-id="' + CSS.escape(focusRequest.id) + '"] [data-team-move="' + focusRequest.direction + '"]');
+      if (target) target.focus();
+    }
+  };
+
+  const showAuthorizedContent = () => {
+    hasOwnerAccess = true;
+    if (lockedPanel) lockedPanel.hidden = true;
+    if (content) content.hidden = false;
+    if (actions) actions.hidden = false;
+  };
+
+  const loadStaff = async ({ announce = true } = {}) => {
+    if (!sessionUser || loadBusy || actionBusy) return;
+    const authToken = authGeneration;
+    const loadToken = ++loadGeneration;
+    loadBusy = true;
+    setControlsDisabled(true);
+    if (announce) setStatus('Refreshing team…');
+    try {
+      const { data, error } = await supabaseClient.rpc('timekeeping_admin_list_staff');
+      if (authToken !== authGeneration || loadToken !== loadGeneration || !sessionUser) return;
+      if (error) throw error;
+      staff = normalizeStaff(data);
+      showAuthorizedContent();
+      renderStaff();
+      if (announce) setStatus('Team is up to date.');
+    } catch (error) {
+      if (authToken !== authGeneration || loadToken !== loadGeneration) return;
+      const failure = readRpcFailure(null, error);
+      hasOwnerAccess = false;
+      staff = [];
+      clearElement(list);
+      if (content) content.hidden = true;
+      if (actions) actions.hidden = true;
+      if (lockedPanel) lockedPanel.hidden = false;
+      setStatus(failure.message, true);
+    } finally {
+      if (authToken === authGeneration && loadToken === loadGeneration) {
+        loadBusy = false;
+        setControlsDisabled(actionBusy);
+      }
+    }
+  };
+
+  const runMutation = async (rpcName, parameters, successMessage, options = {}) => {
+    if (!sessionUser || !hasOwnerAccess || actionBusy || loadBusy) return false;
+    const authToken = authGeneration;
+    const actionToken = ++actionGeneration;
+    let mutationSucceeded = false;
+    let postMutationFocus = null;
+    actionBusy = true;
+    setControlsDisabled(true);
+    setFormError('');
+    setStatus(options.busyMessage || 'Saving team changes…');
+    try {
+      const { data, error } = await supabaseClient.rpc(rpcName, parameters);
+      if (authToken !== authGeneration || actionToken !== actionGeneration || !sessionUser) return false;
+      if (error || (data && data.ok === false)) {
+        const failure = readRpcFailure(data, error);
+        const rpcError = new Error(failure.message);
+        rpcError.teamFailure = failure;
+        throw rpcError;
+      }
+      if (options.staffResult && data && Array.isArray(data.staff)) {
+        staff = normalizeStaff(data.staff);
+      } else {
+        const result = await supabaseClient.rpc('timekeeping_admin_list_staff');
+        if (authToken !== authGeneration || actionToken !== actionGeneration || !sessionUser) return false;
+        if (result.error) throw result.error;
+        staff = normalizeStaff(result.data);
+      }
+      renderStaff(options.focusRequest || null);
+      postMutationFocus = editorReturnFocus && document.contains(editorReturnFocus)
+        ? editorReturnFocus
+        : document.getElementById('team-list-title');
+      closeEditor(false);
+      setStatus(successMessage);
+      mutationSucceeded = true;
+      return true;
+    } catch (error) {
+      if (authToken !== authGeneration || actionToken !== actionGeneration) return false;
+      const failure = error.teamFailure || readRpcFailure(null, error);
+      if (editorMode) setFormError(failure.message);
+      setStatus(failure.message, true);
+      clearPins();
+      return false;
+    } finally {
+      if (authToken === authGeneration && actionToken === actionGeneration) {
+        actionBusy = false;
+        setControlsDisabled(loadBusy);
+        if (mutationSucceeded && options.focusRequest) {
+          const focusTarget = list.querySelector('[data-staff-id="' + CSS.escape(options.focusRequest.id) + '"] [data-team-move="' + options.focusRequest.direction + '"]');
+          if (focusTarget && !focusTarget.disabled) focusTarget.focus();
+        } else if (mutationSucceeded && postMutationFocus) {
+          postMutationFocus.focus();
+        }
+      }
+    }
+  };
+
+  async function moveStaff(member, direction) {
+    await runMutation('timekeeping_admin_move_staff', { p_staff_id: member.id, p_direction: direction }, member.name + ' moved ' + direction + '.', {
+      staffResult: true,
+      busyMessage: 'Updating team order…',
+      focusRequest: { id: member.id, direction },
+    });
+  }
+
+  async function setStaffActive(member, isActive) {
+    const message = isActive ? member.name + ' activated.' : member.name + ' deactivated.';
+    await runMutation('timekeeping_admin_set_staff_active', { p_staff_id: member.id, p_is_active: isActive }, message);
+  }
+
+  form?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (actionBusy || !editorMode) return;
+    const member = staff.find(item => item.id === selectedStaffId);
+    const name = String(nameInput && nameInput.value || '').trim();
+    const pin = String(pinInput && pinInput.value || '');
+    const pinConfirm = String(pinConfirmInput && pinConfirmInput.value || '');
+    if ((editorMode === 'add' || editorMode === 'rename') && !name) {
+      setFormError('Enter a team member name.');
+      nameInput?.focus();
+      return;
+    }
+    if ((editorMode === 'add' || editorMode === 'reset') && (!/^[0-9]{4}$/.test(pin) || pin !== pinConfirm)) {
+      setFormError('Enter matching 4-digit PINs.');
+      clearPins();
+      pinInput?.focus();
+      return;
+    }
+    if (editorMode !== 'add' && !member) {
+      setFormError('This team member no longer exists. Refresh and try again.');
+      return;
+    }
+    if (editorMode === 'add') {
+      await runMutation('timekeeping_admin_create_staff', { p_name: name, p_pin: pin }, name + ' added to the team.');
+    } else if (editorMode === 'rename') {
+      await runMutation('timekeeping_admin_rename_staff', { p_staff_id: member.id, p_name: name }, 'Team member renamed.');
+    } else if (editorMode === 'reset') {
+      await runMutation('timekeeping_admin_reset_staff_pin', { p_staff_id: member.id, p_new_pin: pin }, 'PIN updated.');
+    } else if (editorMode === 'deactivate') {
+      await setStaffActive(member, false);
+    }
+  });
+
+  addButton?.addEventListener('click', event => openEditor('add', null, event.currentTarget));
+  refreshButton?.addEventListener('click', () => loadStaff());
+  editorClose?.addEventListener('click', () => closeEditor());
+  cancelButton?.addEventListener('click', () => closeEditor());
+
+  ownerAccountToggle?.addEventListener('click', event => {
+    event.stopPropagation();
+    if (!ownerAccountMenu) return;
+    const opening = ownerAccountMenu.hidden;
+    ownerAccountMenu.hidden = !opening;
+    ownerAccountToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    if (opening) ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)')?.focus();
+  });
+
+  document.addEventListener('click', event => { if (!ownerAccount.contains(event.target)) closeAccountMenu(); });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (editor && !editor.hidden) closeEditor();
+    else closeAccountMenu();
+  });
+
+  authForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!emailInput || !passwordInput || signInButton?.disabled) return;
+    if (signInButton) signInButton.disabled = true;
+    setStatus('Signing in…');
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
+      if (error) throw error;
+      sessionUser = data.user;
+      updateAccountUi();
+      clearPins();
+      closeAccountMenu();
+      await loadStaff({ announce: false });
+    } catch (error) {
+      clearPins();
+      setStatus(error.message || 'Owner sign in failed.', true);
+    } finally {
+      if (signInButton) signInButton.disabled = false;
+    }
+  });
+
+  signOutButton?.addEventListener('click', async () => {
+    signOutButton.disabled = true;
+    clearPrivateState();
+    sessionUser = null;
+    updateAccountUi();
+    setStatus('Signed out.');
+    closeAccountMenu();
+    await supabaseClient.auth.signOut({ scope: 'local' });
+  });
+
+  const applySession = (session) => {
+    const nextUser = session && session.user;
+    const previousId = sessionUser && sessionUser.id;
+    if (!nextUser) {
+      sessionUser = null;
+      clearPrivateState();
+      updateAccountUi();
+      return;
+    }
+    sessionUser = nextUser;
+    updateAccountUi();
+    if (nextUser.id !== previousId || !hasOwnerAccess) loadStaff({ announce: false });
+  };
+
+  clearPrivateState();
+  updateAccountUi();
+  supabaseClient.auth.getSession().then(({ data }) => applySession(data && data.session));
+  const { data: authSubscription } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    window.setTimeout(() => applySession(session), 0);
+  });
+  window.addEventListener('pagehide', () => {
+    authGeneration += 1;
+    loadGeneration += 1;
+    actionGeneration += 1;
+    clearPins();
+    if (authSubscription && authSubscription.subscription) authSubscription.subscription.unsubscribe();
+  });
+})();
+(() => {
+  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page]):not([data-team-page])');
   const ownerAccount = document.querySelector('[data-owner-account]');
   if (!dashboardRoot || !ownerAccount) return;
 
