@@ -21,7 +21,9 @@
       ? 'menu-manager'
       : currentAdminPage === 'team.html'
         ? 'team'
-        : 'dashboard';
+        : currentAdminPage === 'attendance.html'
+          ? 'attendance'
+          : 'dashboard';
 
   document.querySelectorAll('[data-nav-item]').forEach((item) => {
     const isCurrent = item.dataset.navItem === currentNavItem;
@@ -122,7 +124,7 @@
 
 (() => {
   const notificationButton = document.querySelector('.notification-button');
-  const ownerTeamNavLinks = document.querySelectorAll('[data-owner-team-nav]');
+  const ownerTeamNavLinks = document.querySelectorAll('[data-owner-team-nav], [data-owner-attendance-nav]');
   const desktopBadges = Array.from(document.querySelectorAll('[data-nav-item="incoming-orders"] .nav-badge'));
   const notificationBadges = Array.from(document.querySelectorAll('.notification-badge'));
   const mobileBadges = Array.from(document.querySelectorAll('.mobile-nav-badge'));
@@ -849,6 +851,807 @@
 })();
 
 (() => {
+  const attendanceRoot = document.querySelector('[data-attendance-page]');
+  if (!attendanceRoot) return;
+
+  const SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  const MANILA_TIME_ZONE = 'Asia/Manila';
+  const MAX_HISTORY_DAYS = 31;
+  const SESSION_COLUMNS = [
+    'session_id',
+    'staff_id',
+    'staff_name',
+    'original_clocked_in_at',
+    'original_clocked_out_at',
+    'corrected_clocked_in_at',
+    'corrected_clocked_out_at',
+    'effective_clocked_in_at',
+    'effective_clocked_out_at',
+    'has_correction',
+    'latest_correction_reason',
+    'latest_corrected_at',
+    'total_break_seconds',
+    'worked_seconds',
+  ].join(',');
+
+  const ownerAccount = document.querySelector('[data-owner-account]');
+  const authForm = document.querySelector('[data-auth-form]');
+  const emailInput = document.getElementById('owner-email');
+  const passwordInput = document.getElementById('owner-password');
+  const signInButton = document.querySelector('[data-sign-in]');
+  const signOutButton = document.querySelector('[data-sign-out]');
+  const ownerAccountToggle = document.querySelector('[data-owner-account-toggle]');
+  const ownerAccountMenu = document.querySelector('[data-owner-account-menu]');
+  const ownerSignedOutPanel = document.querySelector('[data-owner-signed-out]');
+  const ownerSignedInPanel = document.querySelector('[data-owner-signed-in]');
+  const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
+  const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
+  const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
+  const refreshButton = attendanceRoot.querySelector('[data-attendance-refresh]');
+  const status = attendanceRoot.querySelector('[data-attendance-status]');
+  const lockedPanel = attendanceRoot.querySelector('[data-attendance-locked]');
+  const retryButton = attendanceRoot.querySelector('[data-attendance-retry]');
+  const content = attendanceRoot.querySelector('[data-attendance-content]');
+  const workingSummary = attendanceRoot.querySelector('[data-working-summary]');
+  const workingList = attendanceRoot.querySelector('[data-working-list]');
+  const workingEmpty = attendanceRoot.querySelector('[data-working-empty]');
+  const todayDate = attendanceRoot.querySelector('[data-today-date]');
+  const todayStaffCount = attendanceRoot.querySelector('[data-today-staff-count]');
+  const todayCompletedCount = attendanceRoot.querySelector('[data-today-completed-count]');
+  const todayWorked = attendanceRoot.querySelector('[data-today-worked]');
+  const todayBreak = attendanceRoot.querySelector('[data-today-break]');
+  const todayList = attendanceRoot.querySelector('[data-today-list]');
+  const todayEmpty = attendanceRoot.querySelector('[data-today-empty]');
+  const filterForm = attendanceRoot.querySelector('[data-attendance-filters]');
+  const staffFilter = attendanceRoot.querySelector('[data-attendance-staff]');
+  const fromInput = attendanceRoot.querySelector('[data-attendance-from]');
+  const toInput = attendanceRoot.querySelector('[data-attendance-to]');
+  const applyButton = attendanceRoot.querySelector('[data-attendance-apply]');
+  const filterError = attendanceRoot.querySelector('[data-attendance-filter-error]');
+  const historyList = attendanceRoot.querySelector('[data-history-list]');
+  const historyEmpty = attendanceRoot.querySelector('[data-history-empty]');
+  const correctionEditor = attendanceRoot.querySelector('[data-attendance-correction]');
+  const correctionTitle = attendanceRoot.querySelector('[data-correction-title]');
+  const correctionDate = attendanceRoot.querySelector('[data-correction-date]');
+  const correctionCurrent = attendanceRoot.querySelector('[data-correction-current]');
+  const correctionForm = attendanceRoot.querySelector('[data-correction-form]');
+  const correctionInInput = attendanceRoot.querySelector('[data-correction-in]');
+  const correctionOutInput = attendanceRoot.querySelector('[data-correction-out]');
+  const correctionReasonInput = attendanceRoot.querySelector('[data-correction-reason]');
+  const correctionError = attendanceRoot.querySelector('[data-correction-error]');
+  const correctionCloseButton = attendanceRoot.querySelector('[data-correction-close]');
+  const correctionCancelButton = attendanceRoot.querySelector('[data-correction-cancel]');
+  const correctionSaveButton = attendanceRoot.querySelector('[data-correction-save]');
+
+  if (!ownerAccount || !window.supabase) return;
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  let sessionUser = null;
+  let hasOwnerAccess = false;
+  let loadBusy = false;
+  let loadGeneration = 0;
+  let authGeneration = 0;
+  let openSessions = [];
+  let openBreaksBySession = new Map();
+  let liveTimer = null;
+  let correctionBusy = false;
+  let correctionGeneration = 0;
+  let selectedCorrectionRecord = null;
+  let correctionReturnFocus = null;
+
+  const clearElement = element => {
+    while (element && element.firstChild) element.removeChild(element.firstChild);
+  };
+
+  const setStatus = (message, isError = false) => {
+    if (!status) return;
+    status.textContent = message || '';
+    status.classList.toggle('is-error', Boolean(isError));
+  };
+
+  const setFilterError = message => {
+    if (!filterError) return;
+    filterError.textContent = message || '';
+    filterError.hidden = !message;
+  };
+
+  const getInitials = email => {
+    const localPart = String(email || '').trim().split('@')[0];
+    return localPart.split(/[._\-\s]+/).filter(Boolean).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('') || 'CO';
+  };
+
+  const updateAccountUi = () => {
+    const signedIn = Boolean(sessionUser);
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = signedIn;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !signedIn;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = signedIn ? 'Owner' : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = signedIn ? 'Signed in as ' + (sessionUser.email || 'owner') : 'Owner access active.';
+    if (ownerAccountInitials) ownerAccountInitials.textContent = getInitials(sessionUser && sessionUser.email);
+    if (signOutButton) signOutButton.disabled = !signedIn;
+  };
+
+  const closeAccountMenu = () => {
+    if (!ownerAccountMenu || !ownerAccountToggle) return;
+    ownerAccountMenu.hidden = true;
+    ownerAccountToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const getManilaDateKey = (date = new Date()) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: MANILA_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return values.year + '-' + values.month + '-' + values.day;
+  };
+
+  const addDaysToKey = (dateKey, days) => {
+    const [year, month, day] = String(dateKey).split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + days));
+    return date.toISOString().slice(0, 10);
+  };
+
+  const dateKeyToManilaIso = dateKey => dateKey + 'T00:00:00+08:00';
+
+  const daySpan = (fromKey, toKey) => {
+    const from = Date.parse(fromKey + 'T00:00:00Z');
+    const to = Date.parse(toKey + 'T00:00:00Z');
+    return Math.floor((to - from) / 86400000) + 1;
+  };
+
+  const setDefaultDates = () => {
+    const todayKey = getManilaDateKey();
+    if (fromInput) fromInput.value = addDaysToKey(todayKey, -6);
+    if (toInput) toInput.value = todayKey;
+    if (todayDate) todayDate.textContent = formatDate(dateKeyToManilaIso(todayKey));
+  };
+
+  const formatDate = value => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { timeZone: MANILA_TIME_ZONE, month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+  };
+
+  const formatTime = value => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-PH', { timeZone: MANILA_TIME_ZONE, hour: 'numeric', minute: '2-digit' }).format(date);
+  };
+
+  const toManilaDateTimeLocal = value => {
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return '';
+    return new Date(timestamp + (8 * 60 * 60 * 1000)).toISOString().slice(0, 19);
+  };
+
+  const manilaDateTimeLocalToIso = value => {
+    const cleanValue = String(value || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(cleanValue)) return '';
+    const withSeconds = cleanValue.length === 16 ? cleanValue + ':00' : cleanValue;
+    const parsed = new Date(withSeconds + '+08:00');
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+  };
+
+  const formatDuration = secondsValue => {
+    const seconds = Math.max(0, Math.floor(Number(secondsValue) || 0));
+    if (seconds === 0) return '0 min';
+    if (seconds < 60) return 'Less than a minute';
+    const totalMinutes = Math.floor(seconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (!hours) return totalMinutes + ' min';
+    if (!minutes) return hours + ' hr';
+    return hours + ' hr ' + minutes + ' min';
+  };
+
+  const elapsedSeconds = value => {
+    const startedAt = new Date(value).getTime();
+    return Number.isFinite(startedAt) ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
+  };
+
+  const stopLiveTimer = () => {
+    if (liveTimer) window.clearInterval(liveTimer);
+    liveTimer = null;
+  };
+
+  const updateLiveDurations = () => {
+    attendanceRoot.querySelectorAll('[data-live-shift]').forEach(node => {
+      node.textContent = formatDuration(elapsedSeconds(node.dataset.liveShift));
+    });
+    attendanceRoot.querySelectorAll('[data-live-break]').forEach(node => {
+      node.textContent = formatDuration(elapsedSeconds(node.dataset.liveBreak));
+    });
+  };
+
+  const startLiveTimer = () => {
+    stopLiveTimer();
+    updateLiveDurations();
+    if (openSessions.length && !document.hidden) liveTimer = window.setInterval(updateLiveDurations, 60000);
+  };
+
+  const setControlsDisabled = disabled => {
+    [refreshButton, retryButton, applyButton, staffFilter, fromInput, toInput].forEach(control => { if (control) control.disabled = disabled; });
+  };
+
+  const setCorrectionError = message => {
+    if (!correctionError) return;
+    correctionError.textContent = message || '';
+    correctionError.hidden = !message;
+  };
+
+  const setCorrectionControlsDisabled = disabled => {
+    [correctionInInput, correctionOutInput, correctionReasonInput, correctionCloseButton, correctionCancelButton, correctionSaveButton].forEach(control => {
+      if (control) control.disabled = disabled;
+    });
+  };
+
+  const closeCorrectionEditor = ({ restoreFocus = true } = {}) => {
+    const returnTarget = correctionReturnFocus;
+    selectedCorrectionRecord = null;
+    correctionReturnFocus = null;
+    if (correctionForm) correctionForm.reset();
+    if (correctionInInput) correctionInInput.value = '';
+    if (correctionOutInput) correctionOutInput.value = '';
+    if (correctionReasonInput) correctionReasonInput.value = '';
+    setCorrectionError('');
+    clearElement(correctionCurrent);
+    if (correctionEditor) correctionEditor.hidden = true;
+    if (restoreFocus && returnTarget && document.contains(returnTarget)) returnTarget.focus();
+  };
+
+  const clearRenderedData = ({ clearStaff = false } = {}) => {
+    stopLiveTimer();
+    if (!correctionBusy) closeCorrectionEditor({ restoreFocus: false });
+    openSessions = [];
+    openBreaksBySession = new Map();
+    [workingList, todayList, historyList].forEach(clearElement);
+    if (workingEmpty) workingEmpty.hidden = false;
+    if (todayEmpty) todayEmpty.hidden = false;
+    if (historyEmpty) historyEmpty.hidden = false;
+    if (workingSummary) workingSummary.textContent = 'No one clocked in';
+    if (todayStaffCount) todayStaffCount.textContent = '0';
+    if (todayCompletedCount) todayCompletedCount.textContent = '0';
+    if (todayWorked) todayWorked.textContent = '0 min';
+    if (todayBreak) todayBreak.textContent = '0 min';
+    if (clearStaff && staffFilter) {
+      const selected = staffFilter.value;
+      clearElement(staffFilter);
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'All Team';
+      staffFilter.appendChild(option);
+      staffFilter.value = selected === '' ? '' : '';
+    }
+  };
+
+  const clearPrivateState = () => {
+    authGeneration += 1;
+    loadGeneration += 1;
+    correctionGeneration += 1;
+    loadBusy = false;
+    correctionBusy = false;
+    hasOwnerAccess = false;
+    setCorrectionControlsDisabled(false);
+    closeCorrectionEditor({ restoreFocus: false });
+    clearRenderedData({ clearStaff: true });
+    setFilterError('');
+    if (content) content.hidden = true;
+    if (refreshButton) refreshButton.hidden = true;
+    if (retryButton) retryButton.hidden = true;
+    if (lockedPanel) lockedPanel.hidden = false;
+    setControlsDisabled(false);
+    setStatus('');
+  };
+
+  const normalizeSessions = rows => Array.isArray(rows) ? rows.map(row => ({
+    session_id: String(row.session_id || ''),
+    staff_id: String(row.staff_id || ''),
+    staff_name: String(row.staff_name || '').trim() || 'Team member',
+    original_clocked_in_at: row.original_clocked_in_at,
+    original_clocked_out_at: row.original_clocked_out_at || null,
+    corrected_clocked_in_at: row.corrected_clocked_in_at || null,
+    corrected_clocked_out_at: row.corrected_clocked_out_at || null,
+    effective_clocked_in_at: row.effective_clocked_in_at,
+    effective_clocked_out_at: row.effective_clocked_out_at || null,
+    has_correction: row.has_correction === true,
+    latest_correction_reason: String(row.latest_correction_reason || '').trim(),
+    latest_corrected_at: row.latest_corrected_at || null,
+    total_break_seconds: Math.max(0, Number(row.total_break_seconds) || 0),
+    worked_seconds: Math.max(0, Number(row.worked_seconds) || 0),
+  })).filter(row => row.session_id && row.staff_id && row.effective_clocked_in_at) : [];
+
+  const makeDetail = (label, value) => {
+    const wrapper = document.createElement('div');
+    const term = document.createElement('dt');
+    const description = document.createElement('dd');
+    term.textContent = label;
+    if (value instanceof Node) description.appendChild(value);
+    else description.textContent = value;
+    wrapper.append(term, description);
+    return wrapper;
+  };
+
+  const makeBadge = (label, className = '') => {
+    const badge = document.createElement('span');
+    badge.className = 'attendance-badge' + (className ? ' ' + className : '');
+    badge.textContent = label;
+    return badge;
+  };
+
+  const appendAuditLine = (container, label, value) => {
+    const row = document.createElement('div');
+    const term = document.createElement('span');
+    const detail = document.createElement('strong');
+    term.textContent = label;
+    detail.textContent = value;
+    row.append(term, detail);
+    container.appendChild(row);
+  };
+
+  const makeCorrectionAudit = record => {
+    const details = document.createElement('details');
+    details.className = 'attendance-audit';
+    const summary = document.createElement('summary');
+    summary.textContent = 'View correction details';
+    const body = document.createElement('div');
+    body.className = 'attendance-audit-body';
+    const current = document.createElement('section');
+    const currentTitle = document.createElement('h4');
+    currentTitle.textContent = 'Current Effective';
+    current.appendChild(currentTitle);
+    appendAuditLine(current, 'Clock In', formatTime(record.effective_clocked_in_at));
+    appendAuditLine(current, 'Clock Out', formatTime(record.effective_clocked_out_at));
+    const original = document.createElement('section');
+    const originalTitle = document.createElement('h4');
+    originalTitle.textContent = 'Original';
+    original.appendChild(originalTitle);
+    appendAuditLine(original, 'Clock In', formatTime(record.original_clocked_in_at));
+    appendAuditLine(original, 'Clock Out', formatTime(record.original_clocked_out_at));
+    const latest = document.createElement('section');
+    const latestTitle = document.createElement('h4');
+    latestTitle.textContent = 'Latest Correction';
+    latest.appendChild(latestTitle);
+    appendAuditLine(latest, 'Reason', record.latest_correction_reason || 'Owner correction');
+    appendAuditLine(latest, 'Corrected at', record.latest_corrected_at ? formatDate(record.latest_corrected_at) + ' · ' + formatTime(record.latest_corrected_at) : '—');
+    appendAuditLine(latest, 'Corrected by', 'Owner');
+    body.append(current, original, latest);
+    details.append(summary, body);
+    return details;
+  };
+
+  const openCorrectionEditor = (record, trigger) => {
+    if (!record || !record.effective_clocked_out_at || correctionBusy) return;
+    selectedCorrectionRecord = record;
+    correctionReturnFocus = trigger || document.activeElement;
+    setCorrectionError('');
+    if (correctionTitle) correctionTitle.textContent = 'Correct Attendance — ' + record.staff_name;
+    if (correctionDate) correctionDate.textContent = formatDate(record.effective_clocked_in_at);
+    clearElement(correctionCurrent);
+    if (correctionCurrent) {
+      const label = document.createElement('span');
+      const value = document.createElement('strong');
+      label.textContent = 'Current Effective';
+      value.textContent = formatTime(record.effective_clocked_in_at) + ' – ' + formatTime(record.effective_clocked_out_at);
+      correctionCurrent.append(label, value);
+    }
+    if (correctionInInput) correctionInInput.value = toManilaDateTimeLocal(record.effective_clocked_in_at);
+    if (correctionOutInput) correctionOutInput.value = toManilaDateTimeLocal(record.effective_clocked_out_at);
+    if (correctionReasonInput) correctionReasonInput.value = '';
+    if (correctionEditor) correctionEditor.hidden = false;
+    setCorrectionControlsDisabled(false);
+    window.requestAnimationFrame(() => {
+      correctionInInput?.focus();
+      correctionEditor?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
+
+  const renderAttendanceRecord = record => {
+    const article = document.createElement('article');
+    article.className = 'attendance-record';
+    article.dataset.sessionId = record.session_id;
+    const header = document.createElement('header');
+    const identity = document.createElement('div');
+    const name = document.createElement('h3');
+    const date = document.createElement('p');
+    name.textContent = record.staff_name;
+    date.textContent = formatDate(record.effective_clocked_in_at);
+    identity.append(name, date);
+    const badges = document.createElement('div');
+    badges.className = 'attendance-badges';
+    const openBreak = openBreaksBySession.get(record.session_id);
+    if (record.effective_clocked_out_at) badges.appendChild(makeBadge('Completed'));
+    else if (openBreak) badges.appendChild(makeBadge('On Break', 'is-break'));
+    else badges.appendChild(makeBadge('Working Now', 'is-working'));
+    if (record.has_correction) badges.appendChild(makeBadge('Corrected', 'is-corrected'));
+    header.append(identity, badges);
+
+    const details = document.createElement('dl');
+    details.className = 'attendance-record-details';
+    details.appendChild(makeDetail('Clock In', formatTime(record.effective_clocked_in_at)));
+    details.appendChild(makeDetail('Clock Out', record.effective_clocked_out_at ? formatTime(record.effective_clocked_out_at) : '—'));
+    if (openBreak) {
+      const breakValue = document.createElement('span');
+      breakValue.append(document.createTextNode('On break · '));
+      const live = document.createElement('span');
+      live.dataset.liveBreak = openBreak.started_at;
+      live.textContent = formatDuration(elapsedSeconds(openBreak.started_at));
+      breakValue.appendChild(live);
+      details.appendChild(makeDetail('Break', breakValue));
+    } else {
+      details.appendChild(makeDetail('Break', formatDuration(record.total_break_seconds)));
+    }
+    details.appendChild(makeDetail('Worked', record.effective_clocked_out_at ? formatDuration(record.worked_seconds) : 'In progress'));
+    article.append(header, details);
+    if (record.has_correction) article.appendChild(makeCorrectionAudit(record));
+    if (record.effective_clocked_out_at) {
+      const footer = document.createElement('footer');
+      footer.className = 'attendance-record-actions';
+      const correctButton = document.createElement('button');
+      correctButton.type = 'button';
+      correctButton.className = 'team-action-button';
+      correctButton.textContent = record.has_correction ? 'Correct Again' : 'Correct Attendance';
+      correctButton.dataset.correctSession = record.session_id;
+      correctButton.addEventListener('click', () => openCorrectionEditor(record, correctButton));
+      footer.appendChild(correctButton);
+      article.appendChild(footer);
+    }
+    return article;
+  };
+
+  const renderWorking = records => {
+    clearElement(workingList);
+    const working = records.filter(record => !openBreaksBySession.has(record.session_id)).length;
+    const onBreak = records.length - working;
+    if (workingSummary) workingSummary.textContent = records.length
+      ? records.length + ' clocked in · ' + working + ' working · ' + onBreak + ' on break'
+      : 'No one clocked in';
+    if (workingEmpty) workingEmpty.hidden = records.length !== 0;
+    records.forEach(record => {
+      const article = document.createElement('article');
+      article.className = 'attendance-working-item';
+      const top = document.createElement('div');
+      const name = document.createElement('h3');
+      const state = document.createElement('p');
+      const openBreak = openBreaksBySession.get(record.session_id);
+      name.textContent = record.staff_name;
+      state.textContent = openBreak ? 'On Break' : 'Working now';
+      top.append(name, state);
+      const details = document.createElement('dl');
+      details.appendChild(makeDetail('Clocked in', formatTime(record.effective_clocked_in_at)));
+      const shiftDuration = document.createElement('span');
+      shiftDuration.dataset.liveShift = record.effective_clocked_in_at;
+      shiftDuration.textContent = formatDuration(elapsedSeconds(record.effective_clocked_in_at));
+      details.appendChild(makeDetail('On shift', shiftDuration));
+      if (openBreak) {
+        details.appendChild(makeDetail('Break started', formatTime(openBreak.started_at)));
+        const breakDuration = document.createElement('span');
+        breakDuration.dataset.liveBreak = openBreak.started_at;
+        breakDuration.textContent = formatDuration(elapsedSeconds(openBreak.started_at));
+        details.appendChild(makeDetail('Break', breakDuration));
+      }
+      article.append(top, details);
+      workingList.appendChild(article);
+    });
+  };
+
+  const renderToday = records => {
+    clearElement(todayList);
+    if (todayEmpty) todayEmpty.hidden = records.length !== 0;
+    const completed = records.filter(record => Boolean(record.effective_clocked_out_at));
+    if (todayStaffCount) todayStaffCount.textContent = String(new Set(records.map(record => record.staff_id)).size);
+    if (todayCompletedCount) todayCompletedCount.textContent = String(completed.length);
+    if (todayWorked) todayWorked.textContent = formatDuration(completed.reduce((sum, record) => sum + record.worked_seconds, 0));
+    if (todayBreak) todayBreak.textContent = formatDuration(records.reduce((sum, record) => sum + record.total_break_seconds, 0));
+    records.forEach(record => todayList.appendChild(renderAttendanceRecord(record)));
+  };
+
+  const renderHistory = records => {
+    clearElement(historyList);
+    if (historyEmpty) historyEmpty.hidden = records.length !== 0;
+    records.forEach(record => historyList.appendChild(renderAttendanceRecord(record)));
+  };
+
+  const populateStaffFilter = rows => {
+    if (!staffFilter) return;
+    const selected = staffFilter.value;
+    clearElement(staffFilter);
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All Team';
+    staffFilter.appendChild(allOption);
+    (Array.isArray(rows) ? rows : []).forEach(member => {
+      if (!member || !member.id || !member.name) return;
+      const option = document.createElement('option');
+      option.value = String(member.id);
+      option.textContent = String(member.name) + (member.is_active === false ? ' (Inactive)' : '');
+      staffFilter.appendChild(option);
+    });
+    staffFilter.value = Array.from(staffFilter.options).some(option => option.value === selected) ? selected : '';
+  };
+
+  const validateFilters = () => {
+    const fromKey = String(fromInput && fromInput.value || '');
+    const toKey = String(toInput && toInput.value || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fromKey) || !/^\d{4}-\d{2}-\d{2}$/.test(toKey)) return { error: 'Choose both history dates.' };
+    const days = daySpan(fromKey, toKey);
+    if (days < 1) return { error: 'Date From must be on or before Date To.' };
+    if (days > MAX_HISTORY_DAYS) return { error: 'Choose a history range of 31 days or less.' };
+    return { fromKey, toKey, days };
+  };
+
+  const friendlyLoadError = error => {
+    const detail = String(error && (error.details || error.message) || '');
+    return detail.includes('TIMEKEEPING_FORBIDDEN')
+      ? 'Owner access is required to review attendance.'
+      : 'Attendance could not be refreshed. Check the connection and try again.';
+  };
+
+  const isForbiddenError = error => String(error && (error.details || error.message) || '').includes('TIMEKEEPING_FORBIDDEN');
+
+  const correctionErrorMessage = error => {
+    const detail = String(error && (error.details || error.message) || '');
+    if (detail.includes('TIMEKEEPING_INVALID_CORRECTION')) return 'Check the corrected times and reason, then try again.';
+    if (detail.includes('TIMEKEEPING_FORBIDDEN') || /jwt|session|auth/i.test(detail)) return 'Your session expired or owner access is unavailable. Please sign in again.';
+    return 'Couldn’t save the correction. Check your connection and try again.';
+  };
+
+  const validateCorrection = () => {
+    const record = selectedCorrectionRecord;
+    const correctedIn = manilaDateTimeLocalToIso(correctionInInput && correctionInInput.value);
+    const correctedOut = manilaDateTimeLocalToIso(correctionOutInput && correctionOutInput.value);
+    const reason = String(correctionReasonInput && correctionReasonInput.value || '').trim();
+    if (!record || !record.effective_clocked_out_at) return { error: 'Choose a completed shift to correct.' };
+    if (!correctedIn) return { error: 'Enter a valid corrected Clock In time.', target: correctionInInput };
+    if (!correctedOut) return { error: 'Enter a valid corrected Clock Out time.', target: correctionOutInput };
+    if (!reason) return { error: 'Enter a reason for this correction.', target: correctionReasonInput };
+    if (reason.length > 500) return { error: 'Keep the correction reason to 500 characters or fewer.', target: correctionReasonInput };
+    const inTime = new Date(correctedIn).getTime();
+    const outTime = new Date(correctedOut).getTime();
+    if (outTime < inTime) return { error: 'Clock Out must be the same as or later than Clock In.', target: correctionOutInput };
+    if (inTime > Date.now()) return { error: 'Corrected Clock In cannot be in the future.', target: correctionInInput };
+    if (outTime > Date.now()) return { error: 'Corrected Clock Out cannot be in the future.', target: correctionOutInput };
+    const currentIn = new Date(record.effective_clocked_in_at).getTime();
+    const currentOut = new Date(record.effective_clocked_out_at).getTime();
+    if (inTime === currentIn && outTime === currentOut) return { error: 'Change at least one attendance time before saving.', target: correctionInInput };
+    return { correctedIn, correctedOut, reason, sessionId: record.session_id };
+  };
+
+  const loadAttendance = async ({ announce = true, supersede = false } = {}) => {
+    if (!sessionUser || (loadBusy && !supersede)) return false;
+    const filters = validateFilters();
+    if (filters.error) {
+      setFilterError(filters.error);
+      return false;
+    }
+    setFilterError('');
+    const authToken = authGeneration;
+    const loadToken = ++loadGeneration;
+    loadBusy = true;
+    setControlsDisabled(true);
+    clearRenderedData();
+    if (announce) setStatus('Refreshing attendance…');
+    const todayKey = getManilaDateKey();
+    const todayStart = dateKeyToManilaIso(todayKey);
+    const todayEnd = dateKeyToManilaIso(addDaysToKey(todayKey, 1));
+    const historyStart = dateKeyToManilaIso(filters.fromKey);
+    const historyEnd = dateKeyToManilaIso(addDaysToKey(filters.toKey, 1));
+    const selectedStaffId = String(staffFilter && staffFilter.value || '');
+    try {
+      let historyQuery = supabaseClient
+        .from('attendance_effective_sessions')
+        .select(SESSION_COLUMNS)
+        .gte('effective_clocked_in_at', historyStart)
+        .lt('effective_clocked_in_at', historyEnd)
+        .order('effective_clocked_in_at', { ascending: false })
+        .limit(1000);
+      if (selectedStaffId) historyQuery = historyQuery.eq('staff_id', selectedStaffId);
+      const [staffResult, openResult, todayResult, historyResult] = await Promise.all([
+        supabaseClient.rpc('timekeeping_admin_list_staff'),
+        supabaseClient.from('attendance_effective_sessions').select(SESSION_COLUMNS).is('effective_clocked_out_at', null).order('effective_clocked_in_at', { ascending: false }).limit(100),
+        supabaseClient.from('attendance_effective_sessions').select(SESSION_COLUMNS).gte('effective_clocked_in_at', todayStart).lt('effective_clocked_in_at', todayEnd).order('effective_clocked_in_at', { ascending: false }).limit(200),
+        historyQuery,
+      ]);
+      if (authToken !== authGeneration || loadToken !== loadGeneration || !sessionUser) return false;
+      const firstError = staffResult.error || openResult.error || todayResult.error || historyResult.error;
+      if (firstError) throw firstError;
+      const nextOpenSessions = normalizeSessions(openResult.data);
+      let nextOpenBreaks = new Map();
+      if (nextOpenSessions.length) {
+        const breakResult = await supabaseClient
+          .from('attendance_breaks')
+          .select('session_id,started_at,ended_at')
+          .in('session_id', nextOpenSessions.map(record => record.session_id))
+          .is('ended_at', null)
+          .order('started_at', { ascending: false })
+          .limit(100);
+        if (authToken !== authGeneration || loadToken !== loadGeneration || !sessionUser) return false;
+        if (breakResult.error) throw breakResult.error;
+        (breakResult.data || []).forEach(record => {
+          const sessionId = String(record.session_id || '');
+          if (sessionId && !nextOpenBreaks.has(sessionId)) nextOpenBreaks.set(sessionId, { started_at: record.started_at });
+        });
+      }
+      openSessions = nextOpenSessions;
+      openBreaksBySession = nextOpenBreaks;
+      populateStaffFilter(staffResult.data);
+      renderWorking(openSessions);
+      renderToday(normalizeSessions(todayResult.data));
+      renderHistory(normalizeSessions(historyResult.data));
+      hasOwnerAccess = true;
+      if (lockedPanel) lockedPanel.hidden = true;
+      if (content) content.hidden = false;
+      if (refreshButton) refreshButton.hidden = false;
+      if (retryButton) retryButton.hidden = true;
+      if (todayDate) todayDate.textContent = formatDate(todayStart);
+      startLiveTimer();
+      if (announce) setStatus('Attendance is up to date.');
+      return true;
+    } catch (error) {
+      if (authToken !== authGeneration || loadToken !== loadGeneration) return false;
+      hasOwnerAccess = false;
+      clearRenderedData({ clearStaff: true });
+      if (content) content.hidden = true;
+      if (refreshButton) refreshButton.hidden = true;
+      if (retryButton) retryButton.hidden = isForbiddenError(error);
+      if (lockedPanel) lockedPanel.hidden = false;
+      setStatus(friendlyLoadError(error), true);
+      return false;
+    } finally {
+      if (authToken === authGeneration && loadToken === loadGeneration) {
+        loadBusy = false;
+        setControlsDisabled(false);
+      }
+    }
+  };
+
+  correctionForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (correctionBusy || !sessionUser || !hasOwnerAccess) return;
+    const validation = validateCorrection();
+    if (validation.error) {
+      setCorrectionError(validation.error);
+      validation.target?.focus();
+      return;
+    }
+    const authToken = authGeneration;
+    const correctionToken = ++correctionGeneration;
+    correctionBusy = true;
+    setCorrectionError('');
+    setCorrectionControlsDisabled(true);
+    setStatus('Saving attendance correction…');
+    try {
+      const { data, error } = await supabaseClient.rpc('timekeeping_correct_session', {
+        p_session_id: validation.sessionId,
+        p_corrected_in: validation.correctedIn,
+        p_corrected_out: validation.correctedOut,
+        p_reason: validation.reason,
+      });
+      if (authToken !== authGeneration || correctionToken !== correctionGeneration || !sessionUser) return;
+      if (error || (data && data.ok === false)) throw error || new Error('TIMEKEEPING_INVALID_CORRECTION');
+      closeCorrectionEditor({ restoreFocus: false });
+      const refreshed = await loadAttendance({ announce: false, supersede: true });
+      if (authToken !== authGeneration || correctionToken !== correctionGeneration || !sessionUser) return;
+      if (refreshed) {
+        setStatus('Attendance correction saved.');
+        const nextButton = attendanceRoot.querySelector('[data-correct-session="' + CSS.escape(validation.sessionId) + '"]');
+        nextButton?.focus();
+      } else {
+        setStatus('Correction saved, but attendance could not be refreshed. Use Retry to load the latest records.', true);
+      }
+    } catch (error) {
+      if (authToken !== authGeneration || correctionToken !== correctionGeneration) return;
+      setCorrectionError(correctionErrorMessage(error));
+      setStatus(correctionErrorMessage(error), true);
+    } finally {
+      if (authToken === authGeneration && correctionToken === correctionGeneration) {
+        correctionBusy = false;
+        setCorrectionControlsDisabled(false);
+      }
+    }
+  });
+
+  correctionCloseButton?.addEventListener('click', () => {
+    if (!correctionBusy) closeCorrectionEditor();
+  });
+  correctionCancelButton?.addEventListener('click', () => {
+    if (!correctionBusy) closeCorrectionEditor();
+  });
+
+  filterForm?.addEventListener('submit', event => {
+    event.preventDefault();
+    loadAttendance();
+  });
+  refreshButton?.addEventListener('click', () => loadAttendance());
+  retryButton?.addEventListener('click', () => loadAttendance());
+
+  ownerAccountToggle?.addEventListener('click', event => {
+    event.stopPropagation();
+    if (!ownerAccountMenu) return;
+    const opening = ownerAccountMenu.hidden;
+    ownerAccountMenu.hidden = !opening;
+    ownerAccountToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    if (opening) ownerAccountMenu.querySelector('input:not(:disabled), button:not(:disabled)')?.focus();
+  });
+  document.addEventListener('click', event => { if (!ownerAccount.contains(event.target)) closeAccountMenu(); });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor();
+    else closeAccountMenu();
+  });
+
+  authForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!emailInput || !passwordInput || signInButton?.disabled) return;
+    if (signInButton) signInButton.disabled = true;
+    setStatus('Signing in…');
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
+      if (error) throw error;
+      sessionUser = data.user;
+      passwordInput.value = '';
+      updateAccountUi();
+      closeAccountMenu();
+      await loadAttendance({ announce: false });
+    } catch (error) {
+      passwordInput.value = '';
+      setStatus('Owner sign in failed. Check the account details and try again.', true);
+    } finally {
+      if (signInButton) signInButton.disabled = false;
+    }
+  });
+
+  signOutButton?.addEventListener('click', async () => {
+    signOutButton.disabled = true;
+    sessionUser = null;
+    clearPrivateState();
+    setDefaultDates();
+    updateAccountUi();
+    closeAccountMenu();
+    await supabaseClient.auth.signOut({ scope: 'local' });
+  });
+
+  const applySession = session => {
+    const nextUser = session && session.user;
+    const previousId = sessionUser && sessionUser.id;
+    if (!nextUser) {
+      sessionUser = null;
+      clearPrivateState();
+      updateAccountUi();
+      return;
+    }
+    sessionUser = nextUser;
+    updateAccountUi();
+    if (nextUser.id !== previousId || !hasOwnerAccess) loadAttendance({ announce: false });
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopLiveTimer();
+    else if (sessionUser && hasOwnerAccess) startLiveTimer();
+  });
+
+  setDefaultDates();
+  clearPrivateState();
+  updateAccountUi();
+  const { data: authSubscription } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    window.setTimeout(() => applySession(session), 0);
+  });
+  supabaseClient.auth.getSession().then(({ data }) => applySession(data && data.session));
+  window.addEventListener('pagehide', () => {
+    authGeneration += 1;
+    loadGeneration += 1;
+    correctionGeneration += 1;
+    correctionBusy = false;
+    stopLiveTimer();
+    closeCorrectionEditor({ restoreFocus: false });
+    if (passwordInput) passwordInput.value = '';
+    if (authSubscription && authSubscription.subscription) authSubscription.subscription.unsubscribe();
+  });
+})();
+
+(() => {
   const teamRoot = document.querySelector('[data-team-page]');
   if (!teamRoot) return;
 
@@ -1361,7 +2164,7 @@
   });
 })();
 (() => {
-  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page]):not([data-team-page])');
+  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page]):not([data-team-page]):not([data-attendance-page])');
   const ownerAccount = document.querySelector('[data-owner-account]');
   if (!dashboardRoot || !ownerAccount) return;
 
