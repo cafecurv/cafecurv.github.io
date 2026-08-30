@@ -235,9 +235,12 @@
     return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
   };
 
-  const getFulfillmentLabel = (order) => String(order && order.fulfillment_type || '').toLowerCase() === 'delivery'
-    ? 'Delivery'
-    : 'Pick-up';
+  const getFulfillmentLabel = (order) => {
+    const type = String(order && order.fulfillment_type || '').trim().toLowerCase();
+    if (type === 'delivery') return 'Delivery';
+    if (type === 'dine_in') return 'DINE IN';
+    return 'Pick-up';
+  };
 
   const normalizePaymentStatus = (status) => {
     const cleanStatus = String(status || '').trim().toLowerCase();
@@ -8481,13 +8484,22 @@
 
   const getFulfillmentType = (order) => {
     const type = String(order && order.fulfillment_type ? order.fulfillment_type : '').trim().toLowerCase();
-    return type === 'delivery' ? 'delivery' : 'pickup';
+    if (type === 'delivery') return 'delivery';
+    if (type === 'dine_in') return 'dine_in';
+    return 'pickup';
   };
 
-  const getFulfillmentLabel = (order) => getFulfillmentType(order) === 'delivery' ? 'Delivery' : 'Pick-up';
+  const getFulfillmentLabel = (order) => {
+    const type = getFulfillmentType(order);
+    if (type === 'delivery') return 'Delivery';
+    if (type === 'dine_in') return 'DINE IN';
+    return 'Pick-up';
+  };
 
   const getDetailedFulfillmentLabel = (order) => {
-    if (getFulfillmentType(order) !== 'delivery') return 'Pick-up';
+    const type = getFulfillmentType(order);
+    if (type === 'dine_in') return 'Dine In';
+    if (type !== 'delivery') return 'Pick-up';
     const deliveryOption = formatDeliveryOption(order && order.delivery_option);
     return deliveryOption && deliveryOption !== '-' ? 'Delivery - ' + deliveryOption : 'Delivery';
   };
@@ -8504,6 +8516,7 @@
     const normalized = method.toLowerCase();
     if (normalized === 'cod') return 'COD';
     if (normalized === 'gcash') return 'GCash';
+    if (normalized === 'counter') return 'Pay at Counter';
     return formatOptionLabel(method);
   };
 
@@ -8662,7 +8675,10 @@
   };
 
   const getKitchenTicketFulfillmentLine = (order) => {
-    const method = getFulfillmentType(order) === 'delivery' ? 'DELIVERY' : 'PICK-UP';
+    const fulfillmentType = getFulfillmentType(order);
+    const method = fulfillmentType === 'delivery'
+      ? 'DELIVERY'
+      : (fulfillmentType === 'dine_in' ? 'DINE IN' : 'PICK-UP');
     const time = String(order && order.pickup_time ? order.pickup_time : '').trim();
     return time ? method + ' - ' + time : method;
   };
@@ -8779,6 +8795,7 @@
     const aliases = new Set([normalized]);
     if (['pickup', 'pick up', 'pick-up'].includes(normalized)) aliases.add('pickup');
     if (['delivery', 'deliver'].includes(normalized)) aliases.add('delivery');
+    if (['dine in', 'dine-in', 'dinein', 'dine_in'].includes(normalized)) aliases.add('dine_in');
     if (['new', 'submitted'].includes(normalized)) aliases.add('submitted');
     if (normalized === 'accepted') aliases.add('accepted');
     if (['prepare', 'preparing'].includes(normalized)) aliases.add('preparing');
@@ -9609,8 +9626,12 @@
     const statusKey = normalizeOrderStatus(order.status);
     const heading = makeElement('div', 'order-detail-heading');
     heading.append(makeElement('h3', '', order.order_number || 'Order'));
+    if (getFulfillmentType(order) === 'dine_in') {
+      heading.append(makeElement('p', 'order-detail-customer-name', order.customer_name || 'Dine-in customer'));
+    }
     const headingBadges = makeElement('div', 'order-detail-badges');
     headingBadges.append(
+      makeElement('span', 'order-fulfillment-badge', getFulfillmentLabel(order)),
       makeElement('span', 'order-status-badge', STATUS_LABELS[statusKey] || order.status || 'Order'),
       makeElement('span', 'order-source-badge', getOrderSource(order)),
     );
@@ -9637,6 +9658,7 @@
     const createdDisplay = formatOrderDate(order.created_at);
     const ageDisplay = formatOrderAge(order.created_at);
     const isDelivery = getFulfillmentType(order) === 'delivery';
+    const isDineIn = getFulfillmentType(order) === 'dine_in';
     const headerSection = renderDetailSection('Order', [
       ['Status', STATUS_LABELS[statusKey] || order.status || 'Order'],
       ['Created', ageDisplay ? ageDisplay + ' / ' + createdDisplay : createdDisplay],
@@ -9650,8 +9672,10 @@
     ], 'order-customer-details');
     const fulfillmentRows = [
       ['Method', getDetailedFulfillmentLabel(order)],
-      [isDelivery ? 'Preferred delivery time' : 'Preferred pickup time', order.pickup_time || '-'],
     ];
+    if (!isDineIn) {
+      fulfillmentRows.push([isDelivery ? 'Preferred delivery time' : 'Preferred pickup time', order.pickup_time || '-']);
+    }
     if (isDelivery) {
       fulfillmentRows.splice(1, 0, ['Address', order.delivery_address || '-']);
     }

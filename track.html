@@ -604,12 +604,21 @@
   const getStatusMeta = (status, fulfillmentType) => {
     const key = String(status || '').trim().toLowerCase();
     const fallback = STATUS_META[key] || STATUS_META.submitted;
-    if (key === 'ready') {
+    if (['submitted', 'new'].includes(key) && fulfillmentType === 'dine_in') {
       return {
         ...fallback,
-        description: fulfillmentType === 'delivery'
-          ? "Your order is ready and waiting for delivery arrangement. We'll update you once it's on the way."
-          : "Your order is ready for pick-up. You may drop by CURV when you're ready.",
+        description: "We've received your dine-in order. We'll call your name once it's ready.",
+      };
+    }
+    if (key === 'ready') {
+      const readyDescription = fulfillmentType === 'delivery'
+        ? "Your order is ready and waiting for delivery arrangement. We'll update you once it's on the way."
+        : (fulfillmentType === 'dine_in'
+          ? "Your order is ready. We’ll call your name for collection."
+          : "Your order is ready for pick-up. You may drop by CURV when you're ready.");
+      return {
+        ...fallback,
+        description: readyDescription,
       };
     }
     return fallback;
@@ -855,7 +864,10 @@
     const currency = order.currency || 'PHP';
     const subtotal = Number(order.subtotal || order.total || 0);
 
-    addDetailRow('Order method', isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pickup');
+    const fulfillmentLabel = order.fulfillment_type === 'dine_in'
+      ? 'Dine In'
+      : (isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pickup');
+    addDetailRow('Order method', fulfillmentLabel);
     if (isDelivery && order.delivery_address) {
       addDetailRow('Delivery address', order.delivery_address);
     }
@@ -911,9 +923,10 @@
 
   const renderOrder = (order) => {
     const status = String(order.status || 'submitted').trim().toLowerCase();
-    const fulfillmentType = String(order.fulfillment_type || 'pickup').trim().toLowerCase() === 'delivery'
+    const rawFulfillmentType = String(order.fulfillment_type || 'pickup').trim().toLowerCase();
+    const fulfillmentType = rawFulfillmentType === 'delivery'
       ? 'delivery'
-      : 'pickup';
+      : (rawFulfillmentType === 'dine_in' ? 'dine_in' : 'pickup');
     const meta = getStatusMeta(status, fulfillmentType);
     const displayMeta = getDisplayStatusMeta(order, status, fulfillmentType);
     latestOrderNumber = order.order_number || '';

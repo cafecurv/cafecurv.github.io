@@ -7016,6 +7016,13 @@ body.more-drawer-open {
   justify-items: start;
 }
 
+.order-detail-customer-name {
+  margin: 0;
+  color: var(--cream);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .order-detail-badges {
   display: flex;
   flex-wrap: wrap;

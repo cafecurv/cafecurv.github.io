@@ -2754,7 +2754,7 @@
       <button class="nav-tab" onclick="showSection('espresso')">Espresso</button>
       <button class="nav-tab" onclick="showSection('blended')">Curvccino</button>
       <button class="nav-tab" onclick="showSection('refreshers')">Refreshers</button>
-      <button class="nav-tab" onclick="showSection('bites')">Bites</button>
+      <button class="nav-tab" onclick="showSection('bites')">Takoyaki &amp; Savory Bites</button>
       <button class="nav-tab" onclick="showSection('salads')">Salads</button>
       <button class="nav-tab" onclick="showSection('pastries')">Pastries & Desserts</button>
     </div>
@@ -2898,7 +2898,7 @@
       <div class="menu-item">
         <div class="item-info" onclick="jumpToPanel('bites', 'chicken-karaage')" style="cursor:pointer">
           <div class="item-name">Chicken Karaage</div>
-          <div class="item-desc">chicken karaage · side w/ chips or veggies · sweet chili sauce</div>
+          <div class="item-desc">crispy chicken karaage · sweet chili sauce</div>
         </div>
         <div class="item-right">
           <div class="price-btn-row"><span class="price-single">₱170</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 170, this, { sauce_pref: 'Sweet Chili Sauce' })">+</button></div>
@@ -3090,11 +3090,11 @@
     </div>
   </section>
 
-  <!-- ── BITES ── -->
+  <!-- ── TAKOYAKI & SAVORY BITES ── -->
   <section class="section" id="bites">
     <div class="section-header">
-      <div class="section-title">Bites</div>
-      <div class="section-desc">Takoyaki and savory appetizers.</div>
+      <div class="section-title">Takoyaki &amp; Savory Bites</div>
+      <div class="section-desc">Japanese-inspired café bites, served à la carte.</div>
     </div>
 
     <div class="note-box">
@@ -3109,7 +3109,7 @@
     </div>
 
     <div class="category">
-      <span class="category-label">Savory</span>
+      <span class="category-label">Savory Bites</span>
       <div id="savory-mount"></div>
     </div>
   </section>
@@ -3117,7 +3117,7 @@
   <!-- ── SALADS ── -->
   <section class="section" id="salads">
     <div class="section-header">
-      <div class="section-title">Salad Bar</div>
+      <div class="section-title">Salads</div>
       <div class="section-desc">Fresh and light.</div>
     </div>
 
@@ -3178,21 +3178,6 @@
     </div>
     </div>
 
-    <div class="category">
-      <span class="category-label">Toast & Croiswhich</span>
-      <div class="menu-item unavailable">
-        <div class="item-info">
-          <div class="item-name">Avo Toast on Sourdough <span class="coming-soon-badge">Coming Soon</span></div>
-          <div class="item-desc">avocado smash · cherry tomatoes · egg · microgreens · side w/ chips and dressing</div>
-        </div>
-      </div>
-      <div class="menu-item unavailable">
-        <div class="item-info">
-          <div class="item-name">Omelette Croiswhich <span class="coming-soon-badge">Coming Soon</span></div>
-          <div class="item-desc">eggs · cheese · veggies on Curv croissant · side w/ chips</div>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- ── PASTRIES & DESSERTS ── -->
@@ -3226,7 +3211,7 @@
     </div>
     <div class="footer-info-row">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);flex-shrink:0"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
-      <span><strong>Delivery</strong> & <strong>In-Store Pick-up</strong> available</span>
+      <span><strong>Dine In</strong>, <strong>Pick-up</strong> &amp; <strong>Delivery</strong> available</span>
     </div>
   </div>
   <div class="footer-socials">
@@ -3276,7 +3261,7 @@
     </div>
     <div class="form-body" id="formBody">
 
-      <div class="delivery-fee-info">
+      <div class="delivery-fee-info" id="delivery-fee-info" hidden>
         <div class="delivery-fee-header">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13l2-6H5L3 12z"/><path d="M5 12v4h14v-4"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/><path d="M15 6l1-3h3"/></svg>
           <span class="delivery-fee-header-label">Delivery Coverage & Estimated Fee</span>
@@ -3292,7 +3277,7 @@
         <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="customer-type-field">
         <label class="form-label">Customer Type</label>
         <div class="temp-toggle-wrap customer-type-toggle" id="customerTypeToggle" role="group" aria-label="Customer Type">
           <button class="temp-tab active" type="button" data-customer-type="new" onclick="setCustomerType('new')">New customer</button>
@@ -3303,22 +3288,23 @@
       <div class="recent-order-reminder" id="recentOrderReminder" hidden></div>
 
       <div class="form-group">
-        <label class="form-label">Name</label>
-        <input class="form-input" type="text" id="f-name" placeholder="Type in your name">
+        <label class="form-label" for="f-name">Name for order</label>
+        <input class="form-input" type="text" id="f-name" placeholder="Type in your name" aria-describedby="dine-in-name-helper">
+        <p class="payment-note" id="dine-in-name-helper" hidden>We’ll call your name once your order is ready.</p>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Contact Number</label>
+        <label class="form-label" for="f-contact">Contact Number</label>
         <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
       </div>
 
       <div class="form-group">
-        <label class="form-label">Order Method</label>
+        <label class="form-label" for="f-delivery">Order Method</label>
         <select class="form-select" id="f-delivery" onchange="syncOrderMethodFields()">
-          <option value="delivery-curv-rider" selected>Delivery — CURV Rider (within Brgy. Santiago/San Francisco)</option>
-          <option value="delivery-lalamove">Delivery — Lalamove</option>
+          <option value="dine-in" selected>Dine In</option>
           <option value="pickup">Pick-up</option>
-          <option value="dine-in" disabled>Dine-in — Currently not available</option>
+          <option value="delivery-curv-rider">Delivery — CURV Rider (within Brgy. Santiago/San Francisco)</option>
+          <option value="delivery-lalamove">Delivery — Lalamove</option>
         </select>
       </div>
 
@@ -3330,7 +3316,7 @@
         <div class="payment-note" id="returning-customer-note" hidden>No need to retype your address if it's the same as before.</div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="preferred-time-field">
         <label class="form-label" id="preferred-time-label">Preferred Delivery Time</label>
         <div class="delivery-time-row">
           <div class="temp-toggle-wrap">
@@ -3346,6 +3332,7 @@
         <label class="form-label">Payment Method</label>
         <select class="form-select" id="f-payment">
           <option value="">Select payment method</option>
+          <option value="counter">Pay at Counter</option>
           <option value="cod">Cash on Delivery</option>
           <option value="gcash">GCash / Maya (Pay before order)</option>
           <option value="bank">Bank Transfer (Pay before order)</option>
@@ -5532,15 +5519,15 @@
     const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
       ? shapedPublicMenu.categories
       : [];
-    const bitesCategory = categories.find(category => normalizePublicMenuText(category.name) === 'bites');
+    const bitesCategory = categories.find(category => ['bites', 'takoyaki'].includes(normalizePublicMenuText(category.name)));
 
     if (!bitesCategory) {
-      return { ok: false, reason: 'Supabase public menu has no Bites category.' };
+      return { ok: false, reason: 'Supabase public menu has no Takoyaki category.' };
     }
 
     const products = Array.isArray(bitesCategory.products) ? bitesCategory.products : [];
     if (!products.length) {
-      return { ok: false, reason: 'Supabase Bites category has no published Takoyaki products.' };
+      return { ok: false, reason: 'Supabase Takoyaki category has no published products.' };
     }
 
     const hardcodedByName = TAKOYAKI_ITEMS.reduce((map, item) => {
@@ -5638,7 +5625,7 @@
     {
       id: 'shrimp-tempura',
       name: 'Shrimp Tempura',
-      desc: 'shrimp tempura · side w/ chips or veggies · tempura sauce',
+      desc: 'shrimp tempura · tempura sauce',
       price: 180,
       default_sauce: 'Tempura Sauce',
       img: null
@@ -5646,7 +5633,7 @@
     {
       id: 'chicken-karaage',
       name: 'Chicken Karaage',
-      desc: 'chicken karaage · side w/ chips or veggies · sweet chili sauce',
+      desc: 'crispy chicken karaage · sweet chili sauce',
       price: 170,
       default_sauce: 'Sweet Chili Sauce',
       img: 'images/menu/savory-bites/chicken-karaage.jpg'
@@ -5654,7 +5641,7 @@
     {
       id: 'cream-dory-fillet',
       name: 'Cream Dory Fillet',
-      desc: 'cream dory · side w/ chips or veggies · garlic aioli',
+      desc: 'crispy cream dory fillet · garlic aioli',
       price: 170,
       default_sauce: 'Garlic Aioli',
       img: 'images/menu/savory-bites/cream-dory-fillet.jpg'
@@ -5776,10 +5763,10 @@
     const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
       ? shapedPublicMenu.categories
       : [];
-    const savoryCategory = categories.find(category => normalizePublicMenuText(category.name) === 'savory');
+    const savoryCategory = categories.find(category => ['savory', 'savory bites'].includes(normalizePublicMenuText(category.name)));
 
     if (!savoryCategory) {
-      return { ok: false, reason: 'Supabase public menu has no Savory category.' };
+      return { ok: false, reason: 'Supabase public menu has no Savory Bites category.' };
     }
 
     const products = Array.isArray(savoryCategory.products) ? savoryCategory.products : [];
@@ -5872,10 +5859,10 @@
     return true;
   }
 
-  // Phase 2D.5: Supabase Salad Bar mapping is limited to simple public prices.
-  // Existing Salad Bar has no Supabase-backed option metadata yet, so known
+  // Phase 2D.5: Supabase Salads mapping is limited to simple public prices.
+  // Existing Salads have no Supabase-backed option metadata yet, so known
   // static products are matched by exact name and rendered with their public
-  // variants only. Toast/Croiswhich coming-soon rows remain hardcoded.
+  // variants only.
   const SALAD_BAR_ITEM_META = {
     'Curv Salad': {
       category: 'Salads',
@@ -5936,15 +5923,15 @@
     const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
       ? shapedPublicMenu.categories
       : [];
-    const saladBarCategory = categories.find(category => normalizePublicMenuText(category.name) === 'salad bar');
+    const saladBarCategory = categories.find(category => ['salad bar', 'salads'].includes(normalizePublicMenuText(category.name)));
 
     if (!saladBarCategory) {
-      return { ok: false, reason: 'Supabase public menu has no Salad Bar category.' };
+      return { ok: false, reason: 'Supabase public menu has no Salads category.' };
     }
 
     const products = Array.isArray(saladBarCategory.products) ? saladBarCategory.products : [];
     if (!products.length) {
-      return { ok: false, reason: 'Supabase Salad Bar category has no published available products.' };
+      return { ok: false, reason: 'Supabase Salads category has no published products.' };
     }
 
     const items = [];
@@ -6289,10 +6276,10 @@
     { name: 'Tropic Kiss', expectedPublicCategory: 'Refreshers' },
     { name: 'Hibiscus Cream Tea', expectedPublicCategory: 'Refreshers' },
     { name: 'Dragon Dreams', expectedPublicCategory: 'Refreshers' },
-    { name: 'OG Takoyaki', expectedPublicCategory: 'Bites' },
-    { name: 'Oozie Cheese', expectedPublicCategory: 'Bites' },
-    { name: 'Chicken Karaage', expectedPublicCategory: 'Savory' },
-    { name: 'Spring Rolls', expectedPublicCategory: 'Salad Bar', quickAddOnly: true, variantMode: 'pieces', categoryLabel: 'Bites & Light Meals' }
+    { name: 'OG Takoyaki', expectedPublicCategory: ['Takoyaki', 'Bites'] },
+    { name: 'Oozie Cheese', expectedPublicCategory: ['Takoyaki', 'Bites'] },
+    { name: 'Chicken Karaage', expectedPublicCategory: ['Savory Bites', 'Savory'] },
+    { name: 'Spring Rolls', expectedPublicCategory: ['Salads', 'Salad Bar'], quickAddOnly: true, variantMode: 'pieces', categoryLabel: 'Bites & Light Meals' }
   ];
 
   function mapCurvPickVariants(product, panelInfo) {
@@ -6455,10 +6442,16 @@
       const name = String(product.name || '').trim();
       const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
 
-      if (normalizePublicMenuText(categoryName) !== normalizePublicMenuText(expectedPick.expectedPublicCategory)) {
+      const expectedCategoryNames = Array.isArray(expectedPick.expectedPublicCategory)
+        ? expectedPick.expectedPublicCategory
+        : [expectedPick.expectedPublicCategory];
+      const categoryMatches = expectedCategoryNames.some(expectedCategory =>
+        normalizePublicMenuText(categoryName) === normalizePublicMenuText(expectedCategory)
+      );
+      if (!categoryMatches) {
         return {
           ok: false,
-          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected "${expectedPick.expectedPublicCategory}".`
+          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected ${expectedCategoryNames.join(' or ')}.`
         };
       }
 
@@ -6696,14 +6689,14 @@
     },
     {
       sectionId: 'bites',
-      tabLabel: 'Bites',
-      categoryNames: ['bites', 'savory'],
+      tabLabel: 'Takoyaki & Savory Bites',
+      categoryNames: ['bites', 'takoyaki', 'savory', 'savory bites'],
       render: renderSupabaseBitesSection
     },
     {
       sectionId: 'salads',
-      tabLabel: 'Salad Bar',
-      categoryNames: ['salad bar'],
+      tabLabel: 'Salads',
+      categoryNames: ['salad bar', 'salads'],
       render: renderSupabaseSaladBarOrFallback
     },
     {
@@ -7271,7 +7264,9 @@
   // ── ORDER METHOD ──
   function getOrderMethod() {
     const select = document.getElementById('f-delivery');
-    return select && select.value === 'pickup' ? 'pickup' : 'delivery';
+    const value = select ? select.value : '';
+    if (value === 'dine-in') return 'dine_in';
+    return value === 'pickup' ? 'pickup' : 'delivery';
   }
 
   function getOrderMethodValue() {
@@ -7281,6 +7276,10 @@
 
   function isDeliveryOrder() {
     return getOrderMethod() === 'delivery';
+  }
+
+  function isDineInOrder() {
+    return getOrderMethod() === 'dine_in';
   }
 
   function getCustomerType() {
@@ -7309,19 +7308,57 @@
     return '';
   }
 
+  let previousNonDineInPaymentMethod = '';
+
   function syncOrderMethodFields() {
-    const delivery = isDeliveryOrder();
+    const method = getOrderMethod();
+    const delivery = method === 'delivery';
+    const dineIn = method === 'dine_in';
     const deliveryFields = document.getElementById('delivery-fields');
+    const deliveryFeeInfo = document.getElementById('delivery-fee-info');
     const deliveryAddressField = document.getElementById('delivery-address-field');
+    const addressInput = document.getElementById('f-address');
     const returningCustomerNote = document.getElementById('returning-customer-note');
+    const customerTypeField = document.getElementById('customer-type-field');
+    const preferredTimeField = document.getElementById('preferred-time-field');
     const timeLabel = document.getElementById('preferred-time-label');
+    const nameHelper = document.getElementById('dine-in-name-helper');
+    const paymentSelect = document.getElementById('f-payment');
+    const paymentNote = document.getElementById('payment-note');
     const isReturningCustomer = getCustomerType() === 'returning';
     const shouldShowAddress = delivery && !isReturningCustomer;
 
-    if (deliveryFields) deliveryFields.style.display = delivery ? 'block' : 'none';
-    if (deliveryAddressField) deliveryAddressField.style.display = shouldShowAddress ? 'block' : 'none';
+    if (customerTypeField) customerTypeField.hidden = dineIn;
+    document.querySelectorAll('[data-customer-type]').forEach(button => { button.disabled = dineIn || isOrderSubmittedLocked; });
+    if (deliveryFeeInfo) deliveryFeeInfo.hidden = !delivery;
+    if (deliveryFields) deliveryFields.hidden = !delivery;
+    if (deliveryAddressField) deliveryAddressField.hidden = !shouldShowAddress;
+    if (addressInput) {
+      if (dineIn) addressInput.value = '';
+      addressInput.disabled = !shouldShowAddress || isOrderSubmittedLocked;
+    }
     if (returningCustomerNote) returningCustomerNote.hidden = !(delivery && isReturningCustomer);
+    if (preferredTimeField) preferredTimeField.hidden = dineIn;
     if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
+    if (nameHelper) nameHelper.hidden = !dineIn;
+
+    if (paymentSelect) {
+      if (dineIn) {
+        if (paymentSelect.value && paymentSelect.value !== 'counter') previousNonDineInPaymentMethod = paymentSelect.value;
+        paymentSelect.value = 'counter';
+        paymentSelect.disabled = true;
+      } else {
+        if (paymentSelect.value === 'counter') paymentSelect.value = previousNonDineInPaymentMethod;
+        paymentSelect.disabled = isOrderSubmittedLocked;
+      }
+    }
+    if (paymentNote) {
+      paymentNote.textContent = dineIn
+        ? 'Payment is handled at the counter through Loyverse.'
+        : (paymentSelect && (paymentSelect.value === 'gcash' || paymentSelect.value === 'bank')
+          ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
+          : '');
+    }
 
     renderCart();
     syncAnytimeOrderState();
@@ -7358,6 +7395,7 @@
   }
 
   function getPreferredTimeValidationMessage() {
+    if (isDineInOrder()) return '';
     const specificTime = document.getElementById('f-delivery-time')?.value || '';
     if (deliveryTimeMode === 'specific' && specificTime && !isValidPreferredTime(specificTime)) {
       return 'Please choose a valid preferred time.';
@@ -7374,15 +7412,16 @@
     const note = document.getElementById('ordering-note');
 
     if (asapButton) {
-      asapButton.disabled = isOrderSubmittedLocked;
+      asapButton.disabled = isOrderSubmittedLocked || isDineInOrder();
       asapButton.classList.toggle('active', deliveryTimeMode === 'asap');
     }
     if (specificButton) {
-      specificButton.disabled = isOrderSubmittedLocked;
+      specificButton.disabled = isOrderSubmittedLocked || isDineInOrder();
       specificButton.classList.toggle('active', deliveryTimeMode === 'specific');
     }
     if (timeInput) {
-      timeInput.style.display = deliveryTimeMode === 'specific' ? 'block' : 'none';
+      timeInput.style.display = !isDineInOrder() && deliveryTimeMode === 'specific' ? 'block' : 'none';
+      timeInput.disabled = isOrderSubmittedLocked || isDineInOrder();
     }
 
     const validationMessage = getPreferredTimeValidationMessage();
@@ -7417,6 +7456,7 @@
   }
 
   function setDeliveryTime(mode) {
+    if (isDineInOrder()) return;
     deliveryTimeMode = mode;
     document.getElementById('tabAsap').classList.toggle('active', deliveryTimeMode === 'asap');
     document.getElementById('tabSpecific').classList.toggle('active', deliveryTimeMode === 'specific');
@@ -7887,7 +7927,9 @@
 
   document.getElementById('f-payment').addEventListener('change', function() {
     const note = document.getElementById('payment-note');
-    note.textContent = (this.value === 'gcash' || this.value === 'bank')
+    note.textContent = isDineInOrder()
+      ? 'Payment is handled at the counter through Loyverse.'
+      : (this.value === 'gcash' || this.value === 'bank')
       ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
       : '';
   });
@@ -7901,6 +7943,7 @@
     const pSel        = document.getElementById('f-payment');
     const orderMethod = getOrderMethod();
     const isDelivery  = orderMethod === 'delivery';
+    const isDineIn = orderMethod === 'dine_in';
     const customerType = getCustomerType();
     const isReturningCustomer = customerType === 'returning';
     const orderMethodLabel = dSel && dSel.selectedIndex >= 0 ? dSel.options[dSel.selectedIndex].text : (isDelivery ? 'Delivery' : 'Pick-up');
@@ -7917,10 +7960,9 @@
     if (!name) { alert('Please fill in your name.'); return null; }
     if (!contact) { alert('Please fill in your contact number.'); return null; }
     if (!dSel.value) { alert('Please select an order method.'); return null; }
-    if (dSel.value === 'dine-in') { alert('Dine-in ordering is currently not available.'); return null; }
     if (isDelivery && !isReturningCustomer && !address) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
-    if (deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred delivery time.'); return null; }
+    if (!isDineIn && deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred time.'); return null; }
     const preferredTimeValidation = getPreferredTimeValidationMessage();
     if (preferredTimeValidation) { alert(preferredTimeValidation); return null; }
     if (cart.length === 0) { alert('Please add at least one item to your order.'); return null; }
@@ -7943,13 +7985,13 @@
     msg += `\n`;
     msg += `👤 Name: ${name}\n`;
     msg += `📞 Contact: ${contact}\n`;
-    msg += `👥 Customer Type: ${isReturningCustomer ? 'Returning customer' : 'New customer'}\n`;
+    if (!isDineIn) msg += `👥 Customer Type: ${isReturningCustomer ? 'Returning customer' : 'New customer'}\n`;
     msg += `🚗 Order Method: ${orderMethodLabel}\n`;
     if (isDelivery) {
       msg += `🛵 Delivery Method: ${deliveryOptionLabel}\n`;
       msg += `📍 Delivery Address: ${isReturningCustomer ? 'Returning customer' : address}\n`;
     }
-    msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
+    if (!isDineIn) msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
     if (isDelivery) {
@@ -7970,6 +8012,7 @@
   }
 
   function getPublicOrderPreferredTime() {
+    if (isDineInOrder()) return null;
     const specificTime = document.getElementById('f-delivery-time').value;
     if (deliveryTimeMode === 'specific') return specificTime ? formatTime12h(specificTime) : null;
     return 'ASAP';
@@ -8016,7 +8059,9 @@
       customer_notes: notes || null,
       subtotal,
       total: subtotal,
-      payment_method: paymentSelect ? (paymentSelect.value || getSelectedOptionText(paymentSelect) || 'cash') : 'cash',
+      payment_method: method === 'dine_in'
+        ? 'counter'
+        : (paymentSelect ? (paymentSelect.value || getSelectedOptionText(paymentSelect) || 'cash') : 'cash'),
       items
     };
 
@@ -8341,7 +8386,9 @@
     const trackingUrl = trackingToken ? getTrackingUrl(trackingToken) : storedUrl;
     return {
       orderNumber: String(info.orderNumber || 'received'),
-      fulfillmentType: info.fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
+      fulfillmentType: info.fulfillmentType === 'dine_in'
+        ? 'dine_in'
+        : (info.fulfillmentType === 'pickup' ? 'pickup' : 'delivery'),
       subtotal: Number(info.subtotal || 0),
       trackingToken,
       trackingUrl,
@@ -8353,7 +8400,9 @@
     const safeToken = getSafeTrackingToken(trackingToken);
     return normalizeSubmittedOrderInfo({
       orderNumber: orderNumber || 'received',
-      fulfillmentType: fulfillmentType === 'pickup' ? 'pickup' : 'delivery',
+      fulfillmentType: fulfillmentType === 'dine_in'
+        ? 'dine_in'
+        : (fulfillmentType === 'pickup' ? 'pickup' : 'delivery'),
       subtotal: Number(subtotal || getCartSubtotal() || 0),
       trackingToken: safeToken,
       trackingUrl: getTrackingUrl(safeToken),
@@ -8434,7 +8483,7 @@
 
   function getStatusMessageForOrder(info) {
     if (!info || !info.orderNumber) return '';
-    if (info.fulfillmentType === 'pickup') {
+    if (info.fulfillmentType === 'pickup' || info.fulfillmentType === 'dine_in') {
       return `Hi CURV! I would like to check the status of my order #${info.orderNumber}.`;
     }
     return `Hi CURV! I would like to confirm the final total for my order #${info.orderNumber}, including delivery fee.`;
@@ -8593,9 +8642,17 @@
 
   function showOrderSuccessModal(info) {
     const isPickup = info && info.fulfillmentType === 'pickup';
+    const isDineIn = info && info.fulfillmentType === 'dine_in';
     const subtotal = Number(info.subtotal || 0).toLocaleString();
     const orderNumberHtml = escapeHtml(info && info.orderNumber ? info.orderNumber : 'received');
-    const bodyHtml = isPickup
+    const bodyHtml = isDineIn
+      ? `
+          <p class="order-success-heading">Order sent!</p>
+          <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
+          <p>We’ve received your dine-in order. We’ll call your name once it’s ready.</p>
+          ${renderTrackingActions(info, 'modalOrder')}
+        `
+      : isPickup
       ? `
           <p class="order-success-heading">Order received!</p>
           <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
@@ -8621,6 +8678,7 @@
     const statusBox = document.getElementById('afterSubmitStatus');
     if (!statusBox || !info) return;
     const isPickup = info.fulfillmentType === 'pickup';
+    const isDineIn = info.fulfillmentType === 'dine_in';
     const subtotal = Number(info.subtotal || 0).toLocaleString();
     const orderNumberHtml = escapeHtml(info.orderNumber || 'received');
     statusBox.hidden = false;
@@ -8629,10 +8687,12 @@
     statusBox.innerHTML = `
       <strong class="order-success-heading">Order received!</strong>
       <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
-      ${isPickup ? '' : `<p>Order subtotal: ₱${subtotal}</p>`}
-      <p>${isPickup
-        ? 'Please wait for our confirmation before pick-up.'
-        : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.'}</p>
+      ${isPickup || isDineIn ? '' : `<p>Order subtotal: ₱${subtotal}</p>`}
+      <p>${isDineIn
+        ? 'We’ve received your dine-in order. We’ll call your name once it’s ready.'
+        : (isPickup
+          ? 'Please wait for our confirmation before pick-up.'
+          : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.')}</p>
       ${renderTrackingActions(info, 'afterSubmit')}
     `;
   }
@@ -8701,12 +8761,11 @@
     if (!payload.customer_name) return 'Please fill in your name.';
     if (!payload.customer_phone) return 'Please fill in your contact number.';
     if (!deliverySelect || !deliverySelect.value) return 'Please select an order method.';
-    if (deliverySelect.value === 'dine-in') return 'Dine-in ordering is currently not available.';
     if (!paymentSelect || !paymentSelect.value) return 'Please select a payment method.';
     if (payload.fulfillment_type === 'delivery') {
       if (getCustomerType() !== 'returning' && !payload.delivery_address) return 'Please fill in your delivery address.';
-    } else if (payload.fulfillment_type !== 'pickup') {
-      return 'Please select Delivery or Pick-up.';
+    } else if (!['pickup', 'dine_in'].includes(payload.fulfillment_type)) {
+      return 'Please select Dine In, Pick-up, or Delivery.';
     }
     if (preferredTimeValidation) return preferredTimeValidation;
     return '';
@@ -8864,8 +8923,10 @@
 
   if (isPublicOrderSubmitEnabled()) {
     window.curvPreviewOrderSuccess = function(orderNumber, fulfillmentType, trackingToken) {
-      const safeType = fulfillmentType === 'pickup' ? 'pickup' : 'delivery';
-      const previewNumber = orderNumber || (safeType === 'pickup' ? 'C-1001' : 'C-1000');
+      const safeType = fulfillmentType === 'dine_in'
+        ? 'dine_in'
+        : (fulfillmentType === 'pickup' ? 'pickup' : 'delivery');
+      const previewNumber = orderNumber || (safeType === 'delivery' ? 'C-1000' : 'C-1001');
       return handleSuccessfulPublicOrder(previewNumber, safeType, getCartSubtotal(), trackingToken);
     };
   }
