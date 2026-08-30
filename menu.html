@@ -7354,7 +7354,7 @@
     }
     if (paymentNote) {
       paymentNote.textContent = dineIn
-        ? 'Payment is handled at the counter through Loyverse.'
+        ? ''
         : (paymentSelect && (paymentSelect.value === 'gcash' || paymentSelect.value === 'bank')
           ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
           : '');
@@ -7928,7 +7928,7 @@
   document.getElementById('f-payment').addEventListener('change', function() {
     const note = document.getElementById('payment-note');
     note.textContent = isDineInOrder()
-      ? 'Payment is handled at the counter through Loyverse.'
+      ? ''
       : (this.value === 'gcash' || this.value === 'bank')
       ? 'Electronic payment must be completed before your order is processed. Payment details will be sent via Messenger.'
       : '';
