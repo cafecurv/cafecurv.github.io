@@ -966,6 +966,11 @@
     'latest_corrected_at',
     'total_break_seconds',
     'worked_seconds',
+    'was_admin_closed',
+    'admin_close_reason',
+    'admin_closed_at',
+    'admin_had_open_break',
+    'admin_open_break_closed_at',
   ].join(',');
 
   const ownerAccount = document.querySelector('[data-owner-account]');
@@ -1016,6 +1021,24 @@
   const correctionCloseButton = attendanceRoot.querySelector('[data-correction-close]');
   const correctionCancelButton = attendanceRoot.querySelector('[data-correction-cancel]');
   const correctionSaveButton = attendanceRoot.querySelector('[data-correction-save]');
+  const adminCloseEditor = attendanceRoot.querySelector('[data-admin-close-editor]');
+  const adminCloseTitle = attendanceRoot.querySelector('[data-admin-close-title]');
+  const adminCloseClockedIn = attendanceRoot.querySelector('[data-admin-close-clocked-in]');
+  const adminCloseBreakContext = attendanceRoot.querySelector('[data-admin-close-break-context]');
+  const adminCloseBreakStart = attendanceRoot.querySelector('[data-admin-close-break-start]');
+  const adminCloseForm = attendanceRoot.querySelector('[data-admin-close-form]');
+  const adminCloseBreakField = attendanceRoot.querySelector('[data-admin-close-break-field]');
+  const adminCloseBreakEndInput = attendanceRoot.querySelector('[data-admin-close-break-end]');
+  const adminCloseClockOutInput = attendanceRoot.querySelector('[data-admin-close-clock-out]');
+  const adminCloseReasonInput = attendanceRoot.querySelector('[data-admin-close-reason]');
+  const adminCloseError = attendanceRoot.querySelector('[data-admin-close-error]');
+  const adminCloseCancelButton = attendanceRoot.querySelector('[data-admin-close-cancel]');
+  const adminCloseFormCancelButton = attendanceRoot.querySelector('[data-admin-close-form-cancel]');
+  const adminCloseReviewButton = attendanceRoot.querySelector('[data-admin-close-review]');
+  const adminCloseConfirm = attendanceRoot.querySelector('[data-admin-close-confirm]');
+  const adminCloseConfirmTitle = attendanceRoot.querySelector('[data-admin-close-confirm-title]');
+  const adminCloseKeepButton = attendanceRoot.querySelector('[data-admin-close-keep]');
+  const adminCloseSubmitButton = attendanceRoot.querySelector('[data-admin-close-submit]');
 
   if (!ownerAccount || !window.supabase) return;
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -1033,6 +1056,12 @@
   let selectedCorrectionRecord = null;
   let correctionReturnFocus = null;
   let correctionInitialValues = null;
+  let adminCloseBusy = false;
+  let adminCloseGeneration = 0;
+  let selectedAdminCloseRecord = null;
+  let selectedAdminCloseBreak = null;
+  let adminCloseReturnFocus = null;
+  let pendingAdminClose = null;
   let attendanceViewActive = !attendanceRoot.hidden;
   let authSubscription = null;
 
@@ -1186,6 +1215,44 @@
     });
   };
 
+  const setAdminCloseError = message => {
+    if (!adminCloseError) return;
+    adminCloseError.textContent = message || '';
+    adminCloseError.hidden = !message;
+  };
+
+  const setAdminCloseControlsDisabled = disabled => {
+    [adminCloseBreakEndInput, adminCloseClockOutInput, adminCloseReasonInput, adminCloseCancelButton,
+      adminCloseFormCancelButton, adminCloseReviewButton, adminCloseKeepButton, adminCloseSubmitButton]
+      .forEach(control => { if (control) control.disabled = disabled; });
+  };
+
+  const setAdminCloseReviewLocked = locked => {
+    [adminCloseBreakEndInput, adminCloseClockOutInput, adminCloseReasonInput, adminCloseCancelButton,
+      adminCloseFormCancelButton, adminCloseReviewButton]
+      .forEach(control => { if (control) control.disabled = locked; });
+    [adminCloseKeepButton, adminCloseSubmitButton]
+      .forEach(control => { if (control) control.disabled = false; });
+  };
+
+  const closeAdminCloseEditor = ({ restoreFocus = true } = {}) => {
+    const returnTarget = adminCloseReturnFocus;
+    selectedAdminCloseRecord = null;
+    selectedAdminCloseBreak = null;
+    adminCloseReturnFocus = null;
+    pendingAdminClose = null;
+    if (adminCloseForm) adminCloseForm.reset();
+    if (adminCloseBreakEndInput) adminCloseBreakEndInput.value = '';
+    if (adminCloseClockOutInput) adminCloseClockOutInput.value = '';
+    if (adminCloseReasonInput) adminCloseReasonInput.value = '';
+    if (adminCloseBreakField) adminCloseBreakField.hidden = true;
+    if (adminCloseBreakContext) adminCloseBreakContext.hidden = true;
+    if (adminCloseConfirm) adminCloseConfirm.hidden = true;
+    setAdminCloseError('');
+    if (adminCloseEditor) adminCloseEditor.hidden = true;
+    if (restoreFocus && returnTarget && document.contains(returnTarget)) returnTarget.focus();
+  };
+
   const closeCorrectionEditor = ({ restoreFocus = true } = {}) => {
     const returnTarget = correctionReturnFocus;
     selectedCorrectionRecord = null;
@@ -1204,6 +1271,7 @@
   const clearRenderedData = ({ clearStaff = false } = {}) => {
     stopLiveTimer();
     if (!correctionBusy) closeCorrectionEditor({ restoreFocus: false });
+    if (!adminCloseBusy) closeAdminCloseEditor({ restoreFocus: false });
     openSessions = [];
     openBreaksBySession = new Map();
     [workingList, todayList, historyList].forEach(clearElement);
@@ -1230,11 +1298,15 @@
     authGeneration += 1;
     loadGeneration += 1;
     correctionGeneration += 1;
+    adminCloseGeneration += 1;
     loadBusy = false;
     correctionBusy = false;
+    adminCloseBusy = false;
     hasOwnerAccess = false;
     setCorrectionControlsDisabled(false);
+    setAdminCloseControlsDisabled(false);
     closeCorrectionEditor({ restoreFocus: false });
+    closeAdminCloseEditor({ restoreFocus: false });
     clearRenderedData({ clearStaff: true });
     setFilterError('');
     if (content) content.hidden = true;
@@ -1260,6 +1332,11 @@
     latest_corrected_at: row.latest_corrected_at || null,
     total_break_seconds: Math.max(0, Number(row.total_break_seconds) || 0),
     worked_seconds: Math.max(0, Number(row.worked_seconds) || 0),
+    was_admin_closed: row.was_admin_closed === true,
+    admin_close_reason: String(row.admin_close_reason || '').trim(),
+    admin_closed_at: row.admin_closed_at || null,
+    admin_had_open_break: row.admin_had_open_break === true,
+    admin_open_break_closed_at: row.admin_open_break_closed_at || null,
   })).filter(row => row.session_id && row.staff_id && row.effective_clocked_in_at) : [];
 
   const makeDetail = (label, value) => {
@@ -1321,8 +1398,106 @@
     return details;
   };
 
+  const makeAdminClosureAudit = record => {
+    const details = document.createElement('details');
+    details.className = 'attendance-audit';
+    const summary = document.createElement('summary');
+    summary.textContent = 'View owner closure details';
+    const body = document.createElement('div');
+    body.className = 'attendance-audit-body';
+    const closure = document.createElement('section');
+    const title = document.createElement('h4');
+    title.textContent = 'Closed by Owner';
+    closure.appendChild(title);
+    appendAuditLine(closure, 'Actual Clock Out', formatTime(record.original_clocked_out_at));
+    appendAuditLine(closure, 'Reason', record.admin_close_reason || 'Forgotten open shift');
+    appendAuditLine(closure, 'Owner action', record.admin_closed_at ? formatDate(record.admin_closed_at) + ' · ' + formatTime(record.admin_closed_at) : '—');
+    if (record.admin_had_open_break) {
+      appendAuditLine(closure, 'Actual Break End', record.admin_open_break_closed_at ? formatTime(record.admin_open_break_closed_at) : '—');
+    }
+    body.appendChild(closure);
+    details.append(summary, body);
+    return details;
+  };
+
+  const openAdminCloseEditor = (record, openBreak, trigger) => {
+    if (!record || record.effective_clocked_out_at || adminCloseBusy || correctionBusy) return;
+    if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor({ restoreFocus: false });
+    selectedAdminCloseRecord = record;
+    selectedAdminCloseBreak = openBreak || null;
+    adminCloseReturnFocus = trigger || document.activeElement;
+    pendingAdminClose = null;
+    setAdminCloseError('');
+    if (adminCloseTitle) adminCloseTitle.textContent = 'Close Open Shift — ' + record.staff_name;
+    if (adminCloseClockedIn) adminCloseClockedIn.textContent = formatDate(record.effective_clocked_in_at) + ' · ' + formatTime(record.effective_clocked_in_at);
+    const hasOpenBreak = Boolean(openBreak && openBreak.started_at);
+    if (adminCloseBreakContext) adminCloseBreakContext.hidden = !hasOpenBreak;
+    if (adminCloseBreakField) adminCloseBreakField.hidden = !hasOpenBreak;
+    if (adminCloseBreakStart) adminCloseBreakStart.textContent = hasOpenBreak
+      ? formatDate(openBreak.started_at) + ' · ' + formatTime(openBreak.started_at)
+      : '—';
+    if (adminCloseBreakEndInput) adminCloseBreakEndInput.value = '';
+    if (adminCloseClockOutInput) adminCloseClockOutInput.value = '';
+    if (adminCloseReasonInput) adminCloseReasonInput.value = '';
+    if (adminCloseConfirm) adminCloseConfirm.hidden = true;
+    if (adminCloseEditor) adminCloseEditor.hidden = false;
+    setAdminCloseControlsDisabled(false);
+    window.requestAnimationFrame(() => {
+      (hasOpenBreak ? adminCloseBreakEndInput : adminCloseClockOutInput)?.focus();
+      adminCloseEditor?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
+
+  const validateAdminClose = () => {
+    const record = selectedAdminCloseRecord;
+    const openBreak = selectedAdminCloseBreak;
+    const clockedOutAt = manilaDateTimeLocalToIso(adminCloseClockOutInput && adminCloseClockOutInput.value);
+    const breakEndedAt = openBreak
+      ? manilaDateTimeLocalToIso(adminCloseBreakEndInput && adminCloseBreakEndInput.value)
+      : null;
+    const reason = String(adminCloseReasonInput && adminCloseReasonInput.value || '').trim();
+    if (!record || record.effective_clocked_out_at) return { error: 'Choose an open shift to close.' };
+    if (openBreak && !breakEndedAt) return { error: 'Enter the actual break end.', target: adminCloseBreakEndInput };
+    if (!clockedOutAt) return { error: 'Enter the actual Clock Out time.', target: adminCloseClockOutInput };
+    if (!reason) return { error: 'Enter a reason for closing this shift.', target: adminCloseReasonInput };
+    if (reason.length > 500) return { error: 'Keep the reason to 500 characters or fewer.', target: adminCloseReasonInput };
+    const clockedInTime = new Date(record.effective_clocked_in_at).getTime();
+    const clockedOutTime = new Date(clockedOutAt).getTime();
+    if (clockedOutTime < clockedInTime) return { error: 'Clock Out must be the same as or later than Clock In.', target: adminCloseClockOutInput };
+    if (clockedOutTime > Date.now()) return { error: 'Clock Out cannot be in the future.', target: adminCloseClockOutInput };
+    if (openBreak) {
+      const breakStartedTime = new Date(openBreak.started_at).getTime();
+      const breakEndedTime = new Date(breakEndedAt).getTime();
+      if (breakEndedTime < breakStartedTime) return { error: 'Break End must be the same as or later than Break Start.', target: adminCloseBreakEndInput };
+      if (breakEndedTime > clockedOutTime) return { error: 'Break End cannot be later than Clock Out.', target: adminCloseBreakEndInput };
+    }
+    return {
+      sessionId: record.session_id,
+      staffName: record.staff_name,
+      clockedOutAt,
+      breakEndedAt,
+      reason,
+    };
+  };
+
+  const adminCloseErrorCode = error => {
+    const value = String(error && (error.details || error.code || error.message) || '');
+    const match = value.match(/TIMEKEEPING_[A-Z_]+/);
+    return match ? match[0] : '';
+  };
+
+  const adminCloseErrorMessage = error => {
+    const code = adminCloseErrorCode(error);
+    if (code === 'TIMEKEEPING_SHIFT_ALREADY_CLOSED') return 'This shift has already been closed. Refreshing attendance.';
+    if (code === 'TIMEKEEPING_OPEN_BREAK_ACTIVE') return 'This shift still has an open break. Resolve it before closing the shift.';
+    if (code === 'TIMEKEEPING_ADMIN_CLOSE_INVALID') return 'Check the shift times and try again.';
+    if (code === 'TIMEKEEPING_FORBIDDEN') return 'Owner access is required.';
+    return 'Couldn’t close the shift. Check your connection and try again.';
+  };
+
   const openCorrectionEditor = (record, trigger) => {
-    if (!record || !record.effective_clocked_out_at || correctionBusy) return;
+    if (!record || !record.effective_clocked_out_at || correctionBusy || adminCloseBusy) return;
+    if (adminCloseEditor && !adminCloseEditor.hidden && !adminCloseBusy) closeAdminCloseEditor({ restoreFocus: false });
     selectedCorrectionRecord = record;
     correctionReturnFocus = trigger || document.activeElement;
     setCorrectionError('');
@@ -1351,6 +1526,16 @@
     });
   };
 
+  const makeAdminCloseButton = (record, openBreak) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'team-action-button attendance-close-shift-button';
+    button.textContent = 'Close Open Shift';
+    button.dataset.closeOpenSession = record.session_id;
+    button.addEventListener('click', () => openAdminCloseEditor(record, openBreak, button));
+    return button;
+  };
+
   const renderAttendanceRecord = record => {
     const article = document.createElement('article');
     article.className = 'attendance-record';
@@ -1368,6 +1553,7 @@
     if (record.effective_clocked_out_at) badges.appendChild(makeBadge('Completed'));
     else if (openBreak) badges.appendChild(makeBadge('On Break', 'is-break'));
     else badges.appendChild(makeBadge('Working Now', 'is-working'));
+    if (record.was_admin_closed) badges.appendChild(makeBadge('Closed by Owner', 'is-owner-closed'));
     if (record.has_correction) badges.appendChild(makeBadge('Corrected', 'is-corrected'));
     header.append(identity, badges);
 
@@ -1388,6 +1574,7 @@
     }
     details.appendChild(makeDetail('Worked', record.effective_clocked_out_at ? formatDuration(record.worked_seconds) : 'In progress'));
     article.append(header, details);
+    if (record.was_admin_closed) article.appendChild(makeAdminClosureAudit(record));
     if (record.has_correction) article.appendChild(makeCorrectionAudit(record));
     if (record.effective_clocked_out_at) {
       const footer = document.createElement('footer');
@@ -1399,6 +1586,11 @@
       correctButton.dataset.correctSession = record.session_id;
       correctButton.addEventListener('click', () => openCorrectionEditor(record, correctButton));
       footer.appendChild(correctButton);
+      article.appendChild(footer);
+    } else {
+      const footer = document.createElement('footer');
+      footer.className = 'attendance-record-actions';
+      footer.appendChild(makeAdminCloseButton(record, openBreak));
       article.appendChild(footer);
     }
     return article;
@@ -1435,7 +1627,10 @@
         breakDuration.textContent = formatDuration(elapsedSeconds(openBreak.started_at));
         details.appendChild(makeDetail('Break', breakDuration));
       }
-      article.append(top, details);
+      const actions = document.createElement('div');
+      actions.className = 'attendance-record-actions';
+      actions.appendChild(makeAdminCloseButton(record, openBreak));
+      article.append(top, details, actions);
       workingList.appendChild(article);
     });
   };
@@ -1663,6 +1858,96 @@
     if (!correctionBusy) closeCorrectionEditor();
   });
 
+  adminCloseForm?.addEventListener('submit', event => {
+    event.preventDefault();
+    if (adminCloseBusy || !sessionUser || !hasOwnerAccess) return;
+    const validation = validateAdminClose();
+    if (validation.error) {
+      setAdminCloseError(validation.error);
+      validation.target?.focus();
+      return;
+    }
+    pendingAdminClose = validation;
+    setAdminCloseError('');
+    if (adminCloseConfirmTitle) {
+      adminCloseConfirmTitle.textContent = 'Close ' + validation.staffName + '’s open shift at '
+        + formatDate(validation.clockedOutAt) + ' · ' + formatTime(validation.clockedOutAt) + '?';
+    }
+    if (adminCloseConfirm) adminCloseConfirm.hidden = false;
+    setAdminCloseReviewLocked(true);
+    adminCloseKeepButton?.focus();
+  });
+
+  const keepAdminShiftOpen = () => {
+    if (adminCloseBusy) return;
+    pendingAdminClose = null;
+    if (adminCloseConfirm) adminCloseConfirm.hidden = true;
+    setAdminCloseReviewLocked(false);
+    adminCloseReviewButton?.focus();
+  };
+
+  adminCloseKeepButton?.addEventListener('click', keepAdminShiftOpen);
+  adminCloseCancelButton?.addEventListener('click', () => {
+    if (!adminCloseBusy) closeAdminCloseEditor();
+  });
+  adminCloseFormCancelButton?.addEventListener('click', () => {
+    if (!adminCloseBusy) closeAdminCloseEditor();
+  });
+  adminCloseSubmitButton?.addEventListener('click', async () => {
+    if (adminCloseBusy || !pendingAdminClose || !sessionUser || !hasOwnerAccess) return;
+    const submission = pendingAdminClose;
+    const authToken = authGeneration;
+    const closeToken = ++adminCloseGeneration;
+    adminCloseBusy = true;
+    setAdminCloseError('');
+    setAdminCloseControlsDisabled(true);
+    setStatus('Closing open shift…');
+    try {
+      const { data, error } = await supabaseClient.rpc('timekeeping_admin_close_open_shift', {
+        p_session_id: submission.sessionId,
+        p_clocked_out_at: submission.clockedOutAt,
+        p_reason: submission.reason,
+        p_break_ended_at: submission.breakEndedAt,
+      });
+      if (authToken !== authGeneration || closeToken !== adminCloseGeneration || !sessionUser) return;
+      if (error || (data && data.ok === false)) throw error || new Error('TIMEKEEPING_ADMIN_CLOSE_INVALID');
+      closeAdminCloseEditor({ restoreFocus: false });
+      const refreshed = await loadAttendance({ announce: false, supersede: true });
+      if (authToken !== authGeneration || closeToken !== adminCloseGeneration || !sessionUser) return;
+      setStatus(refreshed ? submission.staffName + '’s shift was closed successfully.' : 'Open shift closed, but attendance could not be refreshed. Use Retry.', !refreshed);
+      document.getElementById('working-now-title')?.focus();
+    } catch (error) {
+      if (authToken !== authGeneration || closeToken !== adminCloseGeneration) return;
+      const code = adminCloseErrorCode(error);
+      const message = adminCloseErrorMessage(error);
+      if (code === 'TIMEKEEPING_SHIFT_ALREADY_CLOSED') {
+        closeAdminCloseEditor({ restoreFocus: false });
+        await loadAttendance({ announce: false, supersede: true });
+        setStatus(message, true);
+      } else if (code === 'TIMEKEEPING_OPEN_BREAK_ACTIVE') {
+        closeAdminCloseEditor({ restoreFocus: false });
+        await loadAttendance({ announce: false, supersede: true });
+        setStatus(message, true);
+      } else if (code === 'TIMEKEEPING_ADMIN_CLOSE_INVALID') {
+        pendingAdminClose = null;
+        if (adminCloseConfirm) adminCloseConfirm.hidden = true;
+        setAdminCloseReviewLocked(false);
+        setAdminCloseError(message);
+        setStatus(message, true);
+        adminCloseClockOutInput?.focus();
+      } else {
+        setAdminCloseError(message);
+        setStatus(message, true);
+      }
+    } finally {
+      if (authToken === authGeneration && closeToken === adminCloseGeneration) {
+        adminCloseBusy = false;
+        setAdminCloseControlsDisabled(false);
+        if (adminCloseConfirm && !adminCloseConfirm.hidden) setAdminCloseReviewLocked(true);
+      }
+    }
+  });
+
   filterForm?.addEventListener('submit', event => {
     event.preventDefault();
     loadAttendance();
@@ -1672,7 +1957,9 @@
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor();
+    if (adminCloseConfirm && !adminCloseConfirm.hidden && !adminCloseBusy) keepAdminShiftOpen();
+    else if (adminCloseEditor && !adminCloseEditor.hidden && !adminCloseBusy) closeAdminCloseEditor();
+    else if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor();
   });
 
   const applySession = session => {
@@ -1708,16 +1995,25 @@
       else if (sessionUser && hasOwnerAccess) startLiveTimer();
     };
     attendanceRoot.curvHasUnsavedCorrection = () => {
-      if (correctionBusy) return true;
-      if (!correctionEditor || correctionEditor.hidden || !correctionInitialValues) return false;
-      return String(correctionInInput && correctionInInput.value || '') !== correctionInitialValues.clockedIn
+      if (correctionBusy || adminCloseBusy) return true;
+      const correctionDirty = Boolean(correctionEditor && !correctionEditor.hidden && correctionInitialValues) && (
+        String(correctionInInput && correctionInInput.value || '') !== correctionInitialValues.clockedIn
         || String(correctionOutInput && correctionOutInput.value || '') !== correctionInitialValues.clockedOut
-        || Boolean(String(correctionReasonInput && correctionReasonInput.value || '').trim());
+        || Boolean(String(correctionReasonInput && correctionReasonInput.value || '').trim())
+      );
+      const adminCloseDirty = Boolean(adminCloseEditor && !adminCloseEditor.hidden) && (
+        Boolean(pendingAdminClose)
+        || Boolean(String(adminCloseBreakEndInput && adminCloseBreakEndInput.value || ''))
+        || Boolean(String(adminCloseClockOutInput && adminCloseClockOutInput.value || ''))
+        || Boolean(String(adminCloseReasonInput && adminCloseReasonInput.value || '').trim())
+      );
+      return correctionDirty || adminCloseDirty;
     };
-    attendanceRoot.curvCanDiscardTransient = () => !correctionBusy;
+    attendanceRoot.curvCanDiscardTransient = () => !correctionBusy && !adminCloseBusy;
     attendanceRoot.curvDiscardTransient = () => {
-      if (correctionBusy) return false;
+      if (correctionBusy || adminCloseBusy) return false;
       closeCorrectionEditor({ restoreFocus: false });
+      closeAdminCloseEditor({ restoreFocus: false });
       return true;
     };
     attendanceRoot.addEventListener('curv-owner-session-change', event => {
@@ -1773,9 +2069,12 @@
     authGeneration += 1;
     loadGeneration += 1;
     correctionGeneration += 1;
+    adminCloseGeneration += 1;
     correctionBusy = false;
+    adminCloseBusy = false;
     stopLiveTimer();
     closeCorrectionEditor({ restoreFocus: false });
+    closeAdminCloseEditor({ restoreFocus: false });
     if (passwordInput) passwordInput.value = '';
     if (authSubscription && authSubscription.subscription) authSubscription.subscription.unsubscribe();
   });
