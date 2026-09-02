@@ -6821,12 +6821,61 @@
     if (!visible) mount.innerHTML = '';
   }
 
+  function renderAdditionalTakoyakiSavoryProducts(shapedPublicMenu, specializedState) {
+    const categoryRows = getPublicTakoyakiSavoryCategoryRows(shapedPublicMenu);
+    const categoryNameById = new Map(categoryRows.map(category => [category.id, normalizePublicMenuText(category.name)]));
+    const sectionById = shapedPublicMenu && shapedPublicMenu.categorySections
+      ? shapedPublicMenu.categorySections.byId || {}
+      : {};
+    const knownNames = new Set([
+      ...Object.keys(PUBLIC_TAKOYAKI_NAME_MAP),
+      ...Object.keys(PUBLIC_SAVORY_NAME_MAP)
+    ]);
+    const additionalItems = mapGenericPublicCategoryItems({
+      products: getPublicProductsForCategoryRows(categoryRows).filter(product =>
+        product && !knownNames.has(String(product.name || '').trim())
+      )
+    });
+    const groupedItems = { takoyaki: [], savory: [] };
+
+    additionalItems.forEach(item => {
+      const sourceProduct = getPublicProductsForCategoryRows(categoryRows).find(product =>
+        `generic-${slugifyPublicMenuId(product.id || product.name)}` === item.id
+      );
+      const section = item.category_section_id ? sectionById[item.category_section_id] : null;
+      const sectionName = normalizePublicMenuText(section && section.name);
+      const categoryName = normalizePublicMenuText(sourceProduct && categoryNameById.get(sourceProduct.category_id));
+      const target = sectionName === 'takoyaki' || (!sectionName && ['bites', 'takoyaki'].includes(categoryName))
+        ? 'takoyaki'
+        : 'savory';
+      groupedItems[target].push(item);
+    });
+
+    ['takoyaki', 'savory'].forEach(target => {
+      const mount = document.getElementById(target + '-mount');
+      if (!mount || !groupedItems[target].length) return;
+      if (!specializedState[target]) mount.innerHTML = '';
+      mount.insertAdjacentHTML('beforeend', groupedItems[target].map(renderGenericPublicProduct).join(''));
+    });
+
+    return {
+      takoyaki: groupedItems.takoyaki.length > 0,
+      savory: groupedItems.savory.length > 0
+    };
+  }
+
   function renderSupabaseBitesSection(shapedPublicMenu) {
     const takoyakiRendered = renderSupabaseTakoyakiOrFallback(shapedPublicMenu);
     const savoryRendered = renderSupabaseSavoryOrFallback(shapedPublicMenu);
-    setCategoryBlockVisibility('takoyaki-mount', takoyakiRendered);
-    setCategoryBlockVisibility('savory-mount', savoryRendered);
-    return takoyakiRendered || savoryRendered;
+    const additionalRendered = renderAdditionalTakoyakiSavoryProducts(shapedPublicMenu, {
+      takoyaki: takoyakiRendered,
+      savory: savoryRendered
+    });
+    const showTakoyaki = takoyakiRendered || additionalRendered.takoyaki;
+    const showSavory = savoryRendered || additionalRendered.savory;
+    setCategoryBlockVisibility('takoyaki-mount', showTakoyaki);
+    setCategoryBlockVisibility('savory-mount', showSavory);
+    return showTakoyaki || showSavory;
   }
 
   function getGenericCategorySectionId(category) {
@@ -6840,6 +6889,7 @@
       .map(product => {
         const variants = [...(product.variants || [])]
           .map(variant => ({
+            id: variant.id || null,
             label: String(variant.label || '').trim(),
             price: parsePublicMenuPeso(variant.price),
             sort_order: Number(variant.sort_order) || 0
@@ -6850,6 +6900,7 @@
         if (!variants.length && !disabled) return null;
         return {
           id: `generic-${slugifyPublicMenuId(product.id || product.name)}`,
+          product_id: product.id || null,
           name: String(product.name || '').trim(),
           desc: product.description || '',
           img: product.image_url || null,
