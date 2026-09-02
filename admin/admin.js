@@ -2886,6 +2886,7 @@
   let latestCategorySections = [];
   let latestDraftCategorySections = [];
   let draftCategorySectionsLoaded = true;
+  let draftCategorySectionLoadGeneration = 0;
   let latestVisibleProducts = [];
   let selectedCategoryFilter = 'all';
   let selectedSectionFilter = 'all';
@@ -4240,6 +4241,7 @@
   };
 
   const resetDraftProductForm = () => {
+    draftCategorySectionLoadGeneration += 1;
     if (draftForm) draftForm.reset();
     resetVariantGroupOptions('Each');
     if (customVariantInput) customVariantInput.value = '';
@@ -4483,6 +4485,7 @@
   };
 
   const loadDraftCategorySections = async (categoryId, selectedValue = '') => {
+    const loadGeneration = ++draftCategorySectionLoadGeneration;
     if (!categoryId) {
       draftCategorySectionsLoaded = true;
       renderDraftProductSections([], '');
@@ -4501,6 +4504,10 @@
       .eq('category_id', categoryId)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
+
+    if (loadGeneration !== draftCategorySectionLoadGeneration || getDraftCategoryId() !== categoryId) {
+      return false;
+    }
 
     if (error) {
       latestDraftCategorySections = [];
@@ -7088,6 +7095,10 @@
       return { error: 'Category is required.' };
     }
 
+    if (!getRealMenuCategories().some((category) => category.id === categoryId)) {
+      return { error: 'The selected category is no longer available. Refresh categories and try again.' };
+    }
+
     if (!availableInput || availableInput.type !== 'checkbox') {
       return { error: 'Availability state could not be read safely. Refresh products and try again.' };
     }
@@ -7140,12 +7151,19 @@
       return { error: 'Keep badges to 24 characters or fewer.' };
     }
 
+    const categorySectionId = draftSectionSelect && draftSectionSelect.value && draftSectionSelect.value !== '__create_section__'
+      ? draftSectionSelect.value
+      : null;
+    if (categorySectionId && !latestDraftCategorySections.some((section) =>
+      section.id === categorySectionId && section.category_id === categoryId
+    )) {
+      return { error: 'The selected section does not belong to this category. Choose a section again.' };
+    }
+
     return {
       value: {
         category_id: categoryId,
-        category_section_id: draftSectionSelect && draftSectionSelect.value && draftSectionSelect.value !== '__create_section__'
-          ? draftSectionSelect.value
-          : null,
+        category_section_id: categorySectionId,
         name,
         description: String(formData.get('description') || '').trim() || null,
         image_url: String(formData.get('image_url') || '').trim() || null,

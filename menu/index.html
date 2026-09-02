@@ -6061,10 +6061,8 @@
     return true;
   }
 
-  // Phase 2D.5: Supabase Salads mapping is limited to simple public prices.
-  // Existing Salads have no Supabase-backed option metadata yet, so known
-  // static products are matched by exact name and rendered with their public
-  // variants only.
+  // Known Salad products retain their legacy presentation metadata. Products
+  // added or moved through Menu Manager use their public data directly.
   const SALAD_BAR_ITEM_META = {
     'Curv Salad': {
       category: 'Salads',
@@ -6141,10 +6139,11 @@
       const name = String(product.name || '').trim();
       if (!name) return { ok: false, reason: 'A Supabase Salad Bar product is missing a name.' };
 
-      const meta = SALAD_BAR_ITEM_META[name];
-      if (!meta) {
-        return { ok: false, reason: `Supabase Salad Bar has unsupported product name: ${name}.` };
-      }
+      const meta = SALAD_BAR_ITEM_META[name] || {
+        category: 'Salads',
+        desc: '',
+        img: null
+      };
 
       const variantMap = mapPublicSaladBarVariants(product);
       if (!variantMap.ok) return variantMap;
