@@ -5498,14 +5498,15 @@
     );
   }
 
-  function getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows) {
+  function getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows, excludedNames = []) {
     const seenSectionIds = new Set();
+    const excludedSectionNames = new Set(excludedNames.map(normalizePublicMenuText));
     return (Array.isArray(categoryRows) ? categoryRows : [])
       .flatMap(category => getPublicCategorySectionsForCategory(shapedPublicMenu, category && category.id))
       .filter(section => {
         if (!section || !section.id || seenSectionIds.has(section.id)) return false;
         seenSectionIds.add(section.id);
-        return true;
+        return !excludedSectionNames.has(normalizePublicMenuText(section.name));
       })
       .sort(compareSectionedMenuItems);
   }
@@ -5633,7 +5634,7 @@
       ok: true,
       items: mappedItems,
       warnings,
-      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows)
+      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows, ['takoyaki'])
     };
   }
 
@@ -5873,7 +5874,7 @@
       ok: true,
       items: mappedItems,
       warnings,
-      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows)
+      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows, ['savory', 'savory bites'])
     };
   }
 
