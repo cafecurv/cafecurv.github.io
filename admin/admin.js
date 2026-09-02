@@ -8198,7 +8198,7 @@
     completed: 'Completed',
     cancelled: 'Cancelled',
   };
-  const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track.html';
+  const PUBLIC_TRACKING_BASE_URL = 'https://www.thecurv.cafe/track/';
   const WAITING_WATCH_MINUTES = 10;
   const WAITING_URGENT_MINUTES = 20;
   const ORDER_SEARCH_INDEX_LIMIT = 750;

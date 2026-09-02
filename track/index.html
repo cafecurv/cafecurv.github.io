@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/favicon1.png">
+<link rel="apple-touch-icon" href="/favicon1.png">
+<title>Order Tracking | CURV</title>
+<meta name="description" content="Check the latest CURV order status.">
+<meta property="og:title" content="CURV Order Tracking">
+<meta property="og:description" content="See the latest status for your CURV order.">
+<link rel="canonical" href="https://www.thecurv.cafe/track/">
+<meta property="og:image" content="https://www.thecurv.cafe/preview1.png">
+<meta property="og:url" content="https://www.thecurv.cafe/track/">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@200;300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --bg2: #EEECEA;
+    --bg3: #E5E2DC;
+    --navy: #212842;
+    --gray-dark: #3E3E3E;
+    --gray-mid: #6B6760;
+    --gray-light: #8A8680;
+    --accent: #C8B89A;
+    --price: #212842;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(200, 184, 154, 0.18), transparent 34rem),
+      var(--bg);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+  }
+
+  header {
+    padding: 2.7rem 1.4rem 1.3rem;
+    text-align: center;
+    border-bottom: 0.5px solid var(--bg3);
+  }
+
+  .logo {
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    line-height: 1;
+  }
+
+  .logo-line {
+    width: 60px;
+    height: 1px;
+    margin: 10px auto;
+    background: var(--accent);
+  }
+
+  .header-tagline {
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.75rem;
+    font-style: italic;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  main {
+    width: min(100%, 680px);
+    margin: 0 auto;
+    padding: 1.2rem 1.1rem 3rem;
+  }
+
+  .track-hero {
+    padding: 1.6rem 0 1.1rem;
+    text-align: center;
+  }
+
+  .track-kicker {
+    color: var(--accent);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin-top: 0.35rem;
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.65rem, 7vw, 2.45rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .track-subtitle {
+    max-width: 32rem;
+    margin: 0.65rem auto 0;
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.88rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.65;
+  }
+
+  .track-shell {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .track-card {
+    border: 0.5px solid var(--bg3);
+    border-radius: 14px;
+    background: rgba(247, 245, 240, 0.92);
+    box-shadow: 0 12px 34px rgba(33, 40, 66, 0.07);
+    padding: 1.05rem;
+  }
+
+  .track-card.is-centered {
+    padding: 1.4rem 1.05rem;
+    text-align: center;
+  }
+
+  .state-title {
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 1.15rem;
+    letter-spacing: 1px;
+  }
+
+  .state-copy {
+    margin-top: 0.45rem;
+    color: var(--gray-mid);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .track-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.9rem;
+    min-height: 42px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--navy);
+    color: var(--bg);
+    cursor: pointer;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 0.72rem 1.2rem;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .order-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .order-number-label {
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .order-number {
+    margin-top: 0.1rem;
+    color: var(--navy);
+    font-family: 'Cinzel', serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .status-pill {
+    flex-shrink: 0;
+    border: 0.5px solid rgba(200, 184, 154, 0.9);
+    border-radius: 999px;
+    background: rgba(200, 184, 154, 0.18);
+    color: var(--navy);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    padding: 0.38rem 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .status-title {
+    margin-top: 0.9rem;
+    color: var(--navy);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .status-description {
+    margin-top: 0.4rem;
+    color: var(--gray-mid);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+
+  .timeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+
+  .timeline-step {
+    min-width: 0;
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .timeline-step::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 4px;
+    margin-bottom: 0.38rem;
+    border-radius: 99px;
+    background: var(--bg3);
+  }
+
+  .timeline-step.is-complete,
+  .timeline-step.is-current {
+    color: var(--navy);
+  }
+
+  .timeline-step.is-complete::before,
+  .timeline-step.is-current::before {
+    background: var(--accent);
+  }
+
+  .timeline-step.is-cancelled {
+    color: var(--gray-mid);
+  }
+
+  .timeline-step.is-cancelled::before {
+    background: var(--gray-light);
+  }
+
+  .last-updated {
+    margin-top: 1rem;
+    color: var(--gray-light);
+    font-size: 0.76rem;
+  }
+
+  .detail-card-title {
+    color: var(--navy);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .detail-list,
+  .order-item-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+  }
+
+  .detail-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 0.5px solid rgba(229, 226, 220, 0.9);
+    padding-bottom: 0.55rem;
+  }
+
+  .detail-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .detail-label {
+    color: var(--gray-mid);
+    font-size: 0.82rem;
+  }
+
+  .detail-value {
+    color: var(--price);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .order-items-heading {
+    margin-top: 0.95rem;
+    color: var(--gray-light);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .order-item {
+    border: 0.5px solid rgba(229, 226, 220, 0.95);
+    border-radius: 10px;
+    background: rgba(238, 236, 234, 0.45);
+    padding: 0.72rem;
+  }
+
+  .order-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+  }
+
+  .order-item-title {
+    min-width: 0;
+    color: var(--navy);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .order-item-price {
+    flex-shrink: 0;
+    color: var(--price);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .order-item-meta {
+    margin-top: 0.35rem;
+    color: var(--gray-mid);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .order-items-empty {
+    margin-top: 0.8rem;
+    color: var(--gray-light);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  .cancel-card-copy {
+    margin-top: 0.55rem;
+    color: var(--gray-mid);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+
+  .cancel-card-copy.is-requested {
+    color: #9b5b4d;
+    font-weight: 500;
+  }
+
+  .track-card.is-cancel-requested {
+    border-color: rgba(155, 91, 77, 0.28);
+    background: rgba(155, 91, 77, 0.07);
+  }
+
+  .cancel-reason-field {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+  }
+
+  .cancel-reason-field label {
+    color: var(--gray-mid);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+  }
+
+  .cancel-reason-field textarea {
+    min-height: 78px;
+    resize: vertical;
+    border: 0.5px solid var(--bg3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.38);
+    color: var(--gray-dark);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    padding: 0.72rem 0.78rem;
+  }
+
+  .cancel-reason-field textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  .cancel-status {
+    min-height: 1.2rem;
+    margin-top: 0.62rem;
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.78rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .cancel-status.is-error {
+    color: #9b5b4d;
+  }
+
+  .cancel-status.is-success {
+    color: #4a7c59;
+  }
+
+  .cancel-request-button {
+    margin-top: 0.8rem;
+  }
+
+  .cancel-request-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+
+  .messenger-note {
+    border-left: 2px solid var(--accent);
+    color: var(--gray-mid);
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.6;
+    padding-left: 0.8rem;
+  }
+
+  .messenger-note a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 520px) {
+    header { padding-top: 2.25rem; }
+    main { padding-inline: 0.9rem; }
+    .track-card { border-radius: 12px; padding: 0.95rem; }
+    .order-heading { display: grid; }
+    .status-pill { justify-self: start; }
+    .timeline { gap: 0.25rem; }
+    .timeline-step { font-size: 0.5rem; letter-spacing: 0.7px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">CURV</div>
+  <div class="logo-line"></div>
+  <div class="header-tagline">Order updates</div>
+</header>
+
+<main>
+  <section class="track-hero">
+    <h1>Order Tracking</h1>
+  </section>
+
+  <section class="track-shell" data-track-root>
+    <article class="track-card is-centered" data-state-card>
+      <h2 class="state-title" data-state-title>Loading your order...</h2>
+      <p class="state-copy" data-state-copy>Please wait while we check the latest CURV update.</p>
+      <button class="track-button" type="button" data-retry-button hidden>Try Again</button>
+    </article>
+
+    <article class="track-card" data-main-card hidden>
+      <div class="order-heading">
+        <div>
+          <p class="order-number-label">Order Number</p>
+          <p class="order-number" data-order-number>-</p>
+        </div>
+        <span class="status-pill" data-status-pill>Order</span>
+      </div>
+      <h2 class="status-title" data-status-title>Order received</h2>
+      <p class="status-description" data-status-description>We've received your order.</p>
+      <div class="timeline" data-timeline aria-label="Order progress"></div>
+      <p class="last-updated" data-last-updated>Updated just now</p>
+    </article>
+
+    <article class="track-card" data-total-card hidden>
+      <h2 class="detail-card-title">Order Details</h2>
+      <div class="detail-list" data-total-list></div>
+    </article>
+
+    <article class="track-card" data-cancel-card hidden>
+      <h2 class="detail-card-title" data-cancel-title>Need to cancel your order?</h2>
+      <p class="cancel-card-copy" data-cancel-copy>You can request cancellation while your order hasn't started preparation yet.</p>
+      <div class="cancel-reason-field" data-cancel-reason-field>
+        <label for="cancel-reason">Reason (optional)</label>
+        <textarea id="cancel-reason" maxlength="500" placeholder="Tell us why you need to cancel." data-cancel-reason></textarea>
+      </div>
+      <button class="track-button cancel-request-button" type="button" data-cancel-button>Request Cancellation</button>
+      <p class="cancel-status" data-cancel-status></p>
+    </article>
+
+    <article class="track-card messenger-note" data-note-card hidden>
+      For changes or urgent concerns, message CURV directly on
+      <a href="https://m.me/cafecurv" target="_blank" rel="noopener">Messenger</a>.
+    </article>
+  </section>
+</main>
+
+<script>
+(() => {
+  const PUBLIC_MENU_SUPABASE_URL = 'https://tjqnmyjttqukowcehzmq.supabase.co';
+  const PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_tkWA-7LTA9R5wKw7_vi_ng_YDYnS1M0';
+  const POLL_INTERVAL_MS = 15000;
+  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  const stateCard = document.querySelector('[data-state-card]');
+  const stateTitle = document.querySelector('[data-state-title]');
+  const stateCopy = document.querySelector('[data-state-copy]');
+  const retryButton = document.querySelector('[data-retry-button]');
+  const mainCard = document.querySelector('[data-main-card]');
+  const totalCard = document.querySelector('[data-total-card]');
+  const cancelCard = document.querySelector('[data-cancel-card]');
+  const cancelTitle = document.querySelector('[data-cancel-title]');
+  const cancelCopy = document.querySelector('[data-cancel-copy]');
+  const cancelReasonField = document.querySelector('[data-cancel-reason-field]');
+  const cancelReasonInput = document.querySelector('[data-cancel-reason]');
+  const cancelButton = document.querySelector('[data-cancel-button]');
+  const cancelStatus = document.querySelector('[data-cancel-status]');
+  const noteCard = document.querySelector('[data-note-card]');
+  const orderNumberEl = document.querySelector('[data-order-number]');
+  const statusPill = document.querySelector('[data-status-pill]');
+  const statusTitle = document.querySelector('[data-status-title]');
+  const statusDescription = document.querySelector('[data-status-description]');
+  const timeline = document.querySelector('[data-timeline]');
+  const lastUpdated = document.querySelector('[data-last-updated]');
+  const totalList = document.querySelector('[data-total-list]');
+
+  let client = null;
+  let pollTimer = null;
+  let currentToken = '';
+  let lastFetchTime = null;
+  let latestOrderNumber = '';
+  let isSubmittingCancelRequest = false;
+
+  const STATUS_META = {
+    submitted: {
+      label: 'Order received',
+      description: "We've received your order. Please wait while CURV confirms your total and payment details.",
+      step: 0,
+    },
+    new: {
+      label: 'Order received',
+      description: "We've received your order. Please wait while CURV confirms your total and payment details.",
+      step: 0,
+    },
+    accepted: {
+      label: 'Order accepted',
+      description: 'Your order has been accepted and placed in our queue. Kindly wait while our peeps prepare it for you.',
+      step: 1,
+    },
+    preparing: {
+      label: 'Preparing your order',
+      description: 'Your order is now being prepared. Prep time usually takes around 15\u201330 minutes depending on order load, so please bear with us a little.\n\nWe prepare each order fresh, not pre-made, because we want every cup and plate to feel special. \uD83E\uDD79',
+      step: 2,
+    },
+    ready: {
+      label: 'Ready',
+      description: 'Your order is ready.',
+      step: 3,
+    },
+    completed: {
+      label: 'Completed',
+      description: 'Your order has been completed. Thank you for ordering from CURV. \uD83E\uDD79',
+      step: 4,
+      terminal: true,
+    },
+    cancelled: {
+      label: 'Cancelled',
+      description: 'This order has been cancelled. Please message CURV directly if you need help.',
+      step: -1,
+      terminal: true,
+    },
+  };
+
+  const getStatusMeta = (status, fulfillmentType) => {
+    const key = String(status || '').trim().toLowerCase();
+    const fallback = STATUS_META[key] || STATUS_META.submitted;
+    if (['submitted', 'new'].includes(key) && fulfillmentType === 'dine_in') {
+      return {
+        ...fallback,
+        description: "Please proceed to the cashier to confirm your order and estimated waiting time before payment. We'll call your name once your order is ready.",
+      };
+    }
+    if (key === 'ready') {
+      const readyDescription = fulfillmentType === 'delivery'
+        ? "Your order is ready and waiting for delivery arrangement. We'll update you once it's on the way."
+        : (fulfillmentType === 'dine_in'
+          ? "Your order is ready. We’ll call your name for collection."
+          : "Your order is ready for pick-up. You may drop by CURV when you're ready.");
+      return {
+        ...fallback,
+        description: readyDescription,
+      };
+    }
+    return fallback;
+  };
+
+  const getDisplayStatusMeta = (order, status, fulfillmentType) => {
+    const meta = getStatusMeta(status, fulfillmentType);
+    const cancelState = String(order.customer_cancel_status || 'none').trim().toLowerCase();
+    if (status !== 'cancelled' && cancelState === 'requested') {
+      return {
+        ...meta,
+        label: 'Cancellation requested',
+        description: 'Your cancellation request has been sent. Please wait for CURV to review and confirm it.',
+      };
+    }
+    return meta;
+  };
+
+  const setState = (title, copy, showRetry = false) => {
+    if (stateTitle) stateTitle.textContent = title;
+    if (stateCopy) stateCopy.textContent = copy;
+    if (retryButton) retryButton.hidden = !showRetry;
+    if (stateCard) stateCard.hidden = false;
+    if (mainCard) mainCard.hidden = true;
+    if (totalCard) totalCard.hidden = true;
+    if (cancelCard) cancelCard.hidden = true;
+    if (noteCard) noteCard.hidden = true;
+  };
+
+  const showTrackingCards = () => {
+    if (stateCard) stateCard.hidden = true;
+    if (mainCard) mainCard.hidden = false;
+    if (totalCard) totalCard.hidden = false;
+    if (cancelCard) cancelCard.hidden = false;
+    if (noteCard) noteCard.hidden = false;
+  };
+
+  const getTrackingToken = () => {
+    const params = new URLSearchParams(window.location.search);
+    return String(params.get('t') || '').trim();
+  };
+
+  const getSupabaseClient = () => {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+    if (!client) {
+      client = window.supabase.createClient(
+        PUBLIC_MENU_SUPABASE_URL,
+        PUBLIC_MENU_SUPABASE_PUBLISHABLE_KEY
+      );
+    }
+    return client;
+  };
+
+  const formatCurrency = (value, currency = 'PHP') => {
+    const amount = Number(value || 0);
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: currency || 'PHP',
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      return 'PHP ' + amount.toFixed(2);
+    }
+  };
+
+  const formatUpdatedTime = (date) => {
+    if (!date) return 'Updated just now';
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return 'Updated just now';
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Updated just now';
+    if (minutes < 60) return 'Updated ' + minutes + ' min ago';
+    return 'Last updated ' + date.toLocaleString('en-PH', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const formatPaymentStatus = (status) => {
+    const cleanStatus = String(status || '').trim().toLowerCase();
+    if (cleanStatus === 'paid') return 'Paid';
+    if (cleanStatus === 'unpaid' || cleanStatus === 'pending') return 'Payment pending';
+    if (cleanStatus) return formatOptionLabel(cleanStatus);
+    return 'Payment pending';
+  };
+
+  const formatDeliveryMethod = (option) => {
+    const cleanOption = String(option || '').trim().toLowerCase();
+    if (cleanOption === 'curv_rider') return 'CURV Rider';
+    if (cleanOption === 'lalamove') return 'Lalamove';
+    return 'Delivery';
+  };
+
+  const formatOptionLabel = (value) => String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+
+  const stringifyOptionValue = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    if (Array.isArray(value)) return value.map(stringifyOptionValue).filter(Boolean).join(', ');
+    if (typeof value === 'object') {
+      const preferredValue = value.label || value.name || value.value || value.choice || value.option;
+      if (preferredValue && typeof preferredValue !== 'object') return String(preferredValue).trim();
+      return Object.entries(value)
+        .map(([key, nestedValue]) => {
+          const cleanValue = stringifyOptionValue(nestedValue);
+          return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+        })
+        .filter(Boolean)
+        .join(' / ');
+    }
+    return String(value).trim();
+  };
+
+  const formatOrderItemOptions = (options) => {
+    if (!options) return [];
+    if (typeof options === 'string') {
+      const cleanOptions = options.trim();
+      if (!cleanOptions || cleanOptions === '{}') return [];
+      try {
+        return formatOrderItemOptions(JSON.parse(cleanOptions));
+      } catch (error) {
+        return [cleanOptions];
+      }
+    }
+    if (Array.isArray(options)) return options.map(stringifyOptionValue).filter(Boolean);
+    if (typeof options !== 'object' || !Object.keys(options).length) return [];
+    return Object.entries(options)
+      .map(([key, value]) => {
+        const cleanValue = stringifyOptionValue(value);
+        return cleanValue ? formatOptionLabel(key) + ': ' + cleanValue : '';
+      })
+      .filter(Boolean);
+  };
+
+  const addDetailRow = (label, value) => {
+    const row = document.createElement('div');
+    row.className = 'detail-row';
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'detail-label';
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement('strong');
+    valueEl.className = 'detail-value';
+    valueEl.textContent = value;
+
+    row.append(labelEl, valueEl);
+    totalList.appendChild(row);
+  };
+
+  const renderTimeline = (order, meta) => {
+    if (!timeline) return;
+    timeline.innerHTML = '';
+
+    const steps = [
+      { label: 'Received', index: 0 },
+      { label: 'Accepted', index: 1 },
+      { label: 'Preparing', index: 2 },
+      { label: order.fulfillment_type === 'delivery' ? 'Delivery' : 'Ready', index: 3 },
+    ];
+
+    steps.forEach((step) => {
+      const item = document.createElement('span');
+      item.className = 'timeline-step';
+      if (order.status === 'cancelled') {
+        item.classList.add('is-cancelled');
+      } else if (meta.step >= step.index) {
+        item.classList.add(meta.step === step.index ? 'is-current' : 'is-complete');
+      }
+      item.textContent = step.label;
+      timeline.appendChild(item);
+    });
+  };
+
+  const addOrderItems = (items, currency) => {
+    const heading = document.createElement('h3');
+    heading.className = 'order-items-heading';
+    heading.textContent = 'Order items';
+    totalList.appendChild(heading);
+
+    if (!Array.isArray(items) || !items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'order-items-empty';
+      empty.textContent = 'Order items unavailable.';
+      totalList.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'order-item-list';
+
+    items
+      .slice()
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+      .forEach((item) => {
+        const quantity = Number(item.quantity || 0);
+        const quantityLabel = (quantity > 0 ? quantity : 1) + 'x';
+        const card = document.createElement('article');
+        card.className = 'order-item';
+
+        const head = document.createElement('div');
+        head.className = 'order-item-head';
+
+        const title = document.createElement('p');
+        title.className = 'order-item-title';
+        title.textContent = quantityLabel + ' ' + (item.product_name || 'Menu item');
+
+        const price = document.createElement('p');
+        price.className = 'order-item-price';
+        price.textContent = formatCurrency(item.line_total, currency);
+
+        head.append(title, price);
+        card.appendChild(head);
+
+        const metaParts = [];
+        if (item.variant_label) metaParts.push(item.variant_label);
+        const optionLines = formatOrderItemOptions(item.options);
+        if (optionLines.length) metaParts.push(optionLines.join(' / '));
+        if (metaParts.length) {
+          const meta = document.createElement('p');
+          meta.className = 'order-item-meta';
+          meta.textContent = metaParts.join(' - ');
+          card.appendChild(meta);
+        }
+
+        list.appendChild(card);
+      });
+
+    totalList.appendChild(list);
+  };
+
+  const renderTotals = (order) => {
+    if (!totalList) return;
+    totalList.innerHTML = '';
+
+    const isDelivery = order.fulfillment_type === 'delivery';
+    const currency = order.currency || 'PHP';
+    const subtotal = Number(order.subtotal || order.total || 0);
+
+    const fulfillmentLabel = order.fulfillment_type === 'dine_in'
+      ? 'Dine In'
+      : (isDelivery ? 'Delivery - ' + formatDeliveryMethod(order.delivery_option) : 'Pickup');
+    addDetailRow('Order method', fulfillmentLabel);
+    if (isDelivery && order.delivery_address) {
+      addDetailRow('Delivery address', order.delivery_address);
+    }
+    addOrderItems(order.items, currency);
+    addDetailRow('Order subtotal', formatCurrency(subtotal, currency));
+    addDetailRow('Payment status', formatPaymentStatus(order.payment_status));
+  };
+
+  const isCancellationRequestAllowed = (status) => ['submitted', 'new', 'accepted'].includes(status);
+
+  const setCancelMessage = (message, tone = '') => {
+    if (!cancelStatus) return;
+    cancelStatus.textContent = message || '';
+    cancelStatus.classList.toggle('is-error', tone === 'error');
+    cancelStatus.classList.toggle('is-success', tone === 'success');
+  };
+
+  const renderCancellationSection = (order, status) => {
+    if (!cancelCard) return;
+
+    const cancelState = String(order.customer_cancel_status || 'none').trim().toLowerCase();
+    const alreadyRequested = cancelState === 'requested';
+    const isCancelled = status === 'cancelled';
+    const canRequest = isCancellationRequestAllowed(status) && !alreadyRequested;
+
+    if (cancelTitle) {
+      cancelTitle.textContent = alreadyRequested ? 'Request status' : 'Need to cancel your order?';
+    }
+    cancelCard.classList.toggle('is-cancel-requested', alreadyRequested);
+    if (cancelCopy) cancelCopy.classList.toggle('is-requested', alreadyRequested);
+
+    if (cancelCopy) {
+      if (alreadyRequested) {
+        cancelCopy.textContent = 'Cancellation request sent.\nPlease wait for CURV to review your request.';
+      } else if (isCancelled) {
+        cancelCopy.textContent = 'This order has already been cancelled.';
+      } else if (!isCancellationRequestAllowed(status)) {
+        cancelCopy.textContent = 'This order is already being prepared. Please message CURV directly for urgent concerns.';
+      } else {
+        cancelCopy.textContent = "You can request cancellation while your order hasn't started preparation yet.";
+      }
+    }
+
+    if (cancelReasonField) cancelReasonField.hidden = !canRequest;
+    if (cancelButton) {
+      cancelButton.hidden = !canRequest;
+      cancelButton.disabled = isSubmittingCancelRequest;
+      cancelButton.textContent = isSubmittingCancelRequest ? 'Sending...' : 'Request Cancellation';
+    }
+
+    setCancelMessage('');
+  };
+
+  const renderOrder = (order) => {
+    const status = String(order.status || 'submitted').trim().toLowerCase();
+    const rawFulfillmentType = String(order.fulfillment_type || 'pickup').trim().toLowerCase();
+    const fulfillmentType = rawFulfillmentType === 'delivery'
+      ? 'delivery'
+      : (rawFulfillmentType === 'dine_in' ? 'dine_in' : 'pickup');
+    const meta = getStatusMeta(status, fulfillmentType);
+    const displayMeta = getDisplayStatusMeta(order, status, fulfillmentType);
+    latestOrderNumber = order.order_number || '';
+
+    if (orderNumberEl) orderNumberEl.textContent = order.order_number || 'CURV order';
+    if (statusPill) statusPill.textContent = displayMeta.label;
+    if (statusTitle) statusTitle.textContent = displayMeta.label;
+    if (statusDescription) statusDescription.textContent = displayMeta.description;
+
+    renderTimeline({ ...order, status, fulfillment_type: fulfillmentType }, meta);
+    renderTotals({ ...order, status, fulfillment_type: fulfillmentType });
+    renderCancellationSection(order, status);
+
+    lastFetchTime = new Date();
+    if (lastUpdated) lastUpdated.textContent = formatUpdatedTime(lastFetchTime);
+    showTrackingCards();
+
+    if (meta.terminal) {
+      stopPolling();
+    } else {
+      schedulePolling();
+    }
+  };
+
+  const stopPolling = () => {
+    if (pollTimer) window.clearTimeout(pollTimer);
+    pollTimer = null;
+  };
+
+  const schedulePolling = () => {
+    stopPolling();
+    pollTimer = window.setTimeout(fetchTracking, POLL_INTERVAL_MS);
+  };
+
+  const fetchTracking = async () => {
+    if (!currentToken) return;
+
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) {
+      setState('Tracking is unavailable', 'We could not load the tracking connection. Please refresh or message CURV directly.', true);
+      return;
+    }
+
+    const { data, error } = await supabaseClient.rpc('get_public_order_tracking', {
+      p_tracking_token: currentToken,
+    });
+
+    if (error) {
+      setState('Unable to refresh tracking', 'Please try again in a moment. You can also message CURV directly on Messenger.', true);
+      return;
+    }
+
+    const order = Array.isArray(data) ? data[0] : data;
+    if (!order) {
+      setState('Tracking link not found', 'This link may be incorrect or unavailable. Please check your order message or contact CURV on Messenger.', false);
+      stopPolling();
+      return;
+    }
+
+    renderOrder(order);
+  };
+
+  const requestCancellation = async () => {
+    if (!currentToken || isSubmittingCancelRequest) return;
+
+    const shouldRequest = window.confirm('Request cancellation for order ' + (latestOrderNumber || 'this order') + '?');
+    if (!shouldRequest) return;
+
+    const reason = cancelReasonInput && cancelReasonInput.value.trim()
+      ? cancelReasonInput.value.trim()
+      : null;
+    const supabaseClient = getSupabaseClient();
+    if (!supabaseClient) {
+      setCancelMessage('Cancellation request is unavailable right now. Please message CURV directly.', 'error');
+      return;
+    }
+
+    isSubmittingCancelRequest = true;
+    if (cancelButton) {
+      cancelButton.disabled = true;
+      cancelButton.textContent = 'Sending...';
+    }
+    setCancelMessage('');
+
+    const { data, error } = await supabaseClient.rpc('request_public_order_cancellation', {
+      p_tracking_token: currentToken,
+      p_reason: reason,
+    });
+
+    isSubmittingCancelRequest = false;
+    if (cancelButton) {
+      cancelButton.disabled = false;
+      cancelButton.textContent = 'Request Cancellation';
+    }
+
+    if (error) {
+      setCancelMessage(error.message || 'Unable to send cancellation request. Please message CURV directly.', 'error');
+      return;
+    }
+
+    const response = data && typeof data === 'object' ? data : {};
+    const ok = response.ok === true;
+    const fallbackMessage = ok
+      ? 'Cancellation request sent. Please wait for CURV to confirm.'
+      : 'This order is already being prepared. Please message CURV directly for urgent concerns.';
+    setCancelMessage(response.message || fallbackMessage, ok ? 'success' : 'error');
+
+    if (ok) {
+      await fetchTracking();
+    }
+  };
+
+  const init = () => {
+    currentToken = getTrackingToken();
+    if (!currentToken) {
+      setState('Missing tracking link', 'Open the private tracking link sent with your CURV order confirmation.', false);
+      return;
+    }
+
+    if (!UUID_PATTERN.test(currentToken)) {
+      setState('Invalid tracking link', 'This tracking link does not look right. Please check the link or message CURV directly.', false);
+      return;
+    }
+
+    setState('Loading your order...', 'Please wait while we check the latest CURV update.', false);
+    fetchTracking();
+  };
+
+  if (retryButton) {
+    retryButton.addEventListener('click', () => {
+      setState('Checking again...', 'Please wait while we refresh your order status.', false);
+      fetchTracking();
+    });
+  }
+
+  if (cancelButton) {
+    cancelButton.addEventListener('click', requestCancellation);
+  }
+
+  window.addEventListener('beforeunload', stopPolling);
+  init();
+})();
+</script>
+</body>
+</html>
