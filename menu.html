@@ -205,6 +205,149 @@
     font-weight: 500;
   }
 
+  .menu-search {
+    position: relative;
+    max-width: 680px;
+    margin: 0 auto;
+    padding-top: 0.65rem;
+  }
+
+  .menu-search-field {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.35rem 0 0.8rem;
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    background: var(--bg2);
+    color: var(--navy);
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+
+  .menu-search-field:focus-within {
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 2px rgba(176, 141, 87, 0.12);
+  }
+
+  .menu-search-icon {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    color: var(--gray-mid);
+  }
+
+  .menu-search-input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.65rem 0.6rem;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--navy);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0;
+  }
+
+  .menu-search-input::placeholder { color: var(--gray-light); }
+  .menu-search-input::-webkit-search-cancel-button { appearance: none; }
+
+  .menu-search-clear {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--gray-mid);
+    font: 1.15rem/1 'Jost', sans-serif;
+    cursor: pointer;
+  }
+
+  .menu-search-clear:hover,
+  .menu-search-clear:focus-visible {
+    background: var(--bg3);
+    color: var(--navy);
+    outline: none;
+  }
+
+  .menu-search-results {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    z-index: 220;
+    max-height: min(360px, 55vh);
+    overflow-y: auto;
+    padding: 0.35rem;
+    border: 0.5px solid var(--bg3);
+    border-radius: 8px;
+    background: var(--bg);
+    box-shadow: 0 12px 28px rgba(18, 25, 43, 0.16);
+  }
+
+  .menu-search-results[hidden] { display: none; }
+
+  .menu-search-option {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    padding: 0.65rem 0.75rem;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--navy);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu-search-option:hover,
+  .menu-search-option.is-active,
+  .menu-search-option:focus-visible {
+    background: var(--bg2);
+    outline: none;
+  }
+
+  .menu-search-product {
+    display: block;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .menu-search-category {
+    display: block;
+    margin-top: 2px;
+    color: var(--gray-mid);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.61rem;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .menu-search-empty {
+    padding: 0.85rem 0.75rem;
+    color: var(--gray-mid);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+  }
+
+  .menu-search-target-highlight {
+    border-radius: 8px;
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    animation: menuSearchHighlight 2.6s ease-out;
+  }
+
+  @keyframes menuSearchHighlight {
+    0%, 35% { background-color: rgba(176, 141, 87, 0.18); }
+    100% { background-color: transparent; }
+  }
+
   /* ── MAIN ── */
   main { padding: 0 1.2rem 7rem; max-width: 680px; margin: 0 auto; }
 
@@ -2745,6 +2888,29 @@
 
 <!-- NAV -->
 <div class="nav-wrap">
+  <div class="menu-search" id="menuSearch">
+    <div class="menu-search-field">
+      <svg class="menu-search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <input
+        class="menu-search-input"
+        id="menuSearchInput"
+        type="search"
+        placeholder="Search the menu…"
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-label="Search the menu"
+        aria-autocomplete="list"
+        aria-controls="menuSearchResults"
+        aria-expanded="false"
+      >
+      <button class="menu-search-clear" id="menuSearchClear" type="button" aria-label="Clear menu search" hidden>&times;</button>
+    </div>
+    <div class="menu-search-results" id="menuSearchResults" role="listbox" aria-label="Menu search results" hidden></div>
+  </div>
   <div class="nav-inner">
     <div class="nav-menu-label" id="navMenuLabel">MENU</div>
     <button class="nav-arrow" id="arrowLeft" onclick="scrollNav(-120)">&#8249;</button>
@@ -5477,6 +5643,7 @@
 
   const PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES = [
     'bites',
+    'curv bites',
     'takoyaki',
     'takoyaki & savory bites',
     'savory',
@@ -7071,6 +7238,7 @@
 
     reconcilePublicMenuNavigation(visibleEntries);
     activateFirstVisiblePublicSection('seasonal');
+    rebuildPublicMenuSearchIndex(shapedPublicMenu);
   }
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
@@ -7884,6 +8052,268 @@
   const navTabs   = document.getElementById('navTabs');
   const arrowLeft = document.getElementById('arrowLeft');
   const arrowRight = document.getElementById('arrowRight');
+  const menuSearch = document.getElementById('menuSearch');
+  const menuSearchInput = document.getElementById('menuSearchInput');
+  const menuSearchClear = document.getElementById('menuSearchClear');
+  const menuSearchResults = document.getElementById('menuSearchResults');
+  const MENU_SEARCH_MIN_QUERY_LENGTH = 2;
+  const MENU_SEARCH_MAX_RESULTS = 8;
+  const MENU_SEARCH_DEBOUNCE_MS = 140;
+  const MENU_SEARCH_HIGHLIGHT_MS = 2600;
+  let publicMenuSearchIndex = [];
+  let visibleMenuSearchResults = [];
+  let activeMenuSearchResultIndex = -1;
+  let menuSearchDebounceTimer = null;
+  let menuSearchHighlightTimer = null;
+
+  function normalizeMenuSearchText(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  function getMenuSearchCategoryRoute(category) {
+    const normalizedName = normalizePublicMenuText(category && category.name);
+    const specialConfig = SPECIAL_PUBLIC_CATEGORY_SECTIONS.find(config =>
+      (config.categoryNames || []).some(name => normalizePublicMenuText(name) === normalizedName)
+    );
+    if (specialConfig) {
+      return {
+        sectionId: specialConfig.sectionId,
+        categoryName: specialConfig.tabLabel,
+        categoryAliases: specialConfig.categoryNames || []
+      };
+    }
+    return {
+      sectionId: getGenericCategorySectionId(category),
+      categoryName: String(category && category.name || '').trim(),
+      categoryAliases: []
+    };
+  }
+
+  function getMenuSearchTargetName(target) {
+    const nameElement = target.classList.contains('menu-item-wrap')
+      ? target.querySelector('.product-card .item-name') || target.querySelector('.item-name')
+      : target.querySelector('.item-name');
+    if (!nameElement) return '';
+    const nameClone = nameElement.cloneNode(true);
+    nameClone.querySelectorAll('.menu-item-badges').forEach(badges => badges.remove());
+    return normalizeMenuSearchText(nameClone.textContent);
+  }
+
+  function isMenuSearchTargetUsable(target) {
+    if (!target || target.closest('[hidden]')) return false;
+    const fallback = target.closest('[id$="-hardcoded-fallback"]');
+    const supabaseMount = target.closest('[id$="-supabase-mount"]');
+    if (fallback && fallback.style.display === 'none') return false;
+    if (supabaseMount && supabaseMount.style.display === 'none') return false;
+    return true;
+  }
+
+  function findMenuSearchProductTarget(sectionId, productName) {
+    const section = document.getElementById(sectionId);
+    if (!section) return null;
+    const candidates = [
+      ...section.querySelectorAll('.menu-item-wrap'),
+      ...Array.from(section.querySelectorAll('.menu-item')).filter(item => !item.closest('.menu-item-wrap'))
+    ];
+    const normalizedName = normalizeMenuSearchText(productName);
+    return candidates.find(target =>
+      isMenuSearchTargetUsable(target) && getMenuSearchTargetName(target) === normalizedName
+    ) || null;
+  }
+
+  function rebuildPublicMenuSearchIndex(shapedPublicMenu) {
+    const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories.slice().sort(comparePublicCategoryRows)
+      : [];
+    const nextIndex = [];
+
+    categories.forEach((category, categoryOrder) => {
+      const route = getMenuSearchCategoryRoute(category);
+      const products = Array.isArray(category && category.products) ? category.products : [];
+      products.forEach((product, productOrder) => {
+        const productName = String(product && product.name || '').trim();
+        const target = findMenuSearchProductTarget(route.sectionId, productName);
+        if (!productName || !target) return;
+        target.dataset.publicMenuSearchProductId = product.id || '';
+        nextIndex.push({
+          productId: product.id || '',
+          productName,
+          categoryId: category.id || '',
+          categoryName: route.categoryName,
+          sourceCategoryName: String(category.name || '').trim(),
+          renderedCategoryKey: route.sectionId,
+          productNameSearch: normalizeMenuSearchText(productName),
+          categoryNameSearch: normalizeMenuSearchText(route.categoryName),
+          sourceCategoryNameSearch: normalizeMenuSearchText(category.name),
+          categoryAliasesSearch: normalizeMenuSearchText(route.categoryAliases.join(' ')),
+          descriptionSearch: normalizeMenuSearchText(product.description),
+          categoryOrder,
+          productOrder,
+          target
+        });
+      });
+    });
+
+    publicMenuSearchIndex = nextIndex;
+    if (normalizeMenuSearchText(menuSearchInput && menuSearchInput.value).length >= MENU_SEARCH_MIN_QUERY_LENGTH) {
+      renderMenuSearchResults();
+    }
+  }
+
+  function getMenuSearchRank(item, query) {
+    if (item.productNameSearch === query) return 0;
+    if (item.productNameSearch.startsWith(query)) return 1;
+    if (item.productNameSearch.includes(query)) return 2;
+    if (
+      item.categoryNameSearch.includes(query)
+      || item.sourceCategoryNameSearch.includes(query)
+      || item.categoryAliasesSearch.includes(query)
+    ) return 3;
+    if (item.descriptionSearch.includes(query)) return 4;
+    return null;
+  }
+
+  function searchPublicMenu(query) {
+    return publicMenuSearchIndex
+      .map(item => ({ item, rank: getMenuSearchRank(item, query) }))
+      .filter(result => result.rank !== null)
+      .sort((a, b) =>
+        a.rank - b.rank
+        || a.item.categoryOrder - b.item.categoryOrder
+        || a.item.productOrder - b.item.productOrder
+        || a.item.productNameSearch.localeCompare(b.item.productNameSearch)
+      )
+      .slice(0, MENU_SEARCH_MAX_RESULTS)
+      .map(result => result.item);
+  }
+
+  function closeMenuSearchResults() {
+    visibleMenuSearchResults = [];
+    activeMenuSearchResultIndex = -1;
+    menuSearchResults.hidden = true;
+    menuSearchResults.innerHTML = '';
+    menuSearchInput.setAttribute('aria-expanded', 'false');
+    menuSearchInput.removeAttribute('aria-activedescendant');
+  }
+
+  function setActiveMenuSearchResult(index) {
+    if (!visibleMenuSearchResults.length) return;
+    activeMenuSearchResultIndex = (index + visibleMenuSearchResults.length) % visibleMenuSearchResults.length;
+    const options = Array.from(menuSearchResults.querySelectorAll('.menu-search-option'));
+    options.forEach((option, optionIndex) => {
+      const isActive = optionIndex === activeMenuSearchResultIndex;
+      option.classList.toggle('is-active', isActive);
+      option.setAttribute('aria-selected', String(isActive));
+    });
+    const activeOption = options[activeMenuSearchResultIndex];
+    if (activeOption) {
+      menuSearchInput.setAttribute('aria-activedescendant', activeOption.id);
+      activeOption.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function selectMenuSearchResult(item) {
+    if (!item || !item.target || !document.body.contains(item.target)) return;
+    closeMenuSearchResults();
+    jumpToPanel(item.renderedCategoryKey, null);
+    window.setTimeout(() => {
+      if (menuSearchHighlightTimer) window.clearTimeout(menuSearchHighlightTimer);
+      document.querySelectorAll('.menu-search-target-highlight').forEach(target =>
+        target.classList.remove('menu-search-target-highlight')
+      );
+      item.target.classList.add('menu-search-target-highlight');
+      item.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      menuSearchHighlightTimer = window.setTimeout(() => {
+        item.target.classList.remove('menu-search-target-highlight');
+      }, MENU_SEARCH_HIGHLIGHT_MS);
+    }, 80);
+  }
+
+  function renderMenuSearchResults() {
+    const query = normalizeMenuSearchText(menuSearchInput.value);
+    menuSearchClear.hidden = !menuSearchInput.value;
+    if (query.length < MENU_SEARCH_MIN_QUERY_LENGTH) {
+      closeMenuSearchResults();
+      return;
+    }
+
+    visibleMenuSearchResults = searchPublicMenu(query);
+    activeMenuSearchResultIndex = -1;
+    if (!visibleMenuSearchResults.length) {
+      menuSearchResults.innerHTML = '<div class="menu-search-empty" role="status">No menu items found.</div>';
+    } else {
+      menuSearchResults.innerHTML = visibleMenuSearchResults.map((item, index) => `
+        <button
+          class="menu-search-option"
+          id="menu-search-option-${index}"
+          type="button"
+          role="option"
+          aria-selected="false"
+          data-menu-search-index="${index}"
+        >
+          <span class="menu-search-product">${escapeMenuHtml(item.productName)}</span>
+          <span class="menu-search-category">${escapeMenuHtml(item.categoryName)}</span>
+        </button>`).join('');
+    }
+    menuSearchResults.hidden = false;
+    menuSearchInput.setAttribute('aria-expanded', 'true');
+    menuSearchInput.removeAttribute('aria-activedescendant');
+  }
+
+  menuSearchInput.addEventListener('input', () => {
+    menuSearchClear.hidden = !menuSearchInput.value;
+    window.clearTimeout(menuSearchDebounceTimer);
+    menuSearchDebounceTimer = window.setTimeout(renderMenuSearchResults, MENU_SEARCH_DEBOUNCE_MS);
+  });
+
+  menuSearchInput.addEventListener('focus', () => {
+    if (normalizeMenuSearchText(menuSearchInput.value).length >= MENU_SEARCH_MIN_QUERY_LENGTH) {
+      renderMenuSearchResults();
+    }
+  });
+
+  menuSearchInput.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeMenuSearchResults();
+      return;
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
+    if (menuSearchResults.hidden) renderMenuSearchResults();
+    if (!visibleMenuSearchResults.length) return;
+    event.preventDefault();
+    if (event.key === 'ArrowDown') {
+      setActiveMenuSearchResult(activeMenuSearchResultIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      setActiveMenuSearchResult(activeMenuSearchResultIndex < 0 ? visibleMenuSearchResults.length - 1 : activeMenuSearchResultIndex - 1);
+    } else {
+      const selectedIndex = activeMenuSearchResultIndex < 0 ? 0 : activeMenuSearchResultIndex;
+      selectMenuSearchResult(visibleMenuSearchResults[selectedIndex]);
+    }
+  });
+
+  menuSearchResults.addEventListener('click', event => {
+    const option = event.target.closest('[data-menu-search-index]');
+    if (!option) return;
+    selectMenuSearchResult(visibleMenuSearchResults[Number(option.dataset.menuSearchIndex)]);
+  });
+
+  menuSearchClear.addEventListener('click', () => {
+    menuSearchInput.value = '';
+    menuSearchClear.hidden = true;
+    closeMenuSearchResults();
+    menuSearchInput.focus();
+  });
+
+  document.addEventListener('pointerdown', event => {
+    if (menuSearch && !menuSearch.contains(event.target)) closeMenuSearchResults();
+  });
 
   function updateArrows() {
     const atStart = navTabs.scrollLeft <= 4;
