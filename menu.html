@@ -5475,6 +5475,41 @@
     'Salted Egg': 'salted-egg'
   };
 
+  const PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES = [
+    'bites',
+    'takoyaki',
+    'takoyaki & savory bites',
+    'savory',
+    'savory bites'
+  ];
+
+  function getPublicTakoyakiSavoryCategoryRows(shapedPublicMenu) {
+    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    return categories.filter(category =>
+      PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES.includes(normalizePublicMenuText(category && category.name))
+    );
+  }
+
+  function getPublicProductsForCategoryRows(categoryRows) {
+    return (Array.isArray(categoryRows) ? categoryRows : []).flatMap(category =>
+      Array.isArray(category && category.products) ? category.products : []
+    );
+  }
+
+  function getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows) {
+    const seenSectionIds = new Set();
+    return (Array.isArray(categoryRows) ? categoryRows : [])
+      .flatMap(category => getPublicCategorySectionsForCategory(shapedPublicMenu, category && category.id))
+      .filter(section => {
+        if (!section || !section.id || seenSectionIds.has(section.id)) return false;
+        seenSectionIds.add(section.id);
+        return true;
+      })
+      .sort(compareSectionedMenuItems);
+  }
+
   function mapPublicTakoyakiPieces(product, expectedItem) {
     const variants = [...(product.variants || [])].sort((a, b) => {
       const sortA = Number(a.sort_order) || 0;
@@ -5516,16 +5551,13 @@
   }
 
   function mapPublicTakoyakiItems(shapedPublicMenu) {
-    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
-      ? shapedPublicMenu.categories
-      : [];
-    const bitesCategory = categories.find(category => ['bites', 'takoyaki'].includes(normalizePublicMenuText(category.name)));
+    const categoryRows = getPublicTakoyakiSavoryCategoryRows(shapedPublicMenu);
 
-    if (!bitesCategory) {
+    if (!categoryRows.length) {
       return { ok: false, reason: 'Supabase public menu has no Takoyaki category.' };
     }
 
-    const products = Array.isArray(bitesCategory.products) ? bitesCategory.products : [];
+    const products = getPublicProductsForCategoryRows(categoryRows);
     if (!products.length) {
       return { ok: false, reason: 'Supabase Takoyaki category has no published products.' };
     }
@@ -5545,7 +5577,9 @@
       const slugId = slugifyPublicMenuId(name);
 
       if (!expectedId) {
-        warnings.push(`Unsupported Takoyaki product skipped: ${name || 'Unnamed product'}.`);
+        if (!PUBLIC_SAVORY_NAME_MAP[name]) {
+          warnings.push(`Unsupported Takoyaki product skipped: ${name || 'Unnamed product'}.`);
+        }
         continue;
       }
 
@@ -5599,7 +5633,7 @@
       ok: true,
       items: mappedItems,
       warnings,
-      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, bitesCategory.id)
+      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows)
     };
   }
 
@@ -5760,16 +5794,13 @@
   }
 
   function mapPublicSavoryItems(shapedPublicMenu) {
-    const categories = shapedPublicMenu && Array.isArray(shapedPublicMenu.categories)
-      ? shapedPublicMenu.categories
-      : [];
-    const savoryCategory = categories.find(category => ['savory', 'savory bites'].includes(normalizePublicMenuText(category.name)));
+    const categoryRows = getPublicTakoyakiSavoryCategoryRows(shapedPublicMenu);
 
-    if (!savoryCategory) {
+    if (!categoryRows.length) {
       return { ok: false, reason: 'Supabase public menu has no Savory Bites category.' };
     }
 
-    const products = Array.isArray(savoryCategory.products) ? savoryCategory.products : [];
+    const products = getPublicProductsForCategoryRows(categoryRows);
     if (!products.length) {
       return { ok: false, reason: 'Supabase Savory category has no published products.' };
     }
@@ -5789,7 +5820,9 @@
       const slugId = slugifyPublicMenuId(name);
 
       if (!expectedId) {
-        warnings.push(`Unsupported Savory product skipped: ${name || 'Unnamed product'}.`);
+        if (!PUBLIC_TAKOYAKI_NAME_MAP[name]) {
+          warnings.push(`Unsupported Savory product skipped: ${name || 'Unnamed product'}.`);
+        }
         continue;
       }
 
@@ -5840,7 +5873,7 @@
       ok: true,
       items: mappedItems,
       warnings,
-      categorySections: getPublicCategorySectionsForCategory(shapedPublicMenu, savoryCategory.id)
+      categorySections: getPublicSectionsForCategoryRows(shapedPublicMenu, categoryRows)
     };
   }
 
@@ -6276,9 +6309,9 @@
     { name: 'Tropic Kiss', expectedPublicCategory: 'Refreshers' },
     { name: 'Hibiscus Cream Tea', expectedPublicCategory: 'Refreshers' },
     { name: 'Dragon Dreams', expectedPublicCategory: 'Refreshers' },
-    { name: 'OG Takoyaki', expectedPublicCategory: ['Takoyaki', 'Bites'] },
-    { name: 'Oozie Cheese', expectedPublicCategory: ['Takoyaki', 'Bites'] },
-    { name: 'Chicken Karaage', expectedPublicCategory: ['Savory Bites', 'Savory'] },
+    { name: 'OG Takoyaki', expectedPublicCategory: ['Takoyaki & Savory Bites', 'Takoyaki', 'Bites'] },
+    { name: 'Oozie Cheese', expectedPublicCategory: ['Takoyaki & Savory Bites', 'Takoyaki', 'Bites'] },
+    { name: 'Chicken Karaage', expectedPublicCategory: ['Takoyaki & Savory Bites', 'Savory Bites', 'Savory'] },
     { name: 'Spring Rolls', expectedPublicCategory: ['Salads', 'Salad Bar'], quickAddOnly: true, variantMode: 'pieces', categoryLabel: 'Bites & Light Meals' }
   ];
 
@@ -6690,7 +6723,7 @@
     {
       sectionId: 'bites',
       tabLabel: 'Takoyaki & Savory Bites',
-      categoryNames: ['bites', 'takoyaki', 'savory', 'savory bites'],
+      categoryNames: PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES,
       render: renderSupabaseBitesSection
     },
     {
@@ -6720,17 +6753,11 @@
     return normalizePublicMenuText(a && a.name).localeCompare(normalizePublicMenuText(b && b.name));
   }
 
-  function getPublicCategoryByName(categories, name) {
-    const expected = normalizePublicMenuText(name);
-    return (Array.isArray(categories) ? categories : []).find(category =>
-      normalizePublicMenuText(category && category.name) === expected
-    ) || null;
-  }
-
   function getSpecialSectionCategoryRows(config, categories) {
-    return (config.categoryNames || [])
-      .map(name => getPublicCategoryByName(categories, name))
-      .filter(Boolean);
+    const expectedNames = new Set((config.categoryNames || []).map(normalizePublicMenuText));
+    return (Array.isArray(categories) ? categories : []).filter(category =>
+      expectedNames.has(normalizePublicMenuText(category && category.name))
+    );
   }
 
   function getSpecialSectionSortOrder(config, categories) {
@@ -8647,9 +8674,10 @@
     const orderNumberHtml = escapeHtml(info && info.orderNumber ? info.orderNumber : 'received');
     const bodyHtml = isDineIn
       ? `
-          <p class="order-success-heading">Order sent!</p>
+          <p class="order-success-heading">Order received!</p>
           <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
-          <p>We’ve received your dine-in order. We’ll call your name once it’s ready.</p>
+          <p>Please proceed to the cashier to confirm your order and estimated waiting time before payment.</p>
+          <p>We’ll call your name once your order is ready.</p>
           ${renderTrackingActions(info, 'modalOrder')}
         `
       : isPickup
@@ -8688,11 +8716,11 @@
       <strong class="order-success-heading">Order received!</strong>
       <p class="order-number-display"><span>Order number</span><strong>${orderNumberHtml}</strong></p>
       ${isPickup || isDineIn ? '' : `<p>Order subtotal: ₱${subtotal}</p>`}
-      <p>${isDineIn
-        ? 'We’ve received your dine-in order. We’ll call your name once it’s ready.'
-        : (isPickup
+      ${isDineIn
+        ? '<p>Please proceed to the cashier to confirm your order and estimated waiting time before payment.</p><p>We’ll call your name once your order is ready.</p>'
+        : `<p>${isPickup
           ? 'Please wait for our confirmation before pick-up.'
-          : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.')}</p>
+          : 'Delivery fee and final total will be confirmed through Messenger before we accept your order.'}</p>`}
       ${renderTrackingActions(info, 'afterSubmit')}
     `;
   }

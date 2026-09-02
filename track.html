@@ -607,7 +607,7 @@
     if (['submitted', 'new'].includes(key) && fulfillmentType === 'dine_in') {
       return {
         ...fallback,
-        description: "We've received your dine-in order. We'll call your name once it's ready.",
+        description: "Please proceed to the cashier to confirm your order and estimated waiting time before payment. We'll call your name once your order is ready.",
       };
     }
     if (key === 'ready') {
