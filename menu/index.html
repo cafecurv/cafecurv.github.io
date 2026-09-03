@@ -6471,6 +6471,28 @@
     return category ? category.name : '';
   }
 
+  function getCurvPickCategorySortOrder(shapedPublicMenu, product) {
+    const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
+      ? shapedPublicMenu.categories
+      : [];
+    const category = categories.find(item => item.id === product.category_id);
+    return category ? getPublicCategorySortOrderValue(category) : 9999;
+  }
+
+  function getCurvPickSpecializedCategory(shapedPublicMenu, product) {
+    const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
+    const normalizedCategoryName = normalizePublicMenuText(categoryName);
+    return SPECIAL_PUBLIC_CATEGORY_SECTIONS.find(config =>
+      config.categoryNames.includes(normalizedCategoryName)
+    ) || null;
+  }
+
+  function getCurvPickRenderedCategoryLabel(shapedPublicMenu, product) {
+    const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
+    const specializedCategory = getCurvPickSpecializedCategory(shapedPublicMenu, product);
+    return specializedCategory ? specializedCategory.tabLabel : categoryName;
+  }
+
   const EXPECTED_PUBLIC_CURV_PICKS = [
     { name: 'Kagoshima Matcha Cream', expectedPublicCategory: 'Matcha & Hojicha' },
     { name: 'Strawberry Matcha Latte', expectedPublicCategory: 'Matcha & Hojicha' },
@@ -6497,7 +6519,11 @@
       return normalizePublicMenuText(a.label).localeCompare(normalizePublicMenuText(b.label));
     });
 
-    if (!variants.length || variants.length > 3) {
+    if (!variants.length && hasExplicitPublicDisabledState(product)) {
+      return { ok: true, variants: [] };
+    }
+
+    if (!variants.length || (panelInfo.variantMode !== 'generic' && variants.length > 3)) {
       return { ok: false, reason: `${product.name || 'CURV Pick'} has an unsupported variant count.` };
     }
 
@@ -6508,6 +6534,18 @@
 
     if (parsed.some(variant => !variant.rawLabel || variant.price === null)) {
       return { ok: false, reason: `${product.name || 'CURV Pick'} has an invalid variant label or price.` };
+    }
+
+    if (panelInfo.variantMode === 'generic') {
+      return {
+        ok: true,
+        variants: parsed.map(variant => ({
+          kind: parsed.length === 1 ? 'single' : 'size',
+          displayLabel: parsed.length === 1 ? '' : variant.rawLabel,
+          cartLabel: parsed.length === 1 ? '' : variant.rawLabel,
+          price: variant.price
+        }))
+      };
     }
 
     if (panelInfo.variantMode === 'takoyakiPieces') {
@@ -6612,81 +6650,48 @@
     }
 
     const panelIndex = buildCurvPicksPanelIndex();
-    const pickProductsByName = pickProducts.reduce((map, product) => {
-      const name = normalizePublicMenuText(product && product.name);
-      if (!name) return map;
-      if (!map[name]) map[name] = [];
-      map[name].push(product);
-      return map;
-    }, {});
-    const expectedNames = new Set(EXPECTED_PUBLIC_CURV_PICKS.map(item => normalizePublicMenuText(item.name)));
-    const unexpectedPick = pickProducts.find(product => !expectedNames.has(normalizePublicMenuText(product && product.name)));
-
-    if (unexpectedPick) {
-      return {
-        ok: false,
-        reason: `Supabase CURV Pick "${unexpectedPick.name || '(missing name)'}" is not part of the expected hardcoded CURV Picks set.`
-      };
-    }
-
     const mapped = [];
+    const warnings = [];
     const usedPanels = new Set();
 
-    for (const expectedPick of EXPECTED_PUBLIC_CURV_PICKS) {
-      const expectedNameKey = normalizePublicMenuText(expectedPick.name);
-      const matchingProducts = pickProductsByName[expectedNameKey] || [];
-
-      if (matchingProducts.length !== 1) {
-        return {
-          ok: false,
-          reason: matchingProducts.length
-            ? `Supabase CURV Pick "${expectedPick.name}" appears more than once.`
-            : `Missing expected Supabase CURV Pick "${expectedPick.name}".`
-        };
-      }
-
-      const product = matchingProducts[0];
+    pickProducts.forEach(product => {
       const name = String(product.name || '').trim();
+      if (!name) {
+        warnings.push('Skipped a CURV Pick with no product name.');
+        return;
+      }
+
+      const productNameKey = normalizePublicMenuText(name);
       const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
-
-      const expectedCategoryNames = Array.isArray(expectedPick.expectedPublicCategory)
-        ? expectedPick.expectedPublicCategory
-        : [expectedPick.expectedPublicCategory];
-      const categoryMatches = expectedCategoryNames.some(expectedCategory =>
-        normalizePublicMenuText(categoryName) === normalizePublicMenuText(expectedCategory)
-      );
-      if (!categoryMatches) {
-        return {
-          ok: false,
-          reason: `Supabase CURV Pick "${name}" is in "${categoryName || '(missing category)'}" but expected ${expectedCategoryNames.join(' or ')}.`
-        };
-      }
-
-      const panelInfo = expectedPick.quickAddOnly
-        ? {
-            variantMode: expectedPick.variantMode || 'pieces',
-            categoryLabel: expectedPick.categoryLabel || categoryName
-          }
-        : panelIndex[expectedNameKey];
-      if (!panelInfo) {
-        return {
-          ok: false,
-          reason: `Expected Supabase CURV Pick "${expectedPick.name}" does not map to an existing product panel.`
-        };
-      }
+      const categoryLabel = getCurvPickRenderedCategoryLabel(shapedPublicMenu, product) || 'Menu';
+      const specializedCategory = getCurvPickSpecializedCategory(shapedPublicMenu, product);
+      const indexedPanel = panelIndex[productNameKey];
+      const matchedPanel = indexedPanel && specializedCategory && indexedPanel.sectionId === specializedCategory.sectionId
+        ? indexedPanel
+        : null;
+      const panelInfo = matchedPanel
+        ? { ...matchedPanel, categoryLabel }
+        : { variantMode: 'generic', categoryLabel };
 
       if (panelInfo.sectionId && panelInfo.panelId) {
         const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
         if (usedPanels.has(panelKey)) {
-          return { ok: false, reason: `Duplicate Supabase CURV Pick panel target: ${panelKey}` };
+          delete panelInfo.sectionId;
+          delete panelInfo.panelId;
+          panelInfo.variantMode = 'generic';
+        } else {
+          usedPanels.add(panelKey);
         }
-        usedPanels.add(panelKey);
       }
 
       const variantMap = mapCurvPickVariants(product, panelInfo);
-      if (!variantMap.ok) return variantMap;
+      if (!variantMap.ok) {
+        warnings.push(`Skipped CURV Pick "${name}": ${variantMap.reason}`);
+        return;
+      }
 
       mapped.push({
+        product_id: product.id || null,
         name,
         desc: product.description || '',
         img: product.image_url || (panelInfo.hardcodedItem && panelInfo.hardcodedItem.img) || null,
@@ -6698,21 +6703,21 @@
         variants: variantMap.variants,
         is_available: product.is_available,
         is_sold_out: isPublicProductSoldOut(product),
+        category_sort_order: getCurvPickCategorySortOrder(shapedPublicMenu, product),
         sort_order: Number(product.sort_order) || 0
       });
-    }
+    });
 
-    const categoryOrder = ['Matcha & Hojicha', 'Coffee', 'Blended', 'Refreshers', 'Bites & Light Meals'];
     mapped.sort((a, b) => {
-      const orderA = categoryOrder.includes(a.categoryLabel) ? categoryOrder.indexOf(a.categoryLabel) : 99;
-      const orderB = categoryOrder.includes(b.categoryLabel) ? categoryOrder.indexOf(b.categoryLabel) : 99;
-      if (orderA !== orderB) return orderA - orderB;
+      if (a.category_sort_order !== b.category_sort_order) return a.category_sort_order - b.category_sort_order;
       if (a.categoryLabel !== b.categoryLabel) return a.categoryLabel.localeCompare(b.categoryLabel);
       if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
       return a.name.localeCompare(b.name);
     });
 
-    return { ok: true, items: mapped };
+    return mapped.length
+      ? { ok: true, items: mapped, warnings }
+      : { ok: false, reason: warnings[0] || 'No renderable CURV Pick products were found.', warnings };
   }
 
   function renderCurvPickAddButton(item, variant, buttonClass = 'add-btn') {
@@ -6727,6 +6732,8 @@
   function renderCurvPickItem(item) {
     const canOpenPanel = item.sectionId && item.panelId;
     const soldOut = Boolean(item && item.is_sold_out);
+    const unavailable = Boolean(item && item.is_available === false);
+    const disabledLabel = unavailable ? 'Unavailable' : 'Sold Out';
     const prices = (item.variants || []).map(variant => Number(variant.price)).filter(price => Number.isFinite(price));
     const startingPrice = prices.length ? Math.min(...prices) : null;
     const thumbHtml = item.img
@@ -6743,7 +6750,7 @@
         <span class="product-card-info">
           <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
           ${descHtml}
-          <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Customize'}</span>
+          <span class="product-card-action">${soldOut ? disabledLabel : 'Customize'}</span>
         </span>
         ${priceText ? `<span class="curv-pick-meta">${priceText}</span>` : ''}
       </button>`;
@@ -6762,7 +6769,7 @@
         <div class="product-card-info">
           <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
           ${descHtml}
-          <span class="product-card-action">${soldOut ? 'Currently Sold Out' : 'Add'}</span>
+          <span class="product-card-action">${soldOut ? disabledLabel : 'Add'}</span>
         </div>
         <div class="curv-pick-meta">${priceHtml}</div>
       </div>`;
@@ -6851,9 +6858,11 @@
     const fallback = document.getElementById('curv-picks-hardcoded-fallback');
 
     if (!mapped.ok || !mount || !fallback) {
-      console.warn('[CURV menu] CURV Picks using hardcoded fallback.', mapped.reason || 'CURV Picks mount unavailable.');
+      console.warn('[CURV menu] CURV Picks could not render from public data.', mapped.reason || 'CURV Picks mount unavailable.');
       return false;
     }
+
+    (mapped.warnings || []).forEach(warning => console.warn('[CURV menu] ' + warning));
 
     const groups = mapped.items.reduce((map, item) => {
       if (!map[item.categoryLabel]) map[item.categoryLabel] = [];
