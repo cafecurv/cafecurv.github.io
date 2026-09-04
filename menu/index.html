@@ -6640,84 +6640,39 @@
   }
 
   function mapPublicCurvPicks(shapedPublicMenu) {
-    const products = Array.isArray(shapedPublicMenu && shapedPublicMenu.products)
-      ? shapedPublicMenu.products
-      : [];
-    const pickProducts = products.filter(product => product && product.is_curv_pick === true);
-
-    if (!pickProducts.length) {
-      return { ok: false, reason: 'Supabase public menu has no CURV Pick products.' };
-    }
-
-    const panelIndex = buildCurvPicksPanelIndex();
-    const mapped = [];
+    const products = Array.isArray(shapedPublicMenu && shapedPublicMenu.products) ? shapedPublicMenu.products : [];
+    const items = [];
     const warnings = [];
-    const usedPanels = new Set();
-
-    pickProducts.forEach(product => {
-      const name = String(product.name || '').trim();
-      if (!name) {
-        warnings.push('Skipped a CURV Pick with no product name.');
-        return;
-      }
-
-      const productNameKey = normalizePublicMenuText(name);
-      const categoryName = getCurvPickCategoryName(shapedPublicMenu, product);
-      const categoryLabel = getCurvPickRenderedCategoryLabel(shapedPublicMenu, product) || 'Menu';
-      const specializedCategory = getCurvPickSpecializedCategory(shapedPublicMenu, product);
-      const indexedPanel = panelIndex[productNameKey];
-      const matchedPanel = indexedPanel && specializedCategory && indexedPanel.sectionId === specializedCategory.sectionId
-        ? indexedPanel
-        : null;
-      const panelInfo = matchedPanel
-        ? { ...matchedPanel, categoryLabel }
-        : { variantMode: 'generic', categoryLabel };
-
-      if (panelInfo.sectionId && panelInfo.panelId) {
-        const panelKey = `${panelInfo.sectionId}:${panelInfo.panelId}`;
-        if (usedPanels.has(panelKey)) {
-          delete panelInfo.sectionId;
-          delete panelInfo.panelId;
-          panelInfo.variantMode = 'generic';
-        } else {
-          usedPanels.add(panelKey);
+    products.filter(product => product && product.is_curv_pick === true).forEach(product => {
+      try {
+        const item = mapGenericPublicCategoryItems({ products: [product] })[0];
+        if (!item) {
+          warnings.push(`Skipped unrenderable CURV Pick: ${product.id || '(no ID)'}.`);
+          return;
         }
+        // Only link to a panel that actually rendered for this product this refresh.
+        const panel = renderedPublicPanels.get(product.id);
+        items.push({
+          ...item,
+          categoryName: getCurvPickCategoryName(shapedPublicMenu, product),
+          categoryLabel: getCurvPickRenderedCategoryLabel(shapedPublicMenu, product) || 'Menu',
+          sectionId: panel && panel.sectionId,
+          panelId: panel && panel.panelId,
+          defaultOptions: {},
+          variants: item.variants.map(variant => ({
+            price: variant.price,
+            displayLabel: item.variants.length === 1 ? '' : variant.label,
+            cartLabel: item.variants.length === 1 ? '' : variant.label
+          })),
+          category_sort_order: getCurvPickCategorySortOrder(shapedPublicMenu, product)
+        });
+      } catch (error) {
+        warnings.push(`Skipped malformed CURV Pick: ${product.id || '(no ID)'}.`);
       }
-
-      const variantMap = mapCurvPickVariants(product, panelInfo);
-      if (!variantMap.ok) {
-        warnings.push(`Skipped CURV Pick "${name}": ${variantMap.reason}`);
-        return;
-      }
-
-      mapped.push({
-        product_id: product.id || null,
-        name,
-        desc: product.description || '',
-        img: product.image_url || (panelInfo.hardcodedItem && panelInfo.hardcodedItem.img) || null,
-        categoryName,
-        categoryLabel: panelInfo.categoryLabel,
-        sectionId: panelInfo.sectionId,
-        panelId: panelInfo.panelId,
-        defaultOptions: panelInfo.defaultOptions || {},
-        variants: variantMap.variants,
-        is_available: product.is_available,
-        is_sold_out: isPublicProductSoldOut(product),
-        category_sort_order: getCurvPickCategorySortOrder(shapedPublicMenu, product),
-        sort_order: Number(product.sort_order) || 0
-      });
     });
-
-    mapped.sort((a, b) => {
-      if (a.category_sort_order !== b.category_sort_order) return a.category_sort_order - b.category_sort_order;
-      if (a.categoryLabel !== b.categoryLabel) return a.categoryLabel.localeCompare(b.categoryLabel);
-      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
-      return a.name.localeCompare(b.name);
-    });
-
-    return mapped.length
-      ? { ok: true, items: mapped, warnings }
-      : { ok: false, reason: warnings[0] || 'No renderable CURV Pick products were found.', warnings };
+    items.sort((a, b) => a.category_sort_order - b.category_sort_order
+      || a.categoryLabel.localeCompare(b.categoryLabel) || compareSectionedMenuItems(a, b));
+    return { ok: items.length > 0, items, warnings, reason: items.length ? '' : 'No renderable public CURV Picks.' };
   }
 
   function renderCurvPickAddButton(item, variant, buttonClass = 'add-btn') {
@@ -6868,7 +6823,7 @@
       if (!map[item.categoryLabel]) map[item.categoryLabel] = [];
       map[item.categoryLabel].push(item);
       return map;
-    }, {});
+    }, Object.create(null));
 
     mount.innerHTML = Object.keys(groups)
       .map(label => renderCurvPicksCategory(label, groups[label]))
@@ -6882,51 +6837,214 @@
     {
       sectionId: 'matcha',
       tabLabel: 'Matcha & Hojicha',
-      categoryNames: ['matcha & hojicha'],
-      render: renderSupabaseMatchaOrFallback
+      categoryNames: ['matcha & hojicha', 'matcha & houjicha']
     },
     {
       sectionId: 'espresso',
       tabLabel: 'Espresso',
-      categoryNames: ['espresso'],
-      render: renderSupabaseEspressoOrFallback
+      categoryNames: ['espresso']
     },
     {
       sectionId: 'blended',
       tabLabel: 'Curvccino',
-      categoryNames: ['curvccino'],
-      render: renderSupabaseCurvccinoOrFallback
+      categoryNames: ['curvccino']
     },
     {
       sectionId: 'refreshers',
       tabLabel: 'Refreshers',
-      categoryNames: ['refreshers'],
-      render: renderSupabaseRefreshersOrFallback
+      categoryNames: ['refreshers']
     },
     {
       sectionId: 'bites',
       tabLabel: 'Takoyaki & Savory Bites',
-      categoryNames: PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES,
-      render: renderSupabaseBitesSection
+      categoryNames: PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES
     },
     {
       sectionId: 'salads',
       tabLabel: 'Salads',
-      categoryNames: ['salad bar', 'salads'],
-      render: renderSupabaseSaladBarOrFallback
+      categoryNames: ['salad bar', 'salads']
     },
     {
       sectionId: 'pastries',
       tabLabel: 'Pastries & Desserts',
-      categoryNames: ['pastries & desserts'],
-      render: renderSupabasePastriesOrFallback,
-      allowEmpty: true
+      categoryNames: ['pastries & desserts']
     }
   ];
 
   function getPublicCategorySortOrderValue(category) {
     const sortOrder = Number(category && category.sort_order);
     return Number.isFinite(sortOrder) ? sortOrder : 9999;
+  }
+
+  const renderedPublicPanels = new Map();
+
+  function getPublicPanelEnhancements() {
+    return [
+      { sectionId: 'matcha', items: MATCHA_ITEMS, map: mapPublicMatchaItems,
+        render: renderMatchaPanel, defaults: buildMatchaDefaults, mode: 'single' },
+      { sectionId: 'espresso', items: ESPRESSO_ITEMS, map: mapPublicEspressoItems,
+        render: renderEspressoPanel, defaults: buildEspressoDefaults, mode: 'sizes' },
+      { sectionId: 'blended', items: FRAPPE_ITEMS, map: mapPublicCurvccinoItems,
+        render: renderFrappePanel, mode: 'sizes', defaults: item => ({
+          size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none',
+          ...(item.has_milk ? { milk: item.default_milk } : {})
+        }) },
+      { sectionId: 'refreshers', items: REFRESHER_ITEMS, map: mapPublicRefresherItems,
+        render: renderRefresherPanel, mode: 'sizes',
+        defaults: () => ({ size: 'regular', syrup: 'none', sauce: 'none' }) },
+      { sectionId: 'bites', items: TAKOYAKI_ITEMS, map: mapPublicTakoyakiItems,
+        render: renderTakoyakiPanel, mode: 'pieces', group: 'Takoyaki', defaults: item => ({
+          pieces: item.pieces[0].value, spicy: 'no', ...(item.has_cheese ? { cheese: 'no' } : {})
+        }) },
+      { sectionId: 'bites', items: SAVORY_ITEMS, map: mapPublicSavoryItems,
+        render: renderSavoryPanel, mode: 'single', group: 'Savory Bites', defaults: (item, menu) => ({
+          sauce_pref: getSupabaseDefaultOptionValue(item.name, 'sauce_pref', menu) || item.default_sauce
+        }) }
+    ];
+  }
+
+  function publicPanelVariantsCompatible(product, enhancement) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (variants.some(variant => !variant || !String(variant.label || '').trim()
+      || variant.price === null || variant.price === undefined || variant.price === ''
+      || parsePublicMenuPeso(variant.price) === null)) return false;
+    if (enhancement.mode === 'single') return variants.length === 1;
+    if (enhancement.mode === 'pieces') return variants.length > 0;
+    // A size panel must not invent a second size or relabel unfamiliar variants.
+    if (variants.length !== 2) return false;
+    const regularPattern = enhancement.sectionId === 'espresso'
+      ? /\bregular\b|\breg\b|\b12\s*oz\b/
+      : /\bregular\b|\breg\b|\b12\s*oz\b|\b16\s*oz\b/;
+    const largePattern = enhancement.sectionId === 'espresso'
+      ? /\blarge\b|\blrg\b|\b16\s*oz\b|\b18\s*oz\b/
+      : /\blarge\b|\blrg\b|\b18\s*oz\b|\b22\s*oz\b/;
+    const regular = variants.find(variant => regularPattern.test(normalizePublicMenuText(variant.label)));
+    const large = variants.find(variant => largePattern.test(normalizePublicMenuText(variant.label)));
+    return Boolean(regular && large && regular !== large);
+  }
+
+  function mapDefensivePublicCategory(shapedPublicMenu, config) {
+    const entries = [];
+    const usedPanelIds = new Set();
+    const enhancements = getPublicPanelEnhancements().filter(item => item.sectionId === config.sectionId);
+    const categories = getSpecialSectionCategoryRows(config, shapedPublicMenu.categories).sort(comparePublicCategoryRows);
+    categories.forEach(category => {
+      (Array.isArray(category.products) ? category.products : []).forEach(product => {
+        try {
+          const generic = mapGenericPublicCategoryItems({ products: [product] })[0];
+          if (!generic) {
+            console.warn('[CURV menu] Skipped unrenderable public product.', product && product.id);
+            return;
+          }
+          const entry = { product, category, generic, item: generic, enhancement: null };
+          const enhancement = enhancements.find(candidate => candidate.items.some(item =>
+            normalizePublicMenuText(item.name) === normalizePublicMenuText(product.name)
+          ));
+          if (enhancement && publicPanelVariantsCompatible(product, enhancement)) {
+            try {
+              // Legacy mappers are compatibility adapters for ONE product, never category gates.
+              const singleton = { ...shapedPublicMenu, products: [product], categories: [
+                { ...category, name: config.categoryNames[0], products: [product] }
+              ] };
+              const mapped = enhancement.map(singleton);
+              const item = mapped.ok && mapped.items && mapped.items[0];
+              if (item && !usedPanelIds.has(item.id)) {
+                usedPanelIds.add(item.id);
+                entry.item = item;
+                entry.enhancement = enhancement;
+              }
+            } catch (error) {
+              console.warn('[CURV menu] Product panel mapping failed; using public variants.', product.id, error);
+            }
+          }
+          entries.push(entry);
+        } catch (error) {
+          console.warn('[CURV menu] Skipped malformed public product.', product && product.id, error);
+        }
+      });
+    });
+    return entries;
+  }
+
+  function getDefensivePublicGroup(entry, shapedPublicMenu, config) {
+    const sections = getPublicCategorySectionsForCategory(shapedPublicMenu, entry.category.id);
+    const section = sections.find(item => item.id === entry.product.category_section_id);
+    if (section) return { key: section.id, name: section.name, order: Number(section.sort_order) || 0 };
+    let name = config.tabLabel;
+    let order = 9999;
+    if (config.sectionId === 'matcha' && entry.enhancement) {
+      const labels = { signature: 'Signature', popular: 'Popular', seasonal: 'Seasonal', hojicha: 'Hojicha' };
+      name = labels[entry.item.category] || name;
+      order = Object.keys(labels).indexOf(entry.item.category);
+    } else if (config.sectionId === 'espresso') {
+      name = normalizePublicMenuText(entry.product.menu_group) === 'non-espresso' ? 'Non-Espresso' : 'Espresso';
+      order = name === 'Espresso' ? 0 : 1;
+    } else if (config.sectionId === 'bites') {
+      name = entry.enhancement ? entry.enhancement.group
+        : (['bites', 'curv bites', 'takoyaki'].includes(normalizePublicMenuText(entry.category.name)) ? 'Takoyaki' : 'Savory Bites');
+      order = name === 'Takoyaki' ? 0 : 1;
+    }
+    return { key: 'default-' + name, name, order };
+  }
+
+  function renderDefensivePublicCategory(shapedPublicMenu, config) {
+    const section = document.getElementById(config.sectionId);
+    if (!section) return false;
+    // Keep category intros/notes, but remove stale legacy panels and duplicate IDs.
+    Array.from(section.children).forEach(child => {
+      if (!child.matches('.section-header, .note-box')) child.remove();
+    });
+    const mount = document.createElement('div');
+    mount.dataset.defensivePublicMount = 'true';
+    section.appendChild(mount);
+    const groups = new Map();
+    mapDefensivePublicCategory(shapedPublicMenu, config).forEach(entry => {
+      const group = getDefensivePublicGroup(entry, shapedPublicMenu, config);
+      if (!groups.has(group.key)) groups.set(group.key, { ...group, entries: [] });
+      groups.get(group.key).entries.push(entry);
+    });
+    let renderedCount = 0;
+    Array.from(groups.values()).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)).forEach(group => {
+      const block = document.createElement('div');
+      block.className = 'category';
+      appendCategorySectionLabel(block, group.name);
+      mount.appendChild(block);
+      let groupCount = 0;
+      group.entries.sort((a, b) => compareSectionedMenuItems(a.item, b.item)).forEach(entry => {
+        let node = null;
+        if (entry.enhancement) {
+          try {
+            node = entry.enhancement.render(entry.item);
+            block.appendChild(node);
+            delete panelState[entry.item.id];
+            initPanel(entry.item.id, entry.enhancement.defaults(entry.item, shapedPublicMenu));
+            wrapAccordionGroups(document.getElementById('panel-' + entry.item.id));
+            renderedPublicPanels.set(entry.product.id, { sectionId: config.sectionId, panelId: entry.item.id });
+          } catch (error) {
+            if (node) node.remove();
+            node = null;
+            delete panelState[entry.item.id];
+            console.warn('[CURV menu] Product panel failed; using public variants.', entry.product.id, error);
+          }
+        }
+        if (!node) {
+          try {
+            const template = document.createElement('template');
+            template.innerHTML = renderGenericPublicProduct(entry.generic);
+            node = template.content.firstElementChild;
+            block.appendChild(node);
+          } catch (error) {
+            console.warn('[CURV menu] Product card failed.', entry.product.id, error);
+            return;
+          }
+        }
+        node.dataset.publicMenuProductId = entry.product.id || '';
+        groupCount++;
+        renderedCount++;
+      });
+      if (!groupCount) block.remove();
+    });
+    return renderedCount > 0;
   }
 
   function comparePublicCategoryRows(a, b) {
@@ -7069,7 +7187,9 @@
     const products = Array.isArray(category && category.products) ? category.products : [];
     return products
       .map(product => {
-        const variants = [...(product.variants || [])]
+        if (!product || !String(product.name || '').trim() || product.is_published === false || product.archived_at) return null;
+        const variants = (Array.isArray(product.variants) ? product.variants : [])
+          .filter(variant => variant && variant.price !== null && variant.price !== undefined && variant.price !== '')
           .map(variant => ({
             id: variant.id || null,
             label: String(variant.label || '').trim(),
@@ -7110,13 +7230,13 @@
     const priceHtml = !item.variants.length
       ? `<div class="price-btn-row"><span class="price-single">${hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out'}</span><button class="add-btn" disabled aria-disabled="true">+</button></div>`
       : item.variants.length === 1
-        ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${disabledAttr} onclick='addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)'>+</button></div>`
+        ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${disabledAttr} onclick='${escapeMenuHtml(`addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)`)}'>+</button></div>`
         : item.variants.map(variant =>
-            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${disabledAttr} onclick='addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)'>+</button></div>`
+            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${disabledAttr} onclick='${escapeMenuHtml(`addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)`)}'>+</button></div>`
           ).join('');
 
     return `
-      <div class="menu-item generic-public-product${disabled ? ' is-sold-out' : ''}"${disabled ? ' data-sold-out="true"' : ''}>
+      <div class="menu-item generic-public-product${disabled ? ' is-sold-out' : ''}" data-public-menu-product-id="${escapeMenuHtml(item.product_id || '')}"${disabled ? ' data-sold-out="true"' : ''}>
         ${imgHtml}
         <div class="item-info">
           <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
@@ -7214,19 +7334,12 @@
     const visibleEntries = [];
 
     removeDynamicPublicCategoryShells();
-
-    const curvPicksVisible = renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
-    setPublicSectionVisibility('seasonal', curvPicksVisible);
-    if (curvPicksVisible) {
-      visibleEntries.push({ sectionId: 'seasonal', label: 'CURV Picks', order: -1 });
-    }
+    renderedPublicPanels.clear();
 
     SPECIAL_PUBLIC_CATEGORY_SECTIONS.forEach(config => {
       const categoryRows = getSpecialSectionCategoryRows(config, categories);
       categoryRows.forEach(category => claimedCategoryIds.add(category.id));
-      const rendered = categoryRows.length ? config.render(shapedPublicMenu) : false;
-      const hasProducts = categoryRows.some(category => Array.isArray(category.products) && category.products.length);
-      const visible = rendered && (config.allowEmpty || hasProducts);
+      const visible = renderDefensivePublicCategory(shapedPublicMenu, config);
       setPublicSectionVisibility(config.sectionId, visible);
       if (visible) {
         const firstCategory = categoryRows.slice().sort(comparePublicCategoryRows)[0];
@@ -7250,6 +7363,10 @@
       if (tab) tab.dataset.dynamicPublicCategoryTab = 'true';
       visibleEntries.push(entry);
     });
+
+    const curvPicksVisible = renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
+    setPublicSectionVisibility('seasonal', curvPicksVisible);
+    if (curvPicksVisible) visibleEntries.push({ sectionId: 'seasonal', label: 'CURV Picks', order: -1 });
 
     reconcilePublicMenuNavigation(visibleEntries);
     activateFirstVisiblePublicSection('seasonal');
@@ -8130,7 +8247,7 @@
     return true;
   }
 
-  function findMenuSearchProductTarget(sectionId, productName) {
+  function findMenuSearchProductTarget(sectionId, productName, productId) {
     const section = document.getElementById(sectionId);
     if (!section) return null;
     const candidates = [
@@ -8138,6 +8255,10 @@
       ...Array.from(section.querySelectorAll('.menu-item')).filter(item => !item.closest('.menu-item-wrap'))
     ];
     const normalizedName = normalizeMenuSearchText(productName);
+    const exactTarget = productId && candidates.find(target =>
+      target.dataset.publicMenuProductId === String(productId) && isMenuSearchTargetUsable(target)
+    );
+    if (exactTarget) return exactTarget;
     return candidates.find(target =>
       isMenuSearchTargetUsable(target) && getMenuSearchTargetName(target) === normalizedName
     ) || null;
@@ -8154,8 +8275,9 @@
       const products = Array.isArray(category && category.products) ? category.products : [];
       products.forEach((product, productOrder) => {
         const productName = String(product && product.name || '').trim();
-        const target = findMenuSearchProductTarget(route.sectionId, productName);
-        if (!productName || !target) return;
+        if (!productName) return;
+        const target = findMenuSearchProductTarget(route.sectionId, productName, product.id);
+        if (!target) return;
         target.dataset.publicMenuSearchProductId = product.id || '';
         nextIndex.push({
           productId: product.id || '',
