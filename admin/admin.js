@@ -2899,6 +2899,8 @@
   let draftFormSavedLabelActive = false;
   let editorPublishSaving = false;
   let productSaveInProgress = false;
+  let productEditorGeneration = 0;
+  let productImageEditor = null;
   let bulkPublishSaving = false;
   let productDeleteSaving = false;
   let productDeleteGeneration = 0;
@@ -3045,6 +3047,9 @@
     if (!isSignedIn) {
       productDeleteGeneration += 1;
       productDeleteSaving = false;
+      productEditorGeneration += 1;
+      productSaveInProgress = false;
+      productImageEditor?.reset('');
     }
     if (signInButton) signInButton.disabled = isSignedIn;
     if (signOutButton) signOutButton.disabled = !isSignedIn;
@@ -3164,6 +3169,7 @@
       category_id: String(formData.get('category_id') || '').trim(),
       category_section_id: String(formData.get('category_section_id') || '').trim(),
       image_url: String(formData.get('image_url') || '').trim(),
+      image_selection: productImageEditor ? productImageEditor.revision : 0,
       variant_group: String(formData.get('variant_group') || '').trim(),
       custom_variant_group: String(formData.get('custom_variant_group') || '').trim(),
       description: String(formData.get('description') || '').trim(),
@@ -3302,6 +3308,7 @@
   };
 
   const syncEditorSaveLabels = () => {
+    productImageEditor?.refresh();
     const product = getEditingProduct();
     const isPublished = Boolean(product && product.is_published);
     if (createDraftButton) {
@@ -3545,6 +3552,7 @@
     updateRemoveButtons();
     updateCategoryActionButtons();
     setProductBadgesDisabled(isDisabled);
+    productImageEditor?.refresh();
   };
 
   const renderProductOptionEmpty = (title, message) => {
@@ -4243,6 +4251,10 @@
   };
 
   const resetDraftProductForm = () => {
+    productEditorGeneration += 1;
+    productSaveInProgress = false;
+    if (draftForm) { draftForm.inert = false; draftForm.setAttribute('aria-busy', 'false'); }
+    productImageEditor?.reset('');
     draftCategorySectionLoadGeneration += 1;
     if (draftForm) draftForm.reset();
     resetVariantGroupOptions('Each');
@@ -5380,7 +5392,7 @@
     preview.className = 'product-image-preview';
 
     const image = document.createElement('img');
-    image.src = product.image_url;
+    image.src = window.CurvProductImageUpload ? window.CurvProductImageUpload.normalize(product.image_url) : product.image_url;
     image.alt = '';
     image.loading = 'lazy';
 
@@ -6046,6 +6058,7 @@
     setDraftFormDisabled(false);
 
     draftForm.elements.name.value = product.name || '';
+    const editorGeneration = productEditorGeneration;
     draftForm.elements.category_id.value = product.category_id || '';
     if (draftForm.elements.category_id.value !== String(product.category_id)) {
       setDraftFormDisabled(true);
@@ -6054,6 +6067,7 @@
     }
     previousDraftCategoryValue = product.category_id || '';
     const sectionsLoaded = await loadDraftCategorySections(product.category_id || '', product.category_section_id || '');
+    if (!isOwnerSignedIn || editorGeneration !== productEditorGeneration) return;
     if (!sectionsLoaded || (product.category_section_id && (!draftSectionSelect || draftSectionSelect.value !== String(product.category_section_id)))) {
       setDraftFormDisabled(true);
       setStatus('This item could not be opened safely because its saved section could not be loaded. Refresh products and try again.');
@@ -6061,6 +6075,7 @@
     }
     updateCategoryActionButtons();
     draftForm.elements.image_url.value = product.image_url || '';
+    productImageEditor?.reset(product.image_url || '');
     draftForm.elements.description.value = product.description || '';
     draftForm.elements.notes.value = product.notes || '';
     setProductBadges(product.badge_labels);
@@ -6108,6 +6123,27 @@
   }
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const imageRoot = draftForm && draftForm.querySelector('[data-product-image-editor]');
+  if (imageRoot && window.CurvProductImageUpload) {
+    productImageEditor = window.CurvProductImageUpload.create({
+      root: imageRoot,
+      getClient: () => client,
+      isAuthorized: () => isOwnerSignedIn,
+      isEnabled: () => !productSaveInProgress && !draftForm.elements.name.disabled,
+      onChange: markDraftFormDirty
+    });
+  }
+  client.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && signedInOwnerEmail && session?.user?.email !== signedInOwnerEmail)) {
+      setSignedInState(false);
+      resetDraftProductForm();
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    productEditorGeneration += 1;
+    productImageEditor?.reset('');
+  });
 
   const loadOptionGroups = async (forceReload = false) => {
     if (!isOwnerSignedIn) {
@@ -7192,7 +7228,7 @@
       eventOrOptions.preventDefault();
     }
 
-    if (productSaveInProgress) return;
+    if (!isOwnerSignedIn || productSaveInProgress) return;
 
     if (!getRealMenuCategories().length) {
       setStatus('Load categories before saving this item.');
@@ -7236,7 +7272,12 @@
       ? options.publishState
       : (isEditing ? existingProduct.is_published : false);
     const publishAfterSizeSave = finalPublishedState && (!isEditing || !existingProduct.is_published);
+    const saveGeneration = productEditorGeneration;
+    const saveStillCurrent = () => isOwnerSignedIn && saveGeneration === productEditorGeneration;
     productSaveInProgress = true;
+    draftForm.inert = true;
+    draftForm.setAttribute('aria-busy', 'true');
+    productImageEditor?.refresh();
     if (createDraftButton) createDraftButton.disabled = true;
     if (editorPublishActionButton) editorPublishActionButton.disabled = true;
     if (undoProductChangesButton) undoProductChangesButton.disabled = true;
@@ -7245,12 +7286,15 @@
       ? (isEditing ? 'Saving live item...' : 'Creating and publishing item...')
       : (isEditing ? 'Saving draft item...' : 'Saving draft item...'));
 
+    try {
+    const uploadedImageUrl = productImageEditor ? await productImageEditor.prepare(editingProductId) : draft.image_url;
+    if (!saveStillCurrent()) return;
     const productPayload = {
       category_id: draft.category_id,
       category_section_id: draft.category_section_id,
       name: draft.name,
       description: draft.description,
-      image_url: draft.image_url,
+      image_url: uploadedImageUrl || null,
       notes: draft.notes,
       badge_labels: draft.badge_labels,
       is_available: draft.is_available,
@@ -7263,6 +7307,7 @@
     };
 
     let productId = editingProductId;
+    productImageEditor?.markSaveAttempt();
 
     if (isEditing) {
       const { data: updatedProduct, error: productError } = await client
@@ -7272,6 +7317,8 @@
         .is('archived_at', null)
         .select('id')
         .maybeSingle();
+
+      if (!saveStillCurrent()) return;
 
       if (productError || !updatedProduct) {
         productSaveInProgress = false;
@@ -7292,6 +7339,8 @@
         .select('id')
         .single();
 
+      if (!saveStillCurrent()) return;
+
       if (productError) {
         productSaveInProgress = false;
         setStatus('Unable to save item. ' + productError.message);
@@ -7304,6 +7353,8 @@
 
       productId = product.id;
     }
+
+    productImageEditor?.markAttached();
 
     const savedSizeState = isEditing && Array.isArray(existingProduct.product_sizes)
       ? existingProduct.product_sizes
@@ -7319,6 +7370,7 @@
         p_product_id: productId,
         p_sizes: submittedSizeState,
       });
+      if (!saveStillCurrent()) return;
       sizeError = result.error;
     }
 
@@ -7351,9 +7403,12 @@
         .select('id')
         .maybeSingle();
 
+      if (!saveStillCurrent()) return;
+
       if (publishError || !publishedProduct) {
         productSaveInProgress = false;
         await loadProducts();
+    if (!saveStillCurrent()) return;
         if (productId && !latestProducts.find((product) => product.id === productId && product.archived_at)) {
           await loadProductIntoForm(productId);
         }
@@ -7369,8 +7424,10 @@
     }
 
     await loadProducts();
+    if (!saveStillCurrent()) return;
     if (productId) {
       await loadProductIntoForm(productId);
+      if (!isOwnerSignedIn || editingProductId !== productId) return;
       draftFormSavedLabelActive = true;
       markDraftFormClean();
       productSaveInProgress = false;
@@ -7380,6 +7437,18 @@
       ? (isEditing ? 'Live item updated.' : 'Item saved and published.')
       : (isEditing ? 'Draft item saved.' : 'Draft item saved.'));
     productSaveInProgress = false;
+    } catch (error) {
+      if (saveStillCurrent()) setStatus('Unable to save item. Your changes are still editable. ' + (error.message || 'Please try again.'));
+    } finally {
+      if (saveStillCurrent()) {
+        productSaveInProgress = false;
+        draftForm.inert = false;
+        draftForm.setAttribute('aria-busy', 'false');
+        syncEditorSaveLabels();
+        if (cancelEditButton) cancelEditButton.disabled = !isOwnerSignedIn;
+      }
+      productImageEditor?.refresh();
+    }
   };
 
   const updateProductPublishedState = async (productId, shouldPublish, options = {}) => {
@@ -10606,8 +10675,11 @@
   if (signOutButton) {
     signOutButton.addEventListener('click', async () => {
       setStatus('Signing out...');
+      setSignedInState(false);
+      setDraftFormDisabled(true);
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) {
+        await refreshSession();
         setStatus('Sign out failed. ' + error.message);
         return;
       }

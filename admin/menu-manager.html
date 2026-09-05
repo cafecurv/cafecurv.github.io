@@ -14,9 +14,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=mp2c3-product-archive">
+  <link rel="stylesheet" href="admin.css?v=product-image-crop-1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=mp2c3-product-archive" defer></script>
+  <script src="product-image-crop.js?v=1" defer></script>
+  <script src="product-image-upload.js?v=2" defer></script>
+  <script src="admin.js?v=product-image-upload-1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -188,10 +190,27 @@
                 <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-draft-section disabled>Cancel</button>
               </div>
             </div>
-            <label class="admin-field" for="draft-product-image">
-              <span>Image path</span>
-              <input id="draft-product-image" name="image_url" type="text" autocomplete="off" disabled>
-            </label>
+            <div class="admin-field draft-field-wide product-image-editor" data-product-image-editor aria-labelledby="product-image-label">
+              <span id="product-image-label">Product Image</span>
+              <input id="draft-product-image" name="image_url" type="hidden">
+              <input type="file" accept="image/jpeg,image/png,image/webp" data-image-file hidden aria-label="Choose product image">
+              <div class="product-image-editor-body">
+                <div class="product-image-thumbnail">
+                  <img data-image-preview alt="Product image preview" hidden>
+                  <span data-image-placeholder>No image</span>
+                </div>
+                <div class="product-image-editor-controls">
+                  <div class="product-image-editor-actions">
+                    <button type="button" class="auth-button auth-button-secondary" data-image-choose disabled>Choose Image</button>
+                    <button type="button" class="auth-button auth-button-secondary" data-image-remove disabled hidden>Remove Image</button>
+                  </div>
+                  <p class="product-image-help">Upload a JPG, PNG, or WebP image. Maximum 5 MB.</p>
+                  <p data-image-filename class="product-image-filename"></p>
+                  <progress data-image-progress aria-label="Uploading product image" hidden></progress>
+                  <p data-image-status role="status" aria-live="polite"></p>
+                </div>
+              </div>
+            </div>
             <label class="admin-field" for="draft-variant-group">
               <span>Sold by</span>
               <select id="draft-variant-group" name="variant_group" required disabled>

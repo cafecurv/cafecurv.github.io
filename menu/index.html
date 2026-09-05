@@ -2237,6 +2237,37 @@
     min-width: 0;
   }
 
+  /* Generic cards share the thumbnail contract in every category. */
+  .generic-public-product {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) fit-content(40%);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .generic-public-product .item-info,
+  .generic-public-product .item-right,
+  .curv-pick-card .product-card-info {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .generic-public-product .price-single,
+  .generic-public-product .price-pieces strong {
+    white-space: nowrap;
+  }
+
+  .generic-public-product .menu-item-badges,
+  .curv-pick-card .menu-item-badges {
+    max-width: calc(100% - 6px);
+  }
+
+  .generic-public-product .menu-item-badge,
+  .curv-pick-card .menu-item-badge {
+    max-width: 100%;
+    white-space: normal;
+  }
+
   .product-card-price {
     font-family: 'Jost', sans-serif;
     font-size: 0.72rem;
@@ -2651,6 +2682,20 @@
     .product-card-thumb {
       width: 64px;
       height: 64px;
+    }
+    .generic-public-product {
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+    .generic-public-product .product-card-thumb {
+      grid-row: 1 / span 2;
+    }
+    .generic-public-product .item-right {
+      grid-column: 2;
+      align-items: flex-start;
+    }
+    .generic-public-product .price-row,
+    .generic-public-product .price-btn-row {
+      justify-content: flex-start;
     }
     .product-card-price {
       margin-top: 0.15rem;
@@ -7224,8 +7269,8 @@
     const disabled = Boolean(item && item.is_sold_out);
     const disabledAttr = disabled ? ' disabled aria-disabled="true"' : '';
     const imgHtml = item.img
-      ? `<img class="salad-row-img" src="${escapeMenuHtml(item.img)}" alt="" loading="lazy">`
-      : '';
+      ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
+      : '<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>';
     const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
     const priceHtml = !item.variants.length
       ? `<div class="price-btn-row"><span class="price-single">${hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out'}</span><button class="add-btn" disabled aria-disabled="true">+</button></div>`
