@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2237,36 +2237,30 @@
     min-width: 0;
   }
 
-  /* Generic cards share the thumbnail contract in every category. */
-  .generic-public-product {
+  .product-card.unified-product-card {
     display: grid;
-    grid-template-columns: 76px minmax(0, 1fr) fit-content(40%);
-    min-width: 0;
-    max-width: 100%;
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 0;
   }
-
-  .generic-public-product .item-info,
-  .generic-public-product .item-right,
-  .curv-pick-card .product-card-info {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .generic-public-product .price-single,
-  .generic-public-product .price-pieces strong {
-    white-space: nowrap;
-  }
-
-  .generic-public-product .menu-item-badges,
-  .curv-pick-card .menu-item-badges {
-    max-width: calc(100% - 6px);
-  }
-
-  .generic-public-product .menu-item-badge,
-  .curv-pick-card .menu-item-badge {
-    max-width: 100%;
-    white-space: normal;
-  }
+  .unified-product-card .product-card-info { min-width: 0; overflow-wrap: anywhere; }
+  .unified-product-card .item-desc { display: block; }
+  .unified-product-card .menu-item-badges { max-width: calc(100% - 6px); }
+  .unified-product-card .menu-item-badge { max-width: 100%; white-space: normal; }
+  .menu-item-wrap.public-item-wrap.open > .expansion-panel { max-height: none; }
+  .public-item-wrap .panel-inner { padding: 0.9rem 0.8rem 1.2rem; }
+  .public-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .public-panel-header .public-panel-title { min-width: 0; overflow-wrap: anywhere; }
+  .public-item-wrap .accordion-group.open .accordion-body { max-height: none; }
+  .public-panel-title { margin: 0; font-size: 1rem; letter-spacing: 0; }
+  .public-panel-close { justify-self: end; min-height: 36px; padding: 0.3rem 0.7rem; border: 1px solid var(--bg3); border-radius: 4px; background: var(--bg2); color: var(--navy); cursor: pointer; }
+  .public-panel-status { color: var(--navy); font: 0.8rem 'Jost', sans-serif; margin: 0; }
+  .public-item-wrap .panel-options { min-width: 0; }
+  .public-item-wrap .option-group-label { display: block; margin-top: 0.7rem; }
+  .public-item-wrap .option-chip { white-space: normal; overflow-wrap: anywhere; min-height: 36px; }
+  .public-item-wrap .option-chip:focus-visible,
+  .public-item-wrap .accordion-header:focus-visible,
+  .public-panel-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .product-card-price {
     font-family: 'Jost', sans-serif;
@@ -2683,20 +2677,11 @@
       width: 64px;
       height: 64px;
     }
-    .generic-public-product {
-      grid-template-columns: 64px minmax(0, 1fr);
-    }
-    .generic-public-product .product-card-thumb {
-      grid-row: 1 / span 2;
-    }
-    .generic-public-product .item-right {
-      grid-column: 2;
-      align-items: flex-start;
-    }
-    .generic-public-product .price-row,
-    .generic-public-product .price-btn-row {
-      justify-content: flex-start;
-    }
+    .product-card.unified-product-card { grid-template-columns: 64px minmax(0, 1fr); }
+    .unified-product-card .product-card-thumb { grid-row: 1 / span 2; }
+    .unified-product-card .product-card-price { grid-column: 2; justify-self: start; width: auto; padding-left: 0; }
+    .public-item-wrap .panel-footer { flex-wrap: wrap; gap: 0.75rem; }
+    .public-item-wrap .panel-add-btn { min-height: 40px; }
     .product-card-price {
       margin-top: 0.15rem;
     }
@@ -5170,38 +5155,32 @@
     togglePanel(panelId);
   }
 
-  function renderProductCard(item, sectionId) {
-    const soldOut = Boolean(item && item.is_sold_out);
-    const unavailable = hasExplicitPublicUnavailableState(item);
-    const piecePrices = Array.isArray(item.pieces) ? item.pieces.map(piece => Number(piece.price)) : [];
-    const prices = [Number(item.reg), Number(item.lrg), Number(item.price), ...piecePrices].filter(price => Number.isFinite(price) && price >= 0);
-    const startingPrice = prices.length ? Math.min(...prices) : null;
-    const thumbHtml = item.img
+  function renderProductCard(item, sectionId, isPick = false) {
+    const disabled = Boolean(item && item.is_sold_out);
+    const prices = (Array.isArray(item.variants) ? item.variants.map(v => v.price)
+      : [item.reg, item.lrg, item.price, ...(item.pieces || []).map(v => v.price)])
+      .filter(value => value !== null && value !== undefined && value !== '')
+      .map(Number).filter(value => Number.isFinite(value) && value >= 0);
+    const price = prices.length ? Math.min(...prices) : null;
+    const status = hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out';
+    const thumb = item.img
       ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
-      : `<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>`;
-    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
-    const priceHtml = startingPrice !== null
-      ? `<span class="product-card-price">From ₱${startingPrice}</span>`
-      : '';
-    const cardClass = soldOut ? 'product-card is-sold-out' : 'product-card';
-    const soldOutAttrs = soldOut ? ' disabled aria-disabled="true" data-sold-out="true"' : '';
-    const actionClosed = soldOut ? (unavailable ? 'Unavailable' : 'Currently Sold Out') : 'Customize ↓';
-    const openActionHtml = soldOut
-      ? ''
-      : '<span class="product-card-action product-card-action-open">Tap again to minimize ↑</span>';
-    const clickAttr = soldOut ? '' : ` onclick="openProductPanel('${escapeMenuHtml(item.id)}')"`;
-
-    return `
-      <button type="button" class="${cardClass}" data-section="${escapeMenuHtml(sectionId)}"${soldOutAttrs}${clickAttr}>
-        ${thumbHtml}
-        <span class="product-card-info">
-          <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
-          ${descHtml}
-          <span class="product-card-action product-card-action-closed">${actionClosed}</span>
-          ${openActionHtml}
-        </span>
-        ${priceHtml}
-      </button>`;
+      : '<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>';
+    const call = isPick
+      ? `openPublicItemPanel(${JSON.stringify(item.id)}, this, ${JSON.stringify(sectionId)})`
+      : `openPublicItemPanel(${JSON.stringify(item.id)}, this)`;
+    return `<button type="button" class="product-card unified-product-card${isPick ? ' curv-pick-card' : ''}${disabled ? ' is-sold-out' : ''}"
+      aria-label="${escapeMenuHtml((disabled ? status + ': ' : 'Customize ') + item.name)}"
+      data-section="${escapeMenuHtml(sectionId || '')}" aria-controls="panel-${escapeMenuHtml(item.id)}" aria-expanded="false"
+      ${disabled ? 'disabled aria-disabled="true" data-sold-out="true"' : `onclick='${escapeMenuHtml(call)}'`}>
+      ${thumb}
+      <span class="product-card-info">
+        <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
+        ${item.desc ? `<span class="item-desc">${escapeMenuHtml(item.desc)}</span>` : ''}
+        <span class="product-card-action">${disabled ? status : 'Customize'}</span>
+      </span>
+      ${price === null ? '' : `<span class="product-card-price">${prices.length > 1 ? 'From ' : ''}₱${price}</span>`}
+    </button>`;
   }
 
   function renderRefresherPanel(item) {
@@ -6696,7 +6675,8 @@
           return;
         }
         // Only link to a panel that actually rendered for this product this refresh.
-        const panel = renderedPublicPanels.get(product.id);
+        const panel = publicProductPanelTargets.get(product.id);
+        if (!panel) return;
         items.push({
           ...item,
           categoryName: getCurvPickCategoryName(shapedPublicMenu, product),
@@ -6730,49 +6710,8 @@
   }
 
   function renderCurvPickItem(item) {
-    const canOpenPanel = item.sectionId && item.panelId;
-    const soldOut = Boolean(item && item.is_sold_out);
-    const unavailable = Boolean(item && item.is_available === false);
-    const disabledLabel = unavailable ? 'Unavailable' : 'Sold Out';
-    const prices = (item.variants || []).map(variant => Number(variant.price)).filter(price => Number.isFinite(price));
-    const startingPrice = prices.length ? Math.min(...prices) : null;
-    const thumbHtml = item.img
-      ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
-      : `<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>`;
-    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
-    const priceText = startingPrice !== null ? `<span class="product-card-price">From ₱${startingPrice}</span>` : '';
-    const soldOutAttrs = soldOut ? ' aria-disabled="true" data-sold-out="true"' : '';
-
-    if (canOpenPanel) {
-      return `
-      <button type="button" class="product-card curv-pick-card${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' disabled' : ''}${soldOutAttrs}${soldOut ? '' : ` onclick="jumpToPanel('${escapeMenuHtml(item.sectionId)}', '${escapeMenuHtml(item.panelId)}')"`}>
-        ${thumbHtml}
-        <span class="product-card-info">
-          <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
-          ${descHtml}
-          <span class="product-card-action">${soldOut ? disabledLabel : 'Customize'}</span>
-        </span>
-        ${priceText ? `<span class="curv-pick-meta">${priceText}</span>` : ''}
-      </button>`;
-    }
-
-    const variants = item.variants || [];
-    const priceHtml = variants.length === 1
-      ? `<div class="price-btn-row"><span class="price-single">₱${variants[0].price}</span>${renderCurvPickAddButton(item, variants[0])}</div>`
-      : variants.map(variant =>
-          `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.displayLabel)} <strong>₱${variant.price}</strong></span>${renderCurvPickAddButton(item, variant, 'add-btn-pill')}</div>`
-        ).join('');
-
-    return `
-      <div class="product-card curv-pick-card curv-pick-quick-card${soldOut ? ' is-sold-out' : ''}"${soldOut ? ' data-sold-out="true"' : ''}>
-        ${thumbHtml}
-        <div class="product-card-info">
-          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
-          ${descHtml}
-          <span class="product-card-action">${soldOut ? disabledLabel : 'Add'}</span>
-        </div>
-        <div class="curv-pick-meta">${priceHtml}</div>
-      </div>`;
+    if (!item.panelId || !item.sectionId) return '';
+    return renderProductCard({ ...item, id: item.panelId }, item.sectionId, true);
   }
 
   function renderCurvPicksCategory(label, items) {
@@ -7266,29 +7205,36 @@
   }
 
   function renderGenericPublicProduct(item) {
-    const disabled = Boolean(item && item.is_sold_out);
-    const disabledAttr = disabled ? ' disabled aria-disabled="true"' : '';
-    const imgHtml = item.img
-      ? `<span class="product-card-thumb"><img src="${escapeMenuHtml(item.img)}" alt="" loading="lazy"></span>`
-      : '<span class="product-card-thumb"><span class="product-card-placeholder">Photo Soon</span></span>';
-    const descHtml = item.desc ? `<div class="item-desc">${escapeMenuHtml(item.desc)}</div>` : '';
-    const priceHtml = !item.variants.length
-      ? `<div class="price-btn-row"><span class="price-single">${hasExplicitPublicUnavailableState(item) ? 'Unavailable' : 'Sold Out'}</span><button class="add-btn" disabled aria-disabled="true">+</button></div>`
-      : item.variants.length === 1
-        ? `<div class="price-btn-row"><span class="price-single">₱${item.variants[0].price}</span><button class="add-btn"${disabledAttr} onclick='${escapeMenuHtml(`addItem(${JSON.stringify(item.name)}, "", ${item.variants[0].price}, this)`)}'>+</button></div>`
-        : item.variants.map(variant =>
-            `<div class="price-row"><span class="price-pieces">${escapeMenuHtml(variant.label)} <strong>₱${variant.price}</strong></span><button class="add-btn-pill"${disabledAttr} onclick='${escapeMenuHtml(`addItem(${JSON.stringify(item.name)}, ${JSON.stringify(variant.label)}, ${variant.price}, this)`)}'>+</button></div>`
-          ).join('');
-
-    return `
-      <div class="menu-item generic-public-product${disabled ? ' is-sold-out' : ''}" data-public-menu-product-id="${escapeMenuHtml(item.product_id || '')}"${disabled ? ' data-sold-out="true"' : ''}>
-        ${imgHtml}
-        <div class="item-info">
-          <div class="item-name">${renderMenuItemNameWithBadges(item)}</div>
-          ${descHtml}
+    const id = item.id;
+    const disabled = Boolean(item.is_sold_out);
+    return `<div class="menu-item-wrap generic-public-product" id="panel-wrap-${escapeMenuHtml(id)}"
+      data-public-menu-product-id="${escapeMenuHtml(item.product_id || '')}">
+      ${renderProductCard(item, '')}
+      <div class="expansion-panel" id="panel-${escapeMenuHtml(id)}" inert>
+        <div class="panel-inner">
+          <div class="panel-options">
+            <div class="option-group-label">Size</div>
+            <div class="option-chips" data-panel="${escapeMenuHtml(id)}" data-group="size" data-type="single">
+              ${item.variants.map((v, i) => `<button type="button" class="option-chip${i === 0 ? ' selected' : ''}"
+                data-value="${escapeMenuHtml(v.label)}" data-price="${v.price}" data-size-id="${escapeMenuHtml(v.id || '')}">
+                ${escapeMenuHtml(v.label)} <span class="chip-price">₱${v.price}</span></button>`).join('')}
+            </div>
+            <label class="option-group-label" for="note-${escapeMenuHtml(id)}">Special request (optional)</label>
+            <textarea class="panel-note-input" id="note-${escapeMenuHtml(id)}" maxlength="500"></textarea>
+          </div>
+          <div class="panel-footer">
+            <div class="panel-qty">
+              <button type="button" class="panel-qty-btn" onclick="panelQty('${escapeMenuHtml(id)}', -1)">−</button>
+              <span class="panel-qty-num" id="qty-${escapeMenuHtml(id)}">1</span>
+              <button type="button" class="panel-qty-btn" onclick="panelQty('${escapeMenuHtml(id)}', 1)">+</button>
+            </div>
+            <span class="panel-price" id="price-${escapeMenuHtml(id)}"></span>
+            <button type="button" class="panel-add-btn"${disabled ? ' disabled' : ''}
+              onclick='${escapeMenuHtml(`panelAddToCart(${JSON.stringify(id)}, ${JSON.stringify(item.name)})`)}'>Add to Order</button>
+          </div>
         </div>
-        <div class="item-right">${priceHtml}</div>
-      </div>`;
+      </div>
+    </div>`;
   }
 
   function renderGenericPublicCategoryContent(items, categorySections = []) {
@@ -7409,6 +7355,7 @@
       visibleEntries.push(entry);
     });
 
+    hydratePublicItemPanels(shapedPublicMenu);
     const curvPicksVisible = renderSupabaseCurvPicksOrFallback(shapedPublicMenu);
     setPublicSectionVisibility('seasonal', curvPicksVisible);
     if (curvPicksVisible) visibleEntries.push({ sectionId: 'seasonal', label: 'CURV Picks', order: -1 });
@@ -7432,6 +7379,219 @@
   let activeSubmissionKey = '';
   let activeSubmissionKeySignature = '';
   let activeSubmissionFailureMode = '';
+
+  const publicItemPanels = new Map();
+  const publicProductPanelTargets = new Map();
+  let publicPanelOpener = null;
+
+  function setPublicPanelOpen(id, open, restoreFocus = false) {
+    const wrap = document.getElementById('panel-wrap-' + id);
+    if (!wrap) return;
+    wrap.classList.toggle('open', open);
+    const panel = document.getElementById('panel-' + id);
+    if (panel) panel.inert = !open;
+    document.querySelectorAll('button[aria-controls]').forEach(button => {
+      if (button.getAttribute('aria-controls') === 'panel-' + id) button.setAttribute('aria-expanded', String(open));
+    });
+    if (!open && activePanel === id) activePanel = null;
+    if (!open && restoreFocus) {
+      const target = publicPanelOpener && document.body.contains(publicPanelOpener) && isPanelNodeVisible(publicPanelOpener)
+        ? publicPanelOpener : wrap.querySelector('.product-card');
+      target?.focus({ preventScroll: true });
+    }
+  }
+
+  function openPublicItemPanel(id, trigger, sectionId) {
+    const contract = publicItemPanels.get(id);
+    if (contract && contract.item.is_sold_out) return;
+    if (sectionId) showSection(sectionId);
+    publicPanelOpener = trigger;
+    if (sectionId && document.getElementById('panel-wrap-' + id)?.classList.contains('open')) {
+      document.getElementById('panel-' + id)?.querySelector('.public-panel-title')?.focus({ preventScroll: true });
+      return;
+    }
+    togglePanel(id);
+  }
+
+  function renderPublicOptionGroup(group, panelId) {
+    const min = Math.max(Number(group.min_selections) || 0, group.is_required ? 1 : 0);
+    const max = group.selection_type === 'single' ? 1
+      : group.max_selections === null || group.max_selections === undefined ? group.choices.length : Number(group.max_selections);
+    if (!['single', 'multi'].includes(group.selection_type) || !Number.isInteger(min) || !Number.isInteger(max)
+      || max < min || group.choices.length < min || !String(group.group_key || '').trim()) throw new Error('Invalid option rules.');
+    const defaults = new Set((group.defaults || []).map(d => d.option_choice_id));
+    if (defaults.size > max || [...defaults].some(id => !group.choices.some(c => c.option_choice_id === id))) throw new Error('Invalid option defaults.');
+    const key = 'public-option-' + slugifyPublicMenuId(group.option_group_id);
+    const choices = group.choices.slice().sort((a,b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+    return `<div class="public-option-group">
+      <div class="option-group-label">${escapeMenuHtml(group.name)}${min ? ' (required)' : ''}</div>
+      <div class="option-chips" role="group" aria-label="${escapeMenuHtml(group.name)}" data-public-option="true"
+        data-panel="${escapeMenuHtml(panelId)}" data-group="${escapeMenuHtml(key)}" data-option-key="${escapeMenuHtml(group.group_key)}"
+        data-type="${group.selection_type}" data-min="${min}" data-max="${max}">
+        ${choices.map(choice => {
+          const price = Number(choice.price_delta);
+          if (choice.price_delta === null || choice.price_delta === undefined || !Number.isFinite(price) || !String(choice.label || '').trim()) throw new Error('Invalid option choice.');
+          const selected = defaults.has(choice.option_choice_id);
+          return `<button type="button" class="option-chip${selected ? ' selected' : ''}" aria-pressed="${selected}"
+            data-choice-id="${escapeMenuHtml(choice.option_choice_id)}" data-value="${escapeMenuHtml(choice.value || choice.label)}"
+            data-price="${price}">${escapeMenuHtml(choice.label)}${price ? `<span class="chip-price">${price > 0 ? '+' : ''}₱${price}</span>` : ''}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  function hydratePublicItemPanels(menu) {
+    publicItemPanels.clear();
+    publicProductPanelTargets.clear();
+    activePanel = null;
+    publicPanelOpener = null;
+    document.querySelectorAll('.section:not(#seasonal) .menu-item-wrap[data-public-menu-product-id]').forEach(wrap => {
+      const product = (menu.products || []).find(p => p && p.id === wrap.dataset.publicMenuProductId);
+      const item = product && mapGenericPublicCategoryItems({ products: [product] })[0];
+      const panel = wrap.querySelector('.expansion-panel');
+      if (!item || !panel) return;
+      const id = panel.id.slice('panel-'.length);
+      const sectionId = wrap.closest('.section').id;
+      const category = (menu.categories || []).find(c => c.id === product.category_id);
+      const contract = { item, product, categoryName: category && category.name, error: '' };
+      publicItemPanels.set(id, contract);
+      publicProductPanelTargets.set(product.id, { sectionId, panelId: id });
+      wrap.classList.add('public-item-wrap');
+      wrap.querySelector('.product-card').outerHTML = renderProductCard({ ...item, id }, sectionId);
+      panel.inert = true;
+      panel.setAttribute('role', 'region');
+      panel.setAttribute('aria-label', 'Customize ' + item.name);
+      const title = document.createElement('h3');
+      title.className = 'public-panel-title';
+      title.tabIndex = -1;
+      title.textContent = item.name;
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'public-panel-close';
+      close.textContent = 'Close';
+      close.addEventListener('click', () => setPublicPanelOpen(id, false, true));
+      const header = document.createElement('div');
+      header.className = 'public-panel-header';
+      header.append(title, close);
+      panel.querySelector('.panel-inner').prepend(header);
+      const options = panel.querySelector('.panel-options');
+      try {
+        const groups = menu.options && menu.options.byProductId && menu.options.byProductId[product.id]?.groups || [];
+        const groupKeys = new Set();
+        groups.slice().sort((a,b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)).forEach(group => {
+          if (groupKeys.has(group.group_key) || ['size', 'pieces', 'note'].includes(group.group_key)) throw new Error('Conflicting option key.');
+          groupKeys.add(group.group_key);
+          const html = renderPublicOptionGroup(group, id);
+          const legacy = [...options.querySelectorAll('[data-group]')].find(node => node.dataset.group === group.group_key);
+          if (legacy) (legacy.closest('.accordion-group, [data-collapsible]') || legacy).remove();
+          options.insertAdjacentHTML('beforeend', html);
+        });
+        if (menu.options === null && !renderedPublicPanels.has(product.id)) throw new Error('Options not loaded.');
+      } catch (error) {
+        contract.error = 'Options could not be loaded for this item. Please refresh the menu or ask the cashier.';
+        console.warn('[CURV menu] Product options unavailable.', product.id, error);
+      }
+      // Bind compatible legacy size controls to real rows without changing hot/iced pricing.
+      const sizeGroups = [...panel.querySelectorAll('[data-group="size"], [data-group="pieces"]')];
+      sizeGroups.forEach(group => group.querySelectorAll('.option-chip').forEach(chip => {
+        if (chip.dataset.sizeId) return;
+        const value = normalizePublicMenuText(chip.dataset.value);
+        const price = Number(chip.dataset.price);
+        const exact = item.variants.find(v => normalizePublicMenuText(v.label) === value && Number(v.price) === price);
+        const alias = value === 'large' || value === '12oz'
+          ? /\blarge\b|\blrg\b|\b18\s*oz\b|\b22\s*oz\b/
+          : value === 'regular' ? /\bregular\b|\breg\b|\b12\s*oz\b|\b16\s*oz\b/ : null;
+        const priced = item.variants.filter(v => Number(v.price) === price);
+        const variant = exact || (alias && priced.find(v => alias.test(normalizePublicMenuText(v.label))))
+          || (priced.length === 1 ? priced[0] : null);
+        if (variant) chip.dataset.sizeId = variant.id || '';
+      }));
+      if (wrap.classList.contains('generic-public-product')) delete panelState[id];
+      if (!panelState[id]) initPanel(id, {});
+      const temperature = panel.querySelector('[data-option-key="temperature"] .selected');
+      if (temperature) syncPublicPanelTemperature(id, temperature.dataset.value);
+      const note = panel.querySelector('.panel-note-input');
+      if (note) {
+        note.maxLength = 500;
+        note.setAttribute('aria-label', 'Special request (optional)');
+        const accordion = note.closest('.accordion-group');
+        if (accordion) options.append(accordion);
+        else {
+          const label = [...options.querySelectorAll('label')].find(l => l.htmlFor === note.id);
+          if (label) options.append(label);
+          options.append(note);
+        }
+      }
+      const qtyButtons = panel.querySelectorAll('.panel-qty-btn');
+      qtyButtons.forEach((button,index) => {
+        button.type = 'button';
+        button.setAttribute('aria-label', index === 0 ? 'Decrease quantity' : 'Increase quantity');
+      });
+      const qty = panel.querySelector('.panel-qty-num');
+      if (qty) { qty.setAttribute('role', 'status'); qty.setAttribute('aria-label', 'Quantity'); }
+      panel.querySelectorAll('.option-chip').forEach(chip => {
+        if (chip.tagName !== 'BUTTON') { chip.setAttribute('role', 'button'); chip.tabIndex = 0; }
+        chip.setAttribute('aria-pressed', String(chip.classList.contains('selected')));
+      });
+      getPanelOptionGroups(id).forEach(group => {
+        group.setAttribute('role', 'group');
+        if (!group.getAttribute('aria-label')) group.setAttribute('aria-label',
+          group.closest('.accordion-group')?.querySelector('.accordion-label')?.textContent || group.dataset.group);
+      });
+      panel.querySelectorAll('.accordion-header').forEach(header => {
+        header.setAttribute('role', 'button'); header.tabIndex = 0;
+        header.setAttribute('aria-expanded', String(header.parentElement.classList.contains('open')));
+        header.nextElementSibling.inert = !header.parentElement.classList.contains('open');
+      });
+      const message = document.createElement('p');
+      message.className = 'public-panel-status';
+      message.setAttribute('role', 'status');
+      panel.querySelector('.panel-footer').before(message);
+      panel.querySelector('.panel-add-btn').textContent = 'Add to Order';
+      updatePanelPrice(id);
+    });
+  }
+
+  function publicPanelValidation(id) {
+    const contract = publicItemPanels.get(id);
+    if (!contract) return '';
+    if (contract.error) return contract.error;
+    if (contract.item.is_sold_out) return hasExplicitPublicUnavailableState(contract.item) ? 'Unavailable' : 'Sold Out';
+    for (const group of getPanelOptionGroups(id).filter(g => g.dataset.publicOption)) {
+      const count = group.querySelectorAll('.selected').length;
+      if (count < Number(group.dataset.min)) return 'Choose at least ' + group.dataset.min + ' for ' + group.getAttribute('aria-label') + '.';
+      if (count > Number(group.dataset.max)) return 'Choose up to ' + group.dataset.max + ' for ' + group.getAttribute('aria-label') + '.';
+    }
+    const sizeGroup = getPanelOptionGroups(id).find(g => ['size','pieces'].includes(g.dataset.group));
+    if (sizeGroup && !sizeGroup.querySelector('.selected')) return 'Choose a size.';
+    const selectedSize = sizeGroup?.querySelector('.selected');
+    if (selectedSize && contract.item.variants.some(v => v.id) && !selectedSize.dataset.sizeId) return 'This size could not be loaded.';
+    const total = getPanelBasePrice(id) + getPanelAddOnsPrice(id);
+    return Number.isFinite(total) && total >= 0 ? '' : 'This item price could not be loaded.';
+  }
+
+  function syncPublicPanelTemperature(id, value) {
+    const group = getPanelRootElement(id)?.querySelector('[data-group="size"]');
+    if (!group || !group.querySelector('[data-show-when]')) return;
+    const chips = [...group.querySelectorAll('.option-chip')];
+    chips.forEach(chip => {
+      chip.style.display = !chip.dataset.showWhen || chip.dataset.showWhen === normalizePublicMenuText(value) ? '' : 'none';
+      chip.classList.remove('selected');
+      chip.setAttribute('aria-pressed', 'false');
+    });
+    const first = chips.find(chip => chip.style.display !== 'none');
+    if (first) { first.classList.add('selected'); first.setAttribute('aria-pressed', 'true'); }
+  }
+
+  document.addEventListener('keydown', event => {
+    const target = event.target;
+    if (event.key === 'Escape' && activePanel) {
+      event.preventDefault();
+      setPublicPanelOpen(activePanel, false, true);
+    } else if (['Enter',' '].includes(event.key) && target.matches('.option-chip:not(button), .accordion-header')) {
+      event.preventDefault(); target.click();
+    }
+  });
 
   function initPanel(id, defaults) {
     if (!panelState[id]) {
@@ -7470,15 +7630,14 @@
 
   function togglePanel(id) {
     const wrap = document.getElementById('panel-wrap-' + id);
-    if (!wrap) return;
-    if (activePanel && activePanel !== id) {
-      const prevWrap = document.getElementById('panel-wrap-' + activePanel);
-      if (prevWrap) prevWrap.classList.remove('open');
-    }
-    const isOpen = wrap.classList.toggle('open');
-    activePanel = isOpen ? id : null;
-    if (isOpen) {
-      setTimeout(() => { wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+    if (!wrap || publicItemPanels.get(id)?.item.is_sold_out) return;
+    const open = !wrap.classList.contains('open');
+    if (activePanel && activePanel !== id) setPublicPanelOpen(activePanel, false);
+    setPublicPanelOpen(id, open, !open);
+    activePanel = open ? id : null;
+    if (open) {
+      wrap.querySelector('.public-panel-title')?.focus({ preventScroll: true });
+      setTimeout(() => { if (activePanel === id) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
     }
   }
 
@@ -7497,12 +7656,12 @@
     const group = sizeGroup || piecesGroup;
     if (group) {
       const sel = group.querySelector('.option-chip.selected');
-      if (sel) return parseInt(sel.dataset.price) || 0;
+      if (sel) return Number(sel.dataset.price) || 0;
     }
     // Fallback for fixed-price panels (e.g. Matcha/Hojicha — no size or pieces group).
     // The renderer sets data-base-price on the .expansion-panel element.
     const panelEl = getPanelRootElement(id);
-    if (panelEl && panelEl.dataset.basePrice) return parseInt(panelEl.dataset.basePrice) || 0;
+    if (panelEl && panelEl.dataset.basePrice) return Number(panelEl.dataset.basePrice) || 0;
     return 0;
   }
 
@@ -7512,7 +7671,7 @@
       const gname = group.dataset.group;
       if (gname === 'size' || gname === 'pieces' || gname === 'temperature') return;
       group.querySelectorAll('.option-chip.selected').forEach(chip => {
-        extra += parseInt(chip.dataset.price) || 0;
+        extra += Number(chip.dataset.price) || 0;
       });
     });
     return extra;
@@ -7525,6 +7684,10 @@
     const total  = (base + addons) * panelState[id].qty;
     const el = getPanelScopedElement(id, `[id="price-${id}"]`);
     if (el) el.textContent = '₱' + total.toLocaleString();
+    const message = publicPanelValidation(id);
+    const panel = getPanelRootElement(id);
+    if (panel?.querySelector('.public-panel-status')) panel.querySelector('.public-panel-status').textContent = message;
+    if (publicItemPanels.has(id) && panel) panel.querySelector('.panel-add-btn').disabled = Boolean(message);
   }
 
   function handleChipClick(chip) {
@@ -7534,14 +7697,19 @@
     const panelId   = group.dataset.panel;
     const groupName = group.dataset.group;
 
+    if (group.dataset.publicOption && !chip.classList.contains('selected') && type === 'multi'
+      && group.querySelectorAll('.selected').length >= Number(group.dataset.max)) return;
     if (type === 'single') {
+      const deselect = group.dataset.publicOption && Number(group.dataset.min) === 0 && chip.classList.contains('selected');
       group.querySelectorAll('.option-chip').forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
+      if (!deselect) chip.classList.add('selected');
     } else if (type === 'multi') {
       chip.classList.toggle('selected');
     }
+    group.querySelectorAll('.option-chip').forEach(c => c.setAttribute('aria-pressed', String(c.classList.contains('selected'))));
 
     // Temperature chip → swap size chip visibility
+    if (group.dataset.optionKey === 'temperature') syncPublicPanelTemperature(panelId, chip.dataset.value);
     if (groupName === 'temperature') {
       const tempVal = chip.dataset.value; // 'iced' or 'hot'
       const panel   = getPanelRootElement(panelId);
@@ -7578,6 +7746,8 @@
       }
     }
 
+    getPanelRootElement(panelId)?.querySelectorAll('.option-chip').forEach(c =>
+      c.setAttribute('aria-pressed', String(c.classList.contains('selected'))));
     updatePanelPrice(panelId);
     // Phase 5A: keep accordion summary in sync with chip selection
     updateGroupSummary(panelId, groupName);
@@ -7609,7 +7779,8 @@
 
   function panelAddToCart(id, name) {
     if (isOrderSubmittedLocked) return;
-    if (isSoldOutProductName(name)) return;
+    const contract = publicItemPanels.get(id);
+    if (contract ? Boolean(publicPanelValidation(id)) : isSoldOutProductName(name)) return;
     if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
     const qty     = panelState[id].qty;
     const options = getPanelOptions(id);
@@ -7621,13 +7792,13 @@
 
     // Derive variant from size/pieces
     const sizeVal = options.size;
-    const variant = sizeVal === 'large'   ? 'Large'
+    let variant = sizeVal === 'large'   ? 'Large'
                   : sizeVal === '12oz'    ? '12oz'
                   : sizeVal === 'regular' ? 'Regular'
                   : (options.pieces || '');
 
     // Derive temp
-    const temp = options.temperature ? options.temperature.toUpperCase() : null;
+    let temp = options.temperature ? options.temperature.toUpperCase() : null;
 
     // Build clean options (exclude size/pieces/temperature and 'none' values)
     const cleanOptions = {};
@@ -7648,17 +7819,38 @@
         // Sum all selected chips to handle multi-select groups (e.g. add-ons).
         // For single-select groups (0 or 1 selected) the result is identical.
         const p = [...grp.querySelectorAll('.option-chip.selected')]
-          .reduce((sum, c) => sum + (parseInt(c.dataset.price) || 0), 0);
+          .reduce((sum, c) => sum + (Number(c.dataset.price) || 0), 0);
         if (p > 0) cleanPrices[k] = p;
       }
     });
 
-    const key = buildCartKey(name, variant, temp, cleanOptions);
+    let productSize = null;
+    if (contract) {
+      const selected = getPanelRootElement(id).querySelector('[data-group="size"] .selected, [data-group="pieces"] .selected');
+      productSize = selected ? contract.item.variants.find(v => String(v.id || '') === selected.dataset.sizeId)
+        : contract.item.variants[0];
+      if (document.getElementById('panel-wrap-' + id).classList.contains('generic-public-product')) variant = productSize?.label || '';
+      getPanelOptionGroups(id).filter(group => group.dataset.publicOption).forEach(group => {
+        delete cleanOptions[group.dataset.group];
+        delete cleanPrices[group.dataset.group];
+        const chosen = [...group.querySelectorAll('.selected')];
+        if (!chosen.length) return;
+        const key = group.dataset.optionKey;
+        const value = chosen.map(c => c.dataset.value).sort().join(',');
+        if (key === 'temperature') temp = value.toUpperCase();
+        else Object.defineProperty(cleanOptions, key, { value, enumerable: true, configurable: true });
+        const delta = chosen.reduce((sum,c) => sum + Number(c.dataset.price), 0);
+        if (delta) Object.defineProperty(cleanPrices, key, { value: delta, enumerable: true, configurable: true });
+      });
+    }
+    const key = buildCartKey(name, variant, temp, cleanOptions)
+      + (contract ? '|product:' + contract.item.product_id + '|size:' + (productSize?.id || '') : '');
     const existing = cart.find(i => i.key === key);
     if (existing) {
       existing.qty += qty;
     } else {
-      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions, optionPrices: cleanPrices });
+      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions, optionPrices: cleanPrices,
+        ...(contract ? { product_id: contract.item.product_id, product_size_id: productSize?.id || null, category_name: contract.categoryName || null } : {}) });
     }
 
     renderCart();
@@ -7681,7 +7873,7 @@
     if (qtyEl) qtyEl.textContent = '1';
     updatePanelPrice(id);
     const wrap = document.getElementById('panel-wrap-' + id);
-    if (wrap) wrap.classList.remove('open');
+    if (wrap) setPublicPanelOpen(id, false, true);
     activePanel = null;
   }
 
@@ -8062,6 +8254,8 @@
     const group = headerEl.closest('.accordion-group');
     if (!group) return;
     group.classList.toggle('open');
+    headerEl.setAttribute('aria-expanded', String(group.classList.contains('open')));
+    if (headerEl.nextElementSibling) headerEl.nextElementSibling.inert = !group.classList.contains('open');
   }
 
   // Post-process a rendered panel element: find divs with data-collapsible='true'
@@ -9809,6 +10003,8 @@
       name: product.name,
       description: product.description,
       image_url: normalizePublicMenuImageUrl(product.image_url),
+      is_published: product.is_published,
+      archived_at: product.archived_at,
       is_curv_pick: product.is_curv_pick,
       is_seasonal: product.is_seasonal,
       is_available: product.is_available,
@@ -9888,8 +10084,9 @@
       return map;
     }, {});
 
-    const byProductId = {};
-    const byProductName = {};
+    const byProductId = Object.create(null);
+    const byProductName = Object.create(null);
+    const ambiguousNames = new Set();
 
     optionGroups.forEach(group => {
       if (!group.product_id || !group.option_group_id) {
@@ -9912,9 +10109,7 @@
         };
       }
 
-      if (byProductName[productName] && byProductName[productName].product_id !== group.product_id) {
-        throw new Error(`Option data cannot be keyed safely because "${productName}" appears more than once.`);
-      }
+      if (byProductName[productName] && byProductName[productName].product_id !== group.product_id) ambiguousNames.add(productName);
 
       const entry = byProductId[group.product_id];
       const key = `${group.product_id}:${group.option_group_id}`;
@@ -9940,7 +10135,7 @@
       entry.groups.push(shapedGroup);
       entry.choicesByGroupId[group.option_group_id] = choices;
       entry.defaultsByGroupId[group.option_group_id] = defaults;
-      byProductName[productName] = entry;
+      byProductName[productName] = ambiguousNames.has(productName) ? null : entry;
     });
 
     return { byProductName, byProductId };

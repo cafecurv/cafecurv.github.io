@@ -94,7 +94,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         verify(sectionId, [{ ...legacy[0], variants: [variant('Small Cup'), variant('Family Box', 250)] }], 1, 'unfamiliar sizes');
         check(renderedPublicPanels.size === 0, sectionId + ': unfamiliar sizes must not be relabeled');
         verify(sectionId, [{ ...legacy[0], is_available: false, variants: [] }], 1, 'unavailable no price');
-        check(!document.querySelector('#' + sectionId + ' [data-public-menu-product-id] button:not([disabled])'),
+        check(!document.querySelector('#' + sectionId + ' [data-public-menu-product-id] > .product-card:not([disabled])'),
           sectionId + ': unavailable disabled');
         verify(sectionId, [{ ...legacy[0], is_sold_out: true }], 1, 'sold out');
         check(!document.querySelector('#' + sectionId + ' .product-card:not([disabled])'),
@@ -127,7 +127,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       render('matcha', [moved], [{ id: 'new-category', name: 'New Category', sort_order: 3 }]);
       check(!renderedPublicPanels.size, 'moved pick must not link old panel');
       check(publicMenuSearchIndex[0].renderedCategoryKey === 'public-category-new-category', 'moved search route');
-      check(!document.querySelector('#seasonal .curv-pick-card[onclick]'), 'moved pick uses generic ordering');
+      check(document.querySelector('#seasonal .curv-pick-card[onclick]').getAttribute('onclick').includes('generic-'), 'moved pick opens actual generic panel');
 
       for (const alias of PUBLIC_TAKOYAKI_SAVORY_CATEGORY_NAMES) {
         render('bites', [raw('OG Takoyaki', [variant('Box')]), raw('New Side')], [], alias);
@@ -143,7 +143,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         'no duplicate DOM IDs');
 
       render('salads', [raw("Chef's Pick", [variant("Chef's Size", 123), variant('Large', 234)])]);
-      const button = document.querySelector('#salads .add-btn-pill');
+      const button = document.querySelector('#salads .panel-add-btn');
       new Function(button.getAttribute('onclick'));
       cart.length = 0;
       button.click();
@@ -188,7 +188,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       render('salads', [raw('Disabled With Price', undefined, { is_available: false })]);
       check(document.querySelector('#salads .menu-item-badge').textContent === 'Unavailable', 'generic unavailable badge');
       cart.length = 0;
-      document.querySelector('#salads .add-btn').click();
+      document.querySelector('#salads .panel-add-btn').click();
       check(cart.length === 0, 'unavailable generic cannot add to cart');
       render('matcha', [raw('Kagoshima Matcha Cream'), raw('Other Matcha')]);
       return { assertions, matrix };

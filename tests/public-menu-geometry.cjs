@@ -77,7 +77,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     await page.evaluate(() => showSection('matcha'));
     console.log('Matcha image/text geometry:', await page.locator('#matcha .generic-public-product').first().evaluate(card => {
       const bounds = el => ({ width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height });
-      return { card: bounds(card), image: bounds(card.querySelector('img')), text: bounds(card.querySelector('.item-info')) };
+      return { card: bounds(card.querySelector('.product-card')), image: bounds(card.querySelector('img')), text: bounds(card.querySelector('.product-card-info')) };
     }));
     const widths = [320, 375, 390, 430, 768, 1280];
     for (const width of widths) {
@@ -92,12 +92,12 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const geometry = await page.locator('#' + sectionId).evaluate(section => {
           const rect = el => { const r=el.getBoundingClientRect(); return { left:r.left, top:r.top, right:r.right, bottom:r.bottom, width:r.width, height:r.height }; };
           const contained = (inner, outer) => inner.left >= outer.left - 1 && inner.right <= outer.right + 1 && inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1;
-          const cards = [...section.querySelectorAll('.generic-public-product, .curv-pick-card')];
+          const cards = [...section.querySelectorAll('.unified-product-card')];
           return {
             overflow: document.documentElement.scrollWidth > innerWidth,
             cards: cards.map(card => {
               const box = rect(card), info = card.querySelector('.item-info, .product-card-info'), image = card.querySelector('img');
-              const next = card.nextElementSibling;
+              const next = card.closest('.menu-item-wrap')?.nextElementSibling || (card.classList.contains('curv-pick-card') ? card.nextElementSibling : null);
               const textBoxes = [...card.querySelectorAll('.item-name, .item-desc, .menu-item-badge, .price-single, .price-pieces, button')].map(el => ({
                 contained: contained(rect(el), box), wraps: el.scrollWidth <= el.clientWidth + 1 || getComputedStyle(el).display === 'inline'
               }));
@@ -153,23 +153,27 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     const behavior = await page.evaluate(async () => {
       const card = document.querySelector('#matcha [data-public-menu-product-id="geometry-matcha-product-0"]');
       cart.length = 0;
-      card.querySelector('button').click();
+      card.querySelector('.product-card').click();
+      const didNotQuickAdd = cart.length === 0;
+      card.querySelector('.panel-add-btn').click();
       const added = cart.length === 1 && cart[0].name === 'Banana Pudding Matcha Latte' && cart[0].price === 185;
       const panel = renderedPublicPanels.get('geometry-kagoshima');
       const pick = [...document.querySelectorAll('#seasonal .curv-pick-card[onclick]')].find(p => p.textContent.includes('Kagoshima Matcha Cream'));
       pick.click();
       await new Promise(resolve => setTimeout(resolve, 100));
       const panelOpen = document.getElementById('panel-' + panel.panelId).closest('.menu-item-wrap').classList.contains('open');
-      const genericPick = [...document.querySelectorAll('#seasonal .curv-pick-quick-card')].find(p => p.textContent.includes('Banana Pudding Matcha Latte'));
+      const genericPick = [...document.querySelectorAll('#seasonal .curv-pick-card')].find(p => p.textContent.includes('Banana Pudding Matcha Latte'));
       cart.length = 0;
-      genericPick.querySelector('button').click();
+      genericPick.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      card.querySelector('.panel-add-btn').click();
       const pickAdded = cart.length === 1 && cart[0].name === 'Banana Pudding Matcha Latte';
       geometryMenu.products.find(p => p.id === 'geometry-matcha-product-0').is_available = false;
       geometryMenu.products.find(p => p.id === 'geometry-matcha-product-1').is_sold_out = true;
       renderPublicMenuFromSupabase(geometryMenu);
       const disabled = ['geometry-matcha-product-0','geometry-matcha-product-1'].every(id =>
         document.querySelector('#matcha [data-public-menu-product-id="' + id + '"] button').disabled);
-      return { added, pickAdded, panelOpen, disabled };
+      return { added, pickAdded, panelOpen, disabled, didNotQuickAdd };
     });
     for (const [key,value] of Object.entries(behavior)) check(value, key);
     check(errors.length === 0, 'no uncaught errors: ' + errors.join(', '));
