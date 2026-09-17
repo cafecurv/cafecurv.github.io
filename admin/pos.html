@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>CURV POS</title>
+  <link rel="stylesheet" href="admin.css?v=u2-action-standard">
+  <link rel="stylesheet" href="pos.css?v=p1c-1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="pos-kitchen.js?v=p1b-1" defer></script>
+  <script src="pos-customer-print.js?v=p1c-1" defer></script>
+  <script src="pos.js?v=p1c-1" defer></script>
+</head>
+<body class="pos-page">
+  <header class="pos-top"><strong>CURV <span>POS</span></strong><span id="identity"></span>
+    <a id="owner-link" href="index.html" hidden>Control</a><button id="sign-out" hidden>Sign out</button></header>
+  <main>
+    <p id="status" role="status" aria-live="polite">Sign in to use POS.</p>
+    <form id="login"><h1>Counter sign in</h1>
+      <label>Email<input id="email" type="email" autocomplete="username" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+      <button>Sign in</button>
+    </form>
+    <section id="workspace" hidden>
+      <nav class="pos-actions" aria-label="POS"><button id="new-order">New Order</button><button id="open-orders">Open Orders</button><button id="refresh-catalog">Refresh products</button></nav>
+      <aside id="recovery" hidden><p>We’re checking whether your change was saved. Don’t submit it again yet.</p><button id="retry">Check saved change</button></aside>
+      <aside id="proposal" hidden></aside>
+      <section id="open-list" hidden aria-label="Open orders"></section>
+      <div class="pos-grid">
+        <section aria-labelledby="products-heading"><h1 id="products-heading">Products</h1>
+          <div class="pos-filters"><label>Search<input id="search" type="search" placeholder="Find a product"></label>
+            <label>Category<select id="category"><option value="">All categories</option></select></label>
+            <label>Section<select id="section"><option value="">All sections</option></select></label></div>
+          <div id="products" class="pos-products"></div>
+          <form id="item-editor" hidden><h2 id="item-title"></h2>
+            <p id="configuration-notice">Only configured sizes and options are offered. Ask the owner if a choice is missing.</p>
+            <label>Size / variant<select id="size" required></select></label><div id="options"></div>
+            <label>Quantity<input id="quantity" type="number" min="1" max="999" step="1" value="1" required></label>
+            <label>Item note<textarea id="item-note" maxlength="500"></textarea></label>
+            <p id="estimate"></p><button id="save-item">Add item</button><button id="cancel-item" type="button">Cancel</button>
+          </form>
+        </section>
+        <section class="pos-order" aria-labelledby="order-number"><h1 id="order-number">New Order</h1><p id="order-state">Add the first item to save this order.</p>
+          <form id="header-editor"><label>Customer name<input id="customer" maxlength="200" placeholder="Guest"></label>
+            <label>Order type<select id="order-type"><option value="dine_in">Dine-In</option><option value="pickup">Takeout</option><option value="delivery">Delivery</option></select></label>
+            <label>Order note<textarea id="order-note" maxlength="1000"></textarea></label><button id="save-header" hidden>Save order details</button></form>
+          <div id="items"></div><p class="pos-total">Total <strong id="total">₱0.00</strong></p>
+          <button id="hold" hidden>Hold</button><button id="resume" hidden>Resume</button>
+          <section id="kitchen" hidden aria-label="Kitchen updates">
+            <p id="kitchen-status" aria-live="polite"></p><div id="kitchen-pending"></div>
+            <button id="send-kitchen">Send Kitchen Updates</button><button id="reprint-kitchen">Reprint Last Ticket</button>
+            <p class="pos-muted">Sending saves a ticket. If printing fails or is canceled, reprint the saved ticket.</p>
+          </section>
+          <div class="pos-copy-actions"><button id="print-order-copy" disabled>Print Order Copy</button><p class="pos-muted">Unpaid order reference only. Not proof of payment.</p></div>
+          <p class="pos-muted">Delivery fees and payments are not available here yet.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

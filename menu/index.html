@@ -10094,9 +10094,18 @@
       }
 
       const product = productById[group.product_id];
+      if (!product) {
+        console.warn('[CURV menu] Skipping option-group mapping: product is absent from the public product response.', {
+          product_id: group.product_id,
+          option_group_id: group.option_group_id,
+          group_key: group.group_key,
+          publicProductCount: products.length
+        });
+        return;
+      }
       const productName = product && String(product.name || '').trim();
       if (!productName) {
-        throw new Error('Option group row points to a product that is missing from the public product fetch.');
+        throw new Error('Option group row points to a public product with a missing name.');
       }
 
       if (!byProductId[group.product_id]) {
@@ -10238,7 +10247,7 @@
       latestPublicMenuOptions = null;
 
       if (optionErrors.length) {
-        console.warn('[CURV menu] Option fetch failed, all products use hardcoded options', optionErrors);
+        console.warn('[CURV menu] Option fetch failed. Products without a validated options panel remain unavailable.', optionErrors);
       } else {
         try {
           shapedPublicMenu.options = buildSupabaseOptionsMap(
@@ -10252,7 +10261,7 @@
         } catch (optionError) {
           shapedPublicMenu.options = null;
           latestPublicMenuOptions = null;
-          console.warn('[CURV menu] Option fetch failed, all products use hardcoded options', optionError);
+          console.warn('[CURV menu] Option data validation failed. Products without a validated options panel remain unavailable.', optionError);
         }
       }
 

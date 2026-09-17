@@ -1,0 +1,63 @@
+const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const {chromium}=require(process.env.CURV_PLAYWRIGHT_MODULE||'playwright');
+const {copyFixture,businessState}=require('./pos-customer-print.cjs');const root=path.resolve(__dirname,'..');
+(async()=>{
+  const f=await copyFixture(),browser=await chromium.launch({channel:process.env.CURV_BROWSER_CHANNEL||'msedge',headless:true});
+  let checks=0;const ok=(v,label)=>{assert.ok(v,label);checks++;};
+  try{
+    const name='Long product '+('wrapping-name-'.repeat(18))+' <img src=x onerror=bad()>',option='Modifier '+('very-long-'.repeat(15))+' <script>bad()</script>';
+    await f.db.query('update products set name=$1',[name]);await f.db.query('update option_choices set label=$1',[option]);
+    const context=await browser.newContext({viewport:{width:1280,height:900}}),calls=[];
+    await context.exposeBinding('fixtureRpc',async(_s,n,a)=>{calls.push(n);return f.rpc(n,a);});
+    await context.addInitScript(({user})=>{
+      window.print=()=>{window.printRequests=(window.printRequests||0)+1;};
+      window.supabase={createClient:()=>({rpc:(n,a)=>window.fixtureRpc(n,a),auth:{getSession:async()=>({data:{session:{user:{id:user}}}}),onAuthStateChange:()=>{},signOut:async()=>({})}})};
+    },{user:f.id(2)});
+    await context.route('**/*',route=>{const u=new URL(route.request().url()),name=u.pathname.split('/').pop();
+      if(u.origin==='https://curv.test'&&u.pathname==='/admin/'+name&&['pos.html','pos.js','pos.css','admin.css','pos-kitchen.js','pos-customer-print.js'].includes(name))return route.fulfill({path:path.join(root,'admin',name)});
+      return route.abort();});
+    const page=await context.newPage(),errors=[];context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));page.on('pageerror',e=>errors.push(e.message));
+    await page.goto('https://curv.test/admin/pos.html');await page.getByText('Ready to take orders.').waitFor();
+    ok(await page.locator('#print-order-copy').isDisabled(),'new local order cannot print');
+    await page.locator('#products button').click();await page.locator('#quantity').fill('2');await page.locator('#item-note').fill('No ice <img src=x onerror=bad()>');
+    await page.locator('#customer').fill('Jasmine');await page.locator('#save-item').click();await page.getByText('Order saved.',{exact:true}).waitFor();
+    const saved=(await f.rpc('pos_list_open_orders')).data[0];
+    let before=await businessState(f.db);calls.length=0;
+    let pp=page.waitForEvent('popup');await page.locator('#print-order-copy').click();let popup=await pp;await popup.getByText('ORDER COPY',{exact:true}).waitFor();
+    ok((await popup.locator('main').innerText()).includes(saved.order_number),'same order number printed');
+    ok((await popup.locator('.copy-item').innerText()).includes('₱185.00 × 2')&&(await popup.locator('.total').innerText()).includes('₱370.00'),'quantity/unit/line/total visible');
+    ok((await popup.locator('.option').innerText()).includes('+₱25.00 / unit'),'option price effect visible');
+    ok((await popup.locator('main').innerText()).includes(name)&&(await popup.locator('.note').innerText()).includes('No ice'),'saved names/notes retained');
+    ok(await popup.locator('main img,main script').count()===0,'HTML injection escaped');
+    ok(await popup.locator('.unpaid').innerText()==='UNPAID'&&(await popup.locator('footer').innerText()).includes('Not proof of payment.'),'unpaid disclaimer');
+    assert.deepEqual(await businessState(f.db),before);checks++;
+    ok(calls.join(',')==='pos_get_order_copy','print calls only read RPC');
+    await popup.emulateMedia({media:'print'});
+    ok(await popup.evaluate(()=>document.body.scrollWidth<=document.body.clientWidth+1),'long content wraps within paper width');
+    ok(await popup.evaluate(()=>Math.abs(document.body.getBoundingClientRect().width-52*96/25.4)<1),'52mm width');
+    ok(await popup.locator('.controls').isHidden(),'screen explanation omitted on paper');
+    const proof=path.join(root,'node_modules','.pos-printer-proof');fs.mkdirSync(proof,{recursive:true});await popup.screenshot({path:path.join(proof,'order-copy.png'),fullPage:true});
+    await popup.close();assert.deepEqual(await businessState(f.db),before);checks++;
+    // Browser-native printing is stubbed; closing models cancellation without writes.
+    await page.evaluate(()=>{window.realOpen=window.open;window.open=()=>null;});
+    await page.locator('#print-order-copy').click();await page.getByText('Allow pop-ups, then select Print Order Copy again. The order has not changed.').waitFor();
+    assert.deepEqual(await businessState(f.db),before);checks++;
+    await page.evaluate(()=>{window.open=window.realOpen;});
+    let current=(await f.rpc('pos_get_order',{p_order_id:saved.id})).data;
+    await f.db.exec('update product_sizes set price=999;update option_choices set price_delta=99;');
+    await f.rpc('pos_update_item',{p_key:f.id(13000),p_order_id:saved.id,p_revision:current.revision,p_item_id:current.items[0].id,p_quantity:3,p_item_note:'Latest saved note'});
+    before=await businessState(f.db);pp=page.waitForEvent('popup');await page.locator('#print-order-copy').click();popup=await pp;
+    await popup.getByText('Latest saved note',{exact:true}).waitFor();
+    ok((await popup.locator('.total').innerText()).includes('₱555.00')&&(await popup.locator('.amount-row').first().innerText()).includes('₱185.00'),'latest state with historical pricing despite stale POS screen');
+    assert.deepEqual(await businessState(f.db),before);checks++;await popup.close();
+    await page.reload();await page.getByText('Ready to take orders.').waitFor();await page.locator('#hold').click();await page.locator('#resume').waitFor();
+    ok(await page.locator('#print-order-copy').isEnabled(),'HELD allows copy separately from kitchen send');
+    before=await businessState(f.db);pp=page.waitForEvent('popup');await page.locator('#print-order-copy').click();popup=await pp;await popup.getByText('ORDER COPY',{exact:true}).waitFor();
+    assert.deepEqual(await businessState(f.db),before);checks++;await popup.close();
+    await page.locator('#resume').click();await page.locator('#hold').waitFor();current=(await f.rpc('pos_get_order',{p_order_id:saved.id})).data;
+    await f.rpc('pos_remove_item',{p_key:f.id(13001),p_order_id:saved.id,p_revision:current.revision,p_item_id:current.items[0].id});
+    await page.locator('#print-order-copy').click();await page.getByText('Add and save an item before printing an Order Copy.').waitFor();checks++;
+    ok(errors.length===0,'no browser exceptions '+errors.join(';'));
+    console.log(checks+' offline P1C browser checks passed; physical output not tested.');
+  }finally{await browser.close();await f.db.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
