@@ -25,10 +25,11 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       window.fixtureId = n => '00000000-0000-4000-8000-' + String(n).padStart(12, '0');
       window.loadOptionsScenario = async scenario => {
         cart.length = 0;
-        const categories = ['Salads', 'Sushi'].map((name, i) => ({ id: fixtureId(100+i), name, sort_order: i }));
+        const categories = (scenario.specialized ? ['Matcha & Hojicha', 'Takoyaki & Savory Bites'] : ['Salads', 'Sushi', 'Pasta']).map((name, i) => ({ id: fixtureId(100+i), name, sort_order: i }));
         const products = categories.map((category, i) => ({ id: fixtureId(i+1), category_id: category.id,
-          name: 'Sample ' + category.name, is_published: true, is_available: true, is_sold_out: false, is_curv_pick: true }));
-        const sizes = products.map((product, i) => ({ id: fixtureId(200+i), product_id: product.id, label: 'Each', price: 150, sort_order: 0 }));
+          name: scenario.specialized ? ['Kagoshima Matcha Cream', 'OG Takoyaki'][i] : 'Sample ' + category.name, is_published: true, is_available: true, is_sold_out: false, is_curv_pick: true }));
+        const sizes = products.flatMap((product, i) => (scenario.specialized ? (i === 0 ? ['Each'] : ['4pcs', '8pcs', '12pcs']) : ['Each'])
+          .map((label, j) => ({ id: fixtureId(200+i*10+j), product_id: product.id, label, price: 150+j*50, sort_order: j })));
         const group = { product_id: fixtureId(1), option_group_id: fixtureId(300), group_key: 'dressing', name: 'Dressing',
           selection_type: 'single', is_required: true, min_selections: 1, max_selections: 1, sort_order: 0 };
         const choice = { product_id: fixtureId(1), option_group_id: fixtureId(300), option_choice_id: fixtureId(400),
@@ -37,6 +38,10 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const choices = scenario.required && !scenario.noChoices ? [choice] : [];
         const defaults = scenario.required && !scenario.noDefault ? [{ product_id: fixtureId(1), option_group_id: fixtureId(300),
           option_choice_id: fixtureId(scenario.brokenDefault ? 401 : 400) }] : [];
+        if (scenario.missingChoiceId) delete choice.option_choice_id;
+        if (scenario.missingGroupId) delete group.option_group_id;
+        if (scenario.missingDefaultId) delete defaults[0].option_choice_id;
+        if (scenario.unattributableGroup) groups.push({ option_group_id: fixtureId(888) });
         if (scenario.badRules) group.selection_type = 'invalid';
         if (scenario.orphan) {
           groups.unshift({ ...group, product_id: fixtureId(999) });
@@ -79,32 +84,48 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     const run = scenario => page.evaluate(s => loadOptionsScenario(s), scenario);
     let result = await run({});
     check(result.panels.every(p => !p.disabled), 'empty successful options: salad and sushi enabled');
-    check(result.cart.length === 2, 'salad and sushi can actually be added');
+    check(result.cart.length === 3, 'salad and sushi can actually be added');
     check(!result.nullMap && result.warnings.length === 0, 'empty successful reads produce valid empty map: ' + JSON.stringify(result.warnings));
     result = await run({ orphan: true });
-    check(result.cart.length === 2 && result.panels.every(p => !p.disabled), 'orphan does not disable unrelated products');
+    check(result.cart.length === 3 && result.panels.every(p => !p.disabled), 'orphan does not disable unrelated products');
     check(result.orphanSkipped, 'orphan excluded from both map indexes');
     const warning = result.warnings.find(w => String(w[0]).includes('Skipping option-group mapping'));
     check(!!warning && warning[1].product_id.endsWith('999') && warning[1].option_group_id.endsWith('300') &&
-      warning[1].group_key === 'dressing' && warning[1].publicProductCount === 2, 'warning identifies orphan UUID, group and fetched product count');
+      warning[1].group_key === 'dressing' && warning[1].publicProductCount === 3, 'warning identifies orphan UUID, group and fetched product count');
     for (const view of ['public_menu_option_groups', 'public_menu_option_choices', 'public_menu_option_defaults']) {
       result = await run({ required: true, failedView: view });
       check(result.reads.includes(view), view + ': actual fetch path exercised');
       check(result.nullMap, view + ': failed request preserves null map');
-      check(result.panels.every(p => p.disabled) && result.cart.length === 0, view + ': generic products fail closed');
-      check(result.warnings.some(w => String(w[0]).includes('Option fetch failed')), view + ': request failure diagnosed');
+      check(result.panels[0].disabled, view + ': known required options fail closed');
+      check(view === 'public_menu_option_groups'
+        ? result.panels.every(p => p.disabled) && result.cart.length === 0
+        : result.panels.slice(1).every(p => !p.disabled) && result.cart.length === 2,
+        view + ': only confirmed group-free products can fall back');
+      check(result.warnings.some(w => String(w[0]).includes('Option fetch failed') && w[1].some(e => e.view === view)), view + ': request failure diagnosed');
     }
-    for (const scenario of [{ noChoices: true }, { badRules: true }, { brokenDefault: true }]) {
+    for (const scenario of [{ noChoices: true }, { badRules: true }, { brokenDefault: true }, { missingChoiceId: true }, { missingGroupId: true }, { missingDefaultId: true }]) {
       result = await run({ required: true, ...scenario });
       check(!result.nullMap && result.panels[0].disabled, JSON.stringify(scenario) + ': affected product rejected locally');
-      check(!result.panels[1].disabled && result.cart.length === 1 && result.cart[0].product_id.endsWith('002'), 'unrelated sushi remains addable');
+      check(!result.panels[1].disabled && result.cart.length === 2 && result.cart[0].product_id.endsWith('002'), 'unrelated sushi remains addable');
+    }
+    for (const failedView of ['public_menu_option_choices', 'public_menu_option_defaults']) {
+      result = await run({ failedView });
+      check(result.nullMap && result.cart.length === 3, failedView + ': successful empty group read permits all three generic products');
+      result = await run({ failedView, unattributableGroup: true });
+      check(result.panels.every(p => p.disabled), 'unattributable group metadata cannot establish safe fallback');
     }
     result = await run({ required: true, noDefault: true });
     check(result.panels[0].disabled && !result.panels[1].disabled, 'required choice still required without default');
     result = await run({ required: true, orphan: true });
-    check(result.panels.every(p => !p.disabled) && result.cart.length === 2, 'valid required options survive orphan mapping');
+    check(result.panels.every(p => !p.disabled) && result.cart.length === 3, 'valid required options survive orphan mapping');
     check(result.panels[0].selectedDefault && result.cart[0].options.dressing === 'sesame', 'valid default selected and retained in cart');
     check(result.cart[0].price === 160, 'valid option price effect retained');
+    for (const failedView of [undefined, 'public_menu_option_groups', 'public_menu_option_choices', 'public_menu_option_defaults']) {
+      result = await run({ specialized: true, failedView });
+      check(result.cart.length === 2 && result.panels.every(p => !p.disabled), 'Drinks/Takoyaki preserve validated specialized behavior: ' + failedView + JSON.stringify(result));
+    }
+    result = await run({ specialized: true, required: true, failedView: 'public_menu_option_choices' });
+    check(result.panels[0].disabled && !result.panels[1].disabled, 'known configured options cannot bypass failure through specialized panel');
     check(errors.length === 0, 'no browser script errors: ' + errors.join('; '));
     console.log('Public menu options hydration: ' + checks + ' assertions passed');
   } finally { await browser.close(); }
