@@ -1809,14 +1809,8 @@
     color: var(--gray-light);
   }
 
-  .customer-type-toggle {
-    width: 100%;
-  }
-
-  .customer-type-toggle .temp-tab {
-    flex: 1;
-  }
-
+  #customer-details-memory { font-size: 14px; }
+  #forget-customer-details { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
   /* ── CART QTY CONTROLS ── */
   .cart-qty-controls {
     display: flex;
@@ -2748,7 +2742,7 @@
         <div class="hto-num">2</div>
         <div>
           <div class="hto-step-title">Fill in your details</div>
-          <div class="hto-step-desc">Choose <strong>New</strong> or <strong>Returning Customer</strong>, then select your order method. Delivery customers may choose CURV Rider or Lalamove.</div>
+          <div class="hto-step-desc">Enter your details, then select your order method. You can choose to remember your details on this device. Delivery customers may choose CURV Rider or Lalamove.</div>
         </div>
       </div>
       <div class="hto-step">
@@ -3474,12 +3468,11 @@
         <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
       </div>
 
-      <div class="form-group" id="customer-type-field">
-        <label class="form-label">Customer Type</label>
-        <div class="temp-toggle-wrap customer-type-toggle" id="customerTypeToggle" role="group" aria-label="Customer Type">
-          <button class="temp-tab active" type="button" data-customer-type="new" onclick="setCustomerType('new')">New customer</button>
-          <button class="temp-tab" type="button" data-customer-type="returning" onclick="setCustomerType('returning')">Returning customer</button>
-        </div>
+      <div class="form-group" id="customer-details-memory">
+        <label><input type="checkbox" id="remember-customer-details" aria-describedby="customer-details-help"> Remember my details on this device</label>
+        <p class="payment-note" id="customer-details-help">Saves your details in this browser. Avoid using this on a shared device.</p>
+        <p class="payment-note" id="customer-details-status" role="status"></p>
+        <button type="button" id="forget-customer-details" hidden>Forget saved details</button>
       </div>
 
       <div class="recent-order-reminder" id="recentOrderReminder" hidden></div>
@@ -3510,7 +3503,6 @@
           <label class="form-label">Delivery Address</label>
           <input class="form-input" type="text" id="f-address" placeholder="House no. / street / subdivision / landmark">
         </div>
-        <div class="payment-note" id="returning-customer-note" hidden>No need to retype your address if it's the same as before.</div>
       </div>
 
       <div class="form-group" id="preferred-time-field">
@@ -7899,19 +7891,6 @@
     return getOrderMethod() === 'dine_in';
   }
 
-  function getCustomerType() {
-    const active = document.querySelector('[data-customer-type].active');
-    return active && active.dataset.customerType === 'returning' ? 'returning' : 'new';
-  }
-
-  function setCustomerType(type) {
-    const safeType = type === 'returning' ? 'returning' : 'new';
-    document.querySelectorAll('[data-customer-type]').forEach((button) => {
-      button.classList.toggle('active', button.dataset.customerType === safeType);
-    });
-    syncOrderMethodFields();
-  }
-
   function getDeliveryOptionLabel(value) {
     if (value === 'curv_rider') return 'CURV Rider';
     if (value === 'lalamove') return 'Lalamove';
@@ -7935,26 +7914,19 @@
     const deliveryFeeInfo = document.getElementById('delivery-fee-info');
     const deliveryAddressField = document.getElementById('delivery-address-field');
     const addressInput = document.getElementById('f-address');
-    const returningCustomerNote = document.getElementById('returning-customer-note');
-    const customerTypeField = document.getElementById('customer-type-field');
     const preferredTimeField = document.getElementById('preferred-time-field');
     const timeLabel = document.getElementById('preferred-time-label');
     const nameHelper = document.getElementById('dine-in-name-helper');
     const paymentSelect = document.getElementById('f-payment');
     const paymentNote = document.getElementById('payment-note');
-    const isReturningCustomer = getCustomerType() === 'returning';
-    const shouldShowAddress = delivery && !isReturningCustomer;
+    const shouldShowAddress = delivery;
 
-    if (customerTypeField) customerTypeField.hidden = dineIn;
-    document.querySelectorAll('[data-customer-type]').forEach(button => { button.disabled = dineIn || isOrderSubmittedLocked; });
     if (deliveryFeeInfo) deliveryFeeInfo.hidden = !delivery;
     if (deliveryFields) deliveryFields.hidden = !delivery;
     if (deliveryAddressField) deliveryAddressField.hidden = !shouldShowAddress;
     if (addressInput) {
-      if (dineIn) addressInput.value = '';
       addressInput.disabled = !shouldShowAddress || isOrderSubmittedLocked;
     }
-    if (returningCustomerNote) returningCustomerNote.hidden = !(delivery && isReturningCustomer);
     if (preferredTimeField) preferredTimeField.hidden = dineIn;
     if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
     if (nameHelper) nameHelper.hidden = !dineIn;
@@ -8831,8 +8803,6 @@
     const orderMethod = getOrderMethod();
     const isDelivery  = orderMethod === 'delivery';
     const isDineIn = orderMethod === 'dine_in';
-    const customerType = getCustomerType();
-    const isReturningCustomer = customerType === 'returning';
     const orderMethodLabel = dSel && dSel.selectedIndex >= 0 ? dSel.options[dSel.selectedIndex].text : (isDelivery ? 'Delivery' : 'Pick-up');
     const deliveryOptionValue = getDeliveryOptionValue();
     const deliveryOptionLabel = getDeliveryOptionLabel(deliveryOptionValue);
@@ -8847,7 +8817,7 @@
     if (!name) { alert('Please fill in your name.'); return null; }
     if (!contact) { alert('Please fill in your contact number.'); return null; }
     if (!dSel.value) { alert('Please select an order method.'); return null; }
-    if (isDelivery && !isReturningCustomer && !address) { alert('Please fill in your delivery address.'); return null; }
+    if (isDelivery && (!address || /^returning customer$/i.test(address))) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
     if (!isDineIn && deliveryTimeMode === 'specific' && !specificTime) { alert('Please specify your preferred time.'); return null; }
     const preferredTimeValidation = getPreferredTimeValidationMessage();
@@ -8872,11 +8842,10 @@
     msg += `\n`;
     msg += `👤 Name: ${name}\n`;
     msg += `📞 Contact: ${contact}\n`;
-    if (!isDineIn) msg += `👥 Customer Type: ${isReturningCustomer ? 'Returning customer' : 'New customer'}\n`;
     msg += `🚗 Order Method: ${orderMethodLabel}\n`;
     if (isDelivery) {
       msg += `🛵 Delivery Method: ${deliveryOptionLabel}\n`;
-      msg += `📍 Delivery Address: ${isReturningCustomer ? 'Returning customer' : address}\n`;
+      msg += `📍 Delivery Address: ${address}\n`;
     }
     if (!isDineIn) msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
@@ -8909,7 +8878,6 @@
     const name = document.getElementById('f-name').value.trim();
     const contact = document.getElementById('f-contact').value.trim();
     const method = getOrderMethod();
-    const customerType = getCustomerType();
     const address = document.getElementById('f-address').value.trim();
     const paymentSelect = document.getElementById('f-payment');
     const notes = document.getElementById('f-notes').value.trim();
@@ -8954,7 +8922,7 @@
 
     if (method === 'delivery') {
       payload.delivery_option = getDeliveryOptionValue();
-      payload.delivery_address = customerType === 'returning' ? 'Returning customer' : address;
+      payload.delivery_address = address;
     }
 
     return payload;
@@ -9653,7 +9621,7 @@
     if (!deliverySelect || !deliverySelect.value) return 'Please select an order method.';
     if (!paymentSelect || !paymentSelect.value) return 'Please select a payment method.';
     if (payload.fulfillment_type === 'delivery') {
-      if (getCustomerType() !== 'returning' && !payload.delivery_address) return 'Please fill in your delivery address.';
+      if (!payload.delivery_address || /^returning customer$/i.test(payload.delivery_address.trim())) return 'Please fill in your delivery address.';
     } else if (!['pickup', 'dine_in'].includes(payload.fulfillment_type)) {
       return 'Please select Dine In, Pick-up, or Delivery.';
     }
@@ -9671,6 +9639,7 @@
     if (isSubmittingPublicOrder) return;
 
     const payload = buildPublicOrderPayload();
+    const rememberedDetails = captureCustomerDetails();
     const validationMessage = validatePublicOrderPayload(payload);
     if (validationMessage) {
       setSubmitOrderStatus(validationMessage, 'error');
@@ -9735,6 +9704,7 @@
       }
       lastSubmittedPublicOrderSignature = payloadSignature;
       handleSuccessfulPublicOrder(orderNumber || 'received', payload.fulfillment_type, payload.subtotal, trackingToken);
+      saveCustomerDetailsAfterSuccess(rememberedDetails);
       submittedSuccessfully = true;
       clearPublicSubmissionState();
     } catch (error) {
@@ -10308,6 +10278,111 @@
       console.warn('[CURV menu] Supabase public menu fetch errored. Hardcoded menu remains active.', error);
     }
   }
+
+  // Device-only convenience. Never included in an order payload or fingerprint.
+  const CUSTOMER_DETAILS_KEY = 'curv-customer-details-v1';
+  let savedCustomerDetails = null;
+  let customerDetailsInitialized = false;
+  const customerDetailsTouched = new Set();
+  const customerDetailMethods = ['dine_in', 'pickup', 'delivery'];
+  const customerDetailPayments = ['cod', 'gcash', 'bank'];
+
+  function validateCustomerDetails(value) {
+    if (!value || Array.isArray(value) || value.version !== 1 || typeof value.savedAt !== 'string' || !Number.isFinite(Date.parse(value.savedAt))) return null;
+    for (const [key, max] of [['name', 200], ['phone', 50], ['address', 2000]]) {
+      if (typeof value[key] !== 'string' || value[key].length > max) return null;
+    }
+    return {
+      version: 1, savedAt: value.savedAt,
+      name: value.name.trim(), phone: value.phone.trim(),
+      address: /^returning customer$/i.test(value.address.trim()) ? '' : value.address.trim(),
+      fulfillment: customerDetailMethods.includes(value.fulfillment) ? value.fulfillment : '',
+      deliveryOption: ['curv_rider', 'lalamove'].includes(value.deliveryOption) ? value.deliveryOption : '',
+      payment: customerDetailPayments.includes(value.payment) ? value.payment : ''
+    };
+  }
+
+  function forgetCustomerDetails() {
+    savedCustomerDetails = null;
+    document.getElementById('remember-customer-details').checked = false;
+    document.getElementById('forget-customer-details').hidden = true;
+    const status = document.getElementById('customer-details-status');
+    try {
+      localStorage.removeItem(CUSTOMER_DETAILS_KEY);
+      status.textContent = 'Saved details forgotten. Your current form is unchanged.';
+    } catch (_) {
+      status.textContent = 'This browser could not remove saved details. Clear this site’s browser data to remove them. Remembering is off for this visit.';
+    }
+  }
+
+  function initializeCustomerDetails() {
+    if (customerDetailsInitialized) return;
+    customerDetailsInitialized = true;
+    for (const id of ['f-name', 'f-contact', 'f-address', 'f-delivery', 'f-payment']) {
+      for (const event of ['input', 'change']) document.getElementById(id).addEventListener(event, () => customerDetailsTouched.add(id));
+    }
+    document.getElementById('forget-customer-details').addEventListener('click', forgetCustomerDetails);
+    document.getElementById('remember-customer-details').addEventListener('change', event => {
+      if (!event.target.checked) forgetCustomerDetails();
+    });
+    try { savedCustomerDetails = validateCustomerDetails(JSON.parse(localStorage.getItem(CUSTOMER_DETAILS_KEY))); } catch (_) { savedCustomerDetails = null; }
+    if (!savedCustomerDetails) return;
+    const profile = savedCustomerDetails;
+    const setEmpty = (id, value) => {
+      const field = document.getElementById(id);
+      if (!customerDetailsTouched.has(id) && !field.value && document.activeElement !== field) field.value = value;
+    };
+    setEmpty('f-name', profile.name);
+    setEmpty('f-contact', profile.phone);
+    setEmpty('f-address', profile.address);
+    const method = document.getElementById('f-delivery');
+    if (!customerDetailsTouched.has('f-delivery') && document.activeElement !== method && method.value === 'dine-in' && profile.fulfillment) {
+      method.value = profile.fulfillment === 'delivery'
+        ? (profile.deliveryOption ? 'delivery-' + profile.deliveryOption.replace('_', '-') : 'delivery-curv-rider')
+        : profile.fulfillment.replace('_', '-');
+    }
+    const payment = document.getElementById('f-payment');
+    if (!customerDetailsTouched.has('f-payment') && document.activeElement !== payment && (!payment.value || payment.value === 'counter')) {
+      previousNonDineInPaymentMethod = profile.payment;
+      payment.value = profile.payment;
+    }
+    syncOrderMethodFields();
+    document.getElementById('remember-customer-details').checked = true;
+    document.getElementById('forget-customer-details').hidden = false;
+    document.getElementById('customer-details-status').textContent = 'Saved details are available in this browser. You can edit them below.';
+  }
+
+  function captureCustomerDetails() {
+    const address = document.getElementById('f-address').value.trim();
+    return {
+      version: 1, savedAt: new Date().toISOString(),
+      name: document.getElementById('f-name').value.trim(),
+      phone: document.getElementById('f-contact').value.trim(),
+      address: getOrderMethod() === 'delivery' ? address : (address || savedCustomerDetails?.address || ''),
+      fulfillment: getOrderMethod(),
+      deliveryOption: getDeliveryOptionValue() || savedCustomerDetails?.deliveryOption || '',
+      payment: getOrderMethod() === 'dine_in'
+        ? (previousNonDineInPaymentMethod || savedCustomerDetails?.payment || '')
+        : document.getElementById('f-payment').value
+    };
+  }
+
+  function saveCustomerDetailsAfterSuccess(candidate) {
+    if (!document.getElementById('remember-customer-details').checked) return;
+    try {
+      const profile = validateCustomerDetails(candidate);
+      if (!profile) return;
+      profile.savedAt = new Date().toISOString();
+      localStorage.setItem(CUSTOMER_DETAILS_KEY, JSON.stringify(profile));
+      savedCustomerDetails = profile;
+      document.getElementById('forget-customer-details').hidden = false;
+      document.getElementById('customer-details-status').textContent = 'Your details are saved in this browser.';
+    } catch (_) {
+      document.getElementById('customer-details-status').textContent = 'Your order succeeded, but this browser could not save your details.';
+    }
+  }
+
+  initializeCustomerDetails();
 
   window.addEventListener('DOMContentLoaded', () => {
     renderAllEspressoPanels();

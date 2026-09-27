@@ -14,8 +14,24 @@
     });
   }
 
+  // Shared Customers navigation; all private content is authorized by its RPCs.
+  const customerNav = document.createElement('a');
+  customerNav.href = 'customers.html';
+  customerNav.className = 'admin-nav-link';
+  customerNav.dataset.navItem = 'customers';
+  customerNav.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6"/><path d="M17 7h4M17 12h4M18 17h3"/></svg><span class="nav-label">Customers</span>';
+  document.querySelector('.admin-nav [data-nav-item="incoming-orders"]')?.after(customerNav);
+  const customerMobileNav = document.createElement('a');
+  customerMobileNav.href = 'customers.html';
+  customerMobileNav.className = 'mobile-more-item';
+  customerMobileNav.dataset.navItem = 'customers';
+  customerMobileNav.textContent = 'Customers';
+  document.querySelector('.mobile-more-list')?.prepend(customerMobileNav);
+
   const currentAdminPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-  const currentNavItem = currentAdminPage === 'incoming-orders.html'
+  const currentNavItem = currentAdminPage === 'customers.html'
+    ? 'customers'
+    : currentAdminPage === 'incoming-orders.html'
     ? 'incoming-orders'
     : currentAdminPage === 'menu-manager.html'
       ? 'menu-manager'
@@ -2619,7 +2635,7 @@
   });
 })();
 (() => {
-  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page]):not([data-team-page]):not([data-attendance-page])');
+  const dashboardRoot = document.querySelector('.control-main:not([data-supabase-menu-manager]):not([data-supabase-incoming-orders]):not([data-inventory-page]):not([data-recipes-page]):not([data-team-page]):not([data-attendance-page]):not([data-customers-page])');
   const ownerAccount = document.querySelector('[data-owner-account]');
   if (!dashboardRoot || !ownerAccount) return;
 
