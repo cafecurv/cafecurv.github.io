@@ -8244,7 +8244,7 @@
   const ORDER_SEARCH_MAX_RESULTS = 20;
   const ORDER_SEARCH_DEBOUNCE_MS = 140;
   const ORDER_SEARCH_INDEX_MAX_AGE_MS = 5 * 60 * 1000;
-  const ORDER_LIST_SELECT = 'id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at';
+  const ORDER_LIST_SELECT = 'id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,preparation_timing,requested_preparation_at,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at';
   const ORDER_SEARCH_SELECT = 'id,order_number,status,customer_name,customer_phone,fulfillment_type,delivery_address,payment_status,customer_notes,created_at';
   const ACTIVE_STATUS_KEYS = ['submitted', 'accepted', 'preparing', 'ready'];
   const ACTIVE_ORDER_STATUSES = new Set(ACTIVE_STATUS_KEYS);
@@ -8712,12 +8712,24 @@
     });
   };
 
+  const getPreparationLabel = (order) => {
+    if (order.preparation_timing === 'asap') return 'ASAP';
+    if (order.preparation_timing === 'scheduled' && order.requested_preparation_at) {
+      const date = new Date(order.requested_preparation_at);
+      if (Number.isFinite(date.getTime())) return new Intl.DateTimeFormat('en-PH', {
+        timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit'
+      }).format(date);
+    }
+    return 'Not specified';
+  };
+
   const getKitchenTicketFulfillmentLine = (order) => {
     const fulfillmentType = getFulfillmentType(order);
     const method = fulfillmentType === 'delivery'
       ? 'DELIVERY'
       : (fulfillmentType === 'dine_in' ? 'DINE IN' : 'PICK-UP');
-    const time = String(order && order.pickup_time ? order.pickup_time : '').trim();
+    const time = fulfillmentType === 'dine_in' ? 'Preparation: ' + getPreparationLabel(order)
+      : String(order && order.pickup_time ? order.pickup_time : '').trim();
     return time ? method + ' - ' + time : method;
   };
 
@@ -9711,6 +9723,7 @@
     const fulfillmentRows = [
       ['Method', getDetailedFulfillmentLabel(order)],
     ];
+    if (isDineIn) fulfillmentRows.push(['Preparation', getPreparationLabel(order)]);
     if (!isDineIn) {
       fulfillmentRows.push([isDelivery ? 'Preferred delivery time' : 'Preferred pickup time', order.pickup_time || '-']);
     }

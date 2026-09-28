@@ -141,6 +141,78 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   await p.evaluate(() => { Storage.prototype.removeItem=()=>{throw Error('Denied');}; val('forget-customer-details').click(); });
   check(await p.evaluate(() => !val('remember-customer-details').checked && val('customer-details-status').textContent.includes('could not remove')), 'failed removal reported honestly and disables remembering');
   await p.close();
-  console.log(count+' C1A assertions passed; all network requests intercepted.');
+
+  // Order-form cleanup: tracking is a read-only mock, never a live connection.
+  p = await open(JSON.stringify(profile));
+  await p.evaluate(() => {
+    prepare(); calls.length=0;
+    window.trackedOrder={order_number:'C-12345',status:'accepted'};
+    window.trackingMode='success';
+    publicMenuSupabaseClient.rpc=async(name,args)=>{
+      calls.push({name,args});
+      if(trackingMode==='throw') throw Error('Temporary network failure');
+      if(trackingMode==='error') return {error:{message:'Temporary failure'}};
+      if(trackingMode==='missing') return {data:[]};
+      if(trackingMode==='pending') return new Promise(resolve=>{window.finishTracking=resolve;});
+      return {data:[structuredClone(trackedOrder)]};
+    };
+    window.seedRecent=(age=0)=>saveLatestSubmittedOrder({...getSubmittedOrderInfo('C-12345','delivery',150,'00000000-0000-4000-8000-000000000123'),submittedAt:new Date(Date.now()-age).toISOString()});
+    sessionStorage.setItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY,'preserved-key');
+    sessionStorage.setItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY,'preserved-signature');
+    sessionStorage.setItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY,'ambiguous');
+    seedRecent();
+  });
+  await p.evaluate(()=>refreshRecentOrderReminder());
+  check(await p.evaluate(()=>!val('recentOrderReminder').hidden && val('recentOrderReminder').textContent.includes('C-12345')), 'active recent order remains visible');
+  const trackingUrl=await p.locator('#recentOrderReminder a').first().getAttribute('href');
+  check(trackingUrl.includes('/track/?t='), 'active order retains original tracking shortcut');
+  for(const status of ['completed','cancelled']) {
+    await p.evaluate(async status=>{seedRecent();trackedOrder.status=status;await refreshRecentOrderReminder();},status);
+    check(await p.evaluate(()=>!localStorage.getItem(RECENT_ORDER_STORAGE_KEY) && val('recentOrderReminder').hidden && !val('recentOrderReminder').innerHTML),status+' clears only local shortcut cleanly');
+    check(await p.evaluate(()=>!!profileRead()),status+' preserves customer profile');
+    check(await p.evaluate(()=>sessionStorage.getItem(PUBLIC_SUBMISSION_KEY_STORAGE_KEY)==='preserved-key' && sessionStorage.getItem(PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY)==='preserved-signature' && sessionStorage.getItem(PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY)==='ambiguous'),status+' preserves submission state');
+    check(await p.evaluate(async url=>{const r=await publicMenuSupabaseClient.rpc('get_public_order_tracking',{p_tracking_token:new URL(url).searchParams.get('t')});return r.data[0].order_number==='C-12345' && getTrackingUrl(latestSubmittedOrder.trackingToken)===url;},trackingUrl),status+' leaves existing tracking URL and server fixture usable');
+  }
+  check(await p.evaluate(()=>calls.every(c=>c.name==='get_public_order_tracking')), 'lifecycle performs only tracking reads');
+  await p.evaluate(()=>{seedRecent(24*60*60*1000+1);renderRecentOrderReminder();});
+  check(await p.evaluate(()=>!localStorage.getItem(RECENT_ORDER_STORAGE_KEY) && val('recentOrderReminder').hidden), '24-hour-old reference expires');
+  for(const mode of ['error','throw','missing']) {
+    await p.evaluate(async mode=>{seedRecent();trackingMode=mode;await refreshRecentOrderReminder();},mode);
+    check(await p.evaluate(()=>!!localStorage.getItem(RECENT_ORDER_STORAGE_KEY) && !val('recentOrderReminder').hidden),mode+' cannot erase nonexpired reference');
+  }
+  await p.evaluate(()=>{const info=getSubmittedOrderInfo('Legacy','pickup',1,'');delete info.submittedAt;localStorage.setItem(RECENT_ORDER_STORAGE_KEY,JSON.stringify(info));renderRecentOrderReminder();});
+  check(await p.evaluate(()=>!!localStorage.getItem(RECENT_ORDER_STORAGE_KEY) && !loadLatestSubmittedOrder().submittedAt), 'unknown legacy age is not invented or treated as confidently expired');
+  await p.evaluate(()=>{seedRecent(24*60*60*1000-100);renderRecentOrderReminder();});
+  await p.waitForFunction(()=>!localStorage.getItem('curv-latest-public-order'));
+  check(await p.evaluate(()=>val('recentOrderReminder').hidden), 'open-page expiry timer removes shortcut');
+  await p.evaluate(()=>{seedRecent();trackingMode='pending';window.pendingRefresh=refreshRecentOrderReminder();});
+  await p.waitForFunction(()=>!!window.finishTracking);
+  await p.evaluate(async()=>{saveLatestSubmittedOrder(getSubmittedOrderInfo('C-NEW','pickup',2,'00000000-0000-4000-8000-000000000124'));finishTracking({data:[{status:'completed'}]});await pendingRefresh;});
+  check(await p.evaluate(()=>loadLatestSubmittedOrder().orderNumber==='C-NEW'), 'late terminal response cannot clear newer order');
+  check(await p.evaluate(()=>val('submitOrderBtn').previousElementSibling===val('customer-details-memory') && val('customer-details-memory').previousElementSibling.id==='special-requests-field'), 'remember group follows notes directly before submit');
+  check(await p.evaluate(()=>val('customer-details-memory').contains(val('customer-details-help')) && val('remember-customer-details').getAttribute('aria-describedby')==='customer-details-help'), 'helper remains with checkbox and accessibility association');
+  check(await p.evaluate(()=>val('customer-details-memory').contains(val('customer-details-status')) && val('customer-details-memory').contains(val('forget-customer-details'))), 'feedback and forget stay in lower form group');
+  await p.evaluate(()=>{val('f-name').value='Typed name';val('forget-customer-details').click();});
+  check(await p.evaluate(()=>val('f-name').value==='Typed name' && !profileRead() && loadLatestSubmittedOrder().orderNumber==='C-NEW'), 'forget preserves typed values and recent order independently');
+  check(await p.evaluate(()=>val('customer-details-status').textContent.length>0), 'forget feedback appears in relocated group');
+  await p.evaluate(async()=>{cart=[];await submitPublicOrder();});
+  check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please add at least one item to your order.'), 'empty submit displays missing-item validation');
+  await p.evaluate(()=>addItem('Fixture','Each',150,null));
+  check(await p.evaluate(()=>cart.length===1 && val('submitOrderStatus').textContent==='' && !val('submitOrderStatus').classList.contains('error')), 'real add-item action immediately clears stale cart error');
+  await p.evaluate(()=>{setSubmitOrderStatus('Please enter a valid phone number.','error');updateQty(cart[0].key,1);});
+  check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please enter a valid phone number.'), 'quantity changes preserve unrelated phone error');
+  await p.evaluate(()=>{setSubmitOrderStatus('Please enter a delivery address.','error');addItem('Second','Each',100,null);});
+  check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please enter a delivery address.'), 'adding items preserves unrelated address error');
+  await p.evaluate(async()=>{for(const item of [...cart])removeItem(item.key);await submitPublicOrder();});
+  check(await p.evaluate(()=>!cart.length && val('submitOrderStatus').textContent==='Please add at least one item to your order.'), 'removing last item allows missing-item validation again');
+  await p.evaluate(()=>{addItem('Fixture','Each',150,null);updateQty(cart[0].key,1);renderCart();});
+  check(await p.evaluate(()=>!val('submitOrderStatus').textContent.includes('at least one item')), 'valid cart remains free of stale missing-item message');
+  for(const width of [320,390,768,1280]) {
+    await p.setViewportSize({width,height:900});
+    await p.evaluate(()=>{val('formFloat').classList.add('open');val('formBody').classList.remove('minimized');});
+    check(await p.evaluate(()=>{const g=val('customer-details-memory'),b=val('submitOrderBtn'),body=val('formBody');return g.getBoundingClientRect().bottom<=b.getBoundingClientRect().top && body.scrollWidth<=body.clientWidth+1;}),width+' lower form fits without horizontal overflow');
+  }
+  await p.close();
+  console.log(count+' C1A/order-form assertions passed; all network requests intercepted.');
  } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

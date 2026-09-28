@@ -3468,13 +3468,6 @@
         <div class="delivery-fee-note">Fees are estimates and may vary. Outside coverage? Select Lalamove — fee is shouldered by the customer.</div>
       </div>
 
-      <div class="form-group" id="customer-details-memory">
-        <label><input type="checkbox" id="remember-customer-details" aria-describedby="customer-details-help"> Remember my details on this device</label>
-        <p class="payment-note" id="customer-details-help">Saves your details in this browser. Avoid using this on a shared device.</p>
-        <p class="payment-note" id="customer-details-status" role="status"></p>
-        <button type="button" id="forget-customer-details" hidden>Forget saved details</button>
-      </div>
-
       <div class="recent-order-reminder" id="recentOrderReminder" hidden></div>
 
       <div class="form-group">
@@ -3484,7 +3477,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="f-contact">Contact Number</label>
+        <label class="form-label" id="contact-number-label" for="f-contact">Contact Number</label>
         <input class="form-input" type="tel" id="f-contact" placeholder="09xx xxx xxxx">
       </div>
 
@@ -3545,6 +3538,13 @@
       <div class="form-group" id="special-requests-field">
         <label class="form-label">Special Requests</label>
         <textarea class="form-textarea" id="f-notes" placeholder="e.g. less ice, no sugar, extra spicy..."></textarea>
+      </div>
+
+      <div class="form-group" id="customer-details-memory">
+        <label><input type="checkbox" id="remember-customer-details" aria-describedby="customer-details-help"> Remember my details on this device</label>
+        <p class="payment-note" id="customer-details-help">Saves your details in this browser. Avoid using this on a shared device.</p>
+        <p class="payment-note" id="customer-details-status" role="status"></p>
+        <button type="button" id="forget-customer-details" hidden>Forget saved details</button>
       </div>
 
       <button class="submit-btn" onclick="submitPublicOrder()" id="submitOrderBtn" disabled>Submit Order</button>
@@ -7364,6 +7364,9 @@
   let pendingOrderConfirmResolve = null;
   const CURV_MESSENGER_URL = 'https://m.me/cafecurv';
   const RECENT_ORDER_STORAGE_KEY = 'curv-latest-public-order';
+  const RECENT_ORDER_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+  let recentOrderExpiryTimer;
+  let recentOrderRefreshPending = false;
   const PUBLIC_SUBMISSION_KEY_STORAGE_KEY = 'curv-public-submission-key';
   const PUBLIC_SUBMISSION_SIGNATURE_STORAGE_KEY = 'curv-public-submission-signature';
   const PUBLIC_SUBMISSION_FAILURE_STORAGE_KEY = 'curv-public-submission-failure';
@@ -7927,8 +7930,13 @@
     if (addressInput) {
       addressInput.disabled = !shouldShowAddress || isOrderSubmittedLocked;
     }
-    if (preferredTimeField) preferredTimeField.hidden = dineIn;
-    if (timeLabel) timeLabel.textContent = delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
+    if (preferredTimeField) preferredTimeField.hidden = false;
+    const contactLabel = document.getElementById('contact-number-label');
+    if (contactLabel) contactLabel.textContent = dineIn ? 'Contact Number (optional)' : 'Contact Number';
+    const status = document.getElementById('submitOrderStatus');
+    if (dineIn && ['Please fill in your contact number.', 'Please fill in your delivery address.', 'Please specify your preferred time.', 'Please choose a valid preferred time.'].includes(status?.textContent)) setSubmitOrderStatus('');
+    if (!dineIn && status?.textContent.startsWith('Please choose a preparation time')) setSubmitOrderStatus('');
+    if (timeLabel) timeLabel.textContent = dineIn ? 'When should we prepare your order?' : delivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time';
     if (nameHelper) nameHelper.hidden = !dineIn;
 
     if (paymentSelect) {
@@ -7955,6 +7963,7 @@
 
   // ── DELIVERY TIME ──
   let deliveryTimeMode = 'asap';
+  let dineInScheduledSelection = null;
 
   function getTimeMinutes(time24) {
     const match = String(time24 || '').match(/^(\d{1,2}):(\d{2})$/);
@@ -7970,7 +7979,28 @@
     return minutes !== null;
   }
 
+  function getManilaDate(now = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+    const value = type => parts.find(p => p.type === type).value;
+    return `${value('year')}-${value('month')}-${value('day')}`;
+  }
+
+  function getDineInPreparationTimestamp() {
+    const time = document.getElementById('f-delivery-time').value;
+    if (!isValidPreferredTime(time)) return null;
+    if (!dineInScheduledSelection || dineInScheduledSelection.time !== time) {
+      dineInScheduledSelection = { time, timestamp: `${getManilaDate()}T${time}:00+08:00` };
+    }
+    return dineInScheduledSelection.timestamp;
+  }
+
   function getOrderingHelperMessage() {
+    if (isDineInOrder()) {
+      const message = getPreferredTimeValidationMessage();
+      if (message) return { message, tone: 'error' };
+      const availability = getOrderingStatusMessage();
+      return availability.message ? availability : { message: 'Choose ASAP or a preparation time later today (Philippine time).', tone: '' };
+    }
     const specificTime = document.getElementById('f-delivery-time')?.value || '';
     if (deliveryTimeMode === 'specific' && specificTime && !isValidPreferredTime(specificTime)) {
       return { message: 'Please choose a valid preferred time.', tone: 'error' };
@@ -7984,7 +8014,11 @@
   }
 
   function getPreferredTimeValidationMessage() {
-    if (isDineInOrder()) return '';
+    if (isDineInOrder()) {
+      if (deliveryTimeMode === 'asap') return '';
+      const requested = getDineInPreparationTimestamp();
+      return requested && Date.parse(requested) > Date.now() ? '' : 'Please choose a preparation time later today.';
+    }
     const specificTime = document.getElementById('f-delivery-time')?.value || '';
     if (deliveryTimeMode === 'specific' && specificTime && !isValidPreferredTime(specificTime)) {
       return 'Please choose a valid preferred time.';
@@ -8001,16 +8035,16 @@
     const note = document.getElementById('ordering-note');
 
     if (asapButton) {
-      asapButton.disabled = isOrderSubmittedLocked || isDineInOrder();
+      asapButton.disabled = isOrderSubmittedLocked;
       asapButton.classList.toggle('active', deliveryTimeMode === 'asap');
     }
     if (specificButton) {
-      specificButton.disabled = isOrderSubmittedLocked || isDineInOrder();
+      specificButton.disabled = isOrderSubmittedLocked;
       specificButton.classList.toggle('active', deliveryTimeMode === 'specific');
     }
     if (timeInput) {
-      timeInput.style.display = !isDineInOrder() && deliveryTimeMode === 'specific' ? 'block' : 'none';
-      timeInput.disabled = isOrderSubmittedLocked || isDineInOrder();
+      timeInput.style.display = deliveryTimeMode === 'specific' ? 'block' : 'none';
+      timeInput.disabled = isOrderSubmittedLocked;
     }
 
     const validationMessage = getPreferredTimeValidationMessage();
@@ -8031,7 +8065,7 @@
         submitButton.textContent = 'Submitting...';
       } else {
         const canRetryWhilePaused = isWebsiteOrderingEnabled === false && hasStoredPublicSubmissionRetryState();
-        const isSubmitDisabled = (!isPublicOrderSubmitEnabled() && !canRetryWhilePaused) || !isPublicOrderTechnicalAvailable || Boolean(validationMessage);
+        const isSubmitDisabled = (!isPublicOrderSubmitEnabled() && !canRetryWhilePaused) || !isPublicOrderTechnicalAvailable || (Boolean(validationMessage) && !(isDineInOrder() && hasStoredPublicSubmissionRetryState()));
         submitButton.disabled = isSubmitDisabled;
         submitButton.textContent = canRetryWhilePaused && !validationMessage ? 'Retry Submit' : (isSubmitDisabled && !validationMessage ? getPublicOrderDisabledLabel() : 'Submit Order');
       }
@@ -8045,7 +8079,8 @@
   }
 
   function setDeliveryTime(mode) {
-    if (isDineInOrder()) return;
+    if (isOrderSubmittedLocked) return;
+    dineInScheduledSelection = null;
     deliveryTimeMode = mode;
     document.getElementById('tabAsap').classList.toggle('active', deliveryTimeMode === 'asap');
     document.getElementById('tabSpecific').classList.toggle('active', deliveryTimeMode === 'specific');
@@ -8305,6 +8340,11 @@
   }
 
   function renderCart() {
+    // Clear only the obsolete cart error, not other validation or submission feedback.
+    const submitStatus = document.getElementById('submitOrderStatus');
+    if (cart.length > 0 && submitStatus?.textContent === 'Please add at least one item to your order.') {
+      setSubmitOrderStatus('');
+    }
     const itemsEl   = document.getElementById('cartItems');
     const emptyEl   = document.getElementById('cartEmpty');
     const totalEl   = document.getElementById('cartTotal');
@@ -8815,7 +8855,7 @@
       : (specificTime ? formatTime12h(specificTime) : 'Not specified');
 
     if (!name) { alert('Please fill in your name.'); return null; }
-    if (!contact) { alert('Please fill in your contact number.'); return null; }
+    if (!isDineIn && !contact) { alert('Please fill in your contact number.'); return null; }
     if (!dSel.value) { alert('Please select an order method.'); return null; }
     if (isDelivery && (!address || /^returning customer$/i.test(address))) { alert('Please fill in your delivery address.'); return null; }
     if (!pSel.value) { alert('Please select a payment method.'); return null; }
@@ -8847,6 +8887,7 @@
       msg += `🛵 Delivery Method: ${deliveryOptionLabel}\n`;
       msg += `📍 Delivery Address: ${address}\n`;
     }
+    if (isDineIn) msg += `⏰ Preparation: ${preferredTime}\n`;
     if (!isDineIn) msg += `⏰ ${isDelivery ? 'Preferred Delivery Time' : 'Preferred Pickup Time'}: ${preferredTime}\n`;
     msg += `💳 Payment: ${payment}\n\n`;
     msg += `🛒 Order:\n${orderLines}\n\n`;
@@ -8920,6 +8961,10 @@
       items
     };
 
+    if (method === 'dine_in') {
+      payload.preparation_timing = deliveryTimeMode === 'specific' ? 'scheduled' : 'asap';
+      payload.requested_preparation_at = deliveryTimeMode === 'specific' ? getDineInPreparationTimestamp() : null;
+    }
     if (method === 'delivery') {
       payload.delivery_option = getDeliveryOptionValue();
       payload.delivery_address = address;
@@ -9249,7 +9294,7 @@
       subtotal: Number(info.subtotal || 0),
       trackingToken,
       trackingUrl,
-      submittedAt: info.submittedAt || new Date().toISOString()
+      submittedAt: info.submittedAt || ''
     };
   }
 
@@ -9269,6 +9314,7 @@
 
   function saveLatestSubmittedOrder(info) {
     const safeInfo = normalizeSubmittedOrderInfo(info);
+    if (safeInfo && !safeInfo.submittedAt) safeInfo.submittedAt = new Date().toISOString();
     latestSubmittedOrder = safeInfo;
     try {
       if (safeInfo) localStorage.setItem(RECENT_ORDER_STORAGE_KEY, JSON.stringify(safeInfo));
@@ -9278,7 +9324,13 @@
   function loadLatestSubmittedOrder() {
     try {
       const raw = localStorage.getItem(RECENT_ORDER_STORAGE_KEY);
-      return raw ? normalizeSubmittedOrderInfo(JSON.parse(raw)) : null;
+      const info = raw ? normalizeSubmittedOrderInfo(JSON.parse(raw)) : null;
+      const savedAt = info ? Date.parse(info.submittedAt) : NaN;
+      if (Number.isFinite(savedAt) && Date.now() - savedAt >= RECENT_ORDER_MAX_AGE_MS) {
+        localStorage.removeItem(RECENT_ORDER_STORAGE_KEY);
+        return null;
+      }
+      return info;
     } catch (error) {
       return null;
     }
@@ -9324,7 +9376,13 @@
   function renderRecentOrderReminder() {
     const reminder = document.getElementById('recentOrderReminder');
     if (!reminder) return;
+    window.clearTimeout(recentOrderExpiryTimer);
     const recentOrder = loadLatestSubmittedOrder();
+    const savedAt = recentOrder ? Date.parse(recentOrder.submittedAt) : NaN;
+    if (Number.isFinite(savedAt)) {
+      recentOrderExpiryTimer = window.setTimeout(renderRecentOrderReminder,
+        Math.min(RECENT_ORDER_MAX_AGE_MS, Math.max(1, savedAt + RECENT_ORDER_MAX_AGE_MS - Date.now())));
+    }
     if (!recentOrder || !recentOrder.orderNumber) {
       reminder.hidden = true;
       reminder.innerHTML = '';
@@ -9336,6 +9394,32 @@
       <p>Need an update? ${recentOrder.trackingUrl ? 'Track it with your private link.' : 'Message us on Messenger with your order number.'}</p>
       ${recentOrder.trackingUrl ? renderTrackingActions(recentOrder, 'recentOrder', false) : ''}
     `;
+  }
+
+  // Only the device shortcut is removed; confirmation links and server orders stay intact.
+  async function refreshRecentOrderReminder() {
+    renderRecentOrderReminder();
+    const info = loadLatestSubmittedOrder();
+    if (!info?.trackingToken || recentOrderRefreshPending) return;
+    recentOrderRefreshPending = true;
+    try {
+      const client = getPublicSupabaseClient();
+      if (!client) return;
+      const original = localStorage.getItem(RECENT_ORDER_STORAGE_KEY);
+      const { data, error } = await client.rpc('get_public_order_tracking', {
+        p_tracking_token: info.trackingToken
+      });
+      const order = Array.isArray(data) ? data[0] : data;
+      if (!error && ['completed', 'cancelled'].includes(String(order?.status || '').toLowerCase())
+        && localStorage.getItem(RECENT_ORDER_STORAGE_KEY) === original) {
+        localStorage.removeItem(RECENT_ORDER_STORAGE_KEY);
+      }
+    } catch (error) {
+      // Network/storage failures do not establish a terminal order state.
+    } finally {
+      recentOrderRefreshPending = false;
+      renderRecentOrderReminder();
+    }
   }
 
   function getStatusMessageForOrder(info) {
@@ -9617,7 +9701,7 @@
     const preferredTimeValidation = getPreferredTimeValidationMessage();
     if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) return 'Please add at least one item to your order.';
     if (!payload.customer_name) return 'Please fill in your name.';
-    if (!payload.customer_phone) return 'Please fill in your contact number.';
+    if (payload.fulfillment_type !== 'dine_in' && !payload.customer_phone) return 'Please fill in your contact number.';
     if (!deliverySelect || !deliverySelect.value) return 'Please select an order method.';
     if (!paymentSelect || !paymentSelect.value) return 'Please select a payment method.';
     if (payload.fulfillment_type === 'delivery') {
@@ -9640,13 +9724,14 @@
 
     const payload = buildPublicOrderPayload();
     const rememberedDetails = captureCustomerDetails();
+    const payloadSignature = JSON.stringify(payload);
+    const timingReplay = payload?.fulfillment_type === 'dine_in' && await hasPublicSubmissionReplayCandidate(payloadSignature);
     const validationMessage = validatePublicOrderPayload(payload);
-    if (validationMessage) {
+    if (validationMessage && !(timingReplay && validationMessage === 'Please choose a preparation time later today.')) {
       setSubmitOrderStatus(validationMessage, 'error');
       return;
     }
 
-    const payloadSignature = JSON.stringify(payload);
     const canAttemptPausedReplay = isWebsiteOrderingEnabled === false
       ? await hasPublicSubmissionReplayCandidate(payloadSignature)
       : false;
@@ -9730,16 +9815,20 @@
 
   const preferredTimeInput = document.getElementById('f-delivery-time');
   if (preferredTimeInput) {
-    preferredTimeInput.addEventListener('input', syncAnytimeOrderState);
+    preferredTimeInput.addEventListener('input', () => { dineInScheduledSelection = null; syncAnytimeOrderState(); });
     preferredTimeInput.addEventListener('change', syncAnytimeOrderState);
   }
 
   window.addEventListener('focus', () => {
+    refreshRecentOrderReminder();
     refreshWebsiteOrderingStatus();
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') refreshWebsiteOrderingStatus();
+    if (document.visibilityState === 'visible') {
+      refreshRecentOrderReminder();
+      refreshWebsiteOrderingStatus();
+    }
   });
 
   function copyOrder() {
@@ -10349,7 +10438,7 @@
     syncOrderMethodFields();
     document.getElementById('remember-customer-details').checked = true;
     document.getElementById('forget-customer-details').hidden = false;
-    document.getElementById('customer-details-status').textContent = 'Saved details are available in this browser. You can edit them below.';
+    document.getElementById('customer-details-status').textContent = 'Saved details are available in this browser. You can edit them in this form.';
   }
 
   function captureCustomerDetails() {
@@ -10383,6 +10472,9 @@
   }
 
   initializeCustomerDetails();
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') refreshRecentOrderReminder();
+  }, 60000);
 
   window.addEventListener('DOMContentLoaded', () => {
     renderAllEspressoPanels();
@@ -10397,6 +10489,7 @@
     } catch(e) {}
     refreshWebsiteOrderingStatus();
     fetchPublicMenuFromSupabase();
+    refreshRecentOrderReminder();
   });
 
   window.addEventListener('DOMContentLoaded', () => {
