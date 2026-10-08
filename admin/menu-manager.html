@@ -403,20 +403,19 @@
           <div>
             <p class="eyebrow">Option Library</p>
             <h2 id="option-groups-title">Option Groups &amp; Choices</h2>
+            <p class="option-library-help" data-option-library-summary aria-live="polite">Sign in to load options.</p>
           </div>
           <button type="button" class="admin-collapsible-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand option library" data-aria-label-expanded="Collapse option library" aria-label="Expand option library" title="Expand option library" aria-expanded="false" aria-controls="option-groups-content">&#9662;</button>
         </div>
 
         <div id="option-groups-content" class="admin-collapsible-content" data-collapsible-content hidden>
-          <div class="option-manager-grid">
-            <section class="option-manager-card" aria-labelledby="option-group-form-title">
-              <div class="panel-heading-row">
-                <p class="eyebrow">Setup</p>
-                <span class="static-status">Groups only</span>
+          <div class="option-library-editor">
+            <section aria-labelledby="option-group-form-title">
+              <div class="option-library-picker">
+                <label class="admin-field" for="option-library-group"><span>Option Group</span><select id="option-library-group" disabled><option value="">Select Option Group</option></select></label>
+                <button type="button" class="auth-button auth-button-secondary" data-new-option-group disabled>New Group</button>
               </div>
-              <div class="option-form-heading">
-                <h3 id="option-group-form-title" data-option-group-form-title>Create Option Group</h3>
-              </div>
+              <h3 id="option-group-form-title" data-option-group-form-title>New Group</h3>
               <form class="option-group-form" data-option-group-form novalidate>
                 <label class="admin-field" for="option-group-name">
                   <span>Name</span>
@@ -427,10 +426,10 @@
                   <input id="option-group-key" name="group_key" type="text" autocomplete="off" placeholder="extra_shot" required disabled>
                 </label>
                 <label class="admin-field" for="option-group-selection-type">
-                  <span>Selection Type</span>
+                  <span>Customer can choose</span>
                   <select id="option-group-selection-type" name="selection_type" required disabled>
-                    <option value="single">single</option>
-                    <option value="multi">multi</option>
+                    <option value="single">One option</option>
+                    <option value="multi">Multiple options</option>
                   </select>
                 </label>
                 <label class="admin-field" for="option-group-sort-order">
@@ -442,42 +441,22 @@
                   <span>Active</span>
                 </label>
                 <div class="option-form-actions">
-                  <button type="submit" class="auth-button" data-save-option-group disabled>Save Option Group</button>
-                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-group disabled>Cancel Edit / Reset Form</button>
+                  <button type="submit" class="auth-button" data-save-option-group disabled>Save Group</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-group disabled>Cancel / Reset</button>
+                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-group hidden>Deactivate</button>
                 </div>
               </form>
             </section>
-
-            <section class="option-manager-card" aria-labelledby="option-group-list-title">
-              <div class="panel-heading-row">
-                <p class="eyebrow">Groups</p>
-                <span class="static-status" data-option-group-status>Locked</span>
+            <section aria-labelledby="option-choice-form-title">
+              <div class="option-library-picker">
+                <label class="admin-field" for="option-library-choice"><span>Choice</span><select id="option-library-choice" disabled><option value="">Select Choice</option></select></label>
+                <button type="button" class="auth-button auth-button-secondary" data-new-option-choice disabled>New Choice</button>
               </div>
-              <h3 id="option-group-list-title">Option Groups</h3>
-              <div class="option-group-list" data-option-group-list aria-live="polite">
-                <div class="option-empty-state">
-                  <h4>Owner sign-in required</h4>
-                  <p>Sign in to continue.</p>
-                </div>
-              </div>
-            </section>
-
-            <section class="option-manager-card" aria-labelledby="option-group-detail-title">
-              <div class="panel-heading-row">
-                <p class="eyebrow">Choices</p>
-                <span class="static-status">Selected group</span>
-              </div>
-              <div class="option-group-detail" data-option-group-detail>
-                <div class="option-empty-state">
-                  <h3 id="option-group-detail-title">Select a group</h3>
-                </div>
-              </div>
-              <div class="option-form-heading">
-                <h3 data-option-choice-form-title>Create Option Choice</h3>
-              </div>
+              <p class="option-library-help" data-option-choice-help>Select or create an option group first.</p>
+              <h3 id="option-choice-form-title" data-option-choice-form-title>New Choice</h3>
               <form class="option-choice-form" data-option-choice-form novalidate>
                 <label class="admin-field" for="option-choice-label">
-                  <span>Label</span>
+                  <span>Choice Name / Label</span>
                   <input id="option-choice-label" name="label" type="text" autocomplete="off" required disabled>
                 </label>
                 <label class="admin-field" for="option-choice-value">
@@ -498,10 +477,10 @@
                 </label>
                 <div class="option-form-actions">
                   <button type="submit" class="auth-button" data-save-option-choice disabled>Save Choice</button>
-                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-choice disabled>Cancel Edit / Reset Choice Form</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-choice disabled>Cancel / Reset</button>
+                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-choice hidden>Deactivate</button>
                 </div>
               </form>
-              <div class="option-choice-list" data-option-choice-list aria-live="polite"></div>
             </section>
           </div>
           <p class="option-manager-status" data-option-manager-status role="status">Sign in to load reusable option groups.</p>
