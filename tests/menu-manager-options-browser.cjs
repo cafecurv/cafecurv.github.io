@@ -17,7 +17,7 @@ const root=path.resolve(__dirname,'..');
  return {data:one?selected[0]:structuredClone(selected),error:null,count:selected.length};};
  proxy=new Proxy({}, {get:(_,k)=>k==='then'?(r,j)=>exec().then(r,j):(...a)=>{if(k==='insert'||k==='update'){op=k;payload=a[0];}if(k==='eq')filters.push(a);if(k==='single'||k==='maybeSingle')one=true;return proxy;}});return proxy;};
  const chain=new Proxy({}, {get:(_,k)=>k==='then'?r=>Promise.resolve({data:[],error:null}).then(r):()=>chain});
- window.supabase={createClient:()=>({from,rpc:async()=>({data:[],error:null}),channel:()=>chain,removeChannel:async()=>{},auth:{getSession:async()=>({data:{session:{user:{id:'owner',email:'owner@local.test'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
+ window.supabase={createClient:()=>({from,rpc:async name=>({data:name==='is_admin'?true:[],error:null}),channel:()=>chain,removeChannel:async()=>{},auth:{getSession:async()=>({data:{session:{user:{id:'owner',email:'owner@local.test'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
  });
  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin==='https://curv.test'&&['/admin/menu-manager.html','/admin/admin.js','/admin/admin.css'].includes(u.pathname))return route.fulfill({path:path.join(root,u.pathname.slice(1))});return route.abort();});
  await page.goto('https://curv.test/admin/menu-manager.html');
