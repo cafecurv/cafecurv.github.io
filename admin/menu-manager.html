@@ -413,10 +413,17 @@
             <section aria-labelledby="option-group-form-title">
               <div class="option-library-picker">
                 <label class="admin-field" for="option-library-group"><span>Option Group</span><select id="option-library-group" disabled><option value="">Select Option Group</option></select></label>
-                <button type="button" class="auth-button auth-button-secondary" data-new-option-group disabled>New Group</button>
               </div>
+              <div data-option-group-summary class="option-library-summary"></div>
+              <div class="option-form-actions" data-option-group-view-actions>
+                <button type="button" class="auth-button auth-button-secondary" data-edit-option-group disabled>Edit</button>
+                <button type="button" class="auth-button auth-button-secondary" data-delete-option-group disabled aria-describedby="option-group-delete-help">Delete</button>
+                <button type="button" class="auth-button auth-button-secondary" data-new-option-group disabled>New Group</button>
+                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-group hidden>Deactivate</button>
+              </div>
+              <p id="option-group-delete-help" class="option-library-help">Permanent deletion is unavailable: related choices, assignments, defaults or pricing configuration could be affected. Use Deactivate instead.</p>
               <h3 id="option-group-form-title" data-option-group-form-title>New Group</h3>
-              <form class="option-group-form" data-option-group-form novalidate>
+              <form class="option-group-form" data-option-group-form novalidate hidden>
                 <label class="admin-field" for="option-group-name">
                   <span>Name</span>
                   <input id="option-group-name" name="name" type="text" autocomplete="off" required disabled>
@@ -442,19 +449,26 @@
                 </label>
                 <div class="option-form-actions">
                   <button type="submit" class="auth-button" data-save-option-group disabled>Save Group</button>
-                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-group disabled>Cancel / Reset</button>
-                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-group hidden>Deactivate</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-group disabled>Cancel</button>
+
                 </div>
               </form>
             </section>
             <section aria-labelledby="option-choice-form-title">
               <div class="option-library-picker">
                 <label class="admin-field" for="option-library-choice"><span>Choice</span><select id="option-library-choice" disabled><option value="">Select Choice</option></select></label>
-                <button type="button" class="auth-button auth-button-secondary" data-new-option-choice disabled>New Choice</button>
               </div>
               <p class="option-library-help" data-option-choice-help>Select or create an option group first.</p>
+              <div data-option-choice-summary class="option-library-summary"></div>
+              <div class="option-form-actions" data-option-choice-view-actions>
+                <button type="button" class="auth-button auth-button-secondary" data-edit-option-choice disabled>Edit</button>
+                <button type="button" class="auth-button auth-button-secondary" data-delete-option-choice disabled aria-describedby="option-choice-delete-help">Delete</button>
+                <button type="button" class="auth-button auth-button-secondary" data-new-option-choice disabled>New Choice</button>
+                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-choice hidden>Deactivate</button>
+              </div>
+              <p id="option-choice-delete-help" class="option-library-help">Permanent deletion is unavailable: related choices, assignments, defaults or pricing configuration could be affected. Use Deactivate instead.</p>
               <h3 id="option-choice-form-title" data-option-choice-form-title>New Choice</h3>
-              <form class="option-choice-form" data-option-choice-form novalidate>
+              <form class="option-choice-form" data-option-choice-form novalidate hidden>
                 <label class="admin-field" for="option-choice-label">
                   <span>Choice Name / Label</span>
                   <input id="option-choice-label" name="label" type="text" autocomplete="off" required disabled>
@@ -477,8 +491,8 @@
                 </label>
                 <div class="option-form-actions">
                   <button type="submit" class="auth-button" data-save-option-choice disabled>Save Choice</button>
-                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-choice disabled>Cancel / Reset</button>
-                <button type="button" class="auth-button auth-button-secondary" data-toggle-option-choice hidden>Deactivate</button>
+                  <button type="button" class="auth-button auth-button-secondary" data-reset-option-choice disabled>Cancel</button>
+
                 </div>
               </form>
             </section>

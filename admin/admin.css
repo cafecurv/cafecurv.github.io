@@ -8267,3 +8267,6 @@ body.more-drawer-open {
   .option-library-picker { flex-wrap: wrap; }
   .option-library-picker .admin-field { flex-basis: 100%; }
 }
+
+.option-library-editor [hidden] { display: none; }
+.option-library-summary { white-space: pre-line; line-height: 1.65; overflow-wrap: anywhere; }
