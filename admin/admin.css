@@ -8270,3 +8270,20 @@ body.more-drawer-open {
 
 .option-library-editor [hidden] { display: none; }
 .option-library-summary { white-space: pre-line; line-height: 1.65; overflow-wrap: anywhere; }
+
+.option-library-actions { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; }
+.option-library-status-action, .option-library-danger-action { display: grid; gap: .3rem; }
+.option-library-status-action > span, .option-library-danger-action > span { color: var(--slate); font-size: .72rem; }
+.option-library-danger-action { margin-left: auto; }
+.option-library-danger-action .auth-button { color: #db8585; border-color: rgba(219,133,133,.45); }
+
+/* Independent subsection ordering within Menu Manager. */
+.section-order-panel { margin: 20px 0; padding-bottom: 20px; border-bottom: 1px solid var(--border-color, #8791a333); }
+.section-order-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.section-order-row > span { min-width: 0; overflow-wrap: anywhere; }
+.section-order-moves { display: flex; flex-shrink: 0; gap: 8px; }
+.section-order-moves .auth-button { min-height: 44px; }
+@media (max-width: 480px) {
+  .section-order-row { align-items: flex-start; flex-direction: column; }
+  .section-order-moves { flex-wrap: wrap; }
+}
