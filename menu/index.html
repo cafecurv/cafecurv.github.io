@@ -7428,7 +7428,10 @@ body.night-mode .public-item-wrap {
     if (!wrap) return;
     wrap.classList.toggle('open', open);
     const panel = document.getElementById('panel-' + id);
-    if (panel) panel.inert = !open;
+    if (panel) {
+      if (open) organizePublicCustomization(panel);
+      panel.inert = !open;
+    }
     document.querySelectorAll('button[aria-controls]').forEach(button => {
       if (button.getAttribute('aria-controls') === 'panel-' + id) button.setAttribute('aria-expanded', String(open));
     });
@@ -7490,6 +7493,8 @@ body.night-mode .public-item-wrap {
       const panel = wrap.querySelector('.expansion-panel');
       if (!item || !panel) return;
       const id = panel.id.slice('panel-'.length);
+      const previousChoices = new Map([...panel.querySelectorAll('[data-public-option]')].map(group => [group.dataset.optionKey, [...group.querySelectorAll('.selected')].map(chip => chip.dataset.choiceId)]));
+      const previousSize = panel.querySelector('[data-size-id].selected')?.dataset.sizeId;
       const sectionId = wrap.closest('.section').id;
       const category = (menu.categories || []).find(c => c.id === product.category_id);
       const contract = { item, product, categoryName: category && category.name, error: '', optionGroups: [], compatibility: menu.configurationCompatibility || [] };
@@ -7512,6 +7517,7 @@ body.night-mode .public-item-wrap {
       const header = document.createElement('div');
       header.className = 'public-panel-header';
       header.append(title, close);
+      panel.querySelector('.public-panel-header')?.remove();
       panel.querySelector('.panel-inner').prepend(header);
       const options = panel.querySelector('.panel-options');
       // A generic rendering fallback must not silently drop a known recipe's
@@ -7526,7 +7532,7 @@ body.night-mode .public-item-wrap {
         }
       }
       contract.requiredOptionKeys = [...expectedRoot.querySelectorAll('[data-group]')]
-        .map(g => g.dataset.group).filter(key => !['size','pieces'].includes(key));
+        .map(g => g.dataset.optionKey || g.dataset.group).filter(key => !['size','pieces'].includes(key));
       try {
         if (menu.options?.errorsByProductId?.[product.id]) throw new Error(menu.options.errorsByProductId[product.id]);
         const groups = menu.options && menu.options.byProductId && menu.options.byProductId[product.id]?.groups || [];
@@ -7535,9 +7541,10 @@ body.night-mode .public-item-wrap {
         groups.slice().sort((a,b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)).forEach(group => {
           if (groupKeys.has(group.group_key) || ['size', 'pieces', 'note'].includes(group.group_key)) throw new Error('Conflicting option key.');
           groupKeys.add(group.group_key);
-          const html = renderPublicOptionGroup(group, id);
-          const legacy = [...options.querySelectorAll('[data-group]')].find(node => node.dataset.group === group.group_key);
-          if (legacy) (legacy.closest('.accordion-group, [data-collapsible]') || legacy).remove();
+          const selected = previousChoices.get(group.group_key);
+          const html = renderPublicOptionGroup(selected ? { ...group, defaults: selected.filter(choiceId => group.choices.some(choice => choice.option_choice_id === choiceId)).map(option_choice_id => ({ option_choice_id })) } : group, id);
+          const legacy = [...options.querySelectorAll('[data-group]')].find(node => (node.dataset.optionKey || node.dataset.group) === group.group_key);
+          if (legacy) (legacy.closest('.public-option-group, .accordion-group, [data-collapsible]') || legacy).remove();
           options.insertAdjacentHTML('beforeend', html);
         });
         if (menu.options === null && !menu.productsWithoutOptionGroups?.has(product.id) && (menu.productsWithOptionGroups?.has(product.id) || !renderedPublicPanels.has(product.id))) throw new Error('Options not loaded.');
@@ -7558,6 +7565,9 @@ body.night-mode .public-item-wrap {
       if (!panelState[id]) initPanel(id, {});
       const temperature = panel.querySelector('[data-option-key="temperature"] .selected');
       if (temperature) syncPublicPanelTemperature(id, temperature.dataset.value);
+      if (previousSize && panel.querySelector('[data-size-id="' + previousSize + '"]')) {
+        panel.querySelectorAll('[data-size-id]').forEach(chip => chip.classList.toggle('selected', chip.dataset.sizeId === previousSize));
+      }
       const note = panel.querySelector('.panel-note-input');
       if (note) {
         note.maxLength = 500;
@@ -7591,6 +7601,7 @@ body.night-mode .public-item-wrap {
         header.setAttribute('aria-expanded', String(header.parentElement.classList.contains('open')));
         header.nextElementSibling.inert = !header.parentElement.classList.contains('open');
       });
+      panel.querySelector('.public-panel-status')?.remove();
       const message = document.createElement('p');
       message.className = 'public-panel-status';
       message.setAttribute('role', 'status');
@@ -7604,7 +7615,7 @@ body.night-mode .public-item-wrap {
   // Presentation only: move the existing controls after structured replacement.
   function organizePublicCustomization(panel) {
     const options = panel.querySelector('.panel-options');
-    if (!options || options.querySelector('.public-customize')) return;
+    if (!options) return;
     const makeDisclosure = (label, className) => {
       const shell = document.createElement('div');
       shell.className = className;
@@ -7617,7 +7628,8 @@ body.night-mode .public-item-wrap {
       const arrow = document.createElement('span'); arrow.textContent = '▾'; arrow.setAttribute('aria-hidden', 'true');
       button.append(title, summary, arrow);
       const body = document.createElement('div'); body.className = 'customize-body'; body.hidden = true;
-      body.id = panel.id + '-customize-' + panel.querySelectorAll('.customize-body').length + '-' + className;
+      panel.dataset.disclosureSequence = String(Number(panel.dataset.disclosureSequence || 0) + 1);
+      body.id = panel.id + '-customize-' + panel.dataset.disclosureSequence;
       button.setAttribute('aria-controls', body.id);
       button.addEventListener('click', () => {
         body.hidden = !body.hidden;
@@ -7627,12 +7639,23 @@ body.night-mode .public-item-wrap {
       shell.append(button, body);
       return { shell, body, summary };
     };
+    const existingDisclosure = shell => ({ shell, body: shell.querySelector(':scope > .customize-body'), summary: shell.querySelector(':scope > button > .customize-summary') });
+    // Restore core order after the final structured groups have been inserted.
+    const core = [...options.querySelectorAll('[data-group]')].filter(group => ['size','pieces','temperature'].includes(group.dataset.optionKey || group.dataset.group));
+    core.sort((a,b) => Number((a.dataset.optionKey || a.dataset.group)==='temperature') - Number((b.dataset.optionKey || b.dataset.group)==='temperature'));
+    core.reverse().forEach(group => {
+      const container = group.closest('.public-option-group, .accordion-group, [data-collapsible]') || (group.parentElement === options ? group : group.parentElement);
+      options.prepend(container);
+    });
     const modifiers = [...options.querySelectorAll('[data-group]')].filter(group =>
       !['size', 'pieces', 'temperature'].includes(group.dataset.optionKey || group.dataset.group));
     if (modifiers.length) {
-      const customize = makeDisclosure('+ Customize', 'public-customize');
+      const existing = options.querySelector(':scope > .public-customize');
+      const customize = existing ? existingDisclosure(existing) : makeDisclosure('+ Customize', 'public-customize');
       options.append(customize.shell);
       modifiers.forEach(group => {
+        const currentRow = group.closest('.customize-modifier');
+        if (currentRow) { customize.body.append(currentRow); return; }
         const old = group.closest('.public-option-group, .accordion-group, [data-collapsible]') || group.parentElement;
         const label = group.getAttribute('aria-label') || old.querySelector('.option-group-label, .accordion-label')?.textContent || group.dataset.group;
         const row = makeDisclosure(label + (Number(group.dataset.min) > 0 ? ' (required)' : ''), 'customize-modifier');
@@ -7642,18 +7665,22 @@ body.night-mode .public-item-wrap {
         if (old !== options && !old.querySelector('[data-group], textarea')) old.remove();
       });
     }
+    options.querySelectorAll('.customize-modifier').forEach(row => { if (!row.querySelector('[data-group]')) row.remove(); });
+    options.querySelectorAll('.public-customize').forEach(shell => { if (!shell.querySelector('[data-group]')) shell.remove(); });
     const note = options.querySelector('.panel-note-input');
     if (note) {
       const old = note.closest('.accordion-group, [data-collapsible]');
       const oldLabel = note.previousElementSibling;
-      const disclosure = makeDisclosure('Special request', 'customize-note');
+      const existing = options.querySelector(':scope > .customize-note');
+      const disclosure = existing ? existingDisclosure(existing) : makeDisclosure('Special request', 'customize-note');
       options.append(disclosure.shell);
       disclosure.body.append(note);
       if (old) old.remove();
       if (oldLabel?.matches('label, .option-group-label')) oldLabel.remove();
       options.querySelectorAll('label').forEach(label => { if (label.htmlFor === note.id) label.remove(); });
-      const refresh = () => { disclosure.summary.textContent = note.value.trim() ? note.value.trim().slice(0, 60) : '(tap to add)'; };
-      note.addEventListener('input', refresh); refresh();
+      const refresh = () => { const summary = note.closest('.customize-note')?.querySelector('.customize-summary'); if (summary) summary.textContent = note.value.trim() ? note.value.trim().slice(0, 60) : '(tap to add)'; };
+      if (!note.dataset.customizeNoteBound) { note.addEventListener('input', refresh); note.dataset.customizeNoteBound = 'true'; }
+      refresh();
     }
     syncCustomizationSummaries(panel);
   }
@@ -10584,6 +10611,7 @@ body.night-mode .public-item-wrap {
     renderAllTakoyakiPanels();
     renderAllSavoryPanels();
     renderHardcodedCurvPicksFallback();
+    document.querySelectorAll('.expansion-panel').forEach(organizePublicCustomization);
     document.querySelectorAll('.panel-add-btn, .add-btn, .add-btn-pill').forEach(button => {
       button.disabled = true; button.title = 'Waiting for catalog details';
     });

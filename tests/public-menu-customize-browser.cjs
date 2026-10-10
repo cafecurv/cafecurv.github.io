@@ -135,6 +135,65 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       return count;
     });
     checks += results;
+    checks += await page.evaluate(() => {
+      let count=0;const ok=(v,m)=>{if(!v)throw Error(m);count++;};
+      const originalId=publicProductPanelTargets.get(fixtureId(2)).panelId;
+      const selectedBefore=JSON.stringify(readPublicConfiguration(originalId));
+      hydratePublicItemPanels(menuFixture);hydratePublicItemPanels(menuFixture);
+      ok(JSON.stringify(readPublicConfiguration(originalId))===selectedBefore,'repeated hydration preserves selected identities');
+      ok(getFixturePanel(2).querySelectorAll('.public-customize').length===1,'repeated hydration leaves one wrapper');
+      const panel=getFixturePanel(7),id=publicProductPanelTargets.get(fixtureId(7)).panelId;
+      const options=panel.querySelector('.panel-options');
+      const keys=['size','extrashot','milk','syrup','sauce','temperature'];
+      const groups=keys.map(key=>panel.querySelector('[data-option-key="'+key+'"], [data-group="'+key+'"]'));
+      const note=panel.querySelector('textarea');
+      // Reproduce the reported effective DOM order, retaining the real nodes.
+      options.replaceChildren();
+      groups.forEach((group,i)=>{const shell=document.createElement('div');shell.className='public-option-group';const label=document.createElement('div');label.className='option-group-label';label.textContent=keys[i];shell.append(label,group);options.append(shell);});
+      options.append(note);
+      const syrup=groups[3];syrup.dataset.type='multi';syrup.dataset.max='3';
+      const contract=publicItemPanels.get(id),catalog=contract.optionGroups.find(g=>g.group_key==='syrup');
+      catalog.selection_type='multi';catalog.max_selections=3;
+      for(const [n,label] of [[9100,'Caramel'],[9101,'Vanilla']]) {
+        const choice={product_id:fixtureId(7),option_choice_id:fixtureId(n),label,value:label,price_delta:25};catalog.choices.push(choice);
+        const button=document.createElement('button');button.type='button';button.className='option-chip selected';button.dataset.choiceId=choice.option_choice_id;button.dataset.value=label;button.dataset.price='25';button.textContent=label;syrup.append(button);
+      }
+      const size=groups[0].querySelector('.selected').dataset.sizeId,temp=groups[5].querySelector('.selected').dataset.choiceId;
+      contract.compatibility.push({product_id:fixtureId(7),product_size_id:size,option_choice_id:temp,is_active:true});
+      const before=JSON.stringify(readPublicConfiguration(id)),price=getPanelBasePrice(id)+getPanelAddOnsPrice(id);
+      ok(!JSON.parse(before).error,'fixture has a valid UUID configuration');
+      organizePublicCustomization(panel);organizePublicCustomization(panel);
+      const order=[...options.children].filter(el=>el.querySelector('[data-group]')||el.classList.contains('customize-note')).map(el=>el.classList.contains('public-customize')?'customize':el.classList.contains('customize-note')?'note':el.querySelector('[data-group]').dataset.optionKey||el.querySelector('[data-group]').dataset.group);
+      ok(order.join()==='size,temperature,customize,note','exact bad shape becomes Size Temperature Customize Note');
+      ok(panel.querySelectorAll('.public-customize').length===1,'one Customize after repeated organization');
+      ok(panel.querySelectorAll('.customize-note').length===1,'one note after repeated organization');
+      for(const key of ['extrashot','milk','syrup','sauce'])ok(panel.querySelectorAll('[data-customize-group="'+key+'"]').length===1,'one row '+key);
+      ok(groups.every(group=>panel.contains(group)),'original nodes preserved');
+      ok(syrup.querySelectorAll('.selected').length===3,'multi selection survives');
+      ok(JSON.stringify(readPublicConfiguration(id))===before,'all selected UUIDs survive');
+      ok(getPanelBasePrice(id)+getPanelAddOnsPrice(id)===price,'all deltas and total survive');
+      panel.querySelector('.public-customize > button').click();panel.querySelector('.public-customize > button').click();
+      ok(JSON.stringify(readPublicConfiguration(id))===before,'collapse preserves configuration');
+      setPublicPanelOpen(id,true);setPublicPanelOpen(id,false);setPublicPanelOpen(id,true);
+      ok(panel.querySelectorAll('.public-customize').length===1,'reopening reconciles without duplicates');
+      cart.length=0;updatePanelPrice(id);panel.querySelector('.panel-add-btn').click();
+      ok(cart.length===1&&cart[0].option_choice_ids.join()===JSON.parse(before).option_choice_ids.join(),'Add to Order unchanged');
+      // Later insertion into an already-organized panel must not be skipped.
+      const late=document.createElement('div');late.innerHTML='<div class="option-group-label">Late modifier</div><div data-panel="'+id+'" data-group="late"><button class="option-chip selected" data-price="0">Late choice</button></div>';
+      options.append(late);organizePublicCustomization(panel);
+      ok(panel.querySelector('[data-customize-group="late"]'),'later modifier reconciled');
+      panel.querySelector('[data-customize-group="late"]').remove();
+      // Standalone specialized legacy path: opening is a real lifecycle hook.
+      const legacy=renderEspressoPanel(ESPRESSO_ITEMS[0]);const old=document.getElementById(legacy.id);if(old)old.remove();document.getElementById('espresso').append(legacy);
+      initPanel(ESPRESSO_ITEMS[0].id,buildEspressoDefaults(ESPRESSO_ITEMS[0]));
+      setPublicPanelOpen(ESPRESSO_ITEMS[0].id,true);
+      ok(legacy.querySelector('.public-customize'),'legacy opener organizes');
+      ok(legacy.querySelector('[data-customize-group="milk"]'),'legacy milk wrapped');
+      const legacyPanel=legacy.querySelector('.expansion-panel');organizePublicCustomization(legacyPanel);
+      ok(legacy.querySelectorAll('.public-customize').length===1,'legacy repeat safe');legacy.remove();
+      if(activePanel)setPublicPanelOpen(activePanel,false);setPublicPanelOpen(publicProductPanelTargets.get(fixtureId(2)).panelId,false);openFixture(2);
+      return count;
+    });
     const customize=page.locator('.section.active .public-item-wrap.open .public-customize > button');
     await customize.focus();const before=await customize.getAttribute('aria-expanded');await page.keyboard.press('Enter');
     check(await customize.getAttribute('aria-expanded')!==before,'native keyboard activation');
