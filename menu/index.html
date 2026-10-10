@@ -1341,6 +1341,8 @@
     color: var(--navy);
   }
 
+  .authoritative-review { overflow-wrap: anywhere; }
+  .authoritative-review article { padding: 12px 0; border-bottom: 1px solid var(--border, #ddd); }
   .order-confirm-body p {
     margin: 0 0 0.72rem;
     color: var(--gray-mid);
@@ -2716,6 +2718,48 @@
       padding-left: 0;
     }
   }
+
+/* Public product surfaces: page -> expanded product -> nested disclosures. */
+.public-item-wrap {
+  --product-surface: #FCFAF5;
+  --product-inner-surface: #F5F2EB;
+}
+body.night-mode .public-item-wrap {
+  --product-surface: #1A2030;
+  --product-inner-surface: #171C29;
+}
+.public-item-wrap.open {
+  background: var(--product-surface);
+  border-radius: 8px;
+  outline: 1px solid var(--bg3);
+  outline-offset: -1px;
+}
+.public-item-wrap.open > .product-card {
+  background: transparent;
+  border-color: transparent;
+  border-bottom-color: var(--bg3);
+  border-radius: 8px 8px 0 0;
+  box-shadow: none;
+}
+.public-item-wrap.open > .product-card:focus-visible {
+  border-color: var(--accent);
+}
+.public-item-wrap > .expansion-panel { border-radius: 0 0 8px 8px; }
+.public-item-wrap .public-customize,
+.public-item-wrap .customize-note { background: var(--product-inner-surface); }
+
+/* Compact customer customization; hidden controls retain their selected state. */
+.public-customize, .customize-note { border: 1px solid var(--bg3); border-radius: 10px; margin-top: 12px; min-width: 0; }
+.customize-toggle { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; width: 100%; min-height: 48px; padding: 12px; border: 0; border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.customize-toggle > span:first-child { font-weight: 600; }
+.customize-toggle > span:last-child { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+.customize-summary { grid-column: 1; font-size: .85em; overflow-wrap: anywhere; }
+.customize-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.customize-body { padding: 0 12px 12px; min-width: 0; }
+.customize-body[hidden] { display: none; }
+.customize-modifier + .customize-modifier { border-top: 1px solid var(--bg3); }
+.customize-body .option-chip { min-height: 44px; display: inline-flex; align-items: center; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.customize-note textarea { width: 100%; box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -7425,7 +7469,7 @@
         data-type="${group.selection_type}" data-min="${min}" data-max="${max}">
         ${choices.map(choice => {
           const price = Number(choice.price_delta);
-          if (choice.price_delta === null || choice.price_delta === undefined || !Number.isFinite(price) || !String(choice.label || '').trim()) throw new Error('Invalid option choice.');
+          if (choice.price_delta === null || choice.price_delta === undefined || !Number.isFinite(price) || price < 0 || !String(choice.label || '').trim()) throw new Error('Invalid option choice.');
           const selected = defaults.has(choice.option_choice_id);
           return `<button type="button" class="option-chip${selected ? ' selected' : ''}" aria-pressed="${selected}"
             data-choice-id="${escapeMenuHtml(choice.option_choice_id)}" data-value="${escapeMenuHtml(choice.value || choice.label)}"
@@ -7448,7 +7492,7 @@
       const id = panel.id.slice('panel-'.length);
       const sectionId = wrap.closest('.section').id;
       const category = (menu.categories || []).find(c => c.id === product.category_id);
-      const contract = { item, product, categoryName: category && category.name, error: '' };
+      const contract = { item, product, categoryName: category && category.name, error: '', optionGroups: [], compatibility: menu.configurationCompatibility || [] };
       publicItemPanels.set(id, contract);
       publicProductPanelTargets.set(product.id, { sectionId, panelId: id });
       wrap.classList.add('public-item-wrap');
@@ -7470,9 +7514,23 @@
       header.append(title, close);
       panel.querySelector('.panel-inner').prepend(header);
       const options = panel.querySelector('.panel-options');
+      // A generic rendering fallback must not silently drop a known recipe's
+      // selectable modifiers merely because its variant count changed.
+      let expectedRoot = panel;
+      if (!renderedPublicPanels.has(product.id)) {
+        const enhancement = getPublicPanelEnhancements().find(e => e.sectionId === sectionId
+          && e.items.some(i => normalizePublicMenuText(i.name) === normalizePublicMenuText(product.name)));
+        if (enhancement) {
+          try { expectedRoot = enhancement.render(enhancement.items.find(i => normalizePublicMenuText(i.name) === normalizePublicMenuText(product.name))); }
+          catch (_) { contract.error = 'This configuration is not available for ordering yet.'; }
+        }
+      }
+      contract.requiredOptionKeys = [...expectedRoot.querySelectorAll('[data-group]')]
+        .map(g => g.dataset.group).filter(key => !['size','pieces'].includes(key));
       try {
         if (menu.options?.errorsByProductId?.[product.id]) throw new Error(menu.options.errorsByProductId[product.id]);
         const groups = menu.options && menu.options.byProductId && menu.options.byProductId[product.id]?.groups || [];
+        contract.optionGroups = groups;
         const groupKeys = new Set();
         groups.slice().sort((a,b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)).forEach(group => {
           if (groupKeys.has(group.group_key) || ['size', 'pieces', 'note'].includes(group.group_key)) throw new Error('Conflicting option key.');
@@ -7487,21 +7545,15 @@
         contract.error = 'Options could not be loaded for this item. Please refresh the menu or ask the cashier.';
         console.warn('[CURV menu] Product options unavailable.', product.id, error);
       }
-      // Bind compatible legacy size controls to real rows without changing hot/iced pricing.
-      const sizeGroups = [...panel.querySelectorAll('[data-group="size"], [data-group="pieces"]')];
-      sizeGroups.forEach(group => group.querySelectorAll('.option-chip').forEach(chip => {
-        if (chip.dataset.sizeId) return;
-        const value = normalizePublicMenuText(chip.dataset.value);
-        const price = Number(chip.dataset.price);
-        const exact = item.variants.find(v => normalizePublicMenuText(v.label) === value && Number(v.price) === price);
-        const alias = value === 'large' || value === '12oz'
-          ? /\blarge\b|\blrg\b|\b18\s*oz\b|\b22\s*oz\b/
-          : value === 'regular' ? /\bregular\b|\breg\b|\b12\s*oz\b|\b16\s*oz\b/ : null;
-        const priced = item.variants.filter(v => Number(v.price) === price);
-        const variant = exact || (alias && priced.find(v => alias.test(normalizePublicMenuText(v.label))))
-          || (priced.length === 1 ? priced[0] : null);
-        if (variant) chip.dataset.sizeId = variant.id || '';
-      }));
+      // D0A.1: build size controls from the actual rows, never reverse-match a
+      // display label or preview price. Legacy display remains elsewhere.
+      const sizeGroup = panel.querySelector('[data-group="size"], [data-group="pieces"]');
+      if (sizeGroup) {
+        sizeGroup.innerHTML = item.variants.map((variant, index) =>
+          '<span class="option-chip' + (index === 0 ? ' selected' : '') + '" data-size-id="' + escapeMenuHtml(variant.id || '')
+          + '" data-value="' + escapeMenuHtml(variant.label) + '" data-price="' + escapeMenuHtml(variant.price)
+          + '">' + escapeMenuHtml(variant.label) + '</span>').join('');
+      }
       if (wrap.classList.contains('generic-public-product')) delete panelState[id];
       if (!panelState[id]) initPanel(id, {});
       const temperature = panel.querySelector('[data-option-key="temperature"] .selected');
@@ -7544,13 +7596,86 @@
       message.setAttribute('role', 'status');
       panel.querySelector('.panel-footer').before(message);
       panel.querySelector('.panel-add-btn').textContent = 'Add to Order';
+      organizePublicCustomization(panel);
       updatePanelPrice(id);
     });
   }
 
+  // Presentation only: move the existing controls after structured replacement.
+  function organizePublicCustomization(panel) {
+    const options = panel.querySelector('.panel-options');
+    if (!options || options.querySelector('.public-customize')) return;
+    const makeDisclosure = (label, className) => {
+      const shell = document.createElement('div');
+      shell.className = className;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'customize-toggle';
+      button.setAttribute('aria-expanded', 'false');
+      const title = document.createElement('span'); title.textContent = label;
+      const summary = document.createElement('span'); summary.className = 'customize-summary';
+      const arrow = document.createElement('span'); arrow.textContent = '▾'; arrow.setAttribute('aria-hidden', 'true');
+      button.append(title, summary, arrow);
+      const body = document.createElement('div'); body.className = 'customize-body'; body.hidden = true;
+      body.id = panel.id + '-customize-' + panel.querySelectorAll('.customize-body').length + '-' + className;
+      button.setAttribute('aria-controls', body.id);
+      button.addEventListener('click', () => {
+        body.hidden = !body.hidden;
+        button.setAttribute('aria-expanded', String(!body.hidden));
+        if (className === 'public-customize') title.textContent = body.hidden ? '+ Customize' : '− Hide Customizations';
+      });
+      shell.append(button, body);
+      return { shell, body, summary };
+    };
+    const modifiers = [...options.querySelectorAll('[data-group]')].filter(group =>
+      !['size', 'pieces', 'temperature'].includes(group.dataset.optionKey || group.dataset.group));
+    if (modifiers.length) {
+      const customize = makeDisclosure('+ Customize', 'public-customize');
+      options.append(customize.shell);
+      modifiers.forEach(group => {
+        const old = group.closest('.public-option-group, .accordion-group, [data-collapsible]') || group.parentElement;
+        const label = group.getAttribute('aria-label') || old.querySelector('.option-group-label, .accordion-label')?.textContent || group.dataset.group;
+        const row = makeDisclosure(label + (Number(group.dataset.min) > 0 ? ' (required)' : ''), 'customize-modifier');
+        row.shell.dataset.customizeGroup = group.dataset.optionKey || group.dataset.group;
+        customize.body.append(row.shell);
+        row.body.append(group);
+        if (old !== options && !old.querySelector('[data-group], textarea')) old.remove();
+      });
+    }
+    const note = options.querySelector('.panel-note-input');
+    if (note) {
+      const old = note.closest('.accordion-group, [data-collapsible]');
+      const oldLabel = note.previousElementSibling;
+      const disclosure = makeDisclosure('Special request', 'customize-note');
+      options.append(disclosure.shell);
+      disclosure.body.append(note);
+      if (old) old.remove();
+      if (oldLabel?.matches('label, .option-group-label')) oldLabel.remove();
+      options.querySelectorAll('label').forEach(label => { if (label.htmlFor === note.id) label.remove(); });
+      const refresh = () => { disclosure.summary.textContent = note.value.trim() ? note.value.trim().slice(0, 60) : '(tap to add)'; };
+      note.addEventListener('input', refresh); refresh();
+    }
+    syncCustomizationSummaries(panel);
+  }
+
+  function syncCustomizationSummaries(panel) {
+    if (!panel) return;
+    const summaries = [];
+    panel.querySelectorAll('.customize-modifier').forEach(row => {
+      const labels = [...row.querySelectorAll('.option-chip.selected')].map(chip => {
+        const copy = chip.cloneNode(true); copy.querySelectorAll('.chip-price').forEach(price => price.remove());
+        return copy.textContent.trim();
+      });
+      row.querySelector('.customize-summary').textContent = labels.length ? labels.join(' + ') : 'None';
+      if (labels.length) summaries.push(labels.join(' + '));
+    });
+    const summary = panel.querySelector('.public-customize > .customize-toggle > .customize-summary');
+    if (summary) summary.textContent = summaries.length ? summaries.slice(0, 2).join(' · ') + (summaries.length > 2 ? ' · +' + (summaries.length - 2) + ' groups' : '') : 'Options and add-ons';
+  }
+
   function publicPanelValidation(id) {
     const contract = publicItemPanels.get(id);
-    if (!contract) return '';
+    if (!contract) return 'Menu details are still loading. Please refresh if this continues.';
     if (contract.error) return contract.error;
     if (contract.item.is_sold_out) return hasExplicitPublicUnavailableState(contract.item) ? 'Unavailable' : 'Sold Out';
     for (const group of getPanelOptionGroups(id).filter(g => g.dataset.publicOption)) {
@@ -7562,8 +7687,50 @@
     if (sizeGroup && !sizeGroup.querySelector('.selected')) return 'Choose a size.';
     const selectedSize = sizeGroup?.querySelector('.selected');
     if (selectedSize && contract.item.variants.some(v => v.id) && !selectedSize.dataset.sizeId) return 'This size could not be loaded.';
+    const identity = readPublicConfiguration(id);
+    if (identity.error) return identity.error;
     const total = getPanelBasePrice(id) + getPanelAddOnsPrice(id);
+    if (contract.previewError) return contract.previewError;
     return Number.isFinite(total) && total >= 0 ? '' : 'This item price could not be loaded.';
+  }
+
+  // Shared configuration shape for future checkout and amendment pricing.
+  // These checks establish frontend completeness, not server authorization.
+  function readPublicConfiguration(id) {
+    const contract = publicItemPanels.get(id);
+    const fail = () => ({ error: 'This configuration is not available for ordering yet. Please contact CURV.' });
+    if (!contract || !contract.product.id) return fail();
+    const panel = getPanelRootElement(id);
+    const selectedSize = panel.querySelector('[data-group="size"] .selected, [data-group="pieces"] .selected');
+    const size = selectedSize ? contract.product.variants.find(v => v.id && v.id === selectedSize.dataset.sizeId)
+      : contract.product.variants.length === 1 ? contract.product.variants[0] : null;
+    if (!size?.id || size.product_id !== contract.product.id) return fail();
+    if (contract.requiredOptionKeys.some(key => !contract.optionGroups.some(g => g.group_key === key))) return fail();
+    const ids = [], snapshots = [];
+    for (const group of getPanelOptionGroups(id)) {
+      if (['size', 'pieces'].includes(group.dataset.group)) continue;
+      // Unmapped legacy modifiers cannot silently disappear from configuration.
+      if (!group.dataset.publicOption) return fail();
+      const catalog = contract.optionGroups.find(g => g.group_key === group.dataset.optionKey);
+      if (!catalog || (catalog.group_key === 'temperature' && group.querySelectorAll('.selected').length !== 1)) return fail();
+      for (const chip of group.querySelectorAll('.selected')) {
+        const choice = catalog.choices.find(c => c.option_choice_id === chip.dataset.choiceId);
+        if (!choice?.option_choice_id || choice.product_id !== contract.product.id || ids.includes(choice.option_choice_id)) return fail();
+        if (catalog.group_key === 'temperature' && !contract.compatibility.some(row =>
+          row.product_id === contract.product.id && row.product_size_id === size.id
+          && row.option_choice_id === choice.option_choice_id && row.is_active === true)) return fail();
+        ids.push(choice.option_choice_id);
+        snapshots.push({ group_id: catalog.option_group_id, choice_id: choice.option_choice_id,
+          group_name: catalog.name, label: choice.label, value: choice.value });
+      }
+    }
+    return { product_id: contract.product.id, product_size_id: size.id,
+      option_choice_ids: ids.sort(), option_snapshots: snapshots.sort((a,b) => a.choice_id.localeCompare(b.choice_id)) };
+  }
+
+  function configurationCartKey(configuration, note) {
+    return JSON.stringify([configuration.product_id, configuration.product_size_id,
+      [...configuration.option_choice_ids].sort(), note || '']);
   }
 
   function syncPublicPanelTemperature(id, value) {
@@ -7619,9 +7786,9 @@
   }
 
   function getPanelOptionGroups(id) {
-    const groups = [...document.querySelectorAll(`[data-panel="${id}"]`)];
-    const visibleGroups = groups.filter(isPanelNodeVisible);
-    return visibleGroups.length ? visibleGroups : groups;
+    // Collapsing controls must never exclude selections from price or identity.
+    const panel = getPanelRootElement(id);
+    return panel ? [...panel.querySelectorAll('[data-group][data-panel]')].filter(group => group.dataset.panel === id) : [];
   }
 
   function togglePanel(id) {
@@ -7661,7 +7828,41 @@
     return 0;
   }
 
+  // Transitional preview rules only. D0B must use reviewed UUID-based server
+  // overrides; these display rules never create product/size/choice identity.
+  function refreshConfigurationPreview(id) {
+    const contract = publicItemPanels.get(id), panel = getPanelRootElement(id);
+    if (!contract || !panel) return;
+    contract.previewError = '';
+    const includedMilk = {
+      'cloud spanish oat latte': 'oat', 'cocoa caramel latte': 'breve',
+      'cs matcha oat latte': 'oat', 'matcha sunrise': 'coconut'
+    }[normalizePublicMenuText(contract.product.name)];
+    if (includedMilk) panel.querySelectorAll('[data-option-key="milk"] [data-choice-id]').forEach(chip => {
+      if (chip.dataset.catalogDelta === undefined) chip.dataset.catalogDelta = chip.dataset.price;
+      chip.dataset.price = normalizePublicMenuText(chip.dataset.value).replace(/\s+milk$/, '') === includedMilk ? '0' : chip.dataset.catalogDelta;
+      const label = chip.querySelector('.chip-price');
+      if (label) label.textContent = Number(chip.dataset.price) ? '+₱' + chip.dataset.price : '';
+    });
+    if (TAKOYAKI_ITEMS.some(item => normalizePublicMenuText(item.name) === normalizePublicMenuText(contract.product.name))) {
+      const cheese = panel.querySelector('[data-option-key="cheese"] [data-value="yes"]');
+      const selected = panel.querySelector('[data-group="pieces"] .selected, [data-group="size"] .selected');
+      if (cheese && selected) {
+        const size = contract.product.variants.find(v => v.id === selected.dataset.sizeId);
+        const price = { '4pcs':30, '8pcs':60, '12pcs':90 }[String(size?.label || '').toLowerCase().replace(/\s/g,'')];
+        if (price === undefined) contract.previewError = 'This serving configuration is not available yet.';
+        else {
+          cheese.dataset.price = String(price);
+          let label = cheese.querySelector('.chip-price');
+          if (!label) { label = document.createElement('span'); label.className = 'chip-price'; cheese.append(label); }
+          label.textContent = '+₱' + price;
+        }
+      }
+    }
+  }
+
   function getPanelAddOnsPrice(id) {
+    refreshConfigurationPreview(id);
     let extra = 0;
     getPanelOptionGroups(id).forEach(group => {
       const gname = group.dataset.group;
@@ -7683,7 +7884,7 @@
     const message = publicPanelValidation(id);
     const panel = getPanelRootElement(id);
     if (panel?.querySelector('.public-panel-status')) panel.querySelector('.public-panel-status').textContent = message;
-    if (publicItemPanels.has(id) && panel) panel.querySelector('.panel-add-btn').disabled = Boolean(message);
+    if (panel?.querySelector('.panel-add-btn')) panel.querySelector('.panel-add-btn').disabled = Boolean(message);
   }
 
   function handleChipClick(chip) {
@@ -7747,6 +7948,7 @@
     updatePanelPrice(panelId);
     // Phase 5A: keep accordion summary in sync with chip selection
     updateGroupSummary(panelId, groupName);
+    syncCustomizationSummaries(getPanelRootElement(panelId));
   }
 
   // Delegate chip clicks
@@ -7776,7 +7978,9 @@
   function panelAddToCart(id, name) {
     if (isOrderSubmittedLocked) return;
     const contract = publicItemPanels.get(id);
-    if (contract ? Boolean(publicPanelValidation(id)) : isSoldOutProductName(name)) return;
+    if (!contract || publicPanelValidation(id)) return;
+    const configuration = readPublicConfiguration(id);
+    if (configuration.error) return;
     if (!panelState[id]) panelState[id] = { qty: 1, options: {} };
     const qty     = panelState[id].qty;
     const options = getPanelOptions(id);
@@ -7825,7 +8029,7 @@
       const selected = getPanelRootElement(id).querySelector('[data-group="size"] .selected, [data-group="pieces"] .selected');
       productSize = selected ? contract.item.variants.find(v => String(v.id || '') === selected.dataset.sizeId)
         : contract.item.variants[0];
-      if (document.getElementById('panel-wrap-' + id).classList.contains('generic-public-product')) variant = productSize?.label || '';
+      variant = productSize?.label || '';
       getPanelOptionGroups(id).filter(group => group.dataset.publicOption).forEach(group => {
         delete cleanOptions[group.dataset.group];
         delete cleanPrices[group.dataset.group];
@@ -7839,13 +8043,12 @@
         if (delta) Object.defineProperty(cleanPrices, key, { value: delta, enumerable: true, configurable: true });
       });
     }
-    const key = buildCartKey(name, variant, temp, cleanOptions)
-      + (contract ? '|product:' + contract.item.product_id + '|size:' + (productSize?.id || '') : '');
+    const key = configurationCartKey(configuration, note);
     const existing = cart.find(i => i.key === key);
     if (existing) {
       existing.qty += qty;
     } else {
-      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions, optionPrices: cleanPrices,
+      cart.push({ key, name, variant, price: unitPrice, qty, temp, options: cleanOptions, optionPrices: cleanPrices, ...configuration,
         ...(contract ? { product_id: contract.item.product_id, product_size_id: productSize?.id || null, category_name: contract.categoryName || null } : {}) });
     }
 
@@ -8076,6 +8279,7 @@
       copyButton.hidden = !shouldShowCopyFallback;
       copyButton.disabled = !shouldShowCopyFallback;
     }
+    window.curvCheckout?.syncButton();
   }
 
   function setDeliveryTime(mode) {
@@ -8147,33 +8351,9 @@
   }
 
   function addItem(name, variant, price, btn, options = {}) {
-    if (isOrderSubmittedLocked) return;
-    if (isSoldOutProductName(name) || isSoldOutAddContext(btn)) return;
-    const key = buildCartKey(name, variant, null, options);
-    const existing = cart.find(i => i.key === key);
-    if (existing) {
-      existing.qty++;
-    } else {
-      cart.push({ key, name, variant, price, qty: 1, temp: null, options });
-    }
-    renderCart();
-    updateBadge();
-
-    const f = document.getElementById('formFloat');
-    if (!f.classList.contains('open')) {
-      f.classList.add('open');
-      document.getElementById('formBody').classList.remove('minimized');
-      document.getElementById('minimizedBar').classList.remove('show');
-      document.getElementById('minimizeBtn').textContent = 'Minimize';
-      minimized = false;
-      setOrderBar(false);
-    }
-
-    if (btn) {
-      btn.classList.remove('pop');
-      void btn.offsetWidth;
-      btn.classList.add('pop');
-    }
+    // Legacy quick-add has no trustworthy catalog identity. Keep display only.
+    if (btn) { btn.disabled = true; btn.title = 'Open the catalog product to order.'; }
+    return false;
   }
 
   function removeItem(key) {
@@ -8340,6 +8520,7 @@
   }
 
   function renderCart() {
+    window.curvCheckout?.changed();
     // Clear only the obsolete cart error, not other validation or submission feedback.
     const submitStatus = document.getElementById('submitOrderStatus');
     if (cart.length > 0 && submitStatus?.textContent === 'Please add at least one item to your order.') {
@@ -8366,7 +8547,7 @@
     emptyEl.style.display = 'none';
     totalEl.style.display = 'flex';
     const delivery = isDeliveryOrder();
-    if (totalLabelEl) totalLabelEl.textContent = delivery ? 'Order Subtotal' : 'Estimated Total';
+    if (totalLabelEl) totalLabelEl.textContent = 'Estimated subtotal';
     if (totalNoteEl) {
       totalNoteEl.style.display = delivery ? 'block' : 'none';
       totalNoteEl.innerHTML = delivery
@@ -8793,10 +8974,10 @@
     const f = document.getElementById('formFloat');
     if (f.classList.contains('open')) {
       closeForm();
-    } else if (isWebsiteOrderingEnabled === false) {
+    } else if (isWebsiteOrderingEnabled === false && !window.curvCheckout?.hasPending()) {
       syncPublicOrderSubmitGate();
       setSubmitOrderStatus(WEBSITE_ORDERING_PAUSED_MESSAGE, 'error');
-    } else if (isPublicOrderTechnicalAvailable && !isPublicOrderSubmitEnabled()) {
+    } else if (isPublicOrderTechnicalAvailable && !isPublicOrderSubmitEnabled() && !window.curvCheckout?.hasPending()) {
       syncPublicOrderSubmitGate();
       setSubmitOrderStatus('Checking Website Ordering status. Please try again in a moment.');
     } else {
@@ -8933,6 +9114,8 @@
       return {
         product_id: item.product_id || null,
         product_size_id: item.product_size_id || null,
+        option_choice_ids: [...(item.option_choice_ids || [])].sort(),
+        option_snapshots: (item.option_snapshots || []).map(value => ({ ...value })),
         product_name: item.name || '',
         category_name: item.category_name || null,
         variant_label: [item.variant, item.temp].filter(Boolean).join(' · ') || null,
@@ -9028,6 +9211,7 @@
   }
 
   function hasStoredPublicSubmissionRetryState() {
+    if (window.curvCheckout?.hasPending()) return true;
     const storedKey = getSafeSubmissionKey(activeSubmissionKey) || getStoredPublicSubmissionKey();
     const storedSignature = activeSubmissionKeySignature || getStoredPublicSubmissionSignature();
     const failureMode = activeSubmissionFailureMode || getStoredPublicSubmissionFailureMode();
@@ -9089,10 +9273,10 @@
     if (!orderBar || !orderButton) return;
 
     const statusMessage = getOrderingStatusMessage();
-    const shouldDisable = isPublicOrderTechnicalAvailable && isWebsiteOrderingEnabled !== true;
+    const shouldDisable = isPublicOrderTechnicalAvailable && isWebsiteOrderingEnabled !== true && !window.curvCheckout?.hasPending();
     orderButton.disabled = shouldDisable;
     if (orderLabel) {
-      orderLabel.textContent = !isPublicOrderTechnicalAvailable
+      orderLabel.textContent = window.curvCheckout?.hasPending() ? 'Recover Previous Order' : !isPublicOrderTechnicalAvailable
         ? 'Use Copy Order'
         : isWebsiteOrderingEnabled === false
           ? 'Website Ordering Paused'
@@ -9305,7 +9489,7 @@
       fulfillmentType: fulfillmentType === 'dine_in'
         ? 'dine_in'
         : (fulfillmentType === 'pickup' ? 'pickup' : 'delivery'),
-      subtotal: Number(subtotal || getCartSubtotal() || 0),
+      subtotal: Number(subtotal ?? 0),
       trackingToken: safeToken,
       trackingUrl: getTrackingUrl(safeToken),
       submittedAt: new Date().toISOString()
@@ -9549,12 +9733,13 @@
     }
   });
 
-  function confirmOrderBeforeSubmit() {
+  function confirmOrderBeforeSubmit(quote, payload, changed = false) {
     return new Promise((resolve) => {
       pendingOrderConfirmResolve = resolve;
       setOrderConfirmModal(
-        'Review your order first',
+        changed ? 'Confirm your updated order' : 'Review your order',
         `
+          ${window.curvCheckout.reviewHtml(quote, payload)}
           <p>Please double-check your order details before submitting.</p>
           <p>Once confirmed, you won't be able to edit this order on the website.</p>
         `,
@@ -9569,7 +9754,7 @@
             }
           },
           {
-            label: 'Continue & Submit',
+            label: changed ? 'Confirm Updated Order' : 'Continue & Submit',
             onClick: () => {
               pendingOrderConfirmResolve = null;
               closeOrderConfirmModal();
@@ -9714,99 +9899,8 @@
   }
 
   async function submitPublicOrder() {
-    if (!isPublicOrderTechnicalAvailable) {
-      syncPublicOrderSubmitGate();
-      setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
-      return;
-    }
-    if (isOrderSubmittedLocked) return;
-    if (isSubmittingPublicOrder) return;
-
-    const payload = buildPublicOrderPayload();
-    const rememberedDetails = captureCustomerDetails();
-    const payloadSignature = JSON.stringify(payload);
-    const timingReplay = payload?.fulfillment_type === 'dine_in' && await hasPublicSubmissionReplayCandidate(payloadSignature);
-    const validationMessage = validatePublicOrderPayload(payload);
-    if (validationMessage && !(timingReplay && validationMessage === 'Please choose a preparation time later today.')) {
-      setSubmitOrderStatus(validationMessage, 'error');
-      return;
-    }
-
-    const canAttemptPausedReplay = isWebsiteOrderingEnabled === false
-      ? await hasPublicSubmissionReplayCandidate(payloadSignature)
-      : false;
-    if (!isPublicOrderSubmitEnabled() && !canAttemptPausedReplay) {
-      syncPublicOrderSubmitGate();
-      setSubmitOrderStatus(isWebsiteOrderingEnabled === false
-        ? WEBSITE_ORDERING_PAUSED_MESSAGE
-        : 'Checking Website Ordering status. Please try again in a moment.', isWebsiteOrderingEnabled === false ? 'error' : '');
-      return;
-    }
-
-    if (payloadSignature === lastSubmittedPublicOrderSignature) {
-      setSubmitOrderStatus('This order was already submitted. Please wait for CURV confirmation or change the cart before submitting again.', 'success');
-      return;
-    }
-
-    const shouldSubmit = await confirmOrderBeforeSubmit();
-    if (!shouldSubmit) return;
-
-    const client = getPublicSupabaseClient();
-    if (!client) {
-      setPublicOrderTechnicalAvailability(false);
-      setSubmitOrderStatus('Online order submission is unavailable right now. Please use Copy Order instead.', 'error');
-      return;
-    }
-    setPublicOrderTechnicalAvailability(true);
-
-    let submissionKey = '';
-    try {
-      submissionKey = await preparePublicSubmissionKey(payloadSignature);
-    } catch (error) {
-      setSubmitOrderStatus('Unable to prepare secure online order submission. Please use Copy Order instead.', 'error');
-      return;
-    }
-    payload.submission_key = submissionKey;
-
-    const submitButton = document.getElementById('submitOrderBtn');
-    isSubmittingPublicOrder = true;
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = 'Submitting...';
-    }
-    setSubmitOrderStatus('Submitting your order...');
-
-    let submittedSuccessfully = false;
-    try {
-      const { data, error } = await client.rpc('submit_public_order', { order_payload: payload });
-      if (error) throw error;
-
-      const confirmation = Array.isArray(data) ? data[0] : data;
-      const orderNumber = confirmation && confirmation.order_number ? String(confirmation.order_number).trim() : '';
-      const trackingToken = confirmation && confirmation.tracking_token ? getSafeTrackingToken(confirmation.tracking_token) : '';
-      if (!orderNumber || !trackingToken) {
-        throw new Error('Order confirmation was incomplete. Please try again or use Copy Order.');
-      }
-      lastSubmittedPublicOrderSignature = payloadSignature;
-      handleSuccessfulPublicOrder(orderNumber || 'received', payload.fulfillment_type, payload.subtotal, trackingToken);
-      saveCustomerDetailsAfterSuccess(rememberedDetails);
-      submittedSuccessfully = true;
-      clearPublicSubmissionState();
-    } catch (error) {
-      if (isPublicSubmissionKeyConflict(error)) {
-        clearPublicSubmissionState();
-        setSubmitOrderStatus("We couldn't safely submit this updated order. Please review your cart and try again.", 'error');
-      } else if (isWebsiteOrderingClosedError(error)) {
-        setWebsiteOrderingStatus(false);
-        setSubmitOrderStatus(WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE, 'error');
-      } else {
-        setStoredPublicSubmissionFailureMode(isPublicOrderValidationError(error) ? 'validation' : 'ambiguous');
-        setSubmitOrderStatus('Unable to submit order. Please try again or use Copy Order. ' + (error && error.message ? error.message : ''), 'error');
-      }
-    } finally {
-      isSubmittingPublicOrder = false;
-      syncAnytimeOrderState();
-    }
+    if (!window.curvCheckout) { setSubmitOrderStatus('Checkout is unavailable. Please refresh and try again.', 'error'); return; }
+    return window.curvCheckout.submit();
   }
 
   syncOrderMethodFields();
@@ -10125,6 +10219,7 @@
         invalidOptionRow(choice, 'choice');
         return map;
       }
+      if (choice.is_active === false) return map;
       const key = `${choice.product_id}:${choice.option_group_id}`;
       if (!map[key]) map[key] = [];
       map[key].push({
@@ -10260,7 +10355,7 @@
         return;
       }
 
-      const [categoryResult, productResult, sizeResult, sectionResult, optionGroupResult, optionChoiceResult, optionDefaultResult] = await Promise.all([
+      const [categoryResult, productResult, sizeResult, sectionResult, optionGroupResult, optionChoiceResult, optionDefaultResult, compatibilityResult] = await Promise.all([
         client
           .from('public_menu_categories')
           .select('id,name,sort_order')
@@ -10293,7 +10388,10 @@
           .order('label', { ascending: true }),
         client
           .from('public_menu_option_defaults')
-          .select('product_id,option_group_id,option_choice_id')
+          .select('product_id,option_group_id,option_choice_id'),
+        typeof client.rpc === 'function'
+          ? Promise.resolve().then(() => client.rpc('get_public_configuration_compatibility')).catch(error => ({ error }))
+          : Promise.resolve({ error: 'Configuration compatibility API unavailable' })
       ]);
 
       const errors = [categoryResult.error, productResult.error, sizeResult.error].filter(Boolean);
@@ -10310,6 +10408,8 @@
         console.warn('[CURV menu] Category section fetch failed. Menu rendering continues without section data.', sectionResult.error);
       }
       const shapedPublicMenu = shapePublicMenuData(rawCategories, rawProducts, rawProductSizes, rawCategorySections);
+      shapedPublicMenu.configurationCompatibility = !compatibilityResult.error && Array.isArray(compatibilityResult.data) ? compatibilityResult.data : [];
+      if (compatibilityResult.error) console.warn('[CURV menu] Temperature compatibility unavailable; temperature configurations remain blocked.', compatibilityResult.error);
       if (!sectionResult.error) {
         console.log('[CURV menu] Category sections fetched:', shapedPublicMenu.categorySections);
       }
@@ -10484,6 +10584,9 @@
     renderAllTakoyakiPanels();
     renderAllSavoryPanels();
     renderHardcodedCurvPicksFallback();
+    document.querySelectorAll('.panel-add-btn, .add-btn, .add-btn-pill').forEach(button => {
+      button.disabled = true; button.title = 'Waiting for catalog details';
+    });
     try {
       if (localStorage.getItem('curv-mode') === 'night') document.body.classList.add('night-mode');
     } catch(e) {}
@@ -10500,5 +10603,6 @@
     }
   });
 </script>
+<script src="authoritative-checkout.js"></script>
 </body>
 </html>
