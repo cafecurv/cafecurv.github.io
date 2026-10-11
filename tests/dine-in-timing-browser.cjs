@@ -1,3 +1,4 @@
+const {installCheckout}=require('./public-checkout-test-fixture.cjs');
 // Offline C1A profile and real submission-path checks; no live requests.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,10 +19,11 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
    window.fetch = () => { throw Error('Live fetch forbidden'); };
    window.WebSocket = class { constructor() { throw Error('Live socket forbidden'); } };
    if (seed !== undefined) localStorage.setItem(key, seed);
-   if (mode === 'read-fail') Storage.prototype.getItem = () => { throw Error('Storage denied'); };
+   if (mode === 'read-fail') { const get = Storage.prototype.getItem; Storage.prototype.getItem = function(k) { if(this===localStorage) throw Error('Storage denied'); return get.call(this,k); }; }
    if (mode === 'prefilled') { document.getElementById('f-name').value = 'Manual name'; document.getElementById('f-delivery').value = 'pickup'; }
   }, { seed, mode, key });
   for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) if (m[1].trim()) await page.addScriptTag({ content: m[1] });
+  await installCheckout(page);
   await page.evaluate(() => {
    closeForm();
    window.val = id => document.getElementById(id);
@@ -30,19 +32,19 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     val('f-name').value = 'Ana'; val('f-contact').value = '09171234567'; val('f-address').value = '123 Example Street';
     val('f-delivery').value = 'delivery-lalamove'; val('f-payment').value = 'gcash'; syncOrderMethodFields();
     val('f-notes').value = 'Never remember this note';
-    cart.length = 0; cart.push({key:'fixture',id:'fixture',name:'Fixture',variant:'Each',category_name:'Fixture',qty:1,price:150,options:{note:'Private item note'}});
+    cart.length = 0; cart.push({key:'fixture',id:'fixture',product_id:'00000000-0000-4000-8000-000000000030',product_size_id:'00000000-0000-4000-8000-000000000040',option_choice_ids:[],name:'Fixture',variant:'Each',category_name:'Fixture',qty:1,price:150,options:{note:'Private item note'}});
     isWebsiteOrderingEnabled = true;
     confirmOrderBeforeSubmit = async () => true;
     // Time-of-day availability is covered by existing tests; make this fixture deterministic.
 
     window.calls = [];
     window.resultMode = 'success';
-    publicMenuSupabaseClient = { rpc: async (name, args) => {
+    publicMenuSupabaseClient = checkoutFixtureRpc(async (name, args) => {
       calls.push({name, payload: structuredClone(args.order_payload)});
       if (resultMode === 'failure') return {error:{message:'Offline fixture failure',code:'22023'}};
       if (resultMode === 'pending') return new Promise(resolve => { window.finishSubmission = resolve; });
       return {data:{order_number:'C-12345',tracking_token:'00000000-0000-4000-8000-000000000123'}};
-    }};
+    });
     window.supabase = {createClient:()=>publicMenuSupabaseClient};
    };
   });
@@ -78,9 +80,9 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
  check(await scheduled.evaluate(()=>isOrderSubmittedLocked&&calls.at(-1).payload.requested_preparation_at==='2026-09-28T12:00:00+08:00'),'scheduled real submission path');await scheduled.close();
 
  const retry=await open();await retry.clock.setFixedTime(new Date('2026-09-28T15:00:00Z'));
- await retry.evaluate(async()=>{prepare();val('f-delivery').value='dine-in';val('f-contact').value='';syncOrderMethodFields();setDeliveryTime('specific');val('f-delivery-time').value='23:30';publicMenuSupabaseClient.rpc=async(name,args)=>{calls.push(structuredClone(args.order_payload));return {error:{message:'Connection lost'}};};await submitPublicOrder();});
+ await retry.evaluate(async()=>{prepare();val('f-delivery').value='dine-in';val('f-contact').value='';syncOrderMethodFields();setDeliveryTime('specific');val('f-delivery-time').value='23:30';publicMenuSupabaseClient.submitHandler=async(name,args)=>{calls.push(structuredClone(args.order_payload));return {error:{message:'Connection lost'}};};await submitPublicOrder();});
  await retry.clock.setFixedTime(new Date('2026-09-28T16:01:00Z'));
- await retry.evaluate(async()=>{syncAnytimeOrderState();publicMenuSupabaseClient.rpc=async(name,args)=>{calls.push(structuredClone(args.order_payload));return {data:{order_number:'C-REPLAY',tracking_token:'00000000-0000-4000-8000-000000000123'}};};await submitPublicOrder();});
+ await retry.evaluate(async()=>{syncAnytimeOrderState();publicMenuSupabaseClient.submitHandler=async(name,args)=>{calls.push(structuredClone(args.order_payload));return {data:{order_number:'C-REPLAY',tracking_token:'00000000-0000-4000-8000-000000000123'}};};await submitPublicOrder();});
  check(await retry.evaluate(()=>isOrderSubmittedLocked&&calls.length===2&&calls[0].submission_key===calls[1].submission_key&&calls[0].requested_preparation_at===calls[1].requested_preparation_at),'ambiguous scheduled retry after Manila midnight preserves timestamp/key');await retry.close();
  console.log(count+' dine-in form assertions passed; network intercepted.');
  }finally{await browser.close();}

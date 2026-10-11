@@ -1,0 +1,5 @@
+section,schema_name,table_name,status,exact_row,product_name,size_label,size_owner_product_id,group_id,group_name,group_key,choice_label,choice_value,global_choice_delta
+E1_PRICE_OVERRIDES,public,product_option_choice_price_overrides,PRESENT_EMPTY,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+E2_SIZE_COMPATIBILITY,public,product_size_option_choice_compatibility,PRESENT_EMPTY,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+E3_OVERRIDE_REQUIREMENTS,public,product_option_choice_override_requirements,PRESENT_EMPTY,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+E4_PRICING_CERTIFICATIONS,configuration_private,product_pricing_certifications,PRESENT_EMPTY,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL

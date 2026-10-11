@@ -121,7 +121,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       showSection('matcha');
       cart.length = 0;
       panelAddToCart(kagoshima.panelId, 'Kagoshima Matcha Cream');
-      check(cart.length === 1 && cart[0].price === 180, 'customized cart uses public price');
+      check(cart.length === 0, 'unmapped specialized modifiers block ordering');
 
       const moved = raw('Kagoshima Matcha Cream', [variant('Box', 222)], { category_id: 'new-category' });
       render('matcha', [moved], [{ id: 'new-category', name: 'New Category', sort_order: 3 }]);
@@ -183,7 +183,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       check(document.getElementById('panel-' + spanish.panelId).querySelector('[data-group="milk"]'), 'espresso milk preserved');
       cart.length = 0;
       panelAddToCart(spanish.panelId, 'Spanish Latte');
-      check(cart.length === 1 && cart[0].price === 140 && cart[0].variant === 'Regular', 'espresso public size/price cart contract');
+      check(cart.length === 0, 'unmapped espresso configuration cannot create weak cart line');
 
       render('salads', [raw('Disabled With Price', undefined, { is_available: false })]);
       check(document.querySelector('#salads .menu-item-badge').textContent === 'Unavailable', 'generic unavailable badge');

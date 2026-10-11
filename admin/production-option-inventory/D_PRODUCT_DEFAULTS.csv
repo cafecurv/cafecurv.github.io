@@ -1,0 +1,2 @@
+section,default_id,product_id,product_name,option_group_id,group_name,group_key,group_active,option_choice_id,choice_label,choice_value,global_choice_delta,choice_active,choice_actual_group_id,assignment_id,assignment_active
+D_PRODUCT_DEFAULTS,cfe33aa7-fd9d-4e0b-b0c4-016200e59ec2,ffcf04b4-1500-4463-aa25-3703a1e167ed,Shrimp Tempura,5475e951-d4b1-46bf-a556-f63aecdf0fe2,Bites Sauce,bites_sauce,true,ed7d2165-f29d-4ca7-b4d8-1e5bbb89d0a7,Tempura Sauce,Tempura Sauce,0,true,5475e951-d4b1-46bf-a556-f63aecdf0fe2,da9742a2-5ab0-453e-89a8-583f0eff6a46,true

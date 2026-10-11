@@ -2874,16 +2874,31 @@
   const collapsibleToggles = Array.from(document.querySelectorAll('[data-collapsible-toggle]'));
   const displayOrderCategorySelect = document.querySelector('[data-display-order-category]');
   const displayOrderSectionSelect = document.querySelector('[data-display-order-section]');
+  const sectionOrderList = document.querySelector('[data-section-order-list]');
+  const sectionOrderStatus = document.querySelector('[data-section-order-status]');
+  const saveSectionOrderButton = document.querySelector('[data-save-section-order]');
+  const resetSectionOrderButton = document.querySelector('[data-reset-section-order]');
   const displayOrderList = document.querySelector('[data-display-order-list]');
   const displayOrderUnsaved = document.querySelector('[data-display-order-unsaved]');
   const displayOrderStatus = document.querySelector('[data-display-order-status]');
   const resetDisplayOrderButton = document.querySelector('[data-reset-display-order]');
   const saveDisplayOrderButton = document.querySelector('[data-save-display-order]');
   const optionGroupStatus = document.querySelector('[data-option-group-status]');
-  const optionGroupList = document.querySelector('[data-option-group-list]');
-  const optionGroupDetail = document.querySelector('[data-option-group-detail]');
-  const optionChoiceList = document.querySelector('[data-option-choice-list]');
   const optionManagerStatus = document.querySelector('[data-option-manager-status]');
+  const optionGroupSelect = document.getElementById('option-library-group');
+  const optionChoiceSelect = document.getElementById('option-library-choice');
+  const newOptionGroupButton = document.querySelector('[data-new-option-group]');
+  const newOptionChoiceButton = document.querySelector('[data-new-option-choice]');
+  const toggleOptionGroupButton = document.querySelector('[data-toggle-option-group]');
+  const toggleOptionChoiceButton = document.querySelector('[data-toggle-option-choice]');
+  const optionLibrarySummary = document.querySelector('[data-option-library-summary]');
+  const optionChoiceHelp = document.querySelector('[data-option-choice-help]');
+  let optionGroupMode = 'viewing';
+  let optionChoiceMode = 'viewing';
+  let selectedOptionChoiceId = '';
+  let previousOptionGroupId = '';
+  let optionChoiceRequest = 0;
+  let optionChoicesLoading = false;
   const optionGroupForm = document.querySelector('[data-option-group-form]');
   const optionGroupFormTitle = document.querySelector('[data-option-group-form-title]');
   const saveOptionGroupButton = document.querySelector('[data-save-option-group]');
@@ -2945,6 +2960,9 @@
   let editingOptionGroupId = null;
   let editingOptionChoiceId = null;
   let isOwnerSignedIn = false;
+  let menuSessionUser = null;
+  let menuAuthState = 'checking';
+  let menuAuthGeneration = 0;
   let signedInOwnerEmail = '';
   let optionGroupsLoaded = false;
   let optionGroupsLoading = false;
@@ -2954,6 +2972,8 @@
   let selectedDisplayOrderCategory = '';
   let selectedDisplayOrderSection = 'all';
   let latestDisplayOrderSections = [];
+  let draftSectionOrder = [];
+  let sectionOrderRequest = 0;
   let displayOrderOriginalProducts = [];
   let sortableProducts = [];
   let displayOrderDirty = false;
@@ -3044,10 +3064,10 @@
   };
 
   const updateOwnerAccountUi = () => {
-    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
-    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
-    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
-    if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = Boolean(menuSessionUser);
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !menuSessionUser;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = menuSessionUser ? (isOwnerSignedIn ? 'Owner' : 'Account') : 'Owner Login';
+    if (ownerAccountEmail) ownerAccountEmail.textContent = menuSessionUser ? 'Signed in as ' + (menuSessionUser.email || 'account') : '';
     if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
   };
 
@@ -3067,8 +3087,8 @@
       productSaveInProgress = false;
       productImageEditor?.reset('');
     }
-    if (signInButton) signInButton.disabled = isSignedIn;
-    if (signOutButton) signOutButton.disabled = !isSignedIn;
+    if (signInButton) signInButton.disabled = Boolean(menuSessionUser);
+    if (signOutButton) signOutButton.disabled = !menuSessionUser;
     if (openProductEditorButton) openProductEditorButton.disabled = !isSignedIn;
     updateOwnerAccountUi();
     updateEditorPublishAction();
@@ -4759,6 +4779,7 @@
   };
 
   const updateDisplayOrderButtons = () => {
+    renderSectionOrder();
     const hasCategory = Boolean(selectedDisplayOrderCategory);
     const hasSortableSection = isDisplayOrderSectionSortable();
     const hasProducts = sortableProducts.length > 0;
@@ -4784,8 +4805,92 @@
     }
   };
 
+  const sectionOrderIsDirty = () => draftSectionOrder.some((section, index) => section.id !== latestDisplayOrderSections[index]?.id);
+
+  const renderSectionOrder = () => {
+    if (!sectionOrderList) return;
+    sectionOrderList.replaceChildren();
+    const locked = !isOwnerSignedIn || displayOrderSaving;
+    draftSectionOrder.forEach((section, index) => {
+      const row = document.createElement('div');
+      row.className = 'section-order-row';
+      const label = document.createElement('span');
+      label.textContent = section.name + (section.is_active === false ? ' (Hidden)' : '');
+      row.appendChild(label);
+      const actions = document.createElement('div');
+      actions.className = 'section-order-moves';
+      [-1, 1].forEach(direction => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'auth-button auth-button-secondary';
+        button.textContent = direction < 0 ? 'Move Up' : 'Move Down';
+        button.setAttribute('aria-label', button.textContent + ': ' + section.name);
+        button.disabled = locked || index + direction < 0 || index + direction >= draftSectionOrder.length;
+        button.addEventListener('click', () => {
+          if (!isOwnerSignedIn || displayOrderSaving) return;
+          const target = index + direction;
+          [draftSectionOrder[index], draftSectionOrder[target]] = [draftSectionOrder[target], draftSectionOrder[index]];
+          renderSectionOrder();
+          sectionOrderStatus.textContent = sectionOrderIsDirty() ? 'Unsaved section order changes.' : 'Saved section order restored.';
+          const movedButtons = sectionOrderList.children[target].querySelectorAll('button');
+          (movedButtons[direction < 0 ? 0 : 1].disabled ? movedButtons[direction < 0 ? 1 : 0] : movedButtons[direction < 0 ? 0 : 1]).focus();
+        });
+        actions.appendChild(button);
+      });
+      row.appendChild(actions);
+      sectionOrderList.appendChild(row);
+    });
+    if (!draftSectionOrder.length) sectionOrderList.textContent = selectedDisplayOrderCategory ? 'No sections in this category.' : 'Select a category to begin.';
+    saveSectionOrderButton.disabled = locked || !sectionOrderIsDirty();
+    resetSectionOrderButton.disabled = locked || !sectionOrderIsDirty();
+  };
+
+  const saveSectionOrder = async () => {
+    if (!isOwnerSignedIn || displayOrderSaving || !sectionOrderIsDirty() || !selectedDisplayOrderCategory) return;
+    const categoryId = selectedDisplayOrderCategory;
+    const generation = menuAuthGeneration;
+    const saved = draftSectionOrder.map((section, index) => ({ ...section, sort_order: index }));
+    if (saved.some(section => section.category_id !== categoryId)) return;
+    displayOrderSaving = true;
+    displayOrderCategorySelect.disabled = true;
+    displayOrderSectionSelect.disabled = true;
+    updateDisplayOrderButtons();
+    sectionOrderStatus.textContent = 'Saving section order...';
+    try {
+      for (const section of saved) {
+        if (!isOwnerSignedIn || generation !== menuAuthGeneration) return;
+        const { data, error } = await client.from('category_sections')
+          .update({ sort_order: section.sort_order }).eq('id', section.id).eq('category_id', categoryId).select('id').single();
+        if (generation !== menuAuthGeneration) return;
+        if (error || !data) throw new Error(error?.message || 'No matching section was updated.');
+      }
+      latestDisplayOrderSections = saved;
+      draftSectionOrder = saved.slice();
+      if (getSelectedProductListCategoryId() === categoryId) renderProductSections(saved);
+      sectionOrderStatus.textContent = 'Section order saved. The customer menu will use this order on its next load.';
+    } catch (error) {
+      if (generation === menuAuthGeneration) sectionOrderStatus.textContent = 'Unable to save section order. Some sections may have saved; retry Save Section Order. ' + error.message;
+    } finally {
+      if (generation === menuAuthGeneration) {
+        displayOrderSaving = false;
+        displayOrderCategorySelect.disabled = !isOwnerSignedIn;
+        renderDisplayOrderSections(latestDisplayOrderSections);
+        updateDisplayOrderButtons();
+      }
+    }
+  };
+
+  if (saveSectionOrderButton) saveSectionOrderButton.addEventListener('click', saveSectionOrder);
+  if (resetSectionOrderButton) resetSectionOrderButton.addEventListener('click', () => {
+    if (!isOwnerSignedIn || displayOrderSaving) return;
+    draftSectionOrder = latestDisplayOrderSections.slice();
+    renderSectionOrder();
+    sectionOrderStatus.textContent = 'Saved section order restored.';
+  });
+
   const renderDisplayOrderSections = (sections = []) => {
     latestDisplayOrderSections = sections;
+    renderSectionOrder();
     if (!displayOrderSectionSelect) return;
 
     displayOrderSectionSelect.innerHTML = '';
@@ -4820,6 +4925,11 @@
   };
 
   const loadDisplayOrderSections = async (categoryId) => {
+    const request = ++sectionOrderRequest;
+    const generation = menuAuthGeneration;
+    draftSectionOrder = [];
+    renderSectionOrder();
+    sectionOrderStatus.textContent = categoryId ? 'Loading sections...' : 'Select a category to arrange sections.';
     if (!categoryId) {
       renderDisplayOrderSections([]);
       return;
@@ -4837,14 +4947,18 @@
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
 
+    if (request !== sectionOrderRequest || generation !== menuAuthGeneration || categoryId !== selectedDisplayOrderCategory) return;
     if (error) {
       latestDisplayOrderSections = [];
       renderDisplayOrderSections([]);
       setDisplayOrderStatus('Unable to load sections. ' + error.message);
+      sectionOrderStatus.textContent = 'Unable to load sections. ' + error.message;
       return;
     }
 
+    draftSectionOrder = (data || []).slice();
     renderDisplayOrderSections(data || []);
+    sectionOrderStatus.textContent = 'Move sections, then save their order.';
   };
 
   const getProductSortOrder = (product) => {
@@ -5062,6 +5176,9 @@
   };
 
   const initializeDisplayOrderCategory = async (categoryId) => {
+    const generation = menuAuthGeneration;
+    ++sectionOrderRequest;
+    draftSectionOrder = [];
     selectedDisplayOrderCategory = categoryId || '';
     if (displayOrderCategorySelect) displayOrderCategorySelect.value = selectedDisplayOrderCategory;
 
@@ -5080,6 +5197,7 @@
 
     selectedDisplayOrderSection = 'all';
     await loadDisplayOrderSections(selectedDisplayOrderCategory);
+    if (generation !== menuAuthGeneration || categoryId !== selectedDisplayOrderCategory) return;
     displayOrderLoadedCategory = selectedDisplayOrderCategory;
     displayOrderLoadedSection = selectedDisplayOrderSection;
     displayOrderOriginalProducts = getDisplayOrderProductsForSelection();
@@ -5108,7 +5226,7 @@
       return;
     }
 
-    if (displayOrderDirty && nextCategory !== selectedDisplayOrderCategory) {
+    if ((displayOrderDirty || sectionOrderIsDirty()) && nextCategory !== selectedDisplayOrderCategory) {
       const shouldDiscard = window.confirm('You have unsaved display order changes. Switch categories and discard them?');
       if (!shouldDiscard) {
         displayOrderCategorySelect.value = selectedDisplayOrderCategory;
@@ -5144,6 +5262,9 @@
   };
 
   const resetDisplayOrder = () => {
+    ++sectionOrderRequest;
+    draftSectionOrder = [];
+    if (sectionOrderStatus) sectionOrderStatus.textContent = 'Select a category to arrange sections.';
     selectedDisplayOrderCategory = '';
     selectedDisplayOrderSection = 'all';
     latestDisplayOrderSections = [];
@@ -5318,8 +5439,13 @@
     selectedCategoryFilter = 'all';
     selectedSectionFilter = 'all';
     selectedProductStatusFilter = 'all';
-    if (productStatus) productStatus.textContent = 'Locked';
-    if (productCount) productCount.textContent = 'Sign in to load products.';
+    const authCopy = menuAuthState === 'checking' ? ['Checking access', 'Checking owner access...', 'Please wait while your access is verified.']
+      : menuAuthState === 'denied' ? ['Access restricted', 'Owner access required', 'You are signed in, but this account is not authorized as an owner.']
+      : menuAuthState === 'error' ? ['Access unavailable', 'Unable to verify owner access', 'Please retry signing in or refresh.']
+      : menuAuthState === 'owner' ? ['Loading', 'Loading products...', 'Please wait.']
+      : ['Locked', 'Owner sign-in required', 'Sign in to continue.'];
+    if (productStatus) productStatus.textContent = authCopy[0];
+    if (productCount) productCount.textContent = authCopy[1];
     productSearchQuery = '';
     if (productFilterBar) productFilterBar.hidden = true;
     if (productFilterList) productFilterList.innerHTML = '';
@@ -5331,8 +5457,8 @@
     latestVisibleProducts = [];
     updateBulkPublishControls();
     resetDisplayOrder();
-    resetOptionGroups();
-    renderProductEmptyState('Owner sign-in required', 'Sign in to continue.');
+    if (!isOwnerSignedIn) resetOptionGroups();
+    renderProductEmptyState(authCopy[1], authCopy[2]);
   };
 
   const formatPrice = (price) => new Intl.NumberFormat('en-PH', {
@@ -5538,17 +5664,19 @@
     });
     if (saveOptionGroupButton) saveOptionGroupButton.disabled = isDisabled || optionGroupSaving;
     if (resetOptionGroupButton) resetOptionGroupButton.disabled = isDisabled || optionGroupSaving;
+    syncOptionEditor();
   };
 
   const resetOptionGroupForm = () => {
     editingOptionGroupId = null;
+    optionGroupMode = 'viewing';
     if (optionGroupForm) {
       optionGroupForm.reset();
       if (optionGroupForm.elements.selection_type) optionGroupForm.elements.selection_type.value = 'single';
       if (optionGroupForm.elements.sort_order) optionGroupForm.elements.sort_order.value = '0';
       if (optionGroupForm.elements.is_active) optionGroupForm.elements.is_active.checked = true;
     }
-    if (optionGroupFormTitle) optionGroupFormTitle.textContent = 'Create Option Group';
+    if (optionGroupFormTitle) optionGroupFormTitle.textContent = 'New Group';
     setOptionGroupFormDisabled(!isOwnerSignedIn);
   };
 
@@ -5560,6 +5688,7 @@
     }
 
     editingOptionGroupId = group.id;
+    optionGroupMode = 'editing';
     optionGroupForm.elements.name.value = group.name || '';
     optionGroupForm.elements.group_key.value = group.group_key || '';
     optionGroupForm.elements.selection_type.value = group.selection_type || 'single';
@@ -5618,28 +5747,32 @@
     });
     if (saveOptionChoiceButton) saveOptionChoiceButton.disabled = shouldDisable;
     if (resetOptionChoiceButton) resetOptionChoiceButton.disabled = shouldDisable;
+    syncOptionEditor();
   };
 
   const resetOptionChoiceForm = () => {
     editingOptionChoiceId = null;
+    optionChoiceMode = 'viewing';
     if (optionChoiceForm) {
       optionChoiceForm.reset();
       if (optionChoiceForm.elements.price_delta) optionChoiceForm.elements.price_delta.value = '0';
       if (optionChoiceForm.elements.sort_order) optionChoiceForm.elements.sort_order.value = '0';
       if (optionChoiceForm.elements.is_active) optionChoiceForm.elements.is_active.checked = true;
     }
-    if (optionChoiceFormTitle) optionChoiceFormTitle.textContent = 'Create Option Choice';
+    if (optionChoiceFormTitle) optionChoiceFormTitle.textContent = 'New Choice';
+    if (optionChoiceSelect) optionChoiceSelect.value = '';
     setOptionChoiceFormDisabled(!isOwnerSignedIn || !selectedOptionGroupId);
   };
 
   const loadOptionChoiceIntoForm = (choiceId) => {
     const choice = optionChoicesList.find((item) => item.id === choiceId);
-    if (!choice || !optionChoiceForm) {
+    if (!choice || choice.option_group_id !== selectedOptionGroupId || !optionChoiceForm) {
       setOptionManagerStatus('Option choice could not be found.');
       return;
     }
 
     editingOptionChoiceId = choice.id;
+    optionChoiceMode = 'editing';
     optionChoiceForm.elements.label.value = choice.label || '';
     optionChoiceForm.elements.value.value = choice.value || '';
     optionChoiceForm.elements.price_delta.value = String(choice.price_delta ?? 0);
@@ -5691,198 +5824,157 @@
     editingOptionChoiceId = null;
     optionGroupsLoaded = false;
     optionGroupsLoading = false;
+    optionGroupSaving = false;
+    optionChoiceSaving = false;
+    selectedOptionChoiceId = '';
     if (optionGroupStatus) optionGroupStatus.textContent = 'Locked';
     resetOptionGroupForm();
     setOptionGroupFormDisabled(true);
     resetOptionChoiceForm();
     setOptionChoiceFormDisabled(true);
-      renderOptionEmptyState(optionGroupList, 'Owner sign-in required', 'Sign in to continue.', 'h4');
-    renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
-    if (optionChoiceList) optionChoiceList.innerHTML = '';
+    optionChoiceRequest++;
+    optionChoicesLoading = false;
+    renderOptionGroups([]);
+    renderOptionGroupDetail();
+    renderOptionChoices([]);
     setOptionManagerStatus('Sign in to load reusable option groups.');
+  };
+
+  const syncOptionEditor = () => {
+    const busy = !isOwnerSignedIn || optionGroupSaving || optionChoiceSaving || optionGroupsLoading;
+    const group = optionGroupsList.find(item => item.id === selectedOptionGroupId);
+    const choice = optionChoicesList.find(item => item.id === selectedOptionChoiceId);
+    for (const [kind, mode, form, row, waiting] of [
+      ['group', optionGroupMode, optionGroupForm, group, busy],
+      ['choice', optionChoiceMode, optionChoiceForm, choice, busy || !group || optionChoicesLoading]
+    ]) {
+      const viewing = mode === 'viewing';
+      if (form) { form.hidden = viewing; Array.from(form.elements).forEach(field => { field.disabled = waiting || viewing; }); }
+      const title = document.querySelector('[data-option-' + kind + '-form-title]');
+      if (title) { title.hidden = viewing; title.textContent = (mode === 'creating' ? 'New ' : 'Edit ') + (kind === 'group' ? 'Group' : 'Choice'); }
+      const actions = document.querySelector('[data-option-' + kind + '-view-actions]');
+      if (actions) actions.hidden = !viewing;
+      const edit = document.querySelector('[data-edit-option-' + kind + ']');
+      if (edit) edit.disabled = waiting || !row;
+      const remove = document.querySelector('[data-delete-option-' + kind + ']');
+      if (remove) remove.disabled = waiting || !row || optionChoicesLoading;
+      const summary = document.querySelector('[data-option-' + kind + '-summary]');
+      if (summary) {
+        summary.hidden = !viewing;
+        summary.textContent = !row ? 'Select or create a ' + kind + '.' : kind === 'group'
+          ? row.name + '\nKey: ' + row.group_key + '\nCustomer can choose: ' + (row.selection_type === 'multi' ? 'Multiple options' : 'One option') + '\nSort order: ' + row.sort_order + '\nStatus: ' + (row.is_active ? 'Active' : 'Inactive')
+          : row.label + '\nValue: ' + row.value + '\nPrice delta: ' + row.price_delta + '\nSort order: ' + row.sort_order + '\nStatus: ' + (row.is_active ? 'Active' : 'Inactive');
+      }
+      const save = kind === 'group' ? saveOptionGroupButton : saveOptionChoiceButton;
+      if (save) save.textContent = mode === 'creating' ? 'Create ' + (kind === 'group' ? 'Group' : 'Choice') : 'Save Changes';
+      const toggle = kind === 'group' ? toggleOptionGroupButton : toggleOptionChoiceButton;
+      if (toggle) { toggle.hidden = !row || !viewing; toggle.disabled = waiting; toggle.textContent = row?.is_active ? 'Deactivate' : 'Reactivate'; }
+    }
+    if (optionGroupSelect) optionGroupSelect.disabled = busy;
+    if (newOptionGroupButton) newOptionGroupButton.disabled = busy;
+    if (optionChoiceSelect) optionChoiceSelect.disabled = busy || !group || optionChoicesLoading;
+    if (newOptionChoiceButton) newOptionChoiceButton.disabled = busy || !group || optionChoicesLoading;
+    if (optionLibrarySummary) optionLibrarySummary.textContent = !isOwnerSignedIn ? 'Owner access required.'
+      : optionGroupsList.length + ' option groups' + (group && !optionChoicesLoading ? ' · ' + optionChoicesList.length + ' choices in selected group' : '');
+  };
+
+  // A rejected transport must follow the same cleanup path as an API error.
+  const optionLibraryRequest = async (request) => {
+    try { return await request; }
+    catch (error) { return { data: null, error: { message: error?.message || 'Request failed. Please retry.' } }; }
+  };
+
+  const deleteOptionRecord = async (kind) => {
+    if (!isOwnerSignedIn || optionGroupSaving || optionChoiceSaving || optionGroupsLoading || optionChoicesLoading) return;
+    const isGroup = kind === 'group';
+    const record = isGroup ? optionGroupsList.find(row => row.id === selectedOptionGroupId)
+      : optionChoicesList.find(row => row.id === selectedOptionChoiceId);
+    if (!record || !window.confirm('Permanently delete “' + (isGroup ? record.name : record.label) + '”?\nThis cannot be undone.')) return;
+    const generation = menuAuthGeneration;
+    if (isGroup) optionGroupSaving = true; else optionChoiceSaving = true;
+    syncOptionEditor();
+    setOptionManagerStatus('Deleting ' + (isGroup ? 'group' : 'choice') + '...');
+    const { data, error } = await optionLibraryRequest(client.rpc('menu_manager_delete_option_' + kind,
+      isGroup ? { p_group_id: record.id } : { p_choice_id: record.id }));
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
+    if (isGroup) optionGroupSaving = false; else optionChoiceSaving = false;
+    syncOptionEditor();
+    if (error || data?.ok !== true) {
+      const messages = {
+        GROUP_HAS_CHOICES: 'This option group still contains choices. Remove those choices first.',
+        GROUP_ASSIGNED: 'This option group is still assigned to products. Remove those assignments first.',
+        CHOICE_ASSIGNED: 'This option is still assigned to products. Remove those assignments first.',
+        USED_AS_DEFAULT: 'This option is still used as a default.',
+        USED_IN_OVERRIDE: 'This option is still used in product pricing.',
+        USED_IN_COMPATIBILITY: 'This option is still used in size compatibility settings.',
+        USED_IN_REQUIREMENT: 'This option is still required by product pricing settings.',
+        USED_IN_CERTIFICATION: 'This option is still part of a reviewed product configuration.',
+        OWNER_REQUIRED: 'Owner access is required to delete options.',
+        NOT_FOUND: 'This option no longer exists. Refresh the library.',
+        RETRY_REQUIRED: 'Options are busy. Please try again.',
+        REFERENCE_REVIEW_REQUIRED: 'This option has protected references and cannot be deleted.'
+      };
+      const reason = data?.code === 'IN_USE' ? data.reasons?.[0] : data?.code;
+      setOptionManagerStatus(messages[reason] || 'Unable to delete this option. Refresh the library before trying again.');
+      return;
+    }
+    let refreshed = false;
+    if (isGroup) {
+      selectedOptionGroupId = ''; selectedOptionChoiceId = '';
+      resetOptionGroupForm(); resetOptionChoiceForm();
+      await loadOptionGroups(true);
+      refreshed = optionGroupsLoaded;
+    } else {
+      selectedOptionChoiceId = ''; resetOptionChoiceForm();
+      refreshed = await loadOptionChoices(selectedOptionGroupId);
+    }
+    if (refreshed && generation === menuAuthGeneration && isOwnerSignedIn) setOptionManagerStatus(isGroup ? 'Option group deleted.' : 'Option choice deleted.');
   };
 
   const renderOptionGroups = (groups) => {
     optionGroupsList = groups || [];
-    if (!optionGroupList) return;
-    optionGroupList.innerHTML = '';
-
-    if (optionGroupStatus) optionGroupStatus.textContent = 'Owner access';
-
-    if (!optionGroupsList.length) {
-      renderOptionEmptyState(optionGroupList, 'No option groups yet.', 'Use the form above to create the first reusable group.', 'h4');
-      return;
+    if (optionGroupSelect) {
+      optionGroupSelect.replaceChildren(new Option('Select Option Group', ''));
+      optionGroupsList.forEach(group => optionGroupSelect.add(new Option((group.name || 'Untitled group') + (group.is_active ? '' : ' (Inactive)'), group.id)));
+      optionGroupSelect.value = selectedOptionGroupId;
     }
-
-    optionGroupsList.forEach((group) => {
-      const item = document.createElement('article');
-      item.className = group.id === selectedOptionGroupId ? 'option-group-item is-selected' : 'option-group-item';
-      item.dataset.optionGroupId = group.id;
-
-      const selectButton = document.createElement('button');
-      selectButton.type = 'button';
-      selectButton.className = 'option-group-select';
-
-      const name = document.createElement('span');
-      name.className = 'option-group-name';
-      name.textContent = group.name || 'Untitled group';
-
-      const meta = document.createElement('span');
-      meta.className = 'option-group-meta';
-      meta.textContent = group.group_key || 'no key';
-
-      const type = document.createElement('span');
-      type.className = 'option-status-pill is-type';
-      type.textContent = String(group.selection_type || 'unknown').toUpperCase();
-
-      const status = document.createElement('span');
-      status.className = group.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
-      status.textContent = group.is_active ? 'ACTIVE' : 'INACTIVE';
-
-      selectButton.append(name, meta, type, status);
-      selectButton.addEventListener('click', () => selectOptionGroup(group.id));
-
-      const actions = document.createElement('div');
-      actions.className = 'option-group-actions';
-
-      const editButton = document.createElement('button');
-      editButton.type = 'button';
-      editButton.className = 'option-mini-button';
-      editButton.textContent = 'Edit';
-      editButton.addEventListener('click', () => {
-        selectOptionGroup(group.id);
-        loadOptionGroupIntoForm(group.id);
-      });
-
-      const activeButton = document.createElement('button');
-      activeButton.type = 'button';
-      activeButton.className = group.is_active ? 'option-mini-button is-muted' : 'option-mini-button';
-      activeButton.textContent = group.is_active ? 'Deactivate' : 'Reactivate';
-      activeButton.addEventListener('click', () => toggleOptionGroupActive(group.id, !group.is_active));
-
-      actions.append(editButton, activeButton);
-      item.append(selectButton, actions);
-      optionGroupList.appendChild(item);
-    });
+    syncOptionEditor();
   };
 
-  const renderOptionGroupDetail = (group) => {
-    if (!optionGroupDetail) return;
-
-    if (!group) {
-      renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
-      return;
-    }
-
-    optionGroupDetail.innerHTML = '';
-    const header = document.createElement('div');
-    header.className = 'option-detail-header';
-
-    const title = document.createElement('h3');
-    title.textContent = group.name || 'Untitled group';
-    const status = document.createElement('span');
-    status.className = group.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
-    status.textContent = group.is_active ? 'ACTIVE' : 'INACTIVE';
-    header.append(title, status);
-
-    const details = document.createElement('dl');
-    details.className = 'option-detail-list';
-
-    const addDetail = (label, value) => {
-      const term = document.createElement('dt');
-      term.textContent = label;
-      const description = document.createElement('dd');
-      description.textContent = value || '-';
-      details.append(term, description);
-    };
-
-    addDetail('Group key', group.group_key);
-    addDetail('Selection type', group.selection_type);
-    addDetail('Sort order', String(group.sort_order ?? 0));
-
-    optionGroupDetail.append(header, details);
+  const renderOptionGroupDetail = () => {
+    if (optionChoiceHelp) optionChoiceHelp.textContent = selectedOptionGroupId
+      ? 'Choose an existing choice or add a new one to this group.' : 'Select or create an option group first.';
+    syncOptionEditor();
   };
 
   const renderOptionChoices = (choices) => {
-    optionChoicesList = choices || [];
-    if (!optionChoiceList) return;
-    optionChoiceList.innerHTML = '';
-
-    if (!selectedOptionGroupId) {
-      renderOptionEmptyState(optionChoiceList, 'Select a group to see its choices.', 'Choices will appear after you select an option group.', 'h4');
-      return;
+    optionChoicesList = (choices || []).filter(choice => choice.option_group_id === selectedOptionGroupId);
+    if (optionChoiceSelect) {
+      optionChoiceSelect.replaceChildren(new Option('Select Choice', ''));
+      optionChoicesList.forEach(choice => optionChoiceSelect.add(new Option((choice.label || 'Untitled choice') + (choice.is_active ? '' : ' (Inactive)'), choice.id)));
+      optionChoiceSelect.value = selectedOptionChoiceId;
     }
-
-    const heading = document.createElement('h4');
-    heading.className = 'option-choice-heading';
-    heading.textContent = 'Choices';
-    optionChoiceList.appendChild(heading);
-
-    if (!optionChoicesList.length) {
-      renderOptionEmptyState(optionChoiceList, 'This group has no choices yet.', 'Choices will appear here after they are added in the next step.', 'h4');
-      return;
-    }
-
-    optionChoicesList.forEach((choice) => {
-      const row = document.createElement('article');
-      row.className = 'option-choice-card';
-
-      const top = document.createElement('div');
-      top.className = 'option-choice-top';
-      const name = document.createElement('h5');
-      name.textContent = choice.label || 'Untitled choice';
-      const status = document.createElement('span');
-      status.className = choice.is_active ? 'option-status-pill is-active' : 'option-status-pill is-inactive';
-      status.textContent = choice.is_active ? 'ACTIVE' : 'INACTIVE';
-      top.append(name, status);
-
-      const meta = document.createElement('p');
-      meta.className = 'option-choice-meta';
-      const priceDelta = Number(choice.price_delta || 0);
-      meta.textContent = [
-        choice.value ? 'Value: ' + choice.value : 'No value set',
-        priceDelta > 0 ? '+' + formatPrice(priceDelta) : 'Free',
-        'Sort: ' + String(choice.sort_order ?? 0),
-      ].join(' - ');
-
-      row.append(top, meta);
-      const actions = document.createElement('div');
-      actions.className = 'option-choice-actions';
-
-      const editButton = document.createElement('button');
-      editButton.type = 'button';
-      editButton.className = 'option-mini-button';
-      editButton.textContent = 'Edit';
-      editButton.addEventListener('click', () => loadOptionChoiceIntoForm(choice.id));
-
-      const activeButton = document.createElement('button');
-      activeButton.type = 'button';
-      activeButton.className = choice.is_active ? 'option-mini-button is-muted' : 'option-mini-button';
-      activeButton.textContent = choice.is_active ? 'Deactivate' : 'Reactivate';
-      activeButton.addEventListener('click', () => toggleOptionChoiceActive(choice.id, !choice.is_active));
-
-      actions.append(editButton, activeButton);
-      row.appendChild(actions);
-      optionChoiceList.appendChild(row);
-    });
+    syncOptionEditor();
   };
 
   const selectOptionGroup = async (groupId) => {
+    if (optionGroupSaving || optionChoiceSaving) return;
     selectedOptionGroupId = groupId || '';
+    selectedOptionChoiceId = '';
+    resetOptionGroupForm();
+    optionChoiceRequest++;
+    optionChoicesLoading = false;
     resetOptionChoiceForm();
+    renderOptionChoices([]);
     renderOptionGroups(optionGroupsList);
-
-    const group = optionGroupsList.find((item) => item.id === selectedOptionGroupId);
-    renderOptionGroupDetail(group);
-
+    renderOptionGroupDetail();
+    const group = optionGroupsList.find(item => item.id === selectedOptionGroupId);
     if (!group) {
-      optionChoicesList = [];
-      if (optionChoiceList) optionChoiceList.innerHTML = '';
+      resetOptionGroupForm();
       setOptionChoiceFormDisabled(true);
-      setOptionManagerStatus('Select an option group to view choices.');
+      setOptionManagerStatus('Select or create an option group first.');
       return;
     }
-
     await loadOptionChoices(group.id);
   };
 
@@ -6150,12 +6242,6 @@
       onChange: markDraftFormDirty
     });
   }
-  client.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || (event === 'SIGNED_IN' && signedInOwnerEmail && session?.user?.email !== signedInOwnerEmail)) {
-      setSignedInState(false);
-      resetDraftProductForm();
-    }
-  });
   window.addEventListener('pagehide', () => {
     productEditorGeneration += 1;
     productImageEditor?.reset('');
@@ -6175,16 +6261,19 @@
       return;
     }
 
+    const generation = menuAuthGeneration;
     optionGroupsLoading = true;
+    syncOptionEditor();
     if (optionGroupStatus) optionGroupStatus.textContent = 'Loading';
     setOptionManagerStatus('Loading option groups...');
 
-    const { data, error } = await client
+    const { data, error } = await optionLibraryRequest(client
       .from('option_groups')
       .select('id,name,group_key,selection_type,is_active,sort_order')
       .order('sort_order', { ascending: true })
-      .order('name', { ascending: true });
+      .order('name', { ascending: true }));
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     if (error) {
       optionGroupsList = [];
       optionChoicesList = [];
@@ -6192,9 +6281,11 @@
       optionGroupsLoading = false;
       optionGroupsLoaded = false;
       if (optionGroupStatus) optionGroupStatus.textContent = 'Error';
-      renderOptionEmptyState(optionGroupList, 'Unable to load option groups.', error.message, 'h4');
-      renderOptionEmptyState(optionGroupDetail, 'Select a group', 'Select a group to see its choices.');
-      if (optionChoiceList) optionChoiceList.innerHTML = '';
+      resetOptionGroupForm();
+      resetOptionChoiceForm();
+      renderOptionGroups([]);
+      renderOptionGroupDetail();
+      renderOptionChoices([]);
       setOptionManagerStatus('Unable to load option groups. ' + error.message);
       return;
     }
@@ -6206,11 +6297,15 @@
     if (selectedOptionGroupId && !groups.some((group) => group.id === selectedOptionGroupId)) {
       selectedOptionGroupId = '';
     }
+    if (!selectedOptionGroupId) selectedOptionGroupId = groups[0]?.id || '';
     optionChoicesList = [];
+    resetOptionGroupForm();
     setOptionGroupFormDisabled(false);
     renderOptionGroups(groups);
     renderOptionGroupDetail(optionGroupsList.find((item) => item.id === selectedOptionGroupId));
     if (selectedOptionGroupId) {
+      selectedOptionChoiceId = '';
+      resetOptionChoiceForm();
       await loadOptionChoices(selectedOptionGroupId);
     } else {
       renderOptionChoices([]);
@@ -6231,24 +6326,33 @@
       return;
     }
 
+    const request = ++optionChoiceRequest;
+    optionChoicesLoading = true;
+    setOptionChoiceFormDisabled(true);
+    syncOptionEditor();
     setOptionManagerStatus('Loading option choices...');
-    const { data, error } = await client
+    const { data, error } = await optionLibraryRequest(client
       .from('option_choices')
       .select('id,option_group_id,label,value,price_delta,sort_order,is_active')
       .eq('option_group_id', groupId)
       .order('sort_order', { ascending: true })
-      .order('label', { ascending: true });
+      .order('label', { ascending: true }));
 
+    if (request !== optionChoiceRequest || groupId !== selectedOptionGroupId || !isOwnerSignedIn) return;
+    optionChoicesLoading = false;
     if (error) {
       optionChoicesList = [];
-      renderOptionEmptyState(optionChoiceList, 'Unable to load choices.', error.message, 'h4');
+      resetOptionChoiceForm();
+      renderOptionChoices([]);
       setOptionManagerStatus('Unable to load option choices. ' + error.message);
       return;
     }
 
+    if (!(data || []).some(row => row.id === selectedOptionChoiceId)) selectedOptionChoiceId = data?.[0]?.id || '';
     renderOptionChoices(data || []);
     setOptionChoiceFormDisabled(false);
     setOptionManagerStatus((data || []).length ? 'Option choices loaded.' : 'No choices in this group yet.');
+    return true;
   };
 
   const saveOptionChoice = async (event) => {
@@ -6263,6 +6367,8 @@
     }
 
     const wasEditing = Boolean(editingOptionChoiceId);
+    let savedChoiceId = editingOptionChoiceId;
+    const generation = menuAuthGeneration;
     optionChoiceSaving = true;
     setOptionChoiceFormDisabled(false);
     setOptionManagerStatus(wasEditing ? 'Saving option choice...' : 'Creating option choice...');
@@ -6271,7 +6377,7 @@
     let error = null;
 
     if (editingOptionChoiceId) {
-      const response = await client
+      const response = await optionLibraryRequest(client
         .from('option_choices')
         .update({
           label: payload.label,
@@ -6283,17 +6389,19 @@
         .eq('id', editingOptionChoiceId)
         .eq('option_group_id', selectedOptionGroupId)
         .select('id')
-        .single();
+        .single());
       error = response.error;
     } else {
-      const response = await client
+      const response = await optionLibraryRequest(client
         .from('option_choices')
         .insert(payload)
         .select('id')
-        .single();
+        .single());
       error = response.error;
+      if (response.data?.id) savedChoiceId = response.data.id;
     }
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     optionChoiceSaving = false;
 
     if (error) {
@@ -6302,6 +6410,7 @@
       return;
     }
 
+    selectedOptionChoiceId = savedChoiceId || '';
     resetOptionChoiceForm();
     await loadOptionChoices(selectedOptionGroupId);
     setOptionManagerStatus(wasEditing ? 'Option choice updated.' : 'Option choice created.');
@@ -6319,16 +6428,18 @@
     const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option choice?');
     if (!confirmed) return;
 
+    const generation = menuAuthGeneration;
     optionChoiceSaving = true;
     setOptionChoiceFormDisabled(false);
     setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option choice...');
 
-    const { error } = await client
+    const { error } = await optionLibraryRequest(client
       .from('option_choices')
       .update({ is_active: shouldBeActive })
       .eq('id', choiceId)
-      .eq('option_group_id', selectedOptionGroupId);
+      .eq('option_group_id', selectedOptionGroupId));
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     optionChoiceSaving = false;
 
     if (error) {
@@ -6346,7 +6457,7 @@
 
   const saveOptionGroup = async (event) => {
     event.preventDefault();
-    if (!isOwnerSignedIn || optionGroupSaving) return;
+    if (!isOwnerSignedIn || optionGroupSaving || optionChoiceSaving) return;
 
     const validation = validateOptionGroupForm();
     if (!validation) return;
@@ -6356,6 +6467,7 @@
     }
 
     const wasEditing = Boolean(editingOptionGroupId);
+    const generation = menuAuthGeneration;
     optionGroupSaving = true;
     setOptionGroupFormDisabled(false);
     setOptionManagerStatus(wasEditing ? 'Saving option group...' : 'Creating option group...');
@@ -6365,23 +6477,24 @@
     let error = null;
 
     if (editingOptionGroupId) {
-      const response = await client
+      const response = await optionLibraryRequest(client
         .from('option_groups')
         .update(payload)
         .eq('id', editingOptionGroupId)
         .select('id')
-        .single();
+        .single());
       error = response.error;
     } else {
-      const response = await client
+      const response = await optionLibraryRequest(client
         .from('option_groups')
         .insert(payload)
         .select('id')
-        .single();
+        .single());
       error = response.error;
       if (response.data && response.data.id) savedGroupId = response.data.id;
     }
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     optionGroupSaving = false;
 
     if (error) {
@@ -6413,15 +6526,17 @@
     const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option group?');
     if (!confirmed) return;
 
+    const generation = menuAuthGeneration;
     optionGroupSaving = true;
     setOptionGroupFormDisabled(false);
     setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option group...');
 
-    const { error } = await client
+    const { error } = await optionLibraryRequest(client
       .from('option_groups')
       .update({ is_active: shouldBeActive })
-      .eq('id', groupId);
+      .eq('id', groupId));
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     optionGroupSaving = false;
 
     if (error) {
@@ -6553,6 +6668,8 @@
   };
 
   const loadCategories = async () => {
+    if (!isOwnerSignedIn) return false;
+    const generation = menuAuthGeneration;
     setStatus('Loading categories...');
     const { data, error } = await client
       .from('categories')
@@ -6560,10 +6677,13 @@
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return false;
     if (error) {
       latestCategories = [];
       restoreStaticCategories();
       resetProductPreview();
+      if (productStatus) productStatus.textContent = 'Load error';
+      renderProductEmptyState('Unable to load categories.', error.message);
       resetDraftProductForm();
       setStatus('Unable to load categories. ' + error.message);
       return false;
@@ -7037,18 +7157,26 @@
   };
 
   const loadProducts = async () => {
+    if (!isOwnerSignedIn) return;
+    const generation = menuAuthGeneration;
     if (productStatus) productStatus.textContent = 'Loading';
     if (productCount) productCount.textContent = 'Loading products...';
 
     const { data, error } = await client
       .from('products')
-      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_sold_out,is_published,is_curv_pick,is_seasonal,archived_at,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes(id,label,price,cost,sort_order)')
+      .select('id,category_id,category_section_id,name,description,image_url,notes,badge_labels,is_available,is_sold_out,is_published,is_curv_pick,is_seasonal,archived_at,sort_order,created_at,variant_group_name,category:categories(id,name,sort_order),product_sizes!product_sizes_product_id_fkey(id,label,price,cost,sort_order)')
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .order('sort_order', { referencedTable: 'product_sizes', ascending: true });
 
+    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
     if (error) {
-      resetProductPreview();
+      latestProducts = [];
+      latestVisibleProducts = [];
+      updateBulkPublishControls();
+      renderProductEmptyState('Unable to load products.', error.message);
+      if (productStatus) productStatus.textContent = 'Load error';
+      if (productCount) productCount.textContent = 'Products unavailable';
       setStatus('Unable to load products. ' + error.message);
       return;
     }
@@ -7069,21 +7197,49 @@
     setStatus('Connected as owner. Categories and products loaded.');
   };
 
-  const refreshSession = async () => {
-    const { data } = await client.auth.getSession();
-    const isSignedIn = Boolean(data && data.session && data.session.user);
-    setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
-    if (isSignedIn) {
-      await loadCategories();
-      await loadProducts();
-    } else {
-      latestCategories = [];
-      restoreStaticCategories();
+  const applyMenuSession = (session) => {
+    const generation = ++menuAuthGeneration;
+    menuSessionUser = session?.user || null;
+    menuAuthState = menuSessionUser ? 'checking' : 'signed-out';
+    setSignedInState(false);
+    resetProductPreview();
+    resetDraftProductForm();
+    if (!menuSessionUser) { setStatus('Ready for owner sign in.'); return; }
+    setStatus('Checking owner access...');
+    // Leave the Supabase auth callback before making another client request.
+    window.setTimeout(async () => {
+      if (generation !== menuAuthGeneration) return;
+      let result;
+      try { result = await client.rpc('is_admin'); }
+      catch (_) { result = { error: true }; }
+      if (generation !== menuAuthGeneration) return;
+      menuAuthState = result.error ? 'error' : result.data === true ? 'owner' : 'denied';
+      setSignedInState(menuAuthState === 'owner', menuSessionUser.email || '');
+      if (!isOwnerSignedIn) {
+        resetProductPreview();
+        setStatus(result.error ? 'Unable to verify owner access. Please refresh to retry.' : 'You are signed in, but owner authorization is required.');
+        return;
+      }
       resetProductPreview();
-      resetDraftProductForm();
-      showProductListView();
-      setStatus('Ready for owner sign in.');
+      if (document.querySelector('[data-menu-view-section="option-library"]')?.hidden === false) loadOptionGroups(true);
+      await loadCategories();
+      if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
+      await loadProducts();
+    }, 0);
+  };
+
+  const refreshSession = async () => {
+    const generation = menuAuthGeneration;
+    const { data, error } = await client.auth.getSession();
+    if (generation !== menuAuthGeneration) return;
+    if (error) {
+      menuAuthState = 'error';
+      setSignedInState(false);
+      resetProductPreview();
+      setStatus('Unable to check your session. Please refresh to retry.');
+      return;
     }
+    applyMenuSession(data?.session);
   };
 
   const validateDraftProductForm = () => {
@@ -8122,27 +8278,35 @@
     undoProductChangesButton.addEventListener('click', undoProductChanges);
   }
 
-  if (optionGroupForm) {
-    optionGroupForm.addEventListener('submit', saveOptionGroup);
-  }
-
-  if (resetOptionGroupButton) {
-    resetOptionGroupButton.addEventListener('click', () => {
-      resetOptionGroupForm();
-      setOptionManagerStatus('Option group form reset.');
-    });
-  }
-
-  if (optionChoiceForm) {
-    optionChoiceForm.addEventListener('submit', saveOptionChoice);
-  }
-
-  if (resetOptionChoiceButton) {
-    resetOptionChoiceButton.addEventListener('click', () => {
-      resetOptionChoiceForm();
-      setOptionManagerStatus('Option choice form reset.');
-    });
-  }
+  document.querySelector('[data-delete-option-group]')?.addEventListener('click', () => deleteOptionRecord('group'));
+  document.querySelector('[data-delete-option-choice]')?.addEventListener('click', () => deleteOptionRecord('choice'));
+  optionGroupSelect?.addEventListener('change', () => selectOptionGroup(optionGroupSelect.value));
+  document.querySelector('[data-edit-option-group]')?.addEventListener('click', () => loadOptionGroupIntoForm(selectedOptionGroupId));
+  newOptionGroupButton?.addEventListener('click', async () => {
+    previousOptionGroupId = selectedOptionGroupId;
+    await selectOptionGroup('');
+    optionGroupMode = 'creating'; syncOptionEditor(); optionGroupForm.elements.name.focus();
+  });
+  resetOptionGroupButton?.addEventListener('click', () => selectOptionGroup(optionGroupMode === 'creating' ? previousOptionGroupId : selectedOptionGroupId));
+  optionGroupForm?.addEventListener('submit', saveOptionGroup);
+  optionChoiceSelect?.addEventListener('change', () => {
+    selectedOptionChoiceId = optionChoiceSelect.value; resetOptionChoiceForm();
+    optionChoiceSelect.value = selectedOptionChoiceId; syncOptionEditor();
+  });
+  document.querySelector('[data-edit-option-choice]')?.addEventListener('click', () => loadOptionChoiceIntoForm(selectedOptionChoiceId));
+  newOptionChoiceButton?.addEventListener('click', () => {
+    resetOptionChoiceForm(); optionChoiceMode = 'creating'; syncOptionEditor(); optionChoiceForm.elements.label.focus();
+  });
+  resetOptionChoiceButton?.addEventListener('click', () => { resetOptionChoiceForm(); renderOptionChoices(optionChoicesList); });
+  optionChoiceForm?.addEventListener('submit', saveOptionChoice);
+  toggleOptionGroupButton?.addEventListener('click', () => {
+    const group = optionGroupsList.find(item => item.id === selectedOptionGroupId);
+    if (group) toggleOptionGroupActive(group.id, !group.is_active);
+  });
+  toggleOptionChoiceButton?.addEventListener('click', () => {
+    const choice = optionChoicesList.find(item => item.id === selectedOptionChoiceId);
+    if (choice) toggleOptionChoiceActive(choice.id, !choice.is_active);
+  });
 
   if (showAttachOptionGroupButton) {
     showAttachOptionGroupButton.addEventListener('click', openProductOptionAttachForm);
@@ -8186,6 +8350,7 @@
       }
 
       setStatus('Signing in...');
+      const generation = menuAuthGeneration;
       const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
         setSignedInState(false);
@@ -8194,18 +8359,18 @@
       }
 
       if (passwordInput) passwordInput.value = '';
-      setSignedInState(true, email);
       closeOwnerAccountMenu();
-      await loadCategories();
-      await loadProducts();
+      if (generation === menuAuthGeneration) await refreshSession();
     });
   }
 
   if (signOutButton) {
     signOutButton.addEventListener('click', async () => {
+      applyMenuSession(null);
       setStatus('Signing out...');
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) {
+        await refreshSession();
         setStatus('Sign out failed. ' + error.message);
         return;
       }
@@ -8219,6 +8384,11 @@
     });
   }
 
+  client.auth.onAuthStateChange((event, session) => {
+    // Supabase can repeat SIGNED_IN on tab focus; it is not an identity change.
+    if (isOwnerSignedIn && session?.user?.id === menuSessionUser?.id && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) return;
+    applyMenuSession(session);
+  });
   refreshSession();
 })();
 (() => {
@@ -8244,9 +8414,9 @@
   const ORDER_SEARCH_MAX_RESULTS = 20;
   const ORDER_SEARCH_DEBOUNCE_MS = 140;
   const ORDER_SEARCH_INDEX_MAX_AGE_MS = 5 * 60 * 1000;
-  // Current production schema: opt into structured timing reads only after its migration is deployed.
-  const ORDER_LIST_SELECT = 'id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at';
-  const ORDER_SEARCH_SELECT = 'id,order_number,status,customer_name,customer_phone,fulfillment_type,delivery_address,payment_status,customer_notes,created_at';
+  // Approved timing-enabled baseline; NULL values remain valid for legacy rows.
+  const ORDER_LIST_SELECT = 'id,order_number,status,source,customer_name,customer_phone,customer_email,fulfillment_type,preparation_timing,requested_preparation_at,pickup_time,customer_notes,subtotal,total,currency,payment_method,payment_status,delivery_option,delivery_address,delivery_fee,delivery_fee_status,tracking_token,customer_cancel_status,customer_cancel_requested_at,customer_cancel_reason,created_at';
+  const ORDER_SEARCH_SELECT = 'id,order_number,status,customer_name,customer_phone,fulfillment_type,preparation_timing,requested_preparation_at,delivery_address,payment_status,customer_notes,created_at';
   const ACTIVE_STATUS_KEYS = ['submitted', 'accepted', 'preparing', 'ready'];
   const ACTIVE_ORDER_STATUSES = new Set(ACTIVE_STATUS_KEYS);
   const ACTIVE_PAYMENT_FILTER_STATUSES = new Set(['unpaid', 'pending']);

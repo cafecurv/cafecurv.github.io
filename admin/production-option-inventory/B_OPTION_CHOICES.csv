@@ -1,0 +1,25 @@
+section,id,option_group_id,group_name,group_key,group_active,choice_label,choice_value,price_delta,sort_order,is_active
+B_OPTION_CHOICES,3db8c36d-2e8e-4343-b8de-683b65070961,232d1301-d072-48ed-a363-6d5af6a6d906,Add Cheese,add_cheese,true,12pcs,12pcs,90,0,true
+B_OPTION_CHOICES,7c4e3426-a4ea-427c-ad73-b0815242e7c4,232d1301-d072-48ed-a363-6d5af6a6d906,Add Cheese,add_cheese,true,4pcs,4pcs,30,0,true
+B_OPTION_CHOICES,bab37892-3af1-4498-ad67-71271c9cad70,232d1301-d072-48ed-a363-6d5af6a6d906,Add Cheese,add_cheese,true,8pcs,8pcs,60,0,true
+B_OPTION_CHOICES,ed7d2165-f29d-4ca7-b4d8-1e5bbb89d0a7,5475e951-d4b1-46bf-a556-f63aecdf0fe2,Bites Sauce,bites_sauce,true,Tempura Sauce,Tempura Sauce,0,0,true
+B_OPTION_CHOICES,61c4fd98-6351-4daf-8074-f747da337c5c,6f1074e8-f51a-41cd-a7f0-ed777418c916,Extra Espresso Shot,extra_shot,true,Add Espresso Shot,single_shot,45,0,true
+B_OPTION_CHOICES,bd6ff3fe-73c6-4f78-9f9e-8304af73ad5a,6f1074e8-f51a-41cd-a7f0-ed777418c916,Extra Espresso Shot,extra_shot,true,Double Shot,double_shot,90,0,true
+B_OPTION_CHOICES,e07fcd14-ed31-427c-bd67-3067d5c71410,516fb052-949a-43f5-8734-5b3f60bc76be,Inclusions,sinkers,true,Chocolate chips,chocolate_chips,40,0,true
+B_OPTION_CHOICES,e93da599-6652-44c5-80e9-f3d2dd1950ca,516fb052-949a-43f5-8734-5b3f60bc76be,Inclusions,sinkers,true,Coffee Jelly,coffee_jelly,40,0,true
+B_OPTION_CHOICES,505ad026-b0c7-48a9-a1fb-011a4c8a17ef,516fb052-949a-43f5-8734-5b3f60bc76be,Inclusions,sinkers,true,White Chocolate Chips,white_chocolate_chips,40,0,true
+B_OPTION_CHOICES,c7b34dc7-1fe6-4825-bd50-65efb6a37c6c,f16decf7-b5a4-4b98-8182-c9c2c9eca1f0,Sauce,sauce_beverage,true,Chocolate,chocolate,45,0,true
+B_OPTION_CHOICES,086c711e-a1b5-46cf-a5e0-f14394a95dfa,f16decf7-b5a4-4b98-8182-c9c2c9eca1f0,Sauce,sauce_beverage,true,Salted Caramel,salted_caramel,45,0,true
+B_OPTION_CHOICES,6aea534b-4ead-43f1-af1a-0eb80afffc95,f16decf7-b5a4-4b98-8182-c9c2c9eca1f0,Sauce,sauce_beverage,true,Strawberry,strawberry,45,0,true
+B_OPTION_CHOICES,f533a65f-da2e-462b-8c34-81eb061cfa11,f16decf7-b5a4-4b98-8182-c9c2c9eca1f0,Sauce,sauce_beverage,true,White Chocolate,white_chocolate,45,0,true
+B_OPTION_CHOICES,59203eed-e726-4582-a8a8-4d7c9001f338,da657452-3dfe-4ba1-b695-26648180d999,Syrup,syrup,true,Caramel,caramel,30,0,true
+B_OPTION_CHOICES,4e07d4f6-9302-41fb-93f2-02fb9054aea6,da657452-3dfe-4ba1-b695-26648180d999,Syrup,syrup,true,Chocolate Syrup,chocolate_syrup,30,0,true
+B_OPTION_CHOICES,47216d41-5c5e-4891-beb2-4189993f49df,da657452-3dfe-4ba1-b695-26648180d999,Syrup,syrup,true,Vanilla,vanilla,30,0,true
+B_OPTION_CHOICES,a089875e-fde2-45ed-bafd-a14f16efbb5b,da657452-3dfe-4ba1-b695-26648180d999,Syrup,syrup,true,White Chocolate Syrup,white_chocolate_syrup,30,0,true
+B_OPTION_CHOICES,d496995e-4e81-4298-b51e-6d316fc2de83,ff3aa2ce-e4ab-4870-98e1-93ff8078b534,Takoyaki Add-ons,garnish,true,Katsuboshi (Tuna Flakes),katsuboshi_tuna_flakes,30,0,true
+B_OPTION_CHOICES,722860cc-085a-4bf3-868e-52d7a877c0cb,ff3aa2ce-e4ab-4870-98e1-93ff8078b534,Takoyaki Add-ons,garnish,true,Meat Floss,meat_floss,40,0,true
+B_OPTION_CHOICES,c9b382d8-5eee-4d50-a1dc-7ceed43b5fdc,c6727e99-bae9-4963-a7cb-b238409667d9,Temperature,beverage_temperature,true,Hot,hot,0,0,true
+B_OPTION_CHOICES,c018fa7b-5cb5-490a-9d8a-7a5611a1bd67,c6727e99-bae9-4963-a7cb-b238409667d9,Temperature,beverage_temperature,true,Iced,iced,0,0,true
+B_OPTION_CHOICES,04672e62-40c1-4595-955b-55ab7e2598fa,8a798579-ae21-47a2-8b84-6dc545b788bd,Sub Milk,milk,true,Non-fat,non_fat,30,0,true
+B_OPTION_CHOICES,049cc2e6-14d3-4892-abaf-a82b9cd6ed84,8a798579-ae21-47a2-8b84-6dc545b788bd,Sub Milk,milk,true,Oat,oat,50,0,true
+B_OPTION_CHOICES,cd6cfd0e-9826-4c16-bf1a-4d5305186fed,8a798579-ae21-47a2-8b84-6dc545b788bd,Sub Milk,milk,true,Soy Milk,soy_milk,30,0,true

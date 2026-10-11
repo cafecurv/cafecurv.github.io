@@ -1,0 +1,35 @@
+section,schema_name,relname,reloptions,current_definition
+I_PUBLIC_OPTION_VIEW_DEFINITIONS,public,public_menu_option_choices,"[""security_invoker=true""]"," SELECT pog.product_id,
+    og.id AS option_group_id,
+    oc.id AS option_choice_id,
+    oc.label,
+    oc.value,
+    oc.price_delta,
+    oc.sort_order
+   FROM product_option_groups pog
+     JOIN option_groups og ON og.id = pog.option_group_id
+     JOIN option_choices oc ON oc.option_group_id = og.id
+     JOIN products p ON p.id = pog.product_id
+  WHERE p.is_published = true AND p.is_available = true AND p.archived_at IS NULL AND og.is_active = true AND pog.is_active = true AND oc.is_active = true;"
+I_PUBLIC_OPTION_VIEW_DEFINITIONS,public,public_menu_option_defaults,"[""security_invoker=true""]"," SELECT pod.product_id,
+    pod.option_group_id,
+    pod.option_choice_id
+   FROM product_option_defaults pod
+     JOIN product_option_groups pog ON pog.product_id = pod.product_id AND pog.option_group_id = pod.option_group_id
+     JOIN option_groups og ON og.id = pod.option_group_id
+     JOIN option_choices oc ON oc.id = pod.option_choice_id AND oc.option_group_id = pod.option_group_id
+     JOIN products p ON p.id = pod.product_id
+  WHERE p.is_published = true AND p.is_available = true AND p.archived_at IS NULL AND og.is_active = true AND pog.is_active = true AND oc.is_active = true;"
+I_PUBLIC_OPTION_VIEW_DEFINITIONS,public,public_menu_option_groups,"[""security_invoker=true""]"," SELECT pog.product_id,
+    og.id AS option_group_id,
+    og.group_key,
+    og.name,
+    og.selection_type,
+    pog.is_required,
+    pog.min_selections,
+    pog.max_selections,
+    pog.sort_order
+   FROM product_option_groups pog
+     JOIN option_groups og ON og.id = pog.option_group_id
+     JOIN products p ON p.id = pog.product_id
+  WHERE p.is_published = true AND p.is_available = true AND p.archived_at IS NULL AND og.is_active = true AND pog.is_active = true;"

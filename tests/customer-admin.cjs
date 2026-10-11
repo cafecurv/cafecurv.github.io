@@ -59,8 +59,10 @@ async function run() {
       p_quantity: 1, p_customer: 'Counter', p_type: 'dine_in', p_note: '', p_item_note: '' });
     assert.equal(pos.error, null);
     await query('update public.orders set customer_id=$1 where id=$2', [a1.customer_id, pos.data.id]);
-    await query("update public.customers set created_at='2026-01-01',last_order_at='2026-10-01' where id=$1", [a1.customer_id]);
-    await query("update public.customers set created_at='2026-02-01',last_order_at='2026-11-01' where id=$1", [b.customer_id]);
+    // Freeze both history bounds; leaving first_order_at=now() makes this
+    // deterministic sort fixture invalid after its fixed last_order_at date.
+    await query("update public.customers set created_at='2026-01-01',first_order_at='2026-01-01',last_order_at='2026-10-01' where id=$1", [a1.customer_id]);
+    await query("update public.customers set created_at='2026-02-01',first_order_at='2026-02-01',last_order_at='2026-11-01' where id=$1", [b.customer_id]);
     const baseline = await state(), baselineDefinitions = await definitions();
     const track = () => as('anon', null, 'select * from public.get_public_order_tracking($1::uuid)', [first.tracking_token]);
     const beforeTracking = await track();

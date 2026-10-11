@@ -149,20 +149,20 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     check(await page.evaluate(() => getFixturePanel(1).querySelector('[data-option-key="milk"] [data-value="oat"]').classList.contains('selected')), 'specialized product uses database default');
     check(await page.evaluate(() => Boolean(getFixturePanel(1).querySelector('[data-group="extrapower"]'))), 'compatible specialized enhancement retained');
     await page.evaluate(() => getFixturePanel(1).querySelector('.panel-add-btn').click());
-    check(await page.evaluate(() => cart[0].price === 205.5 && cart[0].options.milk === 'oat'), 'specialized base plus database delta');
+    check(await page.evaluate(() => cart.length === 0), 'partially mapped specialized panel fails closed');
     await page.evaluate(() => {
       cart.length=0; openFixture(7);
       const p=getFixturePanel(7);
       p.querySelector('[data-group="temperature"] [data-value="hot"]').click();
       p.querySelector('.panel-add-btn').click();
     });
-    check(await page.evaluate(() => cart[0].temp === 'HOT' && cart[0].variant === '12oz' && cart[0].price === 160 && cart[0].product_size_id === fixtureId(1061)), 'HOT price and underlying real size ID preserved');
+    check(await page.evaluate(() => cart.length === 0), 'HOT cannot alias Large without explicit configuration');
     await page.evaluate(() => {
       cart.length=0; openFixture(8); const p=getFixturePanel(8);
       p.querySelector('[data-group="pieces"] [data-value="8pcs"]').click();
       p.querySelector('.panel-add-btn').click();
     });
-    check(await page.evaluate(() => cart[0].variant === '8pcs' && cart[0].price === 320 && cart[0].product_size_id === fixtureId(1071)), 'Takoyaki piece count and size ID');
+    check(await page.evaluate(() => cart.length === 0 && getFixturePanel(8).querySelector('[data-value="8pcs"]').dataset.sizeId === fixtureId(1071)), 'Takoyaki exact size retained but unmapped modifiers blocked');
 
     await page.evaluate(() => {
       cart.length=0;
@@ -202,6 +202,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       await page.evaluate(() => {
         if (activePanel) setPublicPanelOpen(activePanel,false);
         openFixture(2);
+        getFixturePanel(2).querySelectorAll('.customize-toggle[aria-expanded="false"]').forEach(button=>button.click());
       });
       await page.locator('#matcha .public-panel-title').filter({ hasText:'Banana Pudding Matcha Latte' }).scrollIntoViewIfNeeded();
       check(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth), width+': open panel no horizontal overflow');

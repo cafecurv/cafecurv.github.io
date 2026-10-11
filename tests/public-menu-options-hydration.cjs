@@ -53,7 +53,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const reads = [], warnings = [];
         const warn = console.warn;
         console.warn = (...args) => warnings.push(args.map(a => a instanceof Error ? a.message : a));
-        publicMenuSupabaseClient = { from(view) {
+        publicMenuSupabaseClient = { rpc: async () => scenario.compatibilityFailure ? ({data:null,error:{message:'Fixture compatibility unavailable'}}) : ({data:[],error:null}), from(view) {
           if (!(view in rows)) throw Error('Unexpected read: ' + view);
           reads.push(view);
           return { select() { return this; }, order() { return this; }, then(resolve, reject) {
@@ -86,6 +86,9 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     check(result.panels.every(p => !p.disabled), 'empty successful options: salad and sushi enabled');
     check(result.cart.length === 3, 'salad and sushi can actually be added');
     check(!result.nullMap && result.warnings.length === 0, 'empty successful reads produce valid empty map: ' + JSON.stringify(result.warnings));
+    result = await run({ compatibilityFailure:true });
+    check(result.cart.length===3, 'missing compatibility API leaves group-free products addable');
+    check(result.warnings.some(w=>String(w[0]).includes('Temperature compatibility unavailable')), 'compatibility failure has explicit diagnostic');
     result = await run({ orphan: true });
     check(result.cart.length === 3 && result.panels.every(p => !p.disabled), 'orphan does not disable unrelated products');
     check(result.orphanSkipped, 'orphan excluded from both map indexes');
@@ -122,10 +125,10 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     check(result.cart[0].price === 160, 'valid option price effect retained');
     for (const failedView of [undefined, 'public_menu_option_groups', 'public_menu_option_choices', 'public_menu_option_defaults']) {
       result = await run({ specialized: true, failedView });
-      check(result.cart.length === 2 && result.panels.every(p => !p.disabled), 'Drinks/Takoyaki preserve validated specialized behavior: ' + failedView + JSON.stringify(result));
+      check(result.cart.length === 0 && result.panels.every(p => p.disabled), 'Unmapped Drinks/Takoyaki fail closed: ' + failedView + JSON.stringify(result));
     }
     result = await run({ specialized: true, required: true, failedView: 'public_menu_option_choices' });
-    check(result.panels[0].disabled && !result.panels[1].disabled, 'known configured options cannot bypass failure through specialized panel');
+    check(result.panels.every(p => p.disabled), 'neither failed option reads nor unmapped legacy modifiers can bypass identity checks');
     check(errors.length === 0, 'no browser script errors: ' + errors.join('; '));
     console.log('Public menu options hydration: ' + checks + ' assertions passed');
   } finally { await browser.close(); }

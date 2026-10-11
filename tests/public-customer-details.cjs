@@ -1,3 +1,4 @@
+const {installCheckout}=require('./public-checkout-test-fixture.cjs');
 // Offline C1A profile and real submission-path checks; no live requests.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,10 +19,11 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
    window.fetch = () => { throw Error('Live fetch forbidden'); };
    window.WebSocket = class { constructor() { throw Error('Live socket forbidden'); } };
    if (seed !== undefined) localStorage.setItem(key, seed);
-   if (mode === 'read-fail') Storage.prototype.getItem = () => { throw Error('Storage denied'); };
+   if (mode === 'read-fail') { const get = Storage.prototype.getItem; Storage.prototype.getItem = function(k) { if(this===localStorage) throw Error('Storage denied'); return get.call(this,k); }; }
    if (mode === 'prefilled') { document.getElementById('f-name').value = 'Manual name'; document.getElementById('f-delivery').value = 'pickup'; }
   }, { seed, mode, key });
   for (const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) if (m[1].trim()) await page.addScriptTag({ content: m[1] });
+  await installCheckout(page);
   await page.evaluate(() => {
    closeForm();
    window.val = id => document.getElementById(id);
@@ -30,19 +32,19 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     val('f-name').value = 'Ana'; val('f-contact').value = '09171234567'; val('f-address').value = '123 Example Street';
     val('f-delivery').value = 'delivery-lalamove'; val('f-payment').value = 'gcash'; syncOrderMethodFields();
     val('f-notes').value = 'Never remember this note';
-    cart.length = 0; cart.push({key:'fixture',id:'fixture',name:'Fixture',variant:'Each',category_name:'Fixture',qty:1,price:150,options:{note:'Private item note'}});
+    cart.length = 0; cart.push({key:'fixture',id:'fixture',product_id:'00000000-0000-4000-8000-000000000030',product_size_id:'00000000-0000-4000-8000-000000000040',option_choice_ids:[],name:'Fixture',variant:'Each',category_name:'Fixture',qty:1,price:150,options:{note:'Private item note'}});
     isWebsiteOrderingEnabled = true;
     confirmOrderBeforeSubmit = async () => true;
     // Time-of-day availability is covered by existing tests; make this fixture deterministic.
     getPreferredTimeValidationMessage = () => '';
     window.calls = [];
     window.resultMode = 'success';
-    publicMenuSupabaseClient = { rpc: async (name, args) => {
+    publicMenuSupabaseClient = checkoutFixtureRpc(async (name, args) => {
       calls.push({name, payload: structuredClone(args.order_payload)});
       if (resultMode === 'failure') return {error:{message:'Offline fixture failure',code:'22023'}};
       if (resultMode === 'pending') return new Promise(resolve => { window.finishSubmission = resolve; });
       return {data:{order_number:'C-12345',tracking_token:'00000000-0000-4000-8000-000000000123'}};
-    }};
+    });
     window.supabase = {createClient:()=>publicMenuSupabaseClient};
    };
   });
@@ -115,7 +117,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   await p.close();
   for(const mode of ['read-fail','write-fail']) {
    p = await open(undefined,mode);
-   await p.evaluate(async mode => { prepare();val('remember-customer-details').checked=true;if(mode==='write-fail') Storage.prototype.setItem=()=>{throw Error('Quota exceeded');};await submitPublicOrder(); },mode);
+   await p.evaluate(async mode => { prepare();val('remember-customer-details').checked=true;if(mode==='write-fail') {const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(this===localStorage)throw Error('Quota exceeded');return set.call(this,k,v);};}await submitPublicOrder(); },mode);
    check(await p.evaluate(() => isOrderSubmittedLocked && lastSubmittedPublicOrderSignature.length>0), mode+' never prevents successful order');
    await p.close();
   }
@@ -134,7 +136,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   p = await open();
   await p.evaluate(async () => { prepare(); val('remember-customer-details').checked=true; confirmOrderBeforeSubmit=async()=>false; await submitPublicOrder(); });
   check(await p.evaluate(() => !profileRead() && calls.length===0), 'canceled confirmation does not save or submit');
-  await p.evaluate(async () => { confirmOrderBeforeSubmit=async()=>true; publicMenuSupabaseClient.rpc=async()=>({data:{order_number:'C-12345'}}); await submitPublicOrder(); });
+  await p.evaluate(async () => { confirmOrderBeforeSubmit=async()=>true; publicMenuSupabaseClient.submitHandler=async()=>({data:{order_number:'C-12345'}}); await submitPublicOrder(); });
   check(await p.evaluate(() => !profileRead() && !isOrderSubmittedLocked), 'incomplete server confirmation cannot save');
   await p.close();
   p = await open(JSON.stringify(profile));
@@ -148,7 +150,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     prepare(); calls.length=0;
     window.trackedOrder={order_number:'C-12345',status:'accepted'};
     window.trackingMode='success';
-    publicMenuSupabaseClient.rpc=async(name,args)=>{
+    publicMenuSupabaseClient.submitHandler=async(name,args)=>{
       calls.push({name,args});
       if(trackingMode==='throw') throw Error('Temporary network failure');
       if(trackingMode==='error') return {error:{message:'Temporary failure'}};
@@ -197,15 +199,20 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   check(await p.evaluate(()=>val('customer-details-status').textContent.length>0), 'forget feedback appears in relocated group');
   await p.evaluate(async()=>{cart=[];await submitPublicOrder();});
   check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please add at least one item to your order.'), 'empty submit displays missing-item validation');
-  await p.evaluate(()=>addItem('Fixture','Each',150,null));
+  await p.evaluate(()=>{
+    const id='00000000-0000-4000-8000-000000000901',category='00000000-0000-4000-8000-000000000902';
+    const m=shapePublicMenuData([{id:category,name:'Salads'}],[{id,category_id:category,name:'Fixture',is_published:true,is_available:true}],[{id:'00000000-0000-4000-8000-000000000903',product_id:id,label:'Each',price:150}]);
+    m.options=buildSupabaseOptionsMap([],[],[],m.products);renderPublicMenuFromSupabase(m);
+    window.addProfileFixture=()=>panelAddToCart(publicProductPanelTargets.get(id).panelId,'Fixture');addProfileFixture();
+  });
   check(await p.evaluate(()=>cart.length===1 && val('submitOrderStatus').textContent==='' && !val('submitOrderStatus').classList.contains('error')), 'real add-item action immediately clears stale cart error');
   await p.evaluate(()=>{setSubmitOrderStatus('Please enter a valid phone number.','error');updateQty(cart[0].key,1);});
   check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please enter a valid phone number.'), 'quantity changes preserve unrelated phone error');
-  await p.evaluate(()=>{setSubmitOrderStatus('Please enter a delivery address.','error');addItem('Second','Each',100,null);});
+  await p.evaluate(()=>{setSubmitOrderStatus('Please enter a delivery address.','error');addProfileFixture();});
   check(await p.evaluate(()=>val('submitOrderStatus').textContent==='Please enter a delivery address.'), 'adding items preserves unrelated address error');
   await p.evaluate(async()=>{for(const item of [...cart])removeItem(item.key);await submitPublicOrder();});
   check(await p.evaluate(()=>!cart.length && val('submitOrderStatus').textContent==='Please add at least one item to your order.'), 'removing last item allows missing-item validation again');
-  await p.evaluate(()=>{addItem('Fixture','Each',150,null);updateQty(cart[0].key,1);renderCart();});
+  await p.evaluate(()=>{addProfileFixture();updateQty(cart[0].key,1);renderCart();});
   check(await p.evaluate(()=>!val('submitOrderStatus').textContent.includes('at least one item')), 'valid cart remains free of stale missing-item message');
   for(const width of [320,390,768,1280]) {
     await p.setViewportSize({width,height:900});

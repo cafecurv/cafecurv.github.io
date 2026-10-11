@@ -1,0 +1,11 @@
+section,id,name,group_key,selection_type,sort_order,is_active
+A_OPTION_GROUPS,232d1301-d072-48ed-a363-6d5af6a6d906,Add Cheese,add_cheese,single,0,true
+A_OPTION_GROUPS,5475e951-d4b1-46bf-a556-f63aecdf0fe2,Bites Sauce,bites_sauce,single,0,true
+A_OPTION_GROUPS,6f1074e8-f51a-41cd-a7f0-ed777418c916,Extra Espresso Shot,extra_shot,multi,0,true
+A_OPTION_GROUPS,516fb052-949a-43f5-8734-5b3f60bc76be,Inclusions,sinkers,multi,0,true
+A_OPTION_GROUPS,f16decf7-b5a4-4b98-8182-c9c2c9eca1f0,Sauce,sauce_beverage,multi,0,true
+A_OPTION_GROUPS,1a3e299a-430c-4cf2-97c2-4d677e7019cd,Sweetener,sweetener,multi,0,true
+A_OPTION_GROUPS,da657452-3dfe-4ba1-b695-26648180d999,Syrup,syrup,multi,0,true
+A_OPTION_GROUPS,ff3aa2ce-e4ab-4870-98e1-93ff8078b534,Takoyaki Add-ons,garnish,multi,0,true
+A_OPTION_GROUPS,c6727e99-bae9-4963-a7cb-b238409667d9,Temperature,beverage_temperature,single,0,true
+A_OPTION_GROUPS,8a798579-ae21-47a2-8b84-6dc545b788bd,Sub Milk,milk,single,1,true
