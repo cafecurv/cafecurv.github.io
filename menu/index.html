@@ -3136,7 +3136,7 @@ body.night-mode .public-item-wrap {
           <div class="item-desc">crispy chicken karaage · sweet chili sauce</div>
         </div>
         <div class="item-right">
-          <div class="price-btn-row"><span class="price-single">₱170</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 170, this, { sauce_pref: 'Sweet Chili Sauce' })">+</button></div>
+          <div class="price-btn-row"><span class="price-single">₱170</span><button class="add-btn" onclick="addItem('Chicken Karaage', '', 170, this)">+</button></div>
         </div>
       </div>
       <div class="menu-item">
@@ -3209,7 +3209,7 @@ body.night-mode .public-item-wrap {
       <div class="note-label">About Our Beans</div>
       <p>All espresso drinks are made using our signature premium Varese Beans (100% Arabica) for smooth, caramel-forward notes.</p>
       <p>Requesting less ice will result in reduced volume to preserve the drink's balanced taste.</p>
-      <p>Available iced or hot. Hot drinks are served in a single 12oz size.</p>
+      <p>Classic espresso drinks are available iced or hot. Hot drinks are served in a single 12oz size.</p>
     </div>
 
     <div class="category">
@@ -3638,7 +3638,7 @@ body.night-mode .public-item-wrap {
   });
 
   // ── ESPRESSO ITEMS CONFIG (Phase 4B) ──
-  // reg = iced regular price; lrg = iced large price = hot 12oz price
+  // reg = iced regular and hot 12oz price; lrg = iced large price.
   const ESPRESSO_ITEMS = [
     {
       id: 'curv-latte', name: 'Curv Latte', badge: null,
@@ -3694,26 +3694,27 @@ body.night-mode .public-item-wrap {
       desc: 'double espresso · condensed milk · oat milk · salted cold foam on top.',
       reg: 160, lrg: 170, img: '/images/menu/espresso/cloud-spanish-oat-latte.jpg',
       default_milk: 'Oat Milk',  // oat milk is in the base recipe — free
-      has_milk: true, has_syrup: true, has_sauce: true
+      has_milk: true, has_syrup: true, has_sauce: true, has_temperature: false
     },
     {
       id: 'cocoa-caramel', name: 'Cocoa Caramel Latte', badge: 'Seasonal',
       desc: 'triple espresso · dark chocolate dust · breve · whipped cream · drizzled in caramel sauce. this one hits. hard.',
       reg: 160, lrg: 170, img: '/images/menu/espresso/cocoa-caramel-latte.jpg',
       default_milk: 'Breve',     // breve is in the base recipe — free
-      has_milk: true, has_syrup: true, has_sauce: true
+      has_milk: true, has_syrup: true, has_sauce: true, has_temperature: false
     },
     {
       id: 'white-ube', name: 'White Ube Latte', badge: 'Seasonal',
       desc: 'double espresso · white chocolate · ube · full cream milk.',
       reg: 160, lrg: 170, img: null,
-      has_milk: true, has_syrup: true, has_sauce: true
+      has_milk: true, has_syrup: true, has_sauce: true, has_temperature: false
     }
   ];
 
   // ── ESPRESSO PANEL RENDERER ──
   function renderEspressoPanel(item) {
     const { id, name, badge, desc, reg, lrg, img, has_milk, has_syrup, has_sauce } = item;
+    const hasTemperature = item.has_temperature !== false;
     const badgeHtml = `${badge ? ` <span class="seasonal-badge">${escapeMenuHtml(badge)}</span>` : ''}${renderProductBadges(item)}`;
 
     const imgHtml = img
@@ -3798,19 +3799,19 @@ body.night-mode .public-item-wrap {
         <div class="panel-inner">
           ${imgHtml}
           <div class="panel-options">
-            <div>
+            ${hasTemperature ? `<div>
               <div class="option-group-label">Temperature</div>
               <div class="option-chips" data-panel="${id}" data-group="temperature" data-type="single">
                 <span class="option-chip selected" data-value="iced" data-price="0">Iced</span>
                 <span class="option-chip" data-value="hot" data-price="0">Hot</span>
               </div>
-            </div>
+            </div>` : ''}
             <div>
               <div class="option-group-label">Size</div>
               <div class="option-chips" data-panel="${id}" data-group="size" data-type="single">
                 <span class="option-chip selected" data-value="regular" data-price="${reg}" data-show-when="iced">Regular <span class="chip-price">₱${reg}</span></span>
                 <span class="option-chip" data-value="large" data-price="${lrg}" data-show-when="iced">Large <span class="chip-price">₱${lrg}</span></span>
-                <span class="option-chip" data-value="12oz" data-price="${lrg}" data-show-when="hot" style="display:none">12oz <span class="chip-price">₱${lrg}</span></span>
+                ${hasTemperature ? `<span class="option-chip" data-value="12oz" data-price="${reg}" data-show-when="hot" style="display:none">12oz <span class="chip-price">₱${reg}</span></span>` : ''}
               </div>
             </div>
             ${milkHtml}
@@ -3845,7 +3846,8 @@ body.night-mode .public-item-wrap {
   // Returns the initPanel defaults for one Espresso item.
   // Extracted so renderAllSeasonalPanels() can reuse the same logic.
   function buildEspressoDefaults(item) {
-    const defaults = { temperature: 'iced', size: 'regular', extrashot: 'none' };
+    const defaults = { size: 'regular', extrashot: 'none' };
+    if (item.has_temperature !== false) defaults.temperature = 'iced';
     if (item.has_milk)  defaults.milk  = item.default_milk || 'Full Cream';
     if (item.has_syrup) defaults.syrup = 'none';
     if (item.has_sauce) defaults.sauce = 'none';
@@ -3868,6 +3870,93 @@ body.night-mode .public-item-wrap {
   function normalizePublicMenuText(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
+
+  // One semantic vocabulary for both deployed legacy view keys and the planned
+  // canonical keys. Unknown keys remain unknown and fail normal validation.
+  const PUBLIC_OPTION_KEY_ALIASES = Object.freeze({
+    beverage_temperature: 'temperature', extra_shot: 'extrashot',
+    sinkers: 'inclusions', sauce_beverage: 'sauce',
+    garnish: 'addons', add_cheese: 'cheese'
+  });
+  function normalizePublicOptionKey(key) {
+    const value = String(key || '').trim().toLowerCase();
+    return PUBLIC_OPTION_KEY_ALIASES[value] || value;
+  }
+
+  // Exact owner-approved sellable recipes from the reviewed UUID inventory.
+  // UUID is authoritative; the name lookup supports older local fixtures and
+  // known display spelling, never a category-wide guessed requirement.
+  const PUBLIC_APPROVED_RECIPE_ROWS = [
+    ['93e9a33b-1a37-4edf-9d26-5ddd2d87f87d', "Hojicha Banana Pudding Latte", 'extrapower milk sweetener'],
+    ['e635744c-ed77-4924-a90d-c78440a81603', "Hojicha Brûlée", 'extrapower milk sweetener'],
+    ['d053466a-2a52-420c-bc4c-62b5f614a27f', "Hojicha Latte", 'extrapower milk sweetener'],
+    ['82417b58-d0c4-4d0d-a0cd-27da42b42627', "Sea Salt Cream Hojicha", 'extrapower milk sweetener'],
+    ['6caefdb6-7daf-4e6d-a034-95fda0b7ecd7', "Pink Hojicha Latte", 'extrapower milk sweetener'],
+    ['e058ec46-f133-4982-afe6-cc6cf5e6d521', "Brown Sugar Cinnamon Cream Latte", 'milk extrashot syrup sauce'],
+    ['8f072a83-552e-4e97-946d-9c306169415a', "Cloud Spanish Oat Latte", 'milk extrashot syrup sauce'],
+    ['ec0956f8-8d28-414f-be46-2349e92bef76', "Curv Latte", 'temperature milk extrashot syrup sauce'],
+    ['7b59829b-b13b-4157-a0e8-ecb85bdbb8e4', "Curv Seasalt Latte", 'milk extrashot syrup sauce'],
+    ['31886227-0130-45f7-8fb7-3d84682eed92', "Iced Shaken Vanilla Jelly", 'milk extrashot syrup sauce'],
+    ['57cd4f38-2e5f-41ba-a117-83f5b2c66819', "Seasalt Dark Latte", 'milk extrashot syrup sauce'],
+    ['cbeecaec-e9a5-4faa-b8f3-75b0cae549dd', "Einspanner Latte", 'temperature milk extrashot syrup sauce'],
+    ['7a258d7e-5b74-44c8-93af-38b1fbd92765', "Spanish Latte", 'temperature milk extrashot syrup sauce'],
+    ['aa156151-540b-4beb-b924-d97bf210af95', "Caramel Macchiato", 'temperature milk extrashot syrup sauce'],
+    ['54c6725f-4445-435c-bc1d-b779e5963796', "Vanilla Latte", 'temperature milk extrashot syrup sauce'],
+    ['e684a6bd-aadc-4117-a018-ae0591c43d41', "Americano", 'temperature extrashot'],
+    ['9c0d9e22-8843-4595-b789-7550c29890a4', "Cafè Mocha", 'temperature milk extrashot syrup sauce'],
+    ['45b1f92c-0daa-4ed2-af55-c5da97315c0a', "White Chocolate Mocha", 'temperature milk extrashot syrup sauce'],
+    ['3372a8c3-3208-4458-bb71-38c40c454436', "White Ube Latte", 'milk extrashot syrup sauce'],
+    ['c541decb-607c-44b1-8bed-4c19594c4422', "Cocoa Caramel Latte", 'milk extrashot syrup sauce'],
+    ['8e1b82c6-8aea-4eb9-b591-184072c4f49e', "Curv Chocolate", ''],
+    ['4ea4643e-5a61-402f-b9c4-8a29ae130c18', "Ube Cloud Latte", ''],
+    ['f9e87759-6aa9-4bce-8b8b-3081ec913c01', "Berry Cloud Latte", ''],
+    ['c26d3d79-38bf-4687-b3ca-eedfc1ed0e86', "Double Chocolate Chip Cream", 'syrup sauce inclusions'],
+    ['56ca858c-58da-4ee3-9954-d189390cefb8', "Javachip Brownie Curvccino", 'syrup sauce inclusions'],
+    ['52f8ffc5-8f9b-41d2-9ecd-574ece1cf5e6', "Javachip Jelly Curvccino", 'syrup sauce inclusions'],
+    ['8a078f3e-872d-47e0-a1df-c14f33af64c2', "Strawberries & Cream", 'syrup sauce inclusions'],
+    ['dd5face3-df84-47ae-8ce1-9e2b565a91dd', "White Caramel Curvccino", 'syrup sauce inclusions'],
+    ['f716d196-47f0-46f4-af7e-bda068b95b2d', "Tropic Kiss", 'syrup'],
+    ['483eed35-dd1d-4a87-90a6-2161b3d1ef86', "Tokyo Sunrise", 'syrup'],
+    ['ab350883-08eb-4b3a-b45a-03bb11f509a3', "Hibiscus Cream Tea", 'syrup'],
+    ['9eba0285-c567-4d8d-960a-4f2bed4a6bd7', "Lime Cucumber", 'syrup'],
+    ['24007d6c-e175-4dcf-9a6f-aab076e07b98', "OG Takoyaki", 'spicy addons cheese'],
+    ['ff9e0d6f-2a1b-4b6b-a401-e02370224f39', "Aburi Salmon", 'spicy addons cheese'],
+    ['29187fbb-f9ab-42b7-ab29-82a0a1b3f0c5', "Chicken Karaage", ''],
+    ['a33f5d5a-fde1-4eb4-8604-1637b4afbf9a', "Cream Dory Fillet", ''],
+    ['c027eedc-1807-4574-8f14-79ce07bb544e', "Oozie Cheese", 'spicy addons cheese'],
+    ['c1f44003-500d-46aa-9fe6-9bbf35c57415', "Lava Melt", 'spicy addons cheese'],
+    ['610f399d-6fa3-46f1-b0b4-9fac6aa0ed5f', "Classic Veggie", 'spicy addons cheese'],
+    ['2c218e48-9871-41a3-bb12-19ced7b38321', "Salted Egg", 'spicy addons cheese'],
+    ['5498a571-8404-4a4f-a380-9cc0eaefc67c', "Cheese Katsu Bowl", ''],
+    ['f4253ada-f15f-4fee-abea-c7678cd1fc06', "Pork Katsu Bowl", ''],
+    ['5f5de117-2b8f-42d5-8b66-78f20339f544', "Chicken Bowl", ''],
+  ];
+  const PUBLIC_APPROVED_RECIPE_BY_ID = new Map(PUBLIC_APPROVED_RECIPE_ROWS.map(([id, name, keys]) =>
+    [id, keys ? keys.split(' ') : []]));
+  const PUBLIC_APPROVED_NAME_BY_ID = new Map(PUBLIC_APPROVED_RECIPE_ROWS.map(([id, name]) => [id, name]));
+  const PUBLIC_APPROVED_RECIPE_BY_NAME = new Map(PUBLIC_APPROVED_RECIPE_ROWS.map(([id, name, keys]) =>
+    [normalizePublicMenuText(name), keys ? keys.split(' ') : []]));
+  PUBLIC_APPROVED_RECIPE_BY_NAME.set('caffè mocha', PUBLIC_APPROVED_RECIPE_BY_NAME.get('cafè mocha'));
+  function getApprovedPublicRecipeKeys(product) {
+    if (PUBLIC_APPROVED_RECIPE_BY_ID.has(product.id)) return PUBLIC_APPROVED_RECIPE_BY_ID.get(product.id);
+    return PUBLIC_APPROVED_RECIPE_BY_NAME.get(normalizePublicMenuText(product.name)) || null;
+  }
+  function isRetiredPublicRecipeGroup(product, key) {
+    const name = normalizePublicMenuText(PUBLIC_APPROVED_NAME_BY_ID.get(product.id) || product.name);
+    if (['chicken karaage', 'cream dory fillet', 'shrimp tempura'].includes(name))
+      return ['bites_sauce', 'sauce_pref'].includes(key);
+    if (['brown sugar cinnamon cream latte', 'curv seasalt latte', 'seasalt dark latte',
+      'cloud spanish oat latte', 'cocoa caramel latte', 'white ube latte',
+      'iced shaken vanilla jelly'].includes(name))
+      return key === 'temperature' || (name === 'iced shaken vanilla jelly' && key === 'inclusions');
+    if (['double chocolate chip cream', 'javachip brownie curvccino',
+      'javachip jelly curvccino', 'strawberries & cream', 'white caramel curvccino'].includes(name))
+      return key === 'milk';
+    if (['tropic kiss', 'tokyo sunrise', 'hibiscus cream tea', 'lime cucumber'].includes(name))
+      return key === 'sauce';
+    return false;
+  }
+
 
   function getSoldOutButtonAttrs(item) {
     return item && item.is_sold_out ? ' disabled aria-disabled="true" data-sold-out-action="true"' : '';
@@ -4179,6 +4268,7 @@ body.night-mode .public-item-wrap {
         has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
+        has_temperature: matchingHardcodedItem ? matchingHardcodedItem.has_temperature !== false : true,
         menu_group: product.menu_group,
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
@@ -4863,7 +4953,8 @@ body.night-mode .public-item-wrap {
 
   function renderFrappePanel(item) {
     const { id, name, desc, reg, lrg, img, default_milk,
-            has_milk, has_syrup, has_sauce, has_inclusions } = item;
+            has_syrup, has_sauce, has_inclusions } = item;
+    const has_milk = false; // Curvccino recipe has no selectable milk substitution.
 
     // Image or placeholder
     const imgHtml = img
@@ -5098,7 +5189,7 @@ body.night-mode .public-item-wrap {
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         default_milk: matchingHardcodedItem ? matchingHardcodedItem.default_milk : 'Full Cream',
-        has_milk: matchingHardcodedItem ? matchingHardcodedItem.has_milk : true,
+        has_milk: false,
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
         has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
         has_inclusions: matchingHardcodedItem ? matchingHardcodedItem.has_inclusions : true,
@@ -5220,7 +5311,8 @@ body.night-mode .public-item-wrap {
   }
 
   function renderRefresherPanel(item) {
-    const { id, name, desc, reg, lrg, img, has_syrup, has_sauce } = item;
+    const { id, name, desc, reg, lrg, img, has_syrup } = item;
+    const has_sauce = false; // Refreshers expose syrup only.
 
     // Image or placeholder
     const imgHtml = img
@@ -5412,7 +5504,7 @@ body.night-mode .public-item-wrap {
         is_sold_out: isPublicProductSoldOut(product),
         badge_labels: getPublicProductBadgeLabels(product),
         has_syrup: matchingHardcodedItem ? matchingHardcodedItem.has_syrup : true,
-        has_sauce: matchingHardcodedItem ? matchingHardcodedItem.has_sauce : true,
+        has_sauce: false,
         category_section_id: product.category_section_id || null,
         sort_order: Number(product.sort_order) || 0
       });
@@ -5883,7 +5975,7 @@ body.night-mode .public-item-wrap {
 
   // ── SAVORY BITES ITEMS CONFIG (Phase 4G) ──
   // Single fixed price per item. No size, no temperature, no milk.
-  // Sauce Preference (Sriracha Mayo / Garlic Aioli) is free — added in renderer.
+  // Each sauce is part of its fixed recipe, not a selectable option.
   const SAVORY_ITEMS = [
     {
       id: 'shrimp-tempura',
@@ -5915,8 +6007,7 @@ body.night-mode .public-item-wrap {
   // ── SAVORY BITES PANEL RENDERER (Phase 4G) ──
 
   function renderSavoryPanel(item) {
-    const { id, name, desc, price, img, default_sauce } = item;
-    const sauceHtml = `<span class="option-chip selected" data-value="${default_sauce}" data-price="0">${default_sauce}</span>`;
+    const { id, name, desc, price, img } = item;
 
     // Image or placeholder
     const imgHtml = img
@@ -5945,12 +6036,6 @@ body.night-mode .public-item-wrap {
           ${imgHtml}
           <div class="panel-options">
             <div>
-              <div class="option-group-label">Sauce Preference</div>
-              <div class="option-chips" data-panel="${id}" data-group="sauce_pref" data-type="single">
-                ${sauceHtml}
-              </div>
-            </div>
-            <div>
               <div class="option-group-label">Any notes for this item?</div>
               <textarea class="panel-note-input" id="note-${id}" placeholder="e.g. extra sauce on the side"></textarea>
             </div>
@@ -5976,25 +6061,14 @@ body.night-mode .public-item-wrap {
 
     const renderItem = item => {
       mount.appendChild(renderSavoryPanel(item));
-      const supabaseSauceDefault = getSupabaseDefaultOptionValue(item.name, 'sauce_pref', shapedPublicMenu);
-      const sauceDefault = supabaseSauceDefault || item.default_sauce;
-      const defaults = { sauce_pref: sauceDefault };
-      initPanel(item.id, defaults);
-      if (panelState[item.id]) {
-        panelState[item.id].options = { ...panelState[item.id].options, ...defaults };
-      }
-      if (supabaseSauceDefault) {
-        console.log(`[CURV menu] Using Supabase sauce default for ${item.name}: ${supabaseSauceDefault}`);
-      }
+      initPanel(item.id, {});
     };
 
     if (renderPanelItemsWithOptionalSections(mount, items, categorySections, renderItem)) return;
     items.forEach(renderItem);
   }
 
-  // Phase 2D.4: Supabase Savory mapping keeps fixed sauce behavior hardcoded.
-  // Admin product names must match these known Savory items exactly so sauce_pref
-  // can continue coming from SAVORY_ITEMS until Supabase supports option metadata.
+  // These known Savory items keep their sauces as fixed recipe components.
   const PUBLIC_SAVORY_NAME_MAP = {
     'Shrimp Tempura': 'shrimp-tempura',
     'Chicken Karaage': 'chicken-karaage',
@@ -6516,9 +6590,7 @@ body.night-mode .public-item-wrap {
     addPanelItems(FRAPPE_ITEMS, 'blended', 'Blended', 'Curvccino', 'regularLarge');
     addPanelItems(REFRESHER_ITEMS, 'refreshers', 'Refreshers', 'Refreshers', 'regularLarge');
     addPanelItems(TAKOYAKI_ITEMS, 'bites', 'Bites & Light Meals', 'Bites', 'takoyakiPieces');
-    addPanelItems(SAVORY_ITEMS, 'bites', 'Bites & Light Meals', 'Savory', 'single', item => (
-      item.default_sauce ? { sauce_pref: item.default_sauce } : {}
-    ));
+    addPanelItems(SAVORY_ITEMS, 'bites', 'Bites & Light Meals', 'Savory', 'single');
 
     return index;
   }
@@ -6906,20 +6978,17 @@ body.night-mode .public-item-wrap {
         render: renderEspressoPanel, defaults: buildEspressoDefaults, mode: 'sizes' },
       { sectionId: 'blended', items: FRAPPE_ITEMS, map: mapPublicCurvccinoItems,
         render: renderFrappePanel, mode: 'sizes', defaults: item => ({
-          size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none',
-          ...(item.has_milk ? { milk: item.default_milk } : {})
+          size: 'regular', syrup: 'none', sauce: 'none', inclusions: 'none'
         }) },
       { sectionId: 'refreshers', items: REFRESHER_ITEMS, map: mapPublicRefresherItems,
         render: renderRefresherPanel, mode: 'sizes',
-        defaults: () => ({ size: 'regular', syrup: 'none', sauce: 'none' }) },
+        defaults: () => ({ size: 'regular', syrup: 'none' }) },
       { sectionId: 'bites', items: TAKOYAKI_ITEMS, map: mapPublicTakoyakiItems,
         render: renderTakoyakiPanel, mode: 'pieces', group: 'Takoyaki', defaults: item => ({
           pieces: item.pieces[0].value, spicy: 'no', ...(item.has_cheese ? { cheese: 'no' } : {})
         }) },
       { sectionId: 'bites', items: SAVORY_ITEMS, map: mapPublicSavoryItems,
-        render: renderSavoryPanel, mode: 'single', group: 'Savory Bites', defaults: (item, menu) => ({
-          sauce_pref: getSupabaseDefaultOptionValue(item.name, 'sauce_pref', menu) || item.default_sauce
-        }) }
+        render: renderSavoryPanel, mode: 'single', group: 'Savory Bites', defaults: () => ({}) }
     ];
   }
 
@@ -7460,7 +7529,8 @@ body.night-mode .public-item-wrap {
     const max = group.selection_type === 'single' ? 1
       : group.max_selections === null || group.max_selections === undefined ? group.choices.length : Number(group.max_selections);
     if (!['single', 'multi'].includes(group.selection_type) || !Number.isInteger(min) || !Number.isInteger(max)
-      || max < min || group.choices.length < min || !String(group.group_key || '').trim()) throw new Error('Invalid option rules.');
+      || max < min || !Array.isArray(group.choices) || !group.choices.length
+      || group.choices.length < min || !String(group.group_key || '').trim()) throw new Error('Invalid option rules.');
     const defaults = new Set((group.defaults || []).map(d => d.option_choice_id));
     if (defaults.size > max || [...defaults].some(id => !group.choices.some(c => c.option_choice_id === id))) throw new Error('Invalid option defaults.');
     const key = 'public-option-' + slugifyPublicMenuId(group.option_group_id);
@@ -7520,6 +7590,7 @@ body.night-mode .public-item-wrap {
       panel.querySelector('.public-panel-header')?.remove();
       panel.querySelector('.panel-inner').prepend(header);
       const options = panel.querySelector('.panel-options');
+      const approvedRecipeKeys = getApprovedPublicRecipeKeys(product);
       // A generic rendering fallback must not silently drop a known recipe's
       // selectable modifiers merely because its variant count changed.
       let expectedRoot = panel;
@@ -7531,11 +7602,23 @@ body.night-mode .public-item-wrap {
           catch (_) { contract.error = 'This configuration is not available for ordering yet.'; }
         }
       }
-      contract.requiredOptionKeys = [...expectedRoot.querySelectorAll('[data-group]')]
-        .map(g => g.dataset.optionKey || g.dataset.group).filter(key => !['size','pieces'].includes(key));
+      contract.requiredOptionKeys = approvedRecipeKeys || [...expectedRoot.querySelectorAll('[data-group]')]
+        .map(g => normalizePublicOptionKey(g.dataset.optionKey || g.dataset.group))
+        .filter(key => !['size','pieces'].includes(key) && !isRetiredPublicRecipeGroup(product, key));
+      [...options.querySelectorAll('[data-group]')].forEach(node => {
+        const key = normalizePublicOptionKey(node.dataset.optionKey || node.dataset.group);
+        if (isRetiredPublicRecipeGroup(product, key))
+          (node.closest('.public-option-group, .accordion-group, [data-collapsible]') || node).remove();
+      });
       try {
         if (menu.options?.errorsByProductId?.[product.id]) throw new Error(menu.options.errorsByProductId[product.id]);
-        const groups = menu.options && menu.options.byProductId && menu.options.byProductId[product.id]?.groups || [];
+        const groups = (menu.options?.byProductId?.[product.id]?.groups || []).filter(group => {
+          if (isRetiredPublicRecipeGroup(product, group.group_key)) return false;
+          if (approvedRecipeKeys && !approvedRecipeKeys.includes(group.group_key)) {
+            throw new Error('Unexpected option group for approved recipe.');
+          }
+          return true;
+        });
         contract.optionGroups = groups;
         const groupKeys = new Set();
         groups.slice().sort((a,b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)).forEach(group => {
@@ -7543,8 +7626,10 @@ body.night-mode .public-item-wrap {
           groupKeys.add(group.group_key);
           const selected = previousChoices.get(group.group_key);
           const html = renderPublicOptionGroup(selected ? { ...group, defaults: selected.filter(choiceId => group.choices.some(choice => choice.option_choice_id === choiceId)).map(option_choice_id => ({ option_choice_id })) } : group, id);
-          const legacy = [...options.querySelectorAll('[data-group]')].find(node => (node.dataset.optionKey || node.dataset.group) === group.group_key);
-          if (legacy) (legacy.closest('.public-option-group, .accordion-group, [data-collapsible]') || legacy).remove();
+          const legacy = [...options.querySelectorAll('[data-group]')].find(node =>
+            normalizePublicOptionKey(node.dataset.optionKey || node.dataset.group) === group.group_key);
+          if (legacy) (legacy.closest('.public-option-group, .accordion-group, [data-collapsible]')
+            || (legacy.parentElement === options ? legacy : legacy.parentElement)).remove();
           options.insertAdjacentHTML('beforeend', html);
         });
         if (menu.options === null && !menu.productsWithoutOptionGroups?.has(product.id) && (menu.productsWithOptionGroups?.has(product.id) || !renderedPublicPanels.has(product.id))) throw new Error('Options not loaded.');
@@ -7560,14 +7645,15 @@ body.night-mode .public-item-wrap {
           '<span class="option-chip' + (index === 0 ? ' selected' : '') + '" data-size-id="' + escapeMenuHtml(variant.id || '')
           + '" data-value="' + escapeMenuHtml(variant.label) + '" data-price="' + escapeMenuHtml(variant.price)
           + '">' + escapeMenuHtml(variant.label) + '</span>').join('');
+        setPublicSizeGroupVisible(sizeGroup, Boolean(sizeGroup.querySelector('.option-chip')));
       }
       if (wrap.classList.contains('generic-public-product')) delete panelState[id];
       if (!panelState[id]) initPanel(id, {});
-      const temperature = panel.querySelector('[data-option-key="temperature"] .selected');
-      if (temperature) syncPublicPanelTemperature(id, temperature.dataset.value);
       if (previousSize && panel.querySelector('[data-size-id="' + previousSize + '"]')) {
         panel.querySelectorAll('[data-size-id]').forEach(chip => chip.classList.toggle('selected', chip.dataset.sizeId === previousSize));
       }
+      const temperature = panel.querySelector('[data-option-key="temperature"] .selected');
+      if (temperature) syncPublicPanelTemperature(id, temperature.dataset.value);
       const note = panel.querySelector('.panel-note-input');
       if (note) {
         note.maxLength = 500;
@@ -7760,17 +7846,40 @@ body.night-mode .public-item-wrap {
       [...configuration.option_choice_ids].sort(), note || '']);
   }
 
+  function setPublicSizeGroupVisible(group, visible) {
+    const options = group.closest('.panel-options');
+    const container = group.parentElement;
+    if (container && container !== options) container.style.display = visible ? '' : 'none';
+    else {
+      group.style.display = visible ? '' : 'none';
+      const label = group.previousElementSibling;
+      if (label?.classList.contains('option-group-label')) label.style.display = visible ? '' : 'none';
+    }
+  }
+
   function syncPublicPanelTemperature(id, value) {
     const group = getPanelRootElement(id)?.querySelector('[data-group="size"]');
-    if (!group || !group.querySelector('[data-show-when]')) return;
+    if (!group) return;
+    const contract = publicItemPanels.get(id);
+    const temperatureGroup = contract?.optionGroups.find(option => option.group_key === 'temperature');
+    const temperatureChoice = temperatureGroup?.choices.find(choice => choice.value === value);
+    const allowedSizes = temperatureGroup ? new Set((contract.compatibility || [])
+      .filter(row => row.product_id === contract.product.id && row.option_choice_id === temperatureChoice?.option_choice_id && row.is_active === true)
+      .map(row => row.product_size_id)) : null;
+    if (!allowedSizes && !group.querySelector('[data-show-when]')) return;
     const chips = [...group.querySelectorAll('.option-chip')];
     chips.forEach(chip => {
-      chip.style.display = !chip.dataset.showWhen || chip.dataset.showWhen === normalizePublicMenuText(value) ? '' : 'none';
-      chip.classList.remove('selected');
-      chip.setAttribute('aria-pressed', 'false');
+      const visible = allowedSizes ? allowedSizes.has(chip.dataset.sizeId)
+        : !chip.dataset.showWhen || chip.dataset.showWhen === normalizePublicMenuText(value);
+      chip.style.display = visible ? '' : 'none';
+      if (!visible) chip.classList.remove('selected');
+      chip.setAttribute('aria-pressed', String(chip.classList.contains('selected')));
     });
-    const first = chips.find(chip => chip.style.display !== 'none');
-    if (first) { first.classList.add('selected'); first.setAttribute('aria-pressed', 'true'); }
+    setPublicSizeGroupVisible(group, chips.some(chip => chip.style.display !== 'none'));
+    if (!chips.some(chip => chip.style.display !== 'none' && chip.classList.contains('selected'))) {
+      const first = chips.find(chip => chip.style.display !== 'none');
+      if (first) { first.classList.add('selected'); first.setAttribute('aria-pressed', 'true'); }
+    }
   }
 
   document.addEventListener('keydown', event => {
@@ -10320,10 +10429,23 @@ body.night-mode .public-item-wrap {
         ...defaultItem,
         choice: choices.find(choice => choice.option_choice_id === defaultItem.option_choice_id) || null
       }));
+      const semanticKey = normalizePublicOptionKey(group.group_key);
+      const existingSemanticGroup = entry.groups.find(item => item.group_key === semanticKey);
+      if (existingSemanticGroup) {
+        if (existingSemanticGroup.option_group_id !== group.option_group_id) {
+          errorsByProductId[group.product_id] = 'Different option groups share the same semantic key.';
+          console.warn('[CURV menu] Conflicting option-group aliases for product.', {
+            product_id: group.product_id, group_key: semanticKey,
+            option_group_ids: [existingSemanticGroup.option_group_id, group.option_group_id]
+          });
+        }
+        return;
+      }
       const shapedGroup = {
         product_id: group.product_id,
         option_group_id: group.option_group_id,
-        group_key: group.group_key,
+        group_key: semanticKey,
+        source_group_key: group.group_key,
         name: group.name,
         selection_type: group.selection_type,
         is_required: group.is_required,
@@ -10357,7 +10479,7 @@ body.night-mode .public-item-wrap {
     }, null);
     if (!productEntry || !Array.isArray(productEntry.groups)) return null;
 
-    const group = productEntry.groups.find(item => item && item.group_key === groupKey);
+    const group = productEntry.groups.find(item => item && item.group_key === normalizePublicOptionKey(groupKey));
     if (!group || !Array.isArray(group.defaults) || !group.defaults.length) return null;
 
     const defaultChoice = group.defaults.find(item => item && item.choice && (item.choice.label || item.choice.value));

@@ -158,8 +158,11 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const choice={product_id:fixtureId(7),option_choice_id:fixtureId(n),label,value:label,price_delta:25};catalog.choices.push(choice);
         const button=document.createElement('button');button.type='button';button.className='option-chip selected';button.dataset.choiceId=choice.option_choice_id;button.dataset.value=label;button.dataset.price='25';button.textContent=label;syrup.append(button);
       }
-      const size=groups[0].querySelector('.selected').dataset.sizeId,temp=groups[5].querySelector('.selected').dataset.choiceId;
+      // The bridge hides sizes until the server confirms a temperature pair.
+      const sizeChip=groups[0].querySelector('.option-chip');sizeChip.classList.add('selected');
+      const size=sizeChip.dataset.sizeId,temp=groups[5].querySelector('.selected').dataset.choiceId;
       contract.compatibility.push({product_id:fixtureId(7),product_size_id:size,option_choice_id:temp,is_active:true});
+      syncPublicPanelTemperature(id,'iced');
       const before=JSON.stringify(readPublicConfiguration(id)),price=getPanelBasePrice(id)+getPanelAddOnsPrice(id);
       ok(!JSON.parse(before).error,'fixture has a valid UUID configuration');
       organizePublicCustomization(panel);organizePublicCustomization(panel);
