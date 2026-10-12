@@ -468,6 +468,12 @@ BEGIN
    LEFT JOIN _curv_expected_assignment e ON e.product_id=a.product_id AND e.group_key IN (g.group_key,
       (SELECT x.new_key FROM _curv_expected_group x WHERE x.id=g.id))
    WHERE a.is_active AND e.product_id IS NULL
+     -- Exact approved retirements only; UUID ownership is checked above.
+     -- Phase 3 deactivates both, and postflight requires both inactive.
+     AND a.id NOT IN (
+       '14783335-981c-407a-8b52-4c032122538d'::uuid,
+       'da9742a2-5ab0-453e-89a8-583f0eff6a46'::uuid
+     )
  ) THEN
    RAISE EXCEPTION 'Unapproved active product option mapping exists' USING DETAIL='CURV_OPTION_EXTRA_MAPPING';
  END IF;
