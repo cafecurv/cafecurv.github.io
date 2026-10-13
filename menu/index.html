@@ -855,10 +855,14 @@
   .form-float.open { display: block; }
 
   .form-card {
-    background: var(--bg);
-    border: 0.5px solid var(--bg3);
+    --form-surface: #FCFAF6;
+    --form-nested: #F3EFE7;
+    --form-input: #FFFDF9;
+    --form-border: #D8D0C3;
+    background: var(--form-surface);
+    border: 1px solid var(--form-border);
     border-radius: 12px;
-    box-shadow: 0 -4px 30px rgba(33,40,66,0.08);
+    box-shadow: 0 8px 28px rgba(33,40,66,0.12);
     overflow: hidden;
   }
 
@@ -912,6 +916,81 @@
   }
 
   .form-body.minimized { display: none; }
+
+  /* Separate form surfaces without changing the order flow or surrounding menu. */
+  .form-card .form-top-bar {
+    background: var(--form-nested);
+    border-bottom-color: var(--form-border);
+  }
+  .form-card .form-body { padding: 1.15rem 1.1rem; }
+  .form-card .form-group { margin-bottom: 1rem; }
+  .form-card .form-label {
+    color: var(--gray-mid);
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
+    margin-bottom: 7px;
+  }
+  .form-card .form-input,
+  .form-card .form-select,
+  .form-card .form-textarea {
+    background: var(--form-input);
+    border: 1px solid var(--form-border);
+  }
+  .form-card .form-input:focus,
+  .form-card .form-select:focus,
+  .form-card .form-textarea:focus {
+    background: var(--form-input);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(200,184,154,0.18);
+  }
+  .form-card .cart-box {
+    background: var(--form-nested);
+    border: 1px solid var(--form-border);
+    margin-bottom: 0;
+  }
+  .form-card .cart-total {
+    background: transparent;
+    border-top-color: var(--form-border);
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+  }
+  .form-card #special-requests-field { margin-bottom: 1rem; }
+  .form-card #f-notes { min-height: 76px; }
+  .form-card #customer-details-memory {
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--form-border);
+    margin-bottom: 1rem;
+  }
+  .form-card #customer-details-memory > label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--navy);
+    cursor: pointer;
+  }
+  .form-card #remember-customer-details {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: var(--navy);
+  }
+  .form-card #customer-details-memory .payment-note { margin-top: 0.4rem; }
+  .form-card #forget-customer-details { margin-top: 0.5rem; }
+  .form-card #submitOrderBtn { margin-top: 0.25rem; }
+  .form-card .submit-status { margin-top: 0.75rem; overflow-wrap: anywhere; }
+  .form-card .submit-status:empty,
+  .form-card #customer-details-status:empty { min-height: 0; margin-top: 0; }
+  body.night-mode .form-card {
+    --form-surface: #1B2130;
+    --form-nested: #151B28;
+    --form-input: #171D2B;
+    --form-border: #343D52;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+  }
 
   .form-minimized-bar {
     display: none;
