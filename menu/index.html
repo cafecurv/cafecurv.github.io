@@ -3611,6 +3611,12 @@ body.night-mode .public-item-wrap {
 </div>
 
 <script>
+  // Bump deliberately with the controller's own version marker on each checkout release.
+  const CURV_CHECKOUT_RELEASE = '2026-10-14.1';
+  function getCompatibleCheckout() {
+    const checkout = window.curvCheckout;
+    return checkout?.version === CURV_CHECKOUT_RELEASE && typeof checkout.submit === 'function' ? checkout : null;
+  }
   // ── SITE NAV ──
   function toggleSiteMode() {
     document.body.classList.toggle('night-mode');
@@ -8415,7 +8421,7 @@ body.night-mode .public-item-wrap {
       copyButton.hidden = !shouldShowCopyFallback;
       copyButton.disabled = !shouldShowCopyFallback;
     }
-    window.curvCheckout?.syncButton();
+    getCompatibleCheckout()?.syncButton();
   }
 
   function setDeliveryTime(mode) {
@@ -8656,7 +8662,7 @@ body.night-mode .public-item-wrap {
   }
 
   function renderCart() {
-    window.curvCheckout?.changed();
+    getCompatibleCheckout()?.changed();
     // Clear only the obsolete cart error, not other validation or submission feedback.
     const submitStatus = document.getElementById('submitOrderStatus');
     if (cart.length > 0 && submitStatus?.textContent === 'Please add at least one item to your order.') {
@@ -9110,10 +9116,10 @@ body.night-mode .public-item-wrap {
     const f = document.getElementById('formFloat');
     if (f.classList.contains('open')) {
       closeForm();
-    } else if (isWebsiteOrderingEnabled === false && !window.curvCheckout?.hasPending()) {
+    } else if (isWebsiteOrderingEnabled === false && !getCompatibleCheckout()?.hasPending()) {
       syncPublicOrderSubmitGate();
       setSubmitOrderStatus(WEBSITE_ORDERING_PAUSED_MESSAGE, 'error');
-    } else if (isPublicOrderTechnicalAvailable && !isPublicOrderSubmitEnabled() && !window.curvCheckout?.hasPending()) {
+    } else if (isPublicOrderTechnicalAvailable && !isPublicOrderSubmitEnabled() && !getCompatibleCheckout()?.hasPending()) {
       syncPublicOrderSubmitGate();
       setSubmitOrderStatus('Checking Website Ordering status. Please try again in a moment.');
     } else {
@@ -9347,7 +9353,7 @@ body.night-mode .public-item-wrap {
   }
 
   function hasStoredPublicSubmissionRetryState() {
-    if (window.curvCheckout?.hasPending()) return true;
+    if (getCompatibleCheckout()?.hasPending()) return true;
     const storedKey = getSafeSubmissionKey(activeSubmissionKey) || getStoredPublicSubmissionKey();
     const storedSignature = activeSubmissionKeySignature || getStoredPublicSubmissionSignature();
     const failureMode = activeSubmissionFailureMode || getStoredPublicSubmissionFailureMode();
@@ -9409,10 +9415,10 @@ body.night-mode .public-item-wrap {
     if (!orderBar || !orderButton) return;
 
     const statusMessage = getOrderingStatusMessage();
-    const shouldDisable = isPublicOrderTechnicalAvailable && isWebsiteOrderingEnabled !== true && !window.curvCheckout?.hasPending();
+    const shouldDisable = isPublicOrderTechnicalAvailable && isWebsiteOrderingEnabled !== true && !getCompatibleCheckout()?.hasPending();
     orderButton.disabled = shouldDisable;
     if (orderLabel) {
-      orderLabel.textContent = window.curvCheckout?.hasPending() ? 'Recover Previous Order' : !isPublicOrderTechnicalAvailable
+      orderLabel.textContent = getCompatibleCheckout()?.hasPending() ? 'Recover Previous Order' : !isPublicOrderTechnicalAvailable
         ? 'Use Copy Order'
         : isWebsiteOrderingEnabled === false
           ? 'Website Ordering Paused'
@@ -9875,7 +9881,7 @@ body.night-mode .public-item-wrap {
       setOrderConfirmModal(
         changed ? 'Confirm your updated order' : 'Review your order',
         `
-          ${window.curvCheckout.reviewHtml(quote, payload)}
+          ${getCompatibleCheckout().reviewHtml(quote, payload)}
           <p>Please double-check your order details before submitting.</p>
           <p>Once confirmed, you won't be able to edit this order on the website.</p>
         `,
@@ -10035,8 +10041,9 @@ body.night-mode .public-item-wrap {
   }
 
   async function submitPublicOrder() {
-    if (!window.curvCheckout) { setSubmitOrderStatus('Checkout is unavailable. Please refresh and try again.', 'error'); return; }
-    return window.curvCheckout.submit();
+    const checkout = getCompatibleCheckout();
+    if (!checkout) { setSubmitOrderStatus('Checkout is unavailable. Please refresh and try again.', 'error'); return; }
+    return checkout.submit();
   }
 
   syncOrderMethodFields();
@@ -10753,6 +10760,55 @@ body.night-mode .public-item-wrap {
     }
   });
 </script>
-<script src="authoritative-checkout.js"></script>
+<script>
+(() => {
+  const bootstrap = { version: CURV_CHECKOUT_RELEASE, status: 'loading', attempts: 0 };
+  window.curvCheckoutBootstrap = bootstrap;
+  const diagnostic = reason => console.warn('[CURV checkout] ' + reason);
+  const asset = new URL('authoritative-checkout.js', window.location.href);
+  asset.searchParams.set('v', CURV_CHECKOUT_RELEASE);
+  function load(recovery) {
+    if (getCompatibleCheckout()) { bootstrap.status = 'ready'; return; }
+    bootstrap.attempts++;
+    const url = new URL(asset.href);
+    if (recovery) url.searchParams.set('recovery', '1');
+    const script = document.createElement('script');
+    script.src = url.href;
+    script.async = false;
+    let settled = false, initializationFailed = false;
+    const onInitializationError = event => {
+      if (event.filename && event.filename.split('?')[0] === asset.href.split('?')[0]) {
+        initializationFailed = true;
+        diagnostic('initialization failure');
+      }
+    };
+    window.addEventListener('error', onInitializationError);
+    const timer = setTimeout(() => finish('asset load timeout'), 15000);
+    function finish(reason) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('error', onInitializationError);
+      script.onload = script.onerror = null;
+      if (getCompatibleCheckout()) { bootstrap.status = 'ready'; return; }
+      diagnostic(reason || (window.curvCheckout ? 'version mismatch' : initializationFailed ? 'controller missing after initialization failure' : 'controller missing'));
+      script.remove();
+      if (!recovery) {
+        bootstrap.status = 'recovering';
+        diagnostic('recovery attempt 1');
+        load(true);
+      } else {
+        bootstrap.status = 'unavailable';
+        diagnostic('recovery exhausted');
+        setSubmitOrderStatus('Checkout is unavailable. Please refresh and try again.', 'error');
+      }
+    }
+    script.onload = () => finish();
+    script.onerror = () => finish('asset load failure');
+    document.body.appendChild(script);
+  }
+  load(false);
+})();
+</script>
 </body>
 </html>

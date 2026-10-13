@@ -1,6 +1,12 @@
 /* D0B6: checkout authority and session-only recovery. Catalog prices remain estimates. */
 (() => {
   'use strict';
+  // This marker identifies the served asset itself; match CURV_CHECKOUT_RELEASE
+  // deliberately when releasing, rather than borrowing the page's version.
+  const version = '2026-10-14.1';
+  // Never attach a second set of listeners or replace an existing controller.
+  // An incompatible existing controller stays blocked by the page's version gate.
+  if (window.curvCheckout) return;
   const storageKey = 'curv-pending-order-v2';
   const trim = value => String(value ?? '').replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '') || null;
   const uuid = value => {
@@ -24,7 +30,10 @@
     PRODUCT_UNAVAILABLE: 'One of the selected items is no longer available.', SIZE_INVALID: 'One of the selected sizes is no longer available.',
     OPTION_INVALID: 'One of the selected options is no longer available.', OPTION_REQUIRED: 'Please complete the required options.',
     OPTION_SELECTION_INVALID: 'Please review the selected options.', CONFIGURATION_INVALID: 'This item is temporarily unavailable. Please refresh the menu.',
-    CLIENT_UPDATE_REQUIRED: 'Please refresh before starting a new order.', CURV_ORDERING_CLOSED: WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE,
+    CLIENT_UPDATE_REQUIRED: 'Please refresh before starting a new order.',
+    CURV_ORDERING_CLOSED: typeof WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE === 'string'
+      ? WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE
+      : 'Website ordering was paused before your order could be submitted. Your cart is still saved.',
     DINE_TIMING_REQUIRED: 'Choose when we should prepare your order.', DINE_TIMING_INVALID: 'Choose a valid preparation time later today.',
     DINE_TIMING_NOT_LATER_TODAY: 'Choose a preparation time later today.'
   };
@@ -211,10 +220,18 @@
       if (state.refreshRequested) { state.refreshRequested = false; if (!uncertain() && !isOrderSubmittedLocked) setTimeout(submitPublicOrder, 0); }
     }
   }
-  window.curvCheckout = { submit, changed, syncButton, reviewHtml, items, semantic, state, hasPending: () => !!pending, storageKey };
-  document.getElementById('submitOrderStatus')?.setAttribute('aria-live', 'polite');
-  document.getElementById('formBody')?.addEventListener('input', changed);
-  document.getElementById('formBody')?.addEventListener('change', changed);
-  syncOrderBarState();
-  syncButton();
+  const controller = { version, submit, changed, syncButton, reviewHtml, items, semantic, state, hasPending: () => !!pending, storageKey };
+  window.curvCheckout = controller;
+  try {
+    document.getElementById('submitOrderStatus')?.setAttribute('aria-live', 'polite');
+    document.getElementById('formBody')?.addEventListener('input', changed);
+    document.getElementById('formBody')?.addEventListener('change', changed);
+    syncOrderBarState();
+    syncButton();
+  } catch (error) {
+    document.getElementById('formBody')?.removeEventListener('input', changed);
+    document.getElementById('formBody')?.removeEventListener('change', changed);
+    if (window.curvCheckout === controller) delete window.curvCheckout;
+    throw error;
+  }
 })();
