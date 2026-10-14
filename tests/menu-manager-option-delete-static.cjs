@@ -27,6 +27,7 @@ for(const kind of ['group','choice']){
 }
 for(const reason of ['GROUP_HAS_CHOICES','GROUP_ASSIGNED','USED_AS_DEFAULT','USED_IN_OVERRIDE','USED_IN_COMPATIBILITY','USED_IN_REQUIREMENT','CHOICE_ASSIGNED','USED_IN_CERTIFICATION'])check(sql.includes("'"+reason+"'"),'dependency '+reason);
 const js=fs.readFileSync(path.join(root,'admin/admin.js'),'utf8');const part=js.slice(js.indexOf('  const deleteOptionRecord ='),js.indexOf('  const renderOptionGroups ='));
-check(part.includes("client.rpc('menu_manager_delete_option_' + kind")&&!part.includes('.delete('),'UI safe RPC only');
-check(part.includes('generation !== menuAuthGeneration')&&part.includes('window.confirm'),'confirmation and stale-response guard');
+check(part.includes('phaseOneOptionsGate()')&&!part.includes('client.rpc('),'Phase 1 option deletion gated');
+const boundary=fs.readFileSync(path.join(root,'admin/MENU_MANAGER_PRODUCT_SAVE_PHASE1.sql'),'utf8');
+check(boundary.includes('guard_catalog_write')&&boundary.includes("'option_groups','option_choices'"),'legacy security-definer deletion also guarded by database');
 console.log(n+' static safe-delete draft checks passed; SQL was NOT executed.');

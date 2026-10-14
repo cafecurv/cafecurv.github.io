@@ -1,0 +1,80 @@
+const assert=require('node:assert/strict');
+const {fixture,id,request}=require('./menu-manager-product-save-fixture.cjs');
+const {reviewed,submit,payload}=require('./public-submission-v2-fixture.cjs');
+(async()=>{const {db}=await fixture();let count=0;
+const check=(v,m)=>{assert.ok(v,m);count++;};
+const eq=(a,b,m)=>{assert.deepEqual(a,b,m);count++;};
+const q=async(s,p=[])=>(await db.query(s,p)).rows;
+const as=async(user,fn,role='authenticated')=>{await q("select set_config('request.jwt.claim.sub',$1,false)",[user||'']);await db.exec('set role '+role);try{return await fn();}finally{await db.exec('reset role').catch(()=>{});}};
+const rpc=(name,p,user=id(1))=>as(user,async()=>(await q('select public.'+name+'($1) result',[typeof p==='object'?JSON.stringify(p):p]))[0].result);
+const edit=p=>rpc('menu_manager_get_product_editor',p);const save=r=>rpc('menu_manager_save_product',r);
+const fails=async(fn,detail)=>{let error;try{await fn();}catch(e){error=e;}check(!!error,'must reject '+detail);if(detail)eq(error.detail||error.code,detail);};
+const state=async()=> (await q(`select (select jsonb_agg(to_jsonb(p) order by id) from products p) p,
+ (select jsonb_agg(to_jsonb(s) order by id) from product_sizes s) s,
+ (select jsonb_agg(to_jsonb(c) order by product_id) from configuration_private.product_pricing_certifications c) c,
+ (select jsonb_agg(to_jsonb(r) order by request_id) from menu_save_private.requests r) r`))[0];
+try{
+ for(const name of ['menu_manager_get_product_editor(uuid)','menu_manager_save_product(jsonb)']){
+  const meta=(await q('select prosecdef,proconfig from pg_proc where oid=$1::regprocedure',['public.'+name]))[0];
+  check(meta.prosecdef&&meta.proconfig.includes('search_path=pg_catalog'),'definer restricted search path');
+  check(!(await q("select has_function_privilege('anon',$1,'EXECUTE') allowed",['public.'+name]))[0].allowed,'anon execution denied');
+ }
+ await fails(()=>rpc('menu_manager_save_product',request(null,9000),id(3)),'MM_SAVE_AUTH');
+ await fails(()=>as(null,()=>q('select public.menu_manager_save_product($1)',[JSON.stringify(request(null,9000))]),'anon'),'42501');
+ await fails(()=>rpc('menu_manager_get_product_editor',id(1000),id(3)),'MM_SAVE_AUTH');
+ const draft=await save(request(null,9000));check(draft.ok&&!draft.is_published,'draft create');
+ eq((await q('select count(*)::int n from configuration_private.product_pricing_certifications where product_id=$1',[draft.product_id]))[0].n,0,'draft uncertified');
+ eq(await save(request(null,9000)),draft,'uncertain create retry same result');
+ await fails(()=>save({...request(null,9000),action:'publish'}),'MM_SAVE_KEY_CONFLICT');
+ let ed=await edit(draft.product_id);let r=request(ed,9001,'publish');let result=await save(r);check(result.orderable,'publish simple');
+ await q('select configuration_private.assert_pricing_ready($1)',[draft.product_id]);check(true,'ready');
+ ed=await edit(draft.product_id);r=request(ed,9002);r.sizes[0].price=210;const sizeId=r.sizes[0].id;
+ await save(r);eq((await edit(draft.product_id)).product.product_sizes[0].id,sizeId,'size ID retained');
+ await q('select configuration_private.assert_pricing_ready($1)',[draft.product_id]);check(true,'price edit refreshed');
+ const quote=(await q('select public.quote_public_cart($1) q',[JSON.stringify({pricing_contract_version:2,items:[{product_id:draft.product_id,product_size_id:sizeId,option_choice_ids:[],quantity:1,item_note:null}]})]))[0].q;
+ check(quote.ok,'saved product immediately accepted by authoritative quote');
+ await fails(()=>save({...request(null,9091),expected_structure:{}}),'MM_SAVE_INPUT');
+ const before=await state();await fails(()=>save({...r,request_id:id(9003)}),'MM_SAVE_STALE');eq(await state(),before,'stale no writes');
+ ed=await edit(draft.product_id);r=request(ed,9004);r.product.name='Bad update';r.sizes[0].id=id(1100);
+ await fails(()=>save(r),'MM_SIZE_ID_NOT_FOUND');eq(await state(),before,'product,size,cert,ledger all rollback');
+ r=request(null,9005,'publish');r.product.name='Multi cake';r.sizes.push({id:null,label:'Large',price:300,cost:null});const multi=await save(r);
+ eq((await edit(multi.product_id)).product.product_sizes.length,2,'multi-size');
+ await save(request(await edit(multi.product_id),9006,'unpublish'));check(!(await edit(multi.product_id)).product.is_published,'unpublish');
+ ed=await edit(multi.product_id);r=request(ed,9007);r.sizes[0].price=200;await save(r);await save(request(await edit(multi.product_id),9008,'publish'));check(true,'draft edit then republish');
+ ed=await edit(id(1001));const config=(await q('select configuration_private.catalog_structure($1) s',[id(1001)]))[0].s;
+ r=request(ed,9009);r.sizes[0].price+=1;await save(r);
+ const after=(await q('select configuration_private.catalog_structure($1) s',[id(1001)]))[0].s;delete config.sizes;delete after.sizes;eq(after,config,'option config untouched');
+ ed=await edit(id(1001));r=request(ed,9010);r.sizes=r.sizes.slice(1);await fails(()=>save(r),'MM_SAVE_SIZE_OPTIONS');
+ const intact=await state();r=request(ed,9020);r.product.name='Must roll back';r.sizes.push({id:null,label:'New size without temperature',price:150});
+ await fails(()=>save(r),'MM_SAVE_SIZE_CONFIGURATION');eq(await state(),intact,'new contextual size leaves every table unchanged');
+ ed=await edit(id(1005));r=request(ed,9021);r.sizes.push({id:null,label:'20 pcs',price:400});
+ await fails(()=>save(r),'MM_SAVE_SIZE_CONFIGURATION');eq(await state(),intact,'cannot certify missing cheese price for a new size');
+ await q('insert into inventory_recipes(product_size_id) values($1)',[sizeId]);
+ ed=await edit(draft.product_id);r=request(ed,9011);r.sizes=[{id:null,label:'Replacement',price:100}];await fails(()=>save(r),'MM_SAVE_RECIPE');
+ // Simulate privileged drift, not a public bypass: alter the private snapshot only.
+ await q(`update configuration_private.product_pricing_certifications set expected_structure=expected_structure||'{"drift":true}'::jsonb where product_id=$1`,[id(1001)]);
+ ed=await edit(id(1001));await fails(()=>save(request(ed,9012)),'MM_SAVE_OPTIONS');
+ await fails(()=>as(id(1),()=>q('update products set name=$1 where id=$2',['Bypass',id(1000)])),'42501');
+ await fails(()=>as(id(1),()=>q('update product_sizes set price=2 where id=$1',[id(1100)])),'42501');
+ await fails(()=>as(id(1),()=>q('update option_choices set price_delta=2 where id=$1',[id(3000)])),'42501');
+ await db.exec(`create function public.fixture_legacy_write() returns void language sql security definer as $$ update public.products set name='legacy bypass' where id='${id(1000)}' $$;grant execute on function public.fixture_legacy_write() to authenticated;`);
+ await fails(()=>as(id(1),()=>q('select public.fixture_legacy_write()')),'MM_SAVE_BOUNDARY');
+ await fails(()=>as(id(1),()=>q('select public.menu_manager_reconcile_product_sizes($1,$2)',[id(1000),'[]'])),'42501');
+ await as(id(1),()=>q('update products set sort_order=12 where id=$1',[id(1000)]));check(true,'display order allowed');
+ const order=await submit(db,await reviewed(db,payload(9990)));check(!!order.order_number,'public submit unchanged');
+ const history=await q('select to_jsonb(i) row from order_items i order by id');
+ ed=await edit(id(1000));r=request(ed,9013);r.sizes[0].price=12;await save(r);eq(await q('select to_jsonb(i) row from order_items i order by id'),history,'order snapshots unchanged');
+ r=request(null,9014,'publish');r.product.name='Curv Latte';await fails(()=>save(r),'MM_SAVE_OPTIONS');
+ r=request(null,9015,'publish');r.sizes.push({...r.sizes[0]});await fails(()=>save(r),'MM_SIZE_LABEL_DUPLICATE');
+ r=request(null,9016);r.sizes[0].price=null;await fails(()=>save(r),'MM_SIZE_PRICE_INVALID');
+ r=request(null,9017,'publish');r.product.name='  Curv   Latte  ';await fails(()=>save(r),'MM_SAVE_OPTIONS');
+ ed=await edit(id(30));r=request(ed,9018);r.sizes[0].price=170;await save(r);
+ eq((await q('select count(*)::int n from configuration_private.product_pricing_certifications where product_id=$1',[id(30)]))[0].n,0,'option-bearing draft remains uncertified');
+ await fails(async()=>save(request(await edit(id(30)),9019,'publish')),'MM_SAVE_OPTIONS');
+ eq((await q('select count(*)::int n from menu_save_private.active_save'))[0].n,0,'no retained write capability');
+ await fails(()=>as(id(1),()=>q('select * from menu_save_private.requests')),'42501');
+ await fails(()=>as(id(1),()=>q('truncate product_sizes cascade')),'42501');
+ await db.exec('begin isolation level repeatable read');
+ await fails(()=>save(request(null,9090)),'MM_SAVE_INPUT');await db.exec('rollback');
+ console.log('Menu Manager product save database: '+count+' assertions passed');
+}finally{await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -2925,6 +2925,37 @@
   let productBadgeLabels = [];
   let productBadgesDisabled = true;
   let editingProductId = null;
+  let productEditorVersion = null;
+  let pendingProductSave = null;
+  const productSaveMessage = (error) => {
+    const messages = {
+      MM_SAVE_AUTH: 'Owner access is required to save products.',
+      MM_SAVE_STALE: 'This product changed in another session. Reload before saving.',
+      MM_SAVE_BUSY: 'Another menu change is being saved. Please try again.',
+      MM_SAVE_NAME: 'Enter a product name.',
+      MM_SAVE_CATEGORY: 'Choose an available category and section.',
+      MM_SAVE_SIZES: 'This product needs at least one size.',
+      MM_SIZE_AT_LEAST_ONE_REQUIRED: 'This product needs at least one size.',
+      MM_SIZE_PRICE_INVALID: 'Add a valid price before saving.',
+      MM_SIZE_LABEL_DUPLICATE: 'Give each size a different name.',
+      MM_SAVE_RECIPE: 'This size is used by a recipe and cannot be removed.',
+      MM_SIZE_RECIPE_PROTECTED: 'This size is used by a recipe and cannot be removed.',
+      MM_SAVE_SIZE_OPTIONS: 'This size is used by customer options and cannot be removed yet.',
+      MM_SAVE_SIZE_CONFIGURATION: 'New sizes need matching customer options before they can be added to this item.',
+      MM_SAVE_OPTIONS: 'Some customer options need attention. Your live product was not changed.',
+      MM_SAVE_INPUT: 'Please review the product values and try again.',
+      MM_SAVE_KEY_CONFLICT: 'This save request changed. Reload before saving.'
+    };
+    const detail = String(error?.details || '');
+    if (detail.startsWith('D0B1_')) return messages.MM_SAVE_OPTIONS;
+    return messages[detail] || 'Unable to save. Your changes are still here. Please try again.';
+  };
+  const phaseOneOptionsGate = () => {
+    const message = 'Customer option editing is temporarily read-only while safe saving is prepared.';
+    setStatus(message);
+    setOptionManagerStatus(message);
+    setProductOptionStatus(message);
+  };
   let editingProductSnapshot = null;
   let draftFormBaseline = '';
   let draftFormSavedLabelActive = false;
@@ -4041,38 +4072,7 @@
   };
 
   const saveProductOptionAttachment = async (event) => {
-    if (event) event.preventDefault();
-    if (!isOwnerSignedIn || productOptionAttachmentSaving) return;
-
-    const validation = validateProductOptionAttachmentForm();
-    if (!validation) return;
-    if (validation.error) {
-      setProductOptionStatus(validation.error);
-      return;
-    }
-
-    productOptionAttachmentSaving = true;
-    setProductOptionAttachFormDisabled(false);
-    setProductOptionStatus('Attaching option group...');
-
-    const { error } = await client
-      .from('product_option_groups')
-      .insert(validation.value);
-
-    productOptionAttachmentSaving = false;
-
-    if (error) {
-      setProductOptionAttachFormDisabled(false);
-      const duplicateAttachment = error.message && /duplicate|unique/i.test(error.message);
-      setProductOptionStatus(duplicateAttachment
-        ? 'That option group is already attached to this product.'
-        : 'Unable to attach option group. ' + error.message);
-      return;
-    }
-
-    resetProductOptionAttachForm();
-    await loadProductOptionAttachments(editingProductId);
-    setProductOptionStatus('Option group attached.');
+    event?.preventDefault(); phaseOneOptionsGate(); return;
   };
 
   const validateProductOptionSettings = (optionGroupId) => {
@@ -4131,76 +4131,11 @@
   };
 
   const saveProductOptionSettings = async (optionGroupId) => {
-    if (!isOwnerSignedIn || productOptionSettingsSaving) return;
-
-    const validation = validateProductOptionSettings(optionGroupId);
-    if (!validation) return;
-    if (validation.error) {
-      setProductOptionStatus(validation.error);
-      return;
-    }
-
-    productOptionSettingsSaving = true;
-    renderProductOptionAttachments(productOptionAttachments);
-    setProductOptionStatus('Saving option group settings...');
-
-    const { error } = await client
-      .from('product_option_groups')
-      .update(validation.value)
-      .eq('product_id', editingProductId)
-      .eq('option_group_id', optionGroupId);
-
-    productOptionSettingsSaving = false;
-
-    if (error) {
-      renderProductOptionAttachments(productOptionAttachments);
-      setProductOptionStatus('Unable to save option group settings. ' + error.message);
-      return;
-    }
-
-    editingProductOptionSettingsGroupId = '';
-    await loadProductOptionAttachments(editingProductId);
-    setProductOptionStatus('Option group settings updated.');
+    phaseOneOptionsGate(); return;
   };
 
   const detachProductOptionGroup = async (optionGroupId) => {
-    if (!isOwnerSignedIn || productOptionDetachSaving) return;
-    if (!editingProductId) {
-      setProductOptionStatus('Save the product before detaching option groups.');
-      return;
-    }
-
-    const attachment = productOptionAttachments.find((item) => item.option_group_id === optionGroupId);
-    if (!attachment) {
-      setProductOptionStatus('This option group is not attached to the current product.');
-      return;
-    }
-
-    const confirmed = window.confirm('Remove this option group from this product? Saved defaults for this product/group will also be removed.');
-    if (!confirmed) return;
-
-    productOptionDetachSaving = true;
-    if (editingProductOptionSettingsGroupId === optionGroupId) editingProductOptionSettingsGroupId = '';
-    renderProductOptionAttachments(productOptionAttachments);
-    setProductOptionStatus('Detaching option group...');
-
-    const { error } = await client
-      .from('product_option_groups')
-      .delete()
-      .eq('product_id', editingProductId)
-      .eq('option_group_id', optionGroupId);
-
-    productOptionDetachSaving = false;
-
-    if (error) {
-      renderProductOptionAttachments(productOptionAttachments);
-      setProductOptionStatus('Unable to detach option group. ' + error.message);
-      return;
-    }
-
-    resetProductOptionAttachForm();
-    await loadProductOptionAttachments(editingProductId);
-    setProductOptionStatus('Option group detached from product.');
+    phaseOneOptionsGate(); return;
   };
 
   const validateProductOptionDefaults = (optionGroupId) => {
@@ -4244,49 +4179,12 @@
   };
 
   const saveProductOptionDefaults = async (optionGroupId) => {
-    if (!isOwnerSignedIn || productOptionDefaultSaving) return;
-
-    const validation = validateProductOptionDefaults(optionGroupId);
-    if (!validation) return;
-    if (validation.error) {
-      setProductOptionStatus(validation.error);
-      return;
-    }
-
-    productOptionDefaultSaving = true;
-    setProductOptionStatus('Saving default choices...');
-
-    const { error: deleteError } = await client
-      .from('product_option_defaults')
-      .delete()
-      .eq('product_id', editingProductId)
-      .eq('option_group_id', optionGroupId);
-
-    if (deleteError) {
-      productOptionDefaultSaving = false;
-      setProductOptionStatus('Unable to clear existing defaults. ' + deleteError.message);
-      return;
-    }
-
-    if (validation.value.length) {
-      const { error: insertError } = await client
-        .from('product_option_defaults')
-        .insert(validation.value);
-
-      if (insertError) {
-        productOptionDefaultSaving = false;
-        setProductOptionStatus('Existing defaults were cleared, but new defaults could not be saved. ' + insertError.message);
-        await loadProductOptionAttachments(editingProductId);
-        return;
-      }
-    }
-
-    productOptionDefaultSaving = false;
-    await loadProductOptionAttachments(editingProductId);
-    setProductOptionStatus(validation.value.length ? 'Default choices saved.' : 'Defaults cleared.');
+    phaseOneOptionsGate(); return;
   };
 
   const resetDraftProductForm = () => {
+    productEditorVersion = null;
+    pendingProductSave = null;
     productEditorGeneration += 1;
     productSaveInProgress = false;
     if (draftForm) { draftForm.inert = false; draftForm.setAttribute('aria-busy', 'false'); }
@@ -5885,50 +5783,7 @@
   };
 
   const deleteOptionRecord = async (kind) => {
-    if (!isOwnerSignedIn || optionGroupSaving || optionChoiceSaving || optionGroupsLoading || optionChoicesLoading) return;
-    const isGroup = kind === 'group';
-    const record = isGroup ? optionGroupsList.find(row => row.id === selectedOptionGroupId)
-      : optionChoicesList.find(row => row.id === selectedOptionChoiceId);
-    if (!record || !window.confirm('Permanently delete “' + (isGroup ? record.name : record.label) + '”?\nThis cannot be undone.')) return;
-    const generation = menuAuthGeneration;
-    if (isGroup) optionGroupSaving = true; else optionChoiceSaving = true;
-    syncOptionEditor();
-    setOptionManagerStatus('Deleting ' + (isGroup ? 'group' : 'choice') + '...');
-    const { data, error } = await optionLibraryRequest(client.rpc('menu_manager_delete_option_' + kind,
-      isGroup ? { p_group_id: record.id } : { p_choice_id: record.id }));
-    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
-    if (isGroup) optionGroupSaving = false; else optionChoiceSaving = false;
-    syncOptionEditor();
-    if (error || data?.ok !== true) {
-      const messages = {
-        GROUP_HAS_CHOICES: 'This option group still contains choices. Remove those choices first.',
-        GROUP_ASSIGNED: 'This option group is still assigned to products. Remove those assignments first.',
-        CHOICE_ASSIGNED: 'This option is still assigned to products. Remove those assignments first.',
-        USED_AS_DEFAULT: 'This option is still used as a default.',
-        USED_IN_OVERRIDE: 'This option is still used in product pricing.',
-        USED_IN_COMPATIBILITY: 'This option is still used in size compatibility settings.',
-        USED_IN_REQUIREMENT: 'This option is still required by product pricing settings.',
-        USED_IN_CERTIFICATION: 'This option is still part of a reviewed product configuration.',
-        OWNER_REQUIRED: 'Owner access is required to delete options.',
-        NOT_FOUND: 'This option no longer exists. Refresh the library.',
-        RETRY_REQUIRED: 'Options are busy. Please try again.',
-        REFERENCE_REVIEW_REQUIRED: 'This option has protected references and cannot be deleted.'
-      };
-      const reason = data?.code === 'IN_USE' ? data.reasons?.[0] : data?.code;
-      setOptionManagerStatus(messages[reason] || 'Unable to delete this option. Refresh the library before trying again.');
-      return;
-    }
-    let refreshed = false;
-    if (isGroup) {
-      selectedOptionGroupId = ''; selectedOptionChoiceId = '';
-      resetOptionGroupForm(); resetOptionChoiceForm();
-      await loadOptionGroups(true);
-      refreshed = optionGroupsLoaded;
-    } else {
-      selectedOptionChoiceId = ''; resetOptionChoiceForm();
-      refreshed = await loadOptionChoices(selectedOptionGroupId);
-    }
-    if (refreshed && generation === menuAuthGeneration && isOwnerSignedIn) setOptionManagerStatus(isGroup ? 'Option group deleted.' : 'Option choice deleted.');
+    phaseOneOptionsGate(); return;
   };
 
   const renderOptionGroups = (groups) => {
@@ -6134,8 +5989,14 @@
   };
 
   const loadProductIntoForm = async (productId) => {
-    const product = latestProducts.find((item) => item.id === productId);
-    if (!product) {
+    const loadGeneration = ++productEditorGeneration;
+    productEditorVersion = null;
+    let response;
+    try { response = await client.rpc('menu_manager_get_product_editor', { p_product_id: productId }); }
+    catch (_) { setStatus('Unable to open this product. Please try again.'); return; }
+    if (!isOwnerSignedIn || loadGeneration !== productEditorGeneration) return;
+    const product = response.data?.product;
+    if (response.error || !response.data?.version || !product) {
       setStatus('Product could not be found in the current preview.');
       return;
     }
@@ -6206,6 +6067,7 @@
       touched: true,
     })));
 
+    productEditorVersion = response.data.version;
     setEditMode(product);
     markDraftFormClean();
     loadProductOptionAttachments(product.id);
@@ -6356,202 +6218,19 @@
   };
 
   const saveOptionChoice = async (event) => {
-    event.preventDefault();
-    if (!isOwnerSignedIn || optionChoiceSaving) return;
-
-    const validation = validateOptionChoiceForm();
-    if (!validation) return;
-    if (validation.error) {
-      setOptionManagerStatus(validation.error);
-      return;
-    }
-
-    const wasEditing = Boolean(editingOptionChoiceId);
-    let savedChoiceId = editingOptionChoiceId;
-    const generation = menuAuthGeneration;
-    optionChoiceSaving = true;
-    setOptionChoiceFormDisabled(false);
-    setOptionManagerStatus(wasEditing ? 'Saving option choice...' : 'Creating option choice...');
-
-    const payload = validation.value;
-    let error = null;
-
-    if (editingOptionChoiceId) {
-      const response = await optionLibraryRequest(client
-        .from('option_choices')
-        .update({
-          label: payload.label,
-          value: payload.value,
-          price_delta: payload.price_delta,
-          sort_order: payload.sort_order,
-          is_active: payload.is_active,
-        })
-        .eq('id', editingOptionChoiceId)
-        .eq('option_group_id', selectedOptionGroupId)
-        .select('id')
-        .single());
-      error = response.error;
-    } else {
-      const response = await optionLibraryRequest(client
-        .from('option_choices')
-        .insert(payload)
-        .select('id')
-        .single());
-      error = response.error;
-      if (response.data?.id) savedChoiceId = response.data.id;
-    }
-
-    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
-    optionChoiceSaving = false;
-
-    if (error) {
-      setOptionChoiceFormDisabled(false);
-      setOptionManagerStatus('Unable to save option choice. ' + error.message);
-      return;
-    }
-
-    selectedOptionChoiceId = savedChoiceId || '';
-    resetOptionChoiceForm();
-    await loadOptionChoices(selectedOptionGroupId);
-    setOptionManagerStatus(wasEditing ? 'Option choice updated.' : 'Option choice created.');
+    event?.preventDefault(); phaseOneOptionsGate(); return;
   };
 
   const toggleOptionChoiceActive = async (choiceId, shouldBeActive) => {
-    if (!isOwnerSignedIn || optionChoiceSaving || !selectedOptionGroupId) return;
-    const choice = optionChoicesList.find((item) => item.id === choiceId);
-    if (!choice) {
-      setOptionManagerStatus('Option choice could not be found.');
-      return;
-    }
-
-    const actionLabel = shouldBeActive ? 'reactivate' : 'deactivate';
-    const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option choice?');
-    if (!confirmed) return;
-
-    const generation = menuAuthGeneration;
-    optionChoiceSaving = true;
-    setOptionChoiceFormDisabled(false);
-    setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option choice...');
-
-    const { error } = await optionLibraryRequest(client
-      .from('option_choices')
-      .update({ is_active: shouldBeActive })
-      .eq('id', choiceId)
-      .eq('option_group_id', selectedOptionGroupId));
-
-    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
-    optionChoiceSaving = false;
-
-    if (error) {
-      setOptionChoiceFormDisabled(false);
-      setOptionManagerStatus('Unable to ' + actionLabel + ' option choice. ' + error.message);
-      return;
-    }
-
-    if (editingOptionChoiceId === choiceId && optionChoiceForm && optionChoiceForm.elements.is_active) {
-      optionChoiceForm.elements.is_active.checked = shouldBeActive;
-    }
-    await loadOptionChoices(selectedOptionGroupId);
-    setOptionManagerStatus('Option choice ' + (shouldBeActive ? 'reactivated.' : 'deactivated.'));
+    phaseOneOptionsGate(); return;
   };
 
   const saveOptionGroup = async (event) => {
-    event.preventDefault();
-    if (!isOwnerSignedIn || optionGroupSaving || optionChoiceSaving) return;
-
-    const validation = validateOptionGroupForm();
-    if (!validation) return;
-    if (validation.error) {
-      setOptionManagerStatus(validation.error);
-      return;
-    }
-
-    const wasEditing = Boolean(editingOptionGroupId);
-    const generation = menuAuthGeneration;
-    optionGroupSaving = true;
-    setOptionGroupFormDisabled(false);
-    setOptionManagerStatus(wasEditing ? 'Saving option group...' : 'Creating option group...');
-
-    const payload = validation.value;
-    let savedGroupId = editingOptionGroupId;
-    let error = null;
-
-    if (editingOptionGroupId) {
-      const response = await optionLibraryRequest(client
-        .from('option_groups')
-        .update(payload)
-        .eq('id', editingOptionGroupId)
-        .select('id')
-        .single());
-      error = response.error;
-    } else {
-      const response = await optionLibraryRequest(client
-        .from('option_groups')
-        .insert(payload)
-        .select('id')
-        .single());
-      error = response.error;
-      if (response.data && response.data.id) savedGroupId = response.data.id;
-    }
-
-    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
-    optionGroupSaving = false;
-
-    if (error) {
-      const duplicateKey = error.message && /duplicate|unique/i.test(error.message);
-      setOptionGroupFormDisabled(false);
-      setOptionManagerStatus(duplicateKey
-        ? 'That group key already exists. Use a different lowercase snake_case key.'
-        : 'Unable to save option group. ' + error.message);
-      return;
-    }
-
-    selectedOptionGroupId = savedGroupId || '';
-    resetOptionGroupForm();
-    selectedOptionGroupId = savedGroupId || selectedOptionGroupId;
-    optionGroupsLoaded = false;
-    await loadOptionGroups(true);
-    setOptionManagerStatus(wasEditing ? 'Option group updated.' : 'Option group created.');
+    event?.preventDefault(); phaseOneOptionsGate(); return;
   };
 
   const toggleOptionGroupActive = async (groupId, shouldBeActive) => {
-    if (!isOwnerSignedIn || optionGroupSaving) return;
-    const group = optionGroupsList.find((item) => item.id === groupId);
-    if (!group) {
-      setOptionManagerStatus('Option group could not be found.');
-      return;
-    }
-
-    const actionLabel = shouldBeActive ? 'reactivate' : 'deactivate';
-    const confirmed = window.confirm((shouldBeActive ? 'Reactivate' : 'Deactivate') + ' this option group?');
-    if (!confirmed) return;
-
-    const generation = menuAuthGeneration;
-    optionGroupSaving = true;
-    setOptionGroupFormDisabled(false);
-    setOptionManagerStatus((shouldBeActive ? 'Reactivating' : 'Deactivating') + ' option group...');
-
-    const { error } = await optionLibraryRequest(client
-      .from('option_groups')
-      .update({ is_active: shouldBeActive })
-      .eq('id', groupId));
-
-    if (generation !== menuAuthGeneration || !isOwnerSignedIn) return;
-    optionGroupSaving = false;
-
-    if (error) {
-      setOptionGroupFormDisabled(false);
-      setOptionManagerStatus('Unable to ' + actionLabel + ' option group. ' + error.message);
-      return;
-    }
-
-    selectedOptionGroupId = groupId;
-    if (editingOptionGroupId === groupId && optionGroupForm && optionGroupForm.elements.is_active) {
-      optionGroupForm.elements.is_active.checked = shouldBeActive;
-    }
-    optionGroupsLoaded = false;
-    await loadOptionGroups(true);
-    setOptionManagerStatus('Option group ' + (shouldBeActive ? 'reactivated.' : 'deactivated.'));
+    phaseOneOptionsGate(); return;
   };
 
   const loadProductOptionAttachments = async (productId) => {
@@ -7443,7 +7122,7 @@
     const finalPublishedState = typeof options.publishState === 'boolean'
       ? options.publishState
       : (isEditing ? existingProduct.is_published : false);
-    const publishAfterSizeSave = finalPublishedState && (!isEditing || !existingProduct.is_published);
+
     const saveGeneration = productEditorGeneration;
     const saveStillCurrent = () => isOwnerSignedIn && saveGeneration === productEditorGeneration;
     productSaveInProgress = true;
@@ -7473,128 +7152,36 @@
       is_sold_out: isEditing ? existingProduct.is_sold_out : draft.is_sold_out,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
-      is_published: publishAfterSizeSave ? false : finalPublishedState,
       variant_group_name: draft.variant_group_name,
-      sort_order: isEditing && existingProduct ? Number(existingProduct.sort_order || 0) : 0,
     };
 
-    let productId = editingProductId;
-    productImageEditor?.markSaveAttempt();
-
-    if (isEditing) {
-      const { data: updatedProduct, error: productError } = await client
-        .from('products')
-        .update(productPayload)
-        .eq('id', editingProductId)
-        .is('archived_at', null)
-        .select('id')
-        .maybeSingle();
-
-      if (!saveStillCurrent()) return;
-
-      if (productError || !updatedProduct) {
-        productSaveInProgress = false;
-        setStatus(productError
-          ? 'Unable to update item. ' + productError.message
-          : 'This item was archived before the save completed. Restore it before editing.');
-        if (createDraftButton) createDraftButton.disabled = false;
-        if (editorPublishActionButton) editorPublishActionButton.disabled = false;
-        updateUndoChangesAction();
-        if (cancelEditButton) cancelEditButton.disabled = false;
-        return;
-      }
-
-    } else {
-      const { data: product, error: productError } = await client
-        .from('products')
-        .insert(productPayload)
-        .select('id')
-        .single();
-
-      if (!saveStillCurrent()) return;
-
-      if (productError) {
-        productSaveInProgress = false;
-        setStatus('Unable to save item. ' + productError.message);
-        if (createDraftButton) createDraftButton.disabled = false;
-        if (editorPublishActionButton) editorPublishActionButton.disabled = false;
-        updateUndoChangesAction();
-        if (cancelEditButton) cancelEditButton.disabled = false;
-        return;
-      }
-
-      productId = product.id;
-    }
-
-    productImageEditor?.markAttached();
-
-    const savedSizeState = isEditing && Array.isArray(existingProduct.product_sizes)
-      ? existingProduct.product_sizes
-          .map(normalizeProductSizeState)
-          .sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label) || String(a.id).localeCompare(String(b.id)))
-      : [];
-    const submittedSizeState = draft.sizeRows.map(normalizeProductSizeState);
-    const sizesChanged = !isEditing || JSON.stringify(savedSizeState) !== JSON.stringify(submittedSizeState);
-    let sizeError = null;
-
-    if (sizesChanged) {
-      const result = await client.rpc('menu_manager_reconcile_product_sizes', {
-        p_product_id: productId,
-        p_sizes: submittedSizeState,
-      });
-      if (!saveStillCurrent()) return;
-      sizeError = result.error;
-    }
-
-    if (sizeError) {
-      productSaveInProgress = false;
-      if (!isEditing && productId) {
-        setEditMode({
-          id: productId,
-          ...productPayload,
-          product_sizes: [],
-        });
-      }
-      const savePrefix = publishAfterSizeSave
-        ? 'Item details were saved as a draft and the item was not published. '
-        : 'Item details were saved. ';
-      setStatus(savePrefix + getProductSizeReconciliationErrorMessage(sizeError));
-      if (createDraftButton) createDraftButton.disabled = false;
-      if (editorPublishActionButton) editorPublishActionButton.disabled = false;
-      updateUndoChangesAction();
-      if (cancelEditButton) cancelEditButton.disabled = false;
+    const body = {
+      product_id: editingProductId || null,
+      expected_version: isEditing ? productEditorVersion : null,
+      action: typeof options.publishState === 'boolean' ? (options.publishState ? 'publish' : 'unpublish') : 'save',
+      product: productPayload,
+      sizes: draft.sizeRows.map(normalizeProductSizeState)
+    };
+    // Retain the exact request after an uncertain transport outcome. Never mint
+    // a new creation key while the original save might already have committed.
+    const serialized = JSON.stringify(body);
+    if (pendingProductSave && pendingProductSave.serialized !== serialized) {
+      setStatus('A previous save needs confirmation. Restore those values and retry, or reload products before editing further.');
       return;
     }
-
-    if (publishAfterSizeSave) {
-      const { data: publishedProduct, error: publishError } = await client
-        .from('products')
-        .update({ is_published: true })
-        .eq('id', productId)
-        .is('archived_at', null)
-        .select('id')
-        .maybeSingle();
-
-      if (!saveStillCurrent()) return;
-
-      if (publishError || !publishedProduct) {
-        productSaveInProgress = false;
-        await loadProducts();
+    if (!pendingProductSave) pendingProductSave = { serialized, request: { ...body, request_id: crypto.randomUUID() } };
+    productImageEditor?.markSaveAttempt();
+    const response = await client.rpc('menu_manager_save_product', { p_request: pendingProductSave.request });
     if (!saveStillCurrent()) return;
-        if (productId && !latestProducts.find((product) => product.id === productId && product.archived_at)) {
-          await loadProductIntoForm(productId);
-        }
-        setStatus(publishError
-          ? 'Item and variants were saved as a draft, but the item could not be published. ' + publishError.message
-          : 'The item was archived before publishing completed. Restore it before editing.');
-        if (createDraftButton) createDraftButton.disabled = false;
-        if (editorPublishActionButton) editorPublishActionButton.disabled = false;
-        updateUndoChangesAction();
-        if (cancelEditButton) cancelEditButton.disabled = false;
-        return;
-      }
+    if (response.error || !response.data?.ok) {
+      // A PostgreSQL rejection proves rollback; network failures do not.
+      if (response.error?.code && /^[0-9A-Z]{5}$/.test(response.error.code)) pendingProductSave = null;
+      setStatus(productSaveMessage(response.error));
+      return;
     }
-
+    const productId = response.data.product_id;
+    pendingProductSave = null;
+    productImageEditor?.markAttached();
     await loadProducts();
     if (!saveStillCurrent()) return;
     if (productId) {
@@ -7606,11 +7193,11 @@
       syncEditorSaveLabels();
     }
     setStatus(finalPublishedState
-      ? (isEditing ? 'Live item updated.' : 'Item saved and published.')
-      : (isEditing ? 'Draft item saved.' : 'Draft item saved.'));
+      ? (response.data.orderable ? 'Saved. Customers can order this item.' : 'Saved. This item is currently unavailable.')
+      : 'Draft saved.');
     productSaveInProgress = false;
     } catch (error) {
-      if (saveStillCurrent()) setStatus('Unable to save item. Your changes are still editable. ' + (error.message || 'Please try again.'));
+      if (saveStillCurrent()) setStatus('Unable to confirm the save. Your changes are still here. Retry without changing them.');
     } finally {
       if (saveStillCurrent()) {
         productSaveInProgress = false;
@@ -7623,50 +7210,11 @@
     }
   };
 
-  const updateProductPublishedState = async (productId, shouldPublish, options = {}) => {
-    const product = latestProducts.find((item) => item.id === productId);
-    if (!product) {
-      setStatus('Product could not be found in the current preview.');
-      return;
+  const updateProductPublishedState = async (productId, shouldPublish) => {
+    if (editingProductId !== productId || !productEditorVersion) {
+      setStatus('Open this product before changing its publication state.'); return;
     }
-
-    if (product.archived_at) {
-      setStatus('Archived products cannot be published. Restore this product first.');
-      return;
-    }
-
-    const actionLabel = shouldPublish ? 'publish' : 'unpublish';
-    const confirmed = window.confirm((shouldPublish ? 'Publish' : 'Unpublish') + ' this product? This only changes the admin Supabase publish state.');
-    if (!confirmed) return;
-
-    setStatus((shouldPublish ? 'Publishing' : 'Unpublishing') + ' product...');
-    const { data: updatedProduct, error } = await client
-      .from('products')
-      .update({ is_published: shouldPublish })
-      .eq('id', productId)
-      .is('archived_at', null)
-      .select('id')
-      .maybeSingle();
-
-    if (error || !updatedProduct) {
-      setStatus(error
-        ? 'Unable to ' + actionLabel + ' product. ' + error.message
-        : 'This product was archived before the update completed. Restore it first.');
-      return;
-    }
-
-    await loadProducts();
-    if (options.keepEditor && editingProductId === productId) {
-      await loadProductIntoForm(productId);
-      draftFormSavedLabelActive = true;
-      markDraftFormClean();
-      syncEditorSaveLabels();
-    } else if (shouldPublish && editingProductId === productId) {
-      resetDraftProductForm();
-      populateDraftCategorySelect(latestCategories);
-      setDraftFormDisabled(false);
-    }
-    setStatus(shouldPublish ? 'Product published in admin.' : 'Product unpublished and returned to draft.');
+    await saveDraftProduct({ publishState: shouldPublish });
   };
 
   const updateEditingProductPublishedState = async () => {
@@ -7722,44 +7270,8 @@
     setStatus('Changes undone. Product restored to the last saved state.');
   };
 
-  const bulkUpdateFilteredPublishedState = async (shouldPublish) => {
-    if (bulkPublishSaving || productDeleteSaving) return;
-    const ids = latestVisibleProducts
-      .filter((product) => !product.archived_at)
-      .map((product) => product.id)
-      .filter(Boolean);
-    const count = ids.length;
-    if (!count) {
-      setStatus('No filtered products to update.');
-      return;
-    }
-
-    const confirmed = window.confirm(
-      shouldPublish
-        ? 'Publish ' + count + ' filtered products? Only products matching the current filters will be affected.'
-        : 'Unpublish ' + count + ' filtered products? These items will be hidden from the live menu.'
-    );
-    if (!confirmed) return;
-
-    bulkPublishSaving = true;
-    renderProducts(latestProducts);
-    setStatus(shouldPublish ? 'Publishing filtered products...' : 'Unpublishing filtered products...');
-
-    const { error } = await client
-      .from('products')
-      .update({ is_published: shouldPublish })
-      .in('id', ids);
-
-    if (error) {
-      bulkPublishSaving = false;
-      renderProducts(latestProducts);
-      setStatus('Unable to ' + (shouldPublish ? 'publish' : 'unpublish') + ' filtered products. ' + error.message);
-      return;
-    }
-
-    bulkPublishSaving = false;
-    await loadProducts();
-    setStatus((shouldPublish ? 'Published ' : 'Unpublished ') + count + ' filtered products.');
+  const bulkUpdateFilteredPublishedState = async () => {
+    setStatus('Open each product to publish or hide it safely. Bulk publication is temporarily unavailable.');
   };
 
   const getProductDeleteErrorMessage = (error) => {
@@ -7786,52 +7298,7 @@
   };
 
   const deleteActiveProduct = async (productId) => {
-    if (!isOwnerSignedIn || productDeleteSaving || bulkPublishSaving) return;
-    const product = latestProducts.find((item) => item.id === productId);
-    if (!product) {
-      setStatus('Product could not be found in the current preview.');
-      return;
-    }
-
-    if (product.archived_at) {
-      setStatus('This legacy archived product needs owner review before it can be deleted.');
-      return;
-    }
-
-    const confirmed = window.confirm(
-      'Delete \u201c' + product.name + '\u201d?\n\n'
-      + 'This permanently removes the item and cannot be undone.'
-    );
-    if (!confirmed) return;
-
-    const deleteGeneration = ++productDeleteGeneration;
-    productDeleteSaving = true;
-    renderProducts(latestProducts);
-    setStatus('Checking dependencies and deleting product...');
-    const { error } = await client.rpc('menu_manager_delete_product', {
-      p_product_id: productId,
-    });
-
-    if (deleteGeneration !== productDeleteGeneration || !isOwnerSignedIn) return;
-
-    if (error) {
-      productDeleteSaving = false;
-      renderProducts(latestProducts);
-      setStatus(getProductDeleteErrorMessage(error));
-      return;
-    }
-
-    if (editingProductId === productId) {
-      resetDraftProductForm();
-      populateDraftCategorySelect(latestCategories);
-      setDraftFormDisabled(false);
-    }
-
-    await loadCategories();
-    await loadProducts();
-    productDeleteSaving = false;
-    renderProducts(latestProducts);
-    setStatus(product.name + ' was deleted permanently. Its category remains available.');
+    setStatus('Product deletion is temporarily unavailable. Open the product and unpublish it instead.'); return;
   };
 
   if (variantGroupSelect) {

@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="product-image-crop.js?v=1" defer></script>
   <script src="product-image-upload.js?v=2" defer></script>
-  <script src="admin.js?v=c2-customers" defer></script>
+  <script src="admin.js?v=product-save-phase1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -300,6 +300,7 @@
                 <button type="button" class="admin-collapsible-toggle product-option-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="product-options-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand product option groups" data-aria-label-expanded="Collapse product option groups" aria-label="Collapse product option groups" title="Collapse product option groups" aria-expanded="true" aria-controls="product-options-content">&#9652;</button>
               </div>
               <div id="product-options-content" class="product-option-content" data-collapsible-content>
+                <p class="option-library-help">Existing customer options are preserved when you save. Changing options is temporarily read-only.</p>
                 <div class="product-option-toolbar">
                   <span class="static-status">Product options</span>
                   <button type="button" class="auth-button auth-button-secondary product-option-attach-button" data-show-attach-option-group hidden disabled>+ Attach Group</button>
@@ -414,6 +415,7 @@
           <div>
             <p class="eyebrow">Option Library</p>
             <h2 id="option-groups-title">Option Groups &amp; Choices</h2>
+            <p class="option-library-help">View current options here. Changes are temporarily read-only while safe saving is prepared.</p>
             <p class="option-library-help" data-option-library-summary aria-live="polite">Sign in to load options.</p>
           </div>
           <button type="button" class="admin-collapsible-toggle is-icon-toggle" data-collapsible-toggle data-collapsible-target="option-groups-content" data-label-collapsed="&#9662;" data-label-expanded="&#9652;" data-aria-label-collapsed="Expand option library" data-aria-label-expanded="Collapse option library" aria-label="Expand option library" title="Expand option library" aria-expanded="false" aria-controls="option-groups-content">&#9662;</button>
@@ -506,7 +508,7 @@
               </form>
             </section>
           </div>
-          <p class="option-manager-status" data-option-manager-status role="status">Sign in to load reusable option groups.</p>
+          <p class="option-manager-status" data-option-manager-status role="status">Sign in to view reusable option groups. Customer option changes are temporarily read-only.</p>
         </div>
       </section>
 

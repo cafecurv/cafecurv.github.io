@@ -155,14 +155,25 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         from(table) {
           return {
             select() { return this; }, eq() { return this; }, is() { return this; }, order() { return this; }, in() { return this; },
-            update(value) { saveCalls.push(value); Object.assign(dbProduct, value); return this; },
-            insert(value) { saveCalls.push(value); Object.assign(dbProduct, value); return this; },
+            update() { throw Error("Direct product update must not be used"); },
+            insert() { throw Error("Direct product insert must not be used"); },
             async maybeSingle() { return { data: { id: dbProduct.id } }; },
             async single() { return { data: { id: dbProduct.id } }; },
             then(resolve) { return Promise.resolve({ data: table === 'products' ? [dbProduct] : [], error: null }).then(resolve); }
           };
         },
-        rpc: async () => ({ data: {}, error: null })
+        rpc: async (name, args) => {
+          if (name === 'menu_manager_get_product_editor') return { data: { product: structuredClone(dbProduct), version: 'image-editor-version' }, error: null };
+          if (name === 'menu_manager_save_product') {
+            const r = args.p_request;
+            const is_published = r.action === 'publish' ? true : r.action === 'unpublish' || !r.product_id ? false : dbProduct.is_published;
+            const saved = { ...r.product, is_published };
+            saveCalls.push(saved);
+            Object.assign(dbProduct, saved, { product_sizes: r.sizes });
+            return { data: { ok: true, product_id: dbProduct.id, orderable: is_published }, error: null };
+          }
+          return { data: {}, error: null };
+        }
       };
       window.supabase = { createClient: () => clientMock };
     });
