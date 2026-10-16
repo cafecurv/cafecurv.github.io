@@ -1,0 +1,63 @@
+// Executes authorized disposable local SQL only; never connects to production.
+const assert=require('node:assert/strict');
+const {fixture,id,readSql}=require('./menu-manager-options-writer-fixture.cjs');
+const {shapeCatalog,selectionPrice}=require('../admin/pos.js');
+(async()=>{const f=await fixture(),{db,rpc}=f;let checks=0,key=90000;
+ const eq=(a,b,m)=>{assert.deepEqual(a,b,m);checks++;};
+ const q=async(s,p=[])=>(await db.query(s,p)).rows;
+ const call=async(n,a)=>{const r=await rpc(n,a);assert.equal(r.error,null,JSON.stringify(r.error));checks++;return r.data;};
+ const fail=async(n,a,detail)=>{const r=await rpc(n,a);eq(r.error?.details,detail);};
+ const mutate=async(p,sql,args=[])=>{await db.exec('begin');try{await q('insert into menu_save_private.active_save values(pg_backend_pid(),txid_current(),$1)',[id(p)]);await q(sql,args);await q('delete from menu_save_private.active_save where backend=pg_backend_pid() and transaction_id=txid_current()');await db.exec('commit');}catch(e){await db.exec('rollback');throw e;}};
+ const create=(size,choices)=>({p_key:id(key++),p_size:id(size),p_choices:choices.map(id),p_quantity:1,p_customer:'Effective POS fixture',p_type:'dine_in',p_note:'',p_item_note:'Original note'});
+ const snapshot=()=>q(`select id,configuration_private.catalog_structure(id) structure from products order by id`);
+ try{
+  for(const file of ['POS_PHASE_P1B_SCHEMA.sql','POS_PHASE_P1B_BACKEND.sql','POS_PHASE_P1C_BACKEND.sql'])await db.exec(readSql(file));
+  const before=await snapshot();
+  const security=await q("select oid,proowner,proacl,prosecdef,proconfig,provolatile from pg_proc where oid in ('public.pos_get_catalog()'::regprocedure,'pos_private.resolve_line(uuid,uuid[])'::regprocedure) order by oid");
+  await db.exec(readSql('POS_EFFECTIVE_OPTIONS_PHASE_P3.sql'));
+  eq(await snapshot(),before,'migration does not mutate catalog');
+  eq(await q("select oid,proowner,proacl,prosecdef,proconfig,provolatile from pg_proc where oid in ('public.pos_get_catalog()'::regprocedure,'pos_private.resolve_line(uuid,uuid[])'::regprocedure) order by oid"),security,'exact security retained');
+  try{await db.exec(readSql('POS_EFFECTIVE_OPTIONS_PHASE_P3.sql'));assert.fail('rerun must abort');}catch(e){eq(e.detail,'POS_EFFECTIVE_PREREQUISITE','first application only');await db.exec('rollback');}
+  await mutate(1005,'insert into product_option_choice_price_overrides(product_id,option_choice_id,price_delta) values($1,$2,7)',[id(1005),id(3031)]);
+  let catalog=await call('pos_get_catalog');const get=p=>catalog.products.find(x=>x.id===id(p));
+  eq(get(1001).temperature_compatibility.length,3,'temperature tuples exposed');
+  eq(get(1001).groups.find(g=>g.key==='temperature').choices.find(c=>c.id===id(3010)).is_default,true,'valid default returned');
+  eq(get(1002).groups[0].choices.find(c=>c.id===id(3001)).price_by_size[id(1104)],0,'product override');
+  eq(get(1005).groups[0].choices.find(c=>c.id===id(3031)).price_delta,7,'product override exists alongside contextual overrides');
+  eq(get(1005).groups[0].choices.find(c=>c.id===id(3031)).price_by_size[id(1108)],60,'size override beats product override and shared price');
+  const effective=shapeCatalog(catalog).find(p=>p.id===id(1001));
+  let order=await call('pos_create_order',create(1101,[3010,3001]));eq(Number(order.items[0].unit_price),125,'shared fallback');eq(selectionPrice(effective,id(1101),[id(3010),id(3001)]),Number(order.items[0].unit_price),'browser and server agree');
+  eq(Number((await call('pos_create_order',create(1104,[3001]))).total),100,'product override charged');
+  eq(Number((await call('pos_create_order',create(1108,[3031]))).total),240,'size override charged');
+  await fail('pos_create_order',create(1103,[3010,3000]),'POS_OPTIONS_INVALID');
+  await fail('pos_create_order',create(1101,[3010,3000,3031]),'POS_OPTIONS_INVALID');
+  const sent=await call('pos_send_kitchen',{p_key:id(key++),p_order_id:order.id,p_revision:order.revision});order=sent;
+  const submission=sent.kitchen.last_submission_id;
+  const ticket=await call('pos_get_kitchen_ticket',{p_submission_id:submission});
+  const copy=await call('pos_get_order_copy',{p_order_id:order.id});
+  order=await call('pos_hold_order',{p_key:id(key++),p_order_id:order.id,p_revision:order.revision});const heldItems=order.items;
+  await mutate(1001,'insert into product_option_choice_price_overrides(product_id,option_choice_id,price_delta) values($1,$2,12)',[id(1001),id(3001)]);
+  eq((await call('pos_get_order',{p_order_id:order.id})).items,heldItems,'held snapshots unchanged');
+  eq(await call('pos_get_kitchen_ticket',{p_submission_id:submission}),ticket,'kitchen reprint unchanged');
+  const afterCopy=await call('pos_get_order_copy',{p_order_id:order.id});eq(afterCopy.items,copy.items,'Order Copy saved item prices unchanged');eq(afterCopy.total,copy.total,'Order Copy total unchanged');
+  order=await call('pos_resume_order',{p_key:id(key++),p_order_id:order.id,p_revision:order.revision});
+  order=await call('pos_update_item',{p_key:id(key++),p_order_id:order.id,p_revision:order.revision,p_item_id:order.items[0].id,p_quantity:2,p_item_note:'Changed note'});eq(Number(order.items[0].unit_price),125,'quantity edit preserves original effective price');
+  order=await call('pos_configure_item',{p_key:id(key++),p_order_id:order.id,p_revision:order.revision,p_item_id:order.items[0].id,p_size:id(1101),p_choices:[id(3010),id(3001)],p_quantity:1,p_item_note:''});eq(Number(order.items[0].unit_price),112,'intentional reconfiguration current effective price');
+  await mutate(1001,'delete from product_option_choice_price_overrides where product_id=$1 and option_choice_id=$2',[id(1001),id(3001)]);
+  await mutate(1001,'insert into product_option_choice_policies(product_id,option_group_id,option_choice_id,is_enabled_for_product) values($1,$2,$3,false)',[id(1001),id(2000),id(3001)]);
+  catalog=await call('pos_get_catalog');eq(get(1001).groups.find(g=>g.id===id(2000)).choices.some(c=>c.id===id(3001)),false,'disabled choice absent');eq(get(1002).groups[0].choices.some(c=>c.id===id(3001)),true,'other product unaffected');
+  await fail('pos_create_order',create(1101,[3010,3001]),'POS_OPTIONS_INVALID');
+  await mutate(1001,'insert into product_option_choice_policies(product_id,option_group_id,option_choice_id,is_enabled_for_product) values($1,$2,$3,false)',[id(1001),id(2000),id(3000)]);
+  catalog=await call('pos_get_catalog');eq(get(1001).configuration_valid,false,'disabled default marked invalid');eq(get(1001).groups.find(g=>g.id===id(2000)).choices.some(c=>c.id===id(3000)),false,'disabled default excluded');await fail('pos_create_order',create(1101,[3010,3002]),'POS_CATALOG_INVALID');
+  await mutate(1005,'delete from product_option_choice_price_overrides where product_id=$1 and product_size_id=$2 and option_choice_id=$3',[id(1005),id(1108),id(3031)]);await fail('pos_create_order',create(1108,[3031]),'POS_CATALOG_INVALID');
+  // Privileged fixture-only corruption of shared configuration; migration guards stay unchanged.
+  await mutate(1002,'insert into product_option_choice_policies(product_id,option_group_id,option_choice_id,is_enabled_for_product) values($1,$2,$3,true)',[id(1002),id(2000),id(3002)]);
+  await db.exec('alter table option_choices disable trigger mm_phase1_save_guard');
+  await q('update option_choices set is_active=false where id=$1',[id(3002)]);
+  await db.exec('alter table option_choices enable trigger mm_phase1_save_guard');
+  catalog=await call('pos_get_catalog');eq(get(1002).groups[0].choices.some(c=>c.id===id(3002)),false,'product true cannot resurrect globally inactive choice');
+  f.setUser(null);await fail('pos_get_catalog',{},'POS_AUTH_REQUIRED');f.setUser(id(2));
+  await db.exec("update pos_staff_access set is_active=false");await fail('pos_get_catalog',{},'POS_ACCESS_DENIED');await fail('pos_create_order',create(1100,[]),'POS_ACCESS_DENIED');
+  console.log(checks+' POS effective-options database/history/security checks passed.');
+ }finally{await db.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

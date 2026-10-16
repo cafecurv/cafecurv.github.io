@@ -14,16 +14,37 @@
     POS_COPY_EMPTY:'Add and save an item before printing an Order Copy.',
     POS_COPY_UNAVAILABLE:'An unpaid Order Copy is not available for this order.'
   };
+  // Version 1 prices are authoritative per size. Missing/null prices never become free.
+  function choicePrice(product,choice,size) {
+    const value=product.effective_options_version===1?choice.price_by_size?.[size]:choice.price_delta;
+    return value!==null && value!==undefined && value!=='' && Number.isFinite(Number(value)) && Number(value)>=0?Number(value):null;
+  }
+  function choiceCompatible(product,group,choice,size) {
+    return choicePrice(product,choice,size)!==null && (product.effective_options_version!==1 || group.key!=='temperature'
+      || (product.temperature_compatibility||[]).some(t=>t.size_id===size && t.choice_id===choice.id));
+  }
+  function selectionPrice(product,size,ids) {
+    const row=product?.sizes.find(s=>s.id===size);if(!row || !product.sellable)return null;
+    let total=Number(row.price),seen=0;
+    for(const group of product.groups) {
+      const chosen=group.choices.filter(c=>ids.includes(c.id));seen+=chosen.length;
+      if(chosen.length<Math.max(group.min_selections||0,group.is_required?1:0)
+        || (group.max_selections!=null && chosen.length>group.max_selections)
+        || (group.selection_type==='single' && chosen.length>1))return null;
+      for(const choice of chosen) {if(!choiceCompatible(product,group,choice,size))return null;total+=choicePrice(product,choice,size);}
+    }
+    return seen===ids.length?total:null;
+  }
   function shapeCatalog(raw) {
     return (raw.products || []).filter(p => !p.archived_at && p.is_available !== false).map(p => {
-      const sizes = (p.sizes || []).filter(s => Number.isFinite(Number(s.price)) && Number(s.price)>=0);
-      const groups = (p.groups || []).map(g => ({...g, choices:(g.choices || []).map(c => ({...c,price_delta:Number(c.price_delta)}))}));
+      const sizes = (p.sizes || []).filter(s => s.price!==null && s.price!==undefined && Number.isFinite(Number(s.price)) && Number(s.price)>=0);
+      const groups = (p.groups || []).map(g => ({...g, choices:(g.choices || []).map(c => ({...c,price_delta:c.price_delta===null?null:Number(c.price_delta)}))}));
       const invalid = groups.some(g => !['single','multi'].includes(g.selection_type)
-        || g.choices.some(c => !Number.isFinite(c.price_delta) || c.price_delta<0)
+        || g.choices.some(c => p.effective_options_version===1? sizes.some(s=>choicePrice(p,c,s.id)===null):!Number.isFinite(c.price_delta) || c.price_delta<0)
         || Math.max(g.min_selections || 0,g.is_required?1:0)>g.choices.length
         || (g.selection_type==='single' && Math.max(g.min_selections || 0,g.is_required?1:0)>1));
       // No invented legacy choices/prices. Temperature is an ordinary DB option.
-      return {...p,sizes,groups,sellable:!p.is_sold_out && sizes.length>0 && !invalid};
+      return {...p,sizes,groups,sellable:!p.is_sold_out && p.configuration_valid!==false && sizes.length>0 && !invalid};
     });
   }
   class PosStore {
@@ -67,7 +88,7 @@
       } finally { this.busy=false; }
     }
   }
-  const api={shapeCatalog,PosStore,money,errors};
+  const api={shapeCatalog,choicePrice,choiceCompatible,selectionPrice,PosStore,money,errors};
   if(typeof module!=='undefined' && module.exports) module.exports=api;
   root.CurvPOS=api;
   if(!root.document || !document.getElementById('workspace')) return;
@@ -186,7 +207,8 @@
       for(const c of g.choices) {
         const label=node('label'); const input=node('input'); input.type=g.selection_type==='single'?'radio':'checkbox'; input.name='group-'+g.id; input.value=c.id;
         input.checked=existing?(existing.options?.selections||[]).some(s=>s.choice_id===c.id):Boolean(c.is_default);
-        label.append(input,document.createTextNode(c.label+' · '+money(c.price_delta))); f.append(label);
+        const savedChoice=existing?.options?.selections?.find(s=>s.choice_id===c.id);
+        const caption=node('span',c.label+' · '+money(quantityOnly && savedChoice?savedChoice.price_delta:choicePrice(p,c,$('size').value)));caption.dataset.choiceCaption=c.id;label.append(input,caption); f.append(label);
       }
       if(g.selection_type==='single' && !g.is_required && !g.min_selections) {
         const label=node('label');const input=node('input');input.type='radio';input.name='group-'+g.id; input.value='';
@@ -206,12 +228,28 @@
     if(configure && !p?.sellable) { say('This product cannot be reconfigured. Quantity and note edits remain available.');return; }
     selectProduct(p||{id:i.product_id,name:i.product_name,sizes:[{id:i.product_size_id,label:i.variant_label,price:i.base_price}],groups:[]},i,!configure);
   }
+  function refreshChoices() {
+    if(!selected || $('item-editor').dataset.quantityOnly==='true')return;
+    for(const group of selected.groups) {
+      for(const choice of group.choices) {
+        const input=[...$('options').querySelectorAll('input')].find(n=>n.value===choice.id);
+        const valid=choiceCompatible(selected,group,choice,$('size').value);
+        input.dataset.unavailable=String(!valid);input.disabled=!valid;
+        if(!valid)input.checked=false;
+        input.nextSibling.textContent=choice.label+' · '+(valid?money(choicePrice(selected,choice,$('size').value)):'Unavailable for this size');
+      }
+    }
+  }
   function estimate() {
     const old=store?.order?.items.find(i=>i.id===editId);
-    const price=$('item-editor').dataset.quantityOnly==='true'?Number(old?.unit_price):
-      Number(selected?.sizes.find(s=>s.id===$('size').value)?.price||0)+(selected?.groups||[]).flatMap(g=>g.choices).filter(c=>choices().includes(c.id)).reduce((sum,c)=>sum+Number(c.price_delta),0);
-    $('estimate').textContent='Item total '+money(price*Number($('quantity').value||0));
+    refreshChoices();
+    const price=$('item-editor').dataset.quantityOnly==='true'?Number(old?.unit_price):selectionPrice(selected,$('size').value,choices().filter(Boolean));
+    const valid=price!==null && Number.isFinite(price);
+    $('save-item').dataset.unavailable=String(!valid);
+    $('estimate').textContent=valid?'Item total '+money(price*Number($('quantity').value||0)):'Check the required options for this size.';
+    lock();
   }
+
   async function loadCatalog() {
     const token=generation;
     const {data,error}=await client.rpc('pos_get_catalog'); if(error)throw error;
@@ -246,7 +284,7 @@
   $('header-editor').addEventListener('input',()=>{headerDirty=true;saveDraft();});
   $('header-editor').onsubmit=e=>{e.preventDefault();if(store.order){const h=header();command('pos_update_header',{...args(),p_customer:h.customer,p_type:h.type,p_note:h.note});}};
   $('item-editor').addEventListener('input',()=>{estimate();saveDraft();});
-  $('item-editor').onsubmit=e=>{e.preventDefault();if(!selected)return;const common={p_quantity:Number($('quantity').value),p_item_note:$('item-note').value};
+  $('item-editor').onsubmit=e=>{e.preventDefault();if(!selected || $('save-item').dataset.unavailable==='true')return;const common={p_quantity:Number($('quantity').value),p_item_note:$('item-note').value};
     if(editId && $('item-editor').dataset.quantityOnly==='true')return command('pos_update_item',{...args(),p_item_id:editId,...common});
     const line={...common,p_size:$('size').value,p_choices:choices().filter(Boolean)};
     if(editId)return command('pos_configure_item',{...args(),p_item_id:editId,...line});
