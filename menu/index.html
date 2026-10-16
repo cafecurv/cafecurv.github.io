@@ -8055,6 +8055,30 @@ body.night-mode .public-item-wrap {
     const contract = publicItemPanels.get(id), panel = getPanelRootElement(id);
     if (!contract || !panel) return;
     contract.previewError = '';
+    // Phase 3A: server-resolved size charges supersede transitional recipe prices.
+    // A malformed/missing entry in a supplied map must never become a free option.
+    const effectiveChoices = contract.optionGroups.flatMap(group => group.choices);
+    if (effectiveChoices.some(choice => choice.price_by_size !== undefined)) {
+      const selected = panel.querySelector('[data-group="size"] .selected, [data-group="pieces"] .selected');
+      const sizeId = selected?.dataset.sizeId || (contract.product.variants.length === 1 ? contract.product.variants[0].id : null);
+      effectiveChoices.forEach(choice => {
+        const prices = choice.price_by_size;
+        if (!prices || typeof prices !== 'object' || Array.isArray(prices)
+          || !sizeId || !Object.prototype.hasOwnProperty.call(prices, sizeId)
+          || typeof prices[sizeId] !== 'number' || !Number.isFinite(prices[sizeId]) || prices[sizeId] < 0) {
+          contract.previewError = 'This item price could not be loaded.';
+          return;
+        }
+        const chip = [...panel.querySelectorAll('[data-choice-id]')].find(node => node.dataset.choiceId === choice.option_choice_id);
+        if (!chip) { contract.previewError = 'This item price could not be loaded.'; return; }
+        const price = prices[sizeId];
+        chip.dataset.price = String(price);
+        let label = chip.querySelector('.chip-price');
+        if (!label && price) { label = document.createElement('span'); label.className = 'chip-price'; chip.append(label); }
+        if (label) label.textContent = price ? '+₱' + price : '';
+      });
+      return;
+    }
     const includedMilk = {
       'cloud spanish oat latte': 'oat', 'cocoa caramel latte': 'breve',
       'cs matcha oat latte': 'oat', 'matcha sunrise': 'coconut'
@@ -10451,6 +10475,7 @@ body.night-mode .public-item-wrap {
         label: choice.label,
         value: choice.value,
         price_delta: choice.price_delta,
+        price_by_size: choice.price_by_size,
         sort_order: choice.sort_order
       });
       return map;
@@ -10616,7 +10641,7 @@ body.night-mode .public-item-wrap {
           .order('name', { ascending: true }),
         client
           .from('public_menu_option_choices')
-          .select('product_id,option_group_id,option_choice_id,label,value,price_delta,sort_order')
+          .select('product_id,option_group_id,option_choice_id,label,value,price_delta,sort_order,price_by_size')
           .order('product_id', { ascending: true })
           .order('option_group_id', { ascending: true })
           .order('sort_order', { ascending: true })

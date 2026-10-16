@@ -19,7 +19,7 @@ async function fixture({applyPos=true}={}) {
     'INCOMING_ORDERS_PHASE_A_SCHEMA.sql','INCOMING_ORDERS_PHASE_D1_DELIVERY_SUPPORT.sql','INCOMING_ORDERS_PHASE_O7B_TRACKING_RPC.sql',
     'INCOMING_ORDERS_PHASE_O9B_CANCEL_REQUEST_RPC.sql','INCOMING_ORDERS_PHASE_O12A_WEBSITE_ORDERING_STATUS.sql',
     'INCOMING_ORDERS_PHASE_O14_DINE_IN.sql','TIMEKEEPING_PHASE_T1_BACKEND.sql']) {
-    try { await db.exec(fs.readFileSync(path.join(root,'admin',file),'utf8').replace(/^\uFEFF/,'')); }
+    try { await db.exec(fs.readFileSync(path.join(root,'admin',file),'utf8').replace(/^\uFEFF/,'').replace(/\r\n/g,'\n')); }
     catch(e){ e.message=file+': '+e.message; throw e; }
   }
   // Minimal late catalog-column baseline; not a replacement migration chain.

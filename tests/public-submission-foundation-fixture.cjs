@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path');
 const {configurationFixture}=require('./public-configuration-fixture.cjs');
-const readSql=f=>fs.readFileSync(path.join(__dirname,'../admin',f),'utf8').replace(/^\uFEFF/,'');
+const readSql=f=>fs.readFileSync(path.join(__dirname,'../admin',f),'utf8').replace(/^\uFEFF/,'').replace(/\r\n/g,'\n');
 const foundation='WEBSITE_SUBMISSION_D0B2_FOUNDATION.sql';
 const prerequisites=['CUSTOMER_PHASE_C1B_SCHEMA.sql','CUSTOMER_PHASE_C1B_BACKEND.sql','WEBSITE_DINE_IN_TIMING_SCHEMA.sql','WEBSITE_DINE_IN_TIMING_BACKEND.sql','WEBSITE_PRICING_D0B1_SCHEMA.sql'];
 const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');

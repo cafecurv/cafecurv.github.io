@@ -2,3 +2,7 @@ node_modules/
 .supabase/
 .env
 .env.*
+
+# Generated local production audit outputs (not source documentation).
+/admin/AUTHORITATIVE_CHECKOUT_PREFLIGHT_RESULT.txt
+/admin/PRICING_CERTIFICATION_AUDIT_RESULT.txt
