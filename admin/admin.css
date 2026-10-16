@@ -8327,3 +8327,21 @@ body.more-drawer-open {
   .product-editor-simple .draft-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
   .product-editor-simple .draft-actions > button { flex: 1 1 auto; }
 }
+
+/* Product-specific option drafts; no shared-library styling changes. */
+[data-customer-options-editor] { display:grid; gap:16px; min-width:0; }
+[data-customer-options-editor][hidden] { display:none; }
+.customer-option-card { border:1px solid var(--border); border-radius:12px; padding:16px; min-width:0; overflow-wrap:anywhere; }
+.customer-option-card h4 { margin:0 0 8px; }
+.customer-option-card p { margin:8px 0; }
+.customer-option-card ul { padding-left:20px; }
+.customer-option-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.customer-option-actions > .admin-field { flex:1 1 160px; min-width:0; }
+.customer-option-actions select { min-width:0; max-width:100%; min-height:44px; flex:1 1 160px; }
+.customer-option-edit { display:grid; gap:12px; margin-top:16px; border-top:1px solid var(--border); padding-top:16px; }
+.customer-choice-edit { min-width:0; margin:0; border:1px solid var(--border); border-radius:8px; padding:12px; }
+.customer-choice-edit > fieldset { border:0; margin:0; padding:0; min-width:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.customer-option-edit input:not([type=checkbox]), .customer-option-edit select { width:100%; min-width:0; min-height:44px; }
+.customer-option-edit label:has(input[type=checkbox]) { display:flex; align-items:center; gap:10px; }
+.customer-option-edit input[type=checkbox] { width:20px; height:20px; }
+@media(max-width:540px) { .customer-option-card { padding:12px; } .customer-choice-edit > fieldset { grid-template-columns:minmax(0,1fr); } }

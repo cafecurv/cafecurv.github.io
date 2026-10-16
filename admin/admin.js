@@ -2805,6 +2805,10 @@
   const productStatus = document.querySelector('[data-product-status]');
   const productCount = document.querySelector('[data-product-count]');
   const draftForm = document.querySelector('[data-draft-product-form]');
+  const customerOptionsEditor = window.CurvProductOptions?.create(draftForm.querySelector('[data-customer-options-editor]'),
+    () => draftForm.dispatchEvent(new Event('input', { bubbles: true })),
+    () => getVariantRows().map(row => ({ id: row.dataset.productSizeId || null, label: getSizeInput(row, 'label').value })),
+    () => ({ id: editingProductId, name: draftForm.elements.name.value }));
   const draftCategorySelect = document.getElementById('draft-product-category');
   const draftSectionSelect = document.getElementById('draft-product-section');
   const inlineCategoryCreate = document.querySelector('[data-inline-category-create]');
@@ -2929,6 +2933,10 @@
   let pendingProductSave = null;
   const productSaveMessage = (error) => {
     const messages = {
+      MM_OPTIONS_TEMPERATURE_SIZE: 'Every available temperature needs a serving size.',
+      MM_OPTIONS_INPUT: 'Please review available choices, defaults and sizes.',
+      MM_OPTIONS_PRICE: 'Add a valid additional charge for every required size.',
+      MM_OPTIONS_RECIPE: 'This option setup does not match this menu item.',
       MM_SAVE_AUTH: 'Owner access is required to save products.',
       MM_SAVE_STALE: 'This product changed in another session. Reload before saving.',
       MM_SAVE_BUSY: 'Another menu change is being saved. Please try again.',
@@ -3209,6 +3217,15 @@
     resetDraftProductForm();
     populateDraftCategorySelect(latestCategories);
     await preselectDraftCategoryFromFilter();
+    if (isOwnerSignedIn && customerOptionsEditor) {
+      const generation = productEditorGeneration;
+      try { const response = await client.rpc('menu_manager_get_product_editor', { p_product_id: null });
+        if (generation === productEditorGeneration && !editingProductId && isOwnerSignedIn) {
+          const ready = customerOptionsEditor.load(response.error ? null : response.data);
+          draftForm.querySelector('[data-customer-options-summary]').hidden = ready;
+        }
+      } catch (_) { if (generation === productEditorGeneration) customerOptionsEditor.reset(); }
+    }
     setDraftFormDisabled(!isOwnerSignedIn);
     showProductEditorView('create');
     setStatus(isOwnerSignedIn ? 'Add your product details, then save.' : 'Sign in before creating an item.');
@@ -3247,6 +3264,7 @@
       is_curv_pick: formData.get('is_curv_pick') === 'on',
       is_seasonal: formData.get('is_seasonal') === 'on',
       badge_labels: productBadgeLabels.slice(),
+      customer_options: customerOptionsEditor?.snapshot() || '[]',
       variants,
     });
   };
@@ -4209,6 +4227,7 @@
   };
 
   const resetDraftProductForm = () => {
+    customerOptionsEditor?.reset();
     const optionsSummary = draftForm?.querySelector('[data-customer-options-summary]');
     if (optionsSummary) { optionsSummary.hidden = false; optionsSummary.textContent = 'Option editing will be available in the next Menu Manager update.'; }
     productEditorVersion = null;
@@ -6105,9 +6124,11 @@
     })));
 
     productEditorVersion = response.data.version;
+    const optionsReady = customerOptionsEditor?.load(response.data) || false;
+    draftForm.querySelector('[data-customer-options-summary]').hidden = optionsReady;
     setEditMode(product);
     markDraftFormClean();
-    loadProductOptionAttachments(product.id);
+    if (!optionsReady) loadProductOptionAttachments(product.id);
     draftForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setStatus('Edit your product details, then save.');
   };
@@ -7165,6 +7186,9 @@
     const visibilityChanged = draft.menu_visible !== Boolean(existingProduct?.is_published && existingProduct?.is_available);
     const finalPublishedState = visibilityChanged || !isEditing ? draft.menu_visible : existingProduct.is_published;
 
+    const optionError = customerOptionsEditor?.validate(finalPublishedState);
+    if (optionError) { setStatus(optionError); return; }
+
     const saveGeneration = productEditorGeneration;
     const saveStillCurrent = () => isOwnerSignedIn && saveGeneration === productEditorGeneration;
     productSaveInProgress = true;
@@ -7204,6 +7228,11 @@
       product: productPayload,
       sizes: draft.sizeRows.map(normalizeProductSizeState)
     };
+    const optionDraft = customerOptionsEditor?.payload();
+    if (optionDraft !== undefined) {
+      body.options = optionDraft;
+      if (!isEditing) body.expected_version = customerOptionsEditor.version;
+    }
     // Retain the exact request after an uncertain transport outcome. Never mint
     // a new creation key while the original save might already have committed.
     const serialized = JSON.stringify(body);
@@ -7384,6 +7413,8 @@
       setStatus('Custom sold-by cancelled.');
     });
   }
+
+  draftForm?.elements.name?.addEventListener('change', () => customerOptionsEditor?.refreshRecipe());
 
   draftForm?.querySelector('[data-multiple-sizes]')?.addEventListener('change', event => {
     const status = draftForm.querySelector('[data-size-mode-status]');
