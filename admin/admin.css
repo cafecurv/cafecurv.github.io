@@ -8287,3 +8287,43 @@ body.more-drawer-open {
   .section-order-row { align-items: flex-start; flex-direction: column; }
   .section-order-moves { flex-wrap: wrap; }
 }
+
+/* Menu Manager Phase 2: presentation only; all saves use the Phase 1 boundary. */
+.product-editor-simple { gap: 1.25rem; }
+.product-editor-simple .editor-section,
+.product-editor-simple .variant-builder { min-width: 0; display: grid; gap: 1rem; padding: 0 0 1.25rem; border: 0; border-bottom: 1px solid var(--border); background: none; }
+.product-editor-simple h3 { margin: 0; color: var(--cream); font-size: 0.95rem; letter-spacing: 0.02em; text-transform: none; }
+.product-editor-simple .editor-fields,
+.product-editor-simple .editor-costs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; min-width: 0; }
+.product-editor-simple .editor-fields > *,
+.product-editor-simple .editor-costs > *,
+.product-editor-simple .variant-row > * { min-width: 0; }
+.product-editor-simple .editor-disclosure { min-width: 0; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.product-editor-simple .editor-disclosure > summary { cursor: pointer; color: var(--cream); padding: 0.25rem 0; font-weight: 500; }
+.product-editor-simple .editor-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 3px; }
+.product-editor-simple .editor-disclosure[open] > summary { margin-bottom: 1rem; }
+.product-editor-simple .variant-row { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; background: var(--surface-soft); border-color: var(--border); }
+.product-editor-simple[data-size-mode="single"] .variant-row { grid-template-columns: minmax(0, 1fr); padding: 0; border: 0; background: none; max-width: 26rem; }
+.product-editor-simple .multiple-sizes-toggle { justify-self: start; min-height: 44px; }
+.product-editor-simple .editor-status-controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+.product-editor-simple .editor-status-controls .draft-checkbox { min-height: 44px; }
+.product-editor-simple .editor-status-help { margin: 0; font-size: 0.85rem; color: var(--slate); }
+.product-editor-simple [data-size-mode-status]:empty { display: none; }
+.product-editor-simple input:not([type="checkbox"]),
+.product-editor-simple select,
+.product-editor-simple textarea { width: 100%; box-sizing: border-box; }
+.product-editor-simple [hidden] { display: none; }
+.product-editor-panel .product-editor-simple .draft-actions { position: static; backdrop-filter: none; background: none; border: 0; padding-top: 0; }
+.product-editor-simple .draft-checkbox { font-size: 0.82rem; letter-spacing: 0; text-transform: none; }
+.product-editor-simple .variant-builder-heading { flex-direction: row; }
+.product-editor-simple .variant-builder-heading .auth-button { width: auto; }
+@media (max-width: 540px) {
+  .product-editor-simple .editor-fields,
+  .product-editor-simple .editor-costs { grid-template-columns: minmax(0, 1fr); }
+  .product-editor-simple .variant-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0.65rem; gap: 0.65rem; }
+  .product-editor-simple .variant-remove-button { grid-column: 1 / -1; justify-self: end; }
+  .product-editor-simple .variant-builder-heading { align-items: center; gap: 0.5rem; }
+  .product-editor-simple .variant-builder-heading .auth-button { padding-inline: 0.65rem; }
+  .product-editor-simple .draft-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+  .product-editor-simple .draft-actions > button { flex: 1 1 auto; }
+}

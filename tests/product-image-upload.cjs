@@ -57,6 +57,8 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       }, type), 'base64');
     }
     const choose = async (type = 'image/png', name = 'new-image.png', buffer = bytes[type]) => {
+      const disclosure = page.locator('[data-description-photo]');
+      if (await disclosure.count()) await disclosure.evaluate(el => { el.open = true; });
       await page.locator('[data-image-file]').setInputFiles({ name, mimeType: type, buffer });
       if (bytes[type] && buffer.length <= 5 * 1024 * 1024) {
         await page.waitForFunction(() => !document.querySelector('[data-crop-apply]').disabled);

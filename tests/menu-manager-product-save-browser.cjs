@@ -16,7 +16,7 @@ try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>er
     if(name==='menu_manager_save_product'){
      if(fixture.failure)return {data:null,error:{code:'P0001',details:fixture.failure,message:'raw internal certification error'}};
      const r=args.p_request;
-     if(!fixture.ledger[r.request_id]){Object.assign(fixture.product,r.product,{is_published:r.action==='publish'?true:r.action==='unpublish'?false:fixture.product.is_published,product_sizes:r.sizes});fixture.version+='x';fixture.ledger[r.request_id]={ok:true,product_id:'p1',is_published:fixture.product.is_published,orderable:fixture.product.is_published};}
+     if(!fixture.ledger[r.request_id]){Object.assign(fixture.product,r.product,{is_published:r.action==='publish'?true:r.action==='unpublish'||!r.product_id?false:fixture.product.is_published,product_sizes:r.sizes});fixture.version+='x';fixture.ledger[r.request_id]={ok:true,product_id:'p1',is_published:fixture.product.is_published,orderable:fixture.product.is_published};}
      if(fixture.loseReply){fixture.loseReply=false;throw Error('lost response');}
      return {data:fixture.ledger[r.request_id],error:null};
     }
@@ -29,7 +29,7 @@ try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>er
  await page.waitForFunction(()=>document.querySelector('#draft-product-name').value==='Cafe Cake');
  check(await page.evaluate(()=>fixture.calls.some(c=>c.name==='menu_manager_get_product_editor')),'authoritative editor read');
  await page.locator('[data-variant-price]').fill('190');await page.click('[data-create-draft]');
- await page.waitForFunction(()=>document.body.textContent.includes('Saved. Customers can order this item.'));
+ await page.waitForFunction(()=>document.body.textContent.includes('Changes saved.'));
  let calls=await page.evaluate(()=>fixture.calls.filter(c=>c.name==='menu_manager_save_product'));
  check(calls.length===1,'one save RPC');check(calls[0].args.p_request.expected_version==='server-version-1','opaque token sent');
  check(calls[0].args.p_request.sizes[0].id==='s1','existing size ID sent');
@@ -39,15 +39,15 @@ try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>er
  check(await page.locator('[data-variant-price]').inputValue()==='200','failed edit retained');
  check(!(await page.locator('[data-create-draft]').isDisabled()),'failure releases busy state');
  check(!(await page.locator('body').textContent()).includes('raw internal'),'friendly message only');
- await page.evaluate(()=>fixture.failure=null);await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Saved. Customers can order this item.'));
- await page.click('[data-editor-publish-action]');await page.waitForFunction(()=>document.body.textContent.includes('Draft saved.'));
+ await page.evaluate(()=>fixture.failure=null);await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Changes saved.'));
+ await page.locator('[name=menu_visible]').uncheck();await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Changes saved.'));
  check(await page.evaluate(()=>fixture.calls.filter(c=>c.name==='menu_manager_save_product').at(-1).args.p_request.action==='unpublish'),'unpublish same atomic boundary');
- await page.click('[data-editor-publish-action]');await page.waitForFunction(()=>document.body.textContent.includes('Saved. Customers can order this item.'));
+ await page.locator('[name=menu_visible]').check();await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Changes saved.'));
  check(await page.evaluate(()=>fixture.product.is_published),'republish');
  await page.evaluate(()=>fixture.loseReply=true);await page.locator('[data-variant-price]').fill('220');await page.click('[data-create-draft]');
  await page.waitForFunction(()=>document.body.textContent.includes('Unable to confirm the save'));
  const previous=await page.evaluate(()=>fixture.calls.filter(c=>c.name==='menu_manager_save_product').at(-1).args.p_request);
- await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Saved. Customers can order this item.'));
+ await page.click('[data-create-draft]');await page.waitForFunction(()=>document.body.textContent.includes('Changes saved.'));
  check(JSON.stringify(previous)===JSON.stringify(await page.evaluate(()=>fixture.calls.filter(c=>c.name==='menu_manager_save_product').at(-1).args.p_request)),'uncertain retry frozen payload and key');
  check(await page.evaluate(()=>fixture.writes.length===0),'all actions no direct writes');
  check(errors.length===0,errors.join('\n'));console.log('Menu Manager product save browser: '+count+' assertions passed');

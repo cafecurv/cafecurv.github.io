@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="product-image-crop.js?v=1" defer></script>
   <script src="product-image-upload.js?v=2" defer></script>
-  <script src="admin.js?v=product-save-phase1" defer></script>
+  <script src="admin.js?v=product-editor-phase2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -143,17 +143,20 @@
           <div>
             <button type="button" class="product-editor-back" data-back-to-products>&larr; Back to Products</button>
             <p class="eyebrow">Product Editor</p>
-            <h2 id="draft-product-section-title" data-product-editor-view-title>Create Item</h2>
+            <h2 id="draft-product-section-title" data-product-editor-view-title>Add Product</h2>
           </div>
           <button type="button" class="admin-collapsible-toggle" data-collapsible-toggle data-collapsible-target="draft-product-content" data-label-collapsed="+ Add Item" data-label-expanded="- Add Item" aria-expanded="false" aria-controls="draft-product-content">+ Add Item</button>
         </div>
         <div id="draft-product-content" class="admin-collapsible-content" data-collapsible-content hidden>
           <div class="draft-product-intro">
-            <p class="eyebrow">Draft Product</p>
-            <h3 id="draft-product-title">Create Item</h3>
-            <p class="editor-publish-note" data-editor-publish-note hidden>This item is published. Saving changes updates the live menu.</p>
+
+            <h3 id="draft-product-title" hidden>Add Product</h3>
+            <p class="editor-publish-note" data-editor-publish-note hidden>Changes will update the live menu.</p>
           </div>
-          <form class="draft-product-form" data-draft-product-form novalidate>
+          <form class="draft-product-form product-editor-simple" data-draft-product-form novalidate>
+            <section class="editor-section draft-field-wide" aria-labelledby="editor-details-title">
+              <h3 id="editor-details-title">Product details</h3>
+              <div class="editor-fields">
             <label class="admin-field" for="draft-product-name">
               <span>Product name</span>
               <input id="draft-product-name" name="name" type="text" autocomplete="off" required disabled>
@@ -162,12 +165,6 @@
               <span>Category</span>
               <select id="draft-product-category" name="category_id" required disabled>
                 <option value="">Sign in to load categories</option>
-              </select>
-            </label>
-            <label class="admin-field" for="draft-product-section">
-              <span>Section</span>
-              <select id="draft-product-section" name="category_section_id" disabled>
-                <option value="">Select category first</option>
               </select>
             </label>
             <div class="inline-category-create draft-field-wide" data-inline-category-create hidden>
@@ -180,16 +177,12 @@
                 <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-category disabled>Cancel</button>
               </div>
             </div>
-            <div class="inline-category-create draft-field-wide" data-inline-draft-section-create hidden>
-              <label class="admin-field" for="inline-draft-section-name">
-                <span>New section</span>
-                <input id="inline-draft-section-name" type="text" autocomplete="off" placeholder="Section name" data-inline-draft-section-name disabled>
-              </label>
-              <div class="inline-category-actions">
-                <button type="button" class="auth-button" data-save-inline-draft-section disabled>Add</button>
-                <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-draft-section disabled>Cancel</button>
               </div>
-            </div>
+              <details class="editor-disclosure" data-description-photo><summary>Description &amp; photo</summary><div class="editor-fields">
+            <label class="admin-field draft-field-wide" for="draft-product-description">
+              <span>Description</span>
+              <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>
+            </label>
             <div class="admin-field draft-field-wide product-image-editor" data-product-image-editor aria-labelledby="product-image-label">
               <span id="product-image-label">Product Image</span>
               <input id="draft-product-image" name="image_url" type="hidden">
@@ -211,6 +204,81 @@
                 </div>
               </div>
             </div>
+              </div></details>
+            </section>
+            <section class="variant-builder draft-field-wide" aria-labelledby="variant-builder-title">
+              <div class="variant-builder-heading">
+                <div>
+
+                  <h3 id="variant-builder-title" data-pricing-title>Pricing</h3>
+                </div>
+                <button type="button" class="auth-button auth-button-secondary" data-add-variant disabled>+ Add size</button>
+              </div>
+              <div class="variant-list" data-variant-list>
+                <div class="variant-row" data-variant-row data-touched="false">
+                  <label class="admin-field" for="draft-variant-label-1">
+                    <span>Size name</span>
+                    <input id="draft-variant-label-1" type="text" value="Each" data-variant-label required disabled>
+                  </label>
+                  <label class="admin-field" for="draft-variant-price-1">
+                    <span>Price</span>
+                    <input id="draft-variant-price-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required disabled>
+                  </label>
+                  <label class="admin-field" for="draft-variant-cost-1">
+                    <span>Cost</span>
+                    <input id="draft-variant-cost-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-cost disabled>
+                  </label>
+                  <button type="button" class="variant-remove-button" data-remove-variant disabled>Remove</button>
+                </div>
+              </div>
+              <label class="draft-checkbox multiple-sizes-toggle"><input type="checkbox" data-multiple-sizes disabled><span>This product has multiple sizes</span></label>
+              <p class="product-option-status" data-size-mode-status role="status"></p>
+            </section>
+
+            <section class="editor-section draft-field-wide" aria-labelledby="editor-status-title">
+              <h3 id="editor-status-title">Menu status</h3>
+              <div class="editor-status-controls">
+                <label class="draft-checkbox"><input type="checkbox" name="menu_visible" disabled><span>Visible on menu</span></label>
+                <label class="draft-checkbox"><input type="checkbox" name="is_sold_out" disabled><span>Sold out</span></label>
+              </div>
+              <p class="editor-status-help" data-menu-visibility-help>Hidden from the menu until you turn on visibility and save.</p>
+              <input type="checkbox" name="is_available" checked hidden aria-hidden="true" tabindex="-1">
+            </section>
+            <details class="editor-disclosure draft-field-wide" data-editor-more-details>
+              <summary>More details</summary>
+              <div class="editor-fields">
+            <label class="admin-field" for="draft-product-section">
+              <span>Section</span>
+              <select id="draft-product-section" name="category_section_id" disabled>
+                <option value="">Select category first</option>
+              </select>
+            </label>
+            <div class="inline-category-create draft-field-wide" data-inline-draft-section-create hidden>
+              <label class="admin-field" for="inline-draft-section-name">
+                <span>New section</span>
+                <input id="inline-draft-section-name" type="text" autocomplete="off" placeholder="Section name" data-inline-draft-section-name disabled>
+              </label>
+              <div class="inline-category-actions">
+                <button type="button" class="auth-button" data-save-inline-draft-section disabled>Add</button>
+                <button type="button" class="auth-button auth-button-secondary" data-cancel-inline-draft-section disabled>Cancel</button>
+              </div>
+            </div>
+            <label class="admin-field draft-field-wide" for="draft-product-notes">
+              <span>Internal notes</span>
+              <textarea id="draft-product-notes" name="notes" rows="3" disabled></textarea>
+            </label>
+            <div class="admin-field product-badges-editor" aria-labelledby="product-badges-label">
+              <span id="product-badges-label">Badges</span>
+              <div class="product-badge-chip-field" data-product-badge-chip-field>
+                <div class="product-badge-chip-list" data-product-badge-chip-list aria-label="Product badges"></div>
+                <label class="sr-only" for="product-badge-input">Type badge label</label>
+                <input id="product-badge-input" type="text" autocomplete="off" maxlength="24" placeholder="type badge here..." data-product-badge-input disabled>
+              </div>
+            </div>
+                <div class="draft-checkbox-row draft-field-wide">
+                  <label class="draft-checkbox"><input type="checkbox" name="is_curv_pick" disabled><span>Feature in CURV Picks</span></label>
+                  <label class="draft-checkbox"><input type="checkbox" name="is_seasonal" disabled><span>Seasonal</span></label>
+                </div>
             <label class="admin-field" for="draft-variant-group">
               <span>Sold by</span>
               <select id="draft-variant-group" name="variant_group" required disabled>
@@ -232,65 +300,14 @@
                 <button type="button" class="auth-button auth-button-secondary" data-cancel-custom-sold-by disabled>Cancel</button>
               </div>
             </div>
-            <div class="admin-field product-badges-editor" aria-labelledby="product-badges-label">
-              <span id="product-badges-label">Badges</span>
-              <div class="product-badge-chip-field" data-product-badge-chip-field>
-                <div class="product-badge-chip-list" data-product-badge-chip-list aria-label="Product badges"></div>
-                <label class="sr-only" for="product-badge-input">Type badge label</label>
-                <input id="product-badge-input" type="text" autocomplete="off" maxlength="24" placeholder="type badge here..." data-product-badge-input disabled>
+                <div data-single-size-details></div>
+                <div class="editor-costs draft-field-wide" data-size-costs></div>
               </div>
-            </div>
-            <label class="admin-field draft-field-wide" for="draft-product-description">
-              <span>Description</span>
-              <textarea id="draft-product-description" name="description" rows="3" disabled></textarea>
-            </label>
-            <label class="admin-field draft-field-wide" for="draft-product-notes">
-              <span>Internal notes</span>
-              <textarea id="draft-product-notes" name="notes" rows="3" disabled></textarea>
-            </label>
-            <div class="draft-checkbox-row draft-field-wide">
-              <label class="draft-checkbox">
-                <input type="checkbox" name="is_available" checked disabled>
-                <span>Available</span>
-                <small class="draft-checkbox-hint">Turn off to mark as sold out/unavailable for ordering.</small>
-              </label>
-              <label class="draft-checkbox">
-                <input type="checkbox" name="is_curv_pick" disabled>
-                <span>Feature in CURV Picks</span>
-              </label>
-              <label class="draft-checkbox">
-                <input type="checkbox" name="is_seasonal" disabled>
-                <span>Seasonal</span>
-              </label>
-            </div>
-
-            <section class="variant-builder draft-field-wide" aria-labelledby="variant-builder-title">
-              <div class="variant-builder-heading">
-                <div>
-                  <p class="eyebrow">Variants</p>
-                  <h3 id="variant-builder-title">Variant Rows</h3>
-                </div>
-                <button type="button" class="auth-button auth-button-secondary" data-add-variant disabled>Add Variant</button>
-              </div>
-              <div class="variant-list" data-variant-list>
-                <div class="variant-row" data-variant-row data-touched="false">
-                  <label class="admin-field" for="draft-variant-label-1">
-                    <span>Variant label</span>
-                    <input id="draft-variant-label-1" type="text" value="Each" data-variant-label required disabled>
-                  </label>
-                  <label class="admin-field" for="draft-variant-price-1">
-                    <span>Price</span>
-                    <input id="draft-variant-price-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required disabled>
-                  </label>
-                  <label class="admin-field" for="draft-variant-cost-1">
-                    <span>Cost</span>
-                    <input id="draft-variant-cost-1" type="number" min="0" step="0.01" inputmode="decimal" data-variant-cost disabled>
-                  </label>
-                  <button type="button" class="variant-remove-button" data-remove-variant disabled>Remove</button>
-                </div>
-              </div>
-            </section>
-
+            </details>
+            <section class="editor-section draft-field-wide" aria-labelledby="editor-customer-options-title">
+              <h3 id="editor-customer-options-title">Customer options</h3>
+              <p class="option-library-help" data-customer-options-summary>Option editing will be available in the next Menu Manager update.</p>
+              <div hidden>
             <section class="product-option-attachments draft-field-wide" aria-labelledby="product-options-title">
               <div class="product-option-heading">
                 <div>
@@ -347,9 +364,10 @@
               </div>
             </section>
 
+              </div>
+            </section>
             <div class="draft-actions draft-field-wide">
-              <button type="submit" class="auth-button" data-create-draft disabled>Save Draft</button>
-              <button type="button" class="auth-button auth-button-secondary" data-editor-publish-action hidden disabled>Publish Item</button>
+              <button type="submit" class="auth-button" data-create-draft disabled>Save Product</button>
               <button type="button" class="auth-button auth-button-secondary" data-undo-product-changes hidden disabled>Undo changes</button>
               <button type="button" class="auth-button auth-button-secondary" data-cancel-edit hidden disabled>Cancel</button>
             </div>

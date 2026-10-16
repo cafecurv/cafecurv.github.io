@@ -3201,7 +3201,7 @@
     setProductSubview('editor');
     openCollapsibleById('draft-product-content');
     if (productEditorViewTitle) {
-      productEditorViewTitle.textContent = mode === 'edit' ? 'Edit Item' : 'Create Item';
+      productEditorViewTitle.textContent = mode === 'edit' ? 'Edit Product' : 'Add Product';
     }
   };
 
@@ -3211,7 +3211,7 @@
     await preselectDraftCategoryFromFilter();
     setDraftFormDisabled(!isOwnerSignedIn);
     showProductEditorView('create');
-    setStatus(isOwnerSignedIn ? 'Create a new draft item.' : 'Sign in before creating an item.');
+    setStatus(isOwnerSignedIn ? 'Add your product details, then save.' : 'Sign in before creating an item.');
   };
 
   const getEditingProduct = () => {
@@ -3227,9 +3227,9 @@
     const formData = new FormData(draftForm);
     const variants = getVariantRows().map((row) => ({
       id: row.dataset.productSizeId || null,
-      label: row.querySelector('[data-variant-label]') ? row.querySelector('[data-variant-label]').value.trim() : '',
-      price: row.querySelector('[data-variant-price]') ? row.querySelector('[data-variant-price]').value.trim() : '',
-      cost: row.querySelector('[data-variant-cost]') ? row.querySelector('[data-variant-cost]').value.trim() : '',
+      label: getSizeInput(row, 'label') ? getSizeInput(row, 'label').value.trim() : '',
+      price: getSizeInput(row, 'price') ? getSizeInput(row, 'price').value.trim() : '',
+      cost: getSizeInput(row, 'cost') ? getSizeInput(row, 'cost').value.trim() : '',
     }));
     return JSON.stringify({
       name: String(formData.get('name') || '').trim(),
@@ -3242,7 +3242,8 @@
       description: String(formData.get('description') || '').trim(),
       notes: String(formData.get('notes') || '').trim(),
       is_available: formData.get('is_available') === 'on',
-      is_sold_out: false,
+      menu_visible: formData.get('menu_visible') === 'on',
+      is_sold_out: formData.get('is_sold_out') === 'on',
       is_curv_pick: formData.get('is_curv_pick') === 'on',
       is_seasonal: formData.get('is_seasonal') === 'on',
       badge_labels: productBadgeLabels.slice(),
@@ -3358,20 +3359,9 @@
   };
 
   const updateEditorPublishAction = () => {
-    if (!editorPublishActionButton) return;
     const product = getEditingProduct();
-    const isPublished = Boolean(product && product.is_published);
-    editorPublishActionButton.hidden = false;
-    if (!editingProductId) {
-      editorPublishActionButton.textContent = 'Publish Item';
-      editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving || productSaveInProgress;
-      if (editorPublishNote) editorPublishNote.hidden = true;
-      return;
-    }
-
-    editorPublishActionButton.textContent = isPublished ? 'Unpublish Item' : 'Publish Item';
-    editorPublishActionButton.disabled = !isOwnerSignedIn || editorPublishSaving || productSaveInProgress;
-    if (editorPublishNote) editorPublishNote.hidden = !isPublished;
+    if (editorPublishActionButton) editorPublishActionButton.hidden = true;
+    if (editorPublishNote) editorPublishNote.hidden = !(product?.is_published && product?.is_available);
   };
 
   const syncEditorSaveLabels = () => {
@@ -3379,7 +3369,7 @@
     const product = getEditingProduct();
     const isPublished = Boolean(product && product.is_published);
     if (createDraftButton) {
-      createDraftButton.textContent = draftFormSavedLabelActive ? 'Saved' : (isPublished ? 'Save Changes' : 'Save Draft');
+      createDraftButton.textContent = editingProductId ? 'Save Changes' : 'Save Product';
       createDraftButton.disabled = !isOwnerSignedIn || draftFormSavedLabelActive || productSaveInProgress;
     }
     updateEditorPublishAction();
@@ -3399,9 +3389,9 @@
     editingProductSnapshot = null;
     draftFormBaseline = '';
     draftFormSavedLabelActive = false;
-    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Create Item';
-    if (draftProductTitle) draftProductTitle.textContent = 'Create Item';
-    if (createDraftButton) createDraftButton.textContent = 'Save Draft';
+    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Add Product';
+    if (draftProductTitle) draftProductTitle.textContent = 'Add Product';
+    if (createDraftButton) createDraftButton.textContent = 'Save Product';
     if (cancelEditButton) {
       cancelEditButton.hidden = false;
       cancelEditButton.disabled = false;
@@ -3420,8 +3410,8 @@
     draftFormSavedLabelActive = false;
     showProductEditorView('edit');
     openCollapsibleById('draft-product-content');
-    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Edit Item';
-    if (draftProductTitle) draftProductTitle.textContent = 'Edit Item';
+    if (productEditorViewTitle) productEditorViewTitle.textContent = 'Edit Product';
+    if (draftProductTitle) draftProductTitle.textContent = 'Edit Product';
     if (cancelEditButton) {
       cancelEditButton.hidden = false;
       cancelEditButton.disabled = false;
@@ -3430,6 +3420,34 @@
   };
 
   const getVariantRows = () => variantList ? Array.from(variantList.querySelectorAll('[data-variant-row]')) : [];
+  const getSizeInput = (row, kind) => row._sizeInputs?.[kind] || row.querySelector('[data-variant-' + kind + ']');
+  const syncPricingPresentation = () => {
+    const toggle = draftForm?.querySelector('[data-multiple-sizes]');
+    if (!toggle) return;
+    const multiple = toggle.checked;
+    const rows = getVariantRows();
+    draftForm.dataset.sizeMode = multiple ? 'multiple' : 'single';
+    const heading = draftForm.querySelector('[data-pricing-title]');
+    if (heading) heading.textContent = multiple ? 'Sizes' : 'Pricing';
+    if (addVariantButton) addVariantButton.hidden = !multiple;
+    rows.forEach(row => {
+      const label = getSizeInput(row, 'label').closest('label');
+      const cost = getSizeInput(row, 'cost').closest('label');
+      if (multiple) row.prepend(label);
+      else draftForm.querySelector('[data-single-size-details]').append(label);
+      label.querySelector('span').textContent = multiple ? 'Size name' : 'Selling label';
+      cost.querySelector('span').textContent = 'Internal cost — ' + (getSizeInput(row, 'label').value || 'Size');
+      draftForm.querySelector('[data-size-costs]').append(cost);
+      row.querySelector('[data-remove-variant]').hidden = !multiple;
+    });
+  };
+  const syncMenuStatusHelp = () => {
+    if (!draftForm?.elements.menu_visible) return;
+    draftForm.querySelector('[data-menu-visibility-help]').textContent = !draftForm.elements.menu_visible.checked
+      ? 'Hidden from the menu.' : draftForm.elements.is_sold_out.checked
+        ? 'Shown on the menu as sold out. Customers cannot order it.' : 'Customers can see and order this product after you save.';
+  };
+
 
   const ensureVariantGroupOption = (label) => {
     const value = String(label || '').trim();
@@ -3473,12 +3491,13 @@
     const rows = getVariantRows();
     rows.forEach((row) => {
       const removeButton = row.querySelector('[data-remove-variant]');
-      if (removeButton) removeButton.disabled = rows.length <= 1 || removeButton.dataset.locked === 'true';
+      if (removeButton) removeButton.disabled = rows.length <= 1 || removeButton.dataset.locked === 'true' || !isOwnerSignedIn;
     });
+    syncPricingPresentation();
   };
 
   const setVariantRowDisabled = (row, isDisabled) => {
-    row.querySelectorAll('input, button').forEach((field) => {
+    [...row.querySelectorAll('input, button'), ...Object.values(row._sizeInputs || {})].forEach((field) => {
       field.disabled = isDisabled;
     });
   };
@@ -3492,11 +3511,11 @@
     row.dataset.touched = touched ? 'true' : 'false';
     row.innerHTML = `
       <label class="admin-field" for="draft-variant-label-${variantRowCount}">
-        <span>Variant label</span>
+        <span>Size name</span>
         <input id="draft-variant-label-${variantRowCount}" type="text" value="" data-variant-label required>
       </label>
       <label class="admin-field" for="draft-variant-price-${variantRowCount}">
-        <span>Price</span>
+        <span>Price (₱)</span>
         <input id="draft-variant-price-${variantRowCount}" type="number" min="0" step="0.01" inputmode="decimal" data-variant-price required>
       </label>
       <label class="admin-field" for="draft-variant-cost-${variantRowCount}">
@@ -3505,9 +3524,10 @@
       </label>
       <button type="button" class="variant-remove-button" data-remove-variant>Remove</button>
     `;
-    row.querySelector('[data-variant-label]').value = label;
-    row.querySelector('[data-variant-price]').value = price;
-    row.querySelector('[data-variant-cost]').value = cost;
+    getSizeInput(row, 'label').value = label;
+    getSizeInput(row, 'price').value = price;
+    getSizeInput(row, 'cost').value = cost;
+    row._sizeInputs = Object.fromEntries(['label', 'price', 'cost'].map(kind => [kind, getSizeInput(row, kind)]));
     return row;
   };
 
@@ -3554,19 +3574,20 @@
     const rows = getVariantRows();
     if (rows.length !== 1) return;
     const row = rows[0];
-    const labelInput = row.querySelector('[data-variant-label]');
+    const labelInput = getSizeInput(row, 'label');
     if (!labelInput || row.dataset.touched === 'true') return;
     const groupLabel = getSelectedVariantGroup();
     if (groupLabel) labelInput.value = groupLabel;
   };
 
   const bindVariantRow = (row) => {
-    const labelInput = row.querySelector('[data-variant-label]');
+    const labelInput = getSizeInput(row, 'label');
     const removeButton = row.querySelector('[data-remove-variant]');
 
     if (labelInput) {
       labelInput.addEventListener('input', () => {
         row.dataset.touched = 'true';
+        getSizeInput(row, 'cost').closest('label').querySelector('span').textContent = 'Internal cost — ' + (labelInput.value || 'Size');
         markDraftFormDirty();
       });
     }
@@ -3574,6 +3595,8 @@
     if (removeButton) {
       removeButton.addEventListener('click', () => {
         if (getVariantRows().length <= 1) return;
+        getSizeInput(row, 'label').closest('label').remove();
+        getSizeInput(row, 'cost').closest('label').remove();
         row.remove();
         updateRemoveButtons();
         markDraftFormDirty();
@@ -3583,15 +3606,17 @@
 
   const resetVariantRows = () => {
     if (!variantList) return;
+    draftForm.querySelector('[data-size-costs]')?.replaceChildren();
+    draftForm.querySelector('[data-single-size-details]')?.replaceChildren();
     variantList.innerHTML = '';
     variantRowCount = 1;
     const row = createVariantRow({ label: 'Each', touched: false });
-    const labelInput = row.querySelector('[data-variant-label]');
+    const labelInput = getSizeInput(row, 'label');
     labelInput.id = 'draft-variant-label-1';
     row.querySelector('label[for^="draft-variant-label-"]').setAttribute('for', 'draft-variant-label-1');
-    row.querySelector('[data-variant-price]').id = 'draft-variant-price-1';
+    getSizeInput(row, 'price').id = 'draft-variant-price-1';
     row.querySelector('label[for^="draft-variant-price-"]').setAttribute('for', 'draft-variant-price-1');
-    row.querySelector('[data-variant-cost]').id = 'draft-variant-cost-1';
+    getSizeInput(row, 'cost').id = 'draft-variant-cost-1';
     row.querySelector('label[for^="draft-variant-cost-"]').setAttribute('for', 'draft-variant-cost-1');
     variantList.appendChild(row);
     bindVariantRow(row);
@@ -3606,6 +3631,7 @@
 
   const syncDraftSectionSelectDisabled = () => {
     if (!draftSectionSelect) return;
+    draftSectionSelect.closest('label').hidden = !getDraftCategoryId();
     draftSectionSelect.disabled = !isOwnerSignedIn || !getDraftCategoryId() || Boolean(draftCategorySelect && draftCategorySelect.disabled);
   };
 
@@ -4183,6 +4209,8 @@
   };
 
   const resetDraftProductForm = () => {
+    const optionsSummary = draftForm?.querySelector('[data-customer-options-summary]');
+    if (optionsSummary) { optionsSummary.hidden = false; optionsSummary.textContent = 'Option editing will be available in the next Menu Manager update.'; }
     productEditorVersion = null;
     pendingProductSave = null;
     productEditorGeneration += 1;
@@ -4195,7 +4223,10 @@
     if (customVariantInput) customVariantInput.value = '';
     const availableInput = draftForm ? draftForm.querySelector('[name="is_available"]') : null;
     if (availableInput) availableInput.checked = true;
+    draftForm.querySelector('[data-multiple-sizes]').checked = false;
+    draftForm.querySelectorAll('details').forEach(detail => { detail.open = false; });
     resetVariantRows();
+    syncMenuStatusHelp();
     setCreateMode();
     syncVariantGroupFields();
     maybeSyncDefaultVariantLabel();
@@ -5971,6 +6002,9 @@
 
   const setVariantRows = (variants) => {
     if (!variantList) return;
+    draftForm.querySelector('[data-multiple-sizes]').checked = variants.length > 1;
+    draftForm.querySelector('[data-size-costs]')?.replaceChildren();
+    draftForm.querySelector('[data-single-size-details]')?.replaceChildren();
     variantList.innerHTML = '';
     variantRowCount = 0;
     const rows = variants.length ? variants : [{ label: 'Each', price: '', cost: '', touched: false }];
@@ -6049,6 +6083,9 @@
     draftForm.elements.notes.value = product.notes || '';
     setProductBadges(product.badge_labels);
     draftForm.elements.is_available.checked = Boolean(product.is_available);
+    draftForm.elements.menu_visible.checked = product.is_published && product.is_available;
+    draftForm.elements.is_sold_out.checked = product.is_sold_out;
+    syncMenuStatusHelp();
     draftForm.elements.is_curv_pick.checked = Boolean(product.is_curv_pick);
     draftForm.elements.is_seasonal.checked = Boolean(product.is_seasonal);
 
@@ -6072,7 +6109,7 @@
     markDraftFormClean();
     loadProductOptionAttachments(product.id);
     draftForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setStatus(product.is_published ? 'This item is published. Saving changes updates the live menu.' : 'Editing draft product. Save changes or cancel.');
+    setStatus('Edit your product details, then save.');
   };
 
 
@@ -6255,6 +6292,11 @@
       renderProductOptionEmpty('Unable to load option attachments.', assignmentError.message);
       return;
     }
+
+    const optionsSummary = draftForm.querySelector('[data-customer-options-summary]');
+    if (optionsSummary) optionsSummary.textContent = (assignments?.length
+      ? 'This product already has customer options. They are kept when you save. '
+      : 'This product has no customer options. ') + 'Option editing will be available in the next Menu Manager update.';
 
     if (!assignments || !assignments.length) {
       productOptionAttachments = [];
@@ -6952,30 +6994,30 @@
     }
 
     if (!variantGroupName) {
-      return { error: 'Variant group is required.' };
+      return { error: 'Choose how this product is sold.' };
     }
 
     if (!variantRows.length) {
-      return { error: 'Add at least one variant.' };
+      return { error: 'Add at least one size.' };
     }
 
     for (const [index, row] of variantRows.entries()) {
-      const label = row.querySelector('[data-variant-label]').value.trim();
-      const priceText = row.querySelector('[data-variant-price]').value.trim();
-      const costText = row.querySelector('[data-variant-cost]').value.trim();
+      const label = getSizeInput(row, 'label').value.trim();
+      const priceText = getSizeInput(row, 'price').value.trim();
+      const costText = getSizeInput(row, 'cost').value.trim();
       const price = Number(priceText);
       const cost = costText ? Number(costText) : null;
 
       if (!label) {
-        return { error: 'Variant label is required for row ' + (index + 1) + '.' };
+        return { error: 'Enter a size name for row ' + (index + 1) + '.' };
       }
 
       if (!priceText || !Number.isFinite(price) || price < 0) {
-        return { error: 'Variant price must be 0 or greater for row ' + (index + 1) + '.' };
+        return { error: 'Enter a price of 0 or more for row ' + (index + 1) + '.' };
       }
 
       if (costText && (!Number.isFinite(cost) || cost < 0)) {
-        return { error: 'Variant cost must be 0 or greater for row ' + (index + 1) + '.' };
+        return { error: 'Enter a cost of 0 or more for row ' + (index + 1) + '.' };
       }
 
       sizeRows.push({
@@ -7013,8 +7055,9 @@
         image_url: String(formData.get('image_url') || '').trim() || null,
         notes: String(formData.get('notes') || '').trim() || null,
         badge_labels: productBadgeLabels.slice(),
-        is_available: availableInput.checked,
-        is_sold_out: false,
+        menu_visible: draftForm.elements.menu_visible.checked,
+        is_available: draftForm.elements.menu_visible.checked ? true : availableInput.checked,
+        is_sold_out: draftForm.elements.is_sold_out.checked,
         is_curv_pick: formData.get('is_curv_pick') === 'on',
         is_seasonal: formData.get('is_seasonal') === 'on',
         is_published: false,
@@ -7119,9 +7162,8 @@
       }
     }
 
-    const finalPublishedState = typeof options.publishState === 'boolean'
-      ? options.publishState
-      : (isEditing ? existingProduct.is_published : false);
+    const visibilityChanged = draft.menu_visible !== Boolean(existingProduct?.is_published && existingProduct?.is_available);
+    const finalPublishedState = visibilityChanged || !isEditing ? draft.menu_visible : existingProduct.is_published;
 
     const saveGeneration = productEditorGeneration;
     const saveStillCurrent = () => isOwnerSignedIn && saveGeneration === productEditorGeneration;
@@ -7149,7 +7191,7 @@
       notes: draft.notes,
       badge_labels: draft.badge_labels,
       is_available: draft.is_available,
-      is_sold_out: isEditing ? existingProduct.is_sold_out : draft.is_sold_out,
+      is_sold_out: draft.is_sold_out,
       is_curv_pick: draft.is_curv_pick,
       is_seasonal: draft.is_seasonal,
       variant_group_name: draft.variant_group_name,
@@ -7158,7 +7200,7 @@
     const body = {
       product_id: editingProductId || null,
       expected_version: isEditing ? productEditorVersion : null,
-      action: typeof options.publishState === 'boolean' ? (options.publishState ? 'publish' : 'unpublish') : 'save',
+      action: finalPublishedState === Boolean(existingProduct?.is_published) ? 'save' : (finalPublishedState ? 'publish' : 'unpublish'),
       product: productPayload,
       sizes: draft.sizeRows.map(normalizeProductSizeState)
     };
@@ -7192,9 +7234,7 @@
       productSaveInProgress = false;
       syncEditorSaveLabels();
     }
-    setStatus(finalPublishedState
-      ? (response.data.orderable ? 'Saved. Customers can order this item.' : 'Saved. This item is currently unavailable.')
-      : 'Draft saved.');
+    setStatus(isEditing ? 'Changes saved.' : 'Product saved.');
     productSaveInProgress = false;
     } catch (error) {
       if (saveStillCurrent()) setStatus('Unable to confirm the save. Your changes are still here. Retry without changing them.');
@@ -7344,6 +7384,17 @@
       setStatus('Custom sold-by cancelled.');
     });
   }
+
+  draftForm?.querySelector('[data-multiple-sizes]')?.addEventListener('change', event => {
+    const status = draftForm.querySelector('[data-size-mode-status]');
+    if (!event.target.checked && getVariantRows().length > 1) {
+      event.target.checked = true;
+      status.textContent = 'Remove extra sizes first. Your sizes and prices have been kept.';
+    } else status.textContent = '';
+    syncPricingPresentation();
+  });
+  draftForm?.elements.menu_visible?.addEventListener('change', syncMenuStatusHelp);
+  draftForm?.elements.is_sold_out?.addEventListener('change', syncMenuStatusHelp);
 
   if (addVariantButton && variantList) {
     addVariantButton.addEventListener('click', () => {
