@@ -3,10 +3,17 @@
   'use strict';
   // This marker identifies the served asset itself; match CURV_CHECKOUT_RELEASE
   // deliberately when releasing, rather than borrowing the page's version.
-  const version = '2026-10-14.1';
-  // Never attach a second set of listeners or replace an existing controller.
-  // An incompatible existing controller stays blocked by the page's version gate.
-  if (window.curvCheckout) return;
+  const version = '2026-10-18.1';
+  // Registration is idempotent; bootstrap retires only a known idle controller.
+  if (window.curvCheckout) return; // Only bootstrap may retire an incompatible controller.
+  const diagnostic = stage => console.warn('[CURV checkout] ' + stage);
+  let disposed = false;
+  function acceptedFallback() {
+    const node = document.getElementById('submitOrderStatus');
+    if (node) { node.textContent = 'Your order was received, but we couldn\'t display the confirmation normally. Order ' + state.accepted.order_number + '.'; node.classList.remove('error'); node.classList.add('success'); }
+    const button = document.getElementById('submitOrderBtn');
+    if (button) { button.disabled = true; button.textContent = 'Order Submitted'; }
+  }
   const storageKey = 'curv-pending-order-v2';
   const trim = value => String(value ?? '').replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '') || null;
   const uuid = value => {
@@ -112,6 +119,7 @@
       + (p.fulfillment_type === 'delivery' ? '<p>Delivery fee and final total will be confirmed separately.</p>' : '') + '</div>';
   }
   async function quote(p) {
+    diagnostic('quote-start');
     const generation = ++state.generation;
     state.intentKey = JSON.stringify(p.items); state.orderKey = semantic(p);
     state.status = 'quoting'; state.quote = null; syncButton();
@@ -123,6 +131,7 @@
       if (error || !data?.ok || !validQuote(data.quote, p.items)) {
         state.status = 'error'; setSubmitOrderStatus(messages[data?.error?.code] || 'Unable to check current prices. Please retry.', 'error'); return null;
       }
+      diagnostic('quote-success');
       state.status = 'ready'; state.quote = data.quote; state.intentKey = JSON.stringify(p.items);
       return data.quote;
     } catch (_) { if (generation === state.generation) { state.status = 'error'; setSubmitOrderStatus('Unable to check current prices. Please retry.', 'error'); } return null; }
@@ -152,7 +161,7 @@
     else if (!button.disabled) button.textContent = 'Review Order';
   }
   async function submit() {
-    if (state.busy || isOrderSubmittedLocked) return;
+    if (disposed || state.accepted || state.busy || isOrderSubmittedLocked) return;
     if (storageCorrupt || (!pending && getStoredPublicSubmissionKey() && getStoredPublicSubmissionFailureMode() !== 'validation')) {
       setSubmitOrderStatus('A previous order needs to be checked before starting another. Use your tracking link or contact CURV; do not resend it as a new order.', 'error'); return;
     }
@@ -186,17 +195,26 @@
       const frozen = JSON.parse(JSON.stringify(pending));
       const client = getPublicSupabaseClient(); if (!client) throw Error('network');
       setSubmitOrderStatus('Submitting your order…');
+      diagnostic('submit-start');
       const { data, error } = await rpc(client, 'submit_public_order_v2', { p_request: frozen.request });
       if (error) throw Error('network');
       if (data?.order_number && getSafeTrackingToken(data.tracking_token)) {
-        // Clear before rendering; if removal fails, the same accepted request is
-        // still safe to replay on reload. Never rotate it into another attempt.
+        // Acceptance is irreversible for this key, regardless of optional display failures.
+        state.accepted = { order_number: String(data.order_number), tracking_token: data.tracking_token,
+          submission_key: frozen.request.payload.submission_key };
+        isOrderSubmittedLocked = true;
+        diagnostic('submit-success');
+        // Keep the frozen request until acceptance has been recorded. If storage is
+        // denied, retaining it is safe: replay uses the same key, never a new order.
+        try { sessionStorage.setItem('curv-accepted-order-v2', JSON.stringify(state.accepted)); }
+        catch (_) { diagnostic('accepted-storage-unavailable'); }
         pending = null; try { write(); } catch (_) { storageCorrupt = true; }
-        clearPublicSubmissionState();
-        lastSubmittedPublicOrderSignature = semantic(frozen.request.payload);
-        // Respect both original opt-in and any later withdrawal of consent.
-        if (frozen.remember) saveCustomerDetailsAfterSuccess(frozen.details);
-        handleSuccessfulPublicOrder(String(data.order_number), frozen.request.payload.fulfillment_type, frozen.subtotal, data.tracking_token);
+        try {
+          clearPublicSubmissionState();
+          lastSubmittedPublicOrderSignature = semantic(frozen.request.payload);
+          if (frozen.remember) saveCustomerDetailsAfterSuccess(frozen.details);
+          handleSuccessfulPublicOrder(String(data.order_number), frozen.request.payload.fulfillment_type, frozen.subtotal, data.tracking_token);
+        } catch (_) { diagnostic('success-render-failed'); acceptedFallback(); }
         return;
       }
       if (data?.error?.code === 'PRICE_CHANGED' && validQuote(data.quote, frozen.request.payload.items)) {
@@ -213,14 +231,25 @@
         pending.state = 'conflict'; write(); setSubmitOrderStatus('This request belongs to a different order. Check your tracking link or contact CURV before starting another.', 'error');
       } else throw Error('uncertain');
     } catch (_) {
+      if (state.accepted) { diagnostic('success-render-failed'); acceptedFallback(); return; }
+      diagnostic('uncertain-recovery');
       if (pending) { pending.state = 'ambiguous'; try { write(); } catch (_) {} }
       setSubmitOrderStatus(pending ? 'Your order could not be confirmed. Recover the previous order before starting another. Keep this tab open.' : 'Please review your cart and try again.', 'error');
     } finally {
-      state.reviewing = false; state.busy = false; isSubmittingPublicOrder = false; syncAnytimeOrderState(); syncButton();
+      state.reviewing = false; state.busy = false; isSubmittingPublicOrder = false;
+      try { syncAnytimeOrderState(); syncButton(); }
+      catch (_) { if (state.accepted) { diagnostic('success-render-failed'); acceptedFallback(); } else diagnostic('status-render-failed'); }
       if (state.refreshRequested) { state.refreshRequested = false; if (!uncertain() && !isOrderSubmittedLocked) setTimeout(submitPublicOrder, 0); }
     }
   }
-  const controller = { version, submit, changed, syncButton, reviewHtml, items, semantic, state, hasPending: () => !!pending, storageKey };
+  function dispose() {
+    if (state.busy || state.reviewing || state.refreshRequested || state.accepted) return false;
+    disposed = true; ++state.generation;
+    document.getElementById('formBody')?.removeEventListener('input', changed);
+    document.getElementById('formBody')?.removeEventListener('change', changed);
+    return true;
+  }
+  const controller = { dispose, version, submit, changed, syncButton, reviewHtml, items, semantic, state, hasPending: () => !!pending, storageKey };
   window.curvCheckout = controller;
   try {
     document.getElementById('submitOrderStatus')?.setAttribute('aria-live', 'polite');

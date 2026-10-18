@@ -3,6 +3,7 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const html = fs.readFileSync(path.join(__dirname, '../menu/index.html'), 'utf8').replace(/\r\n/g, '\n');
+  const legacyController = require('node:child_process').execFileSync('git', ['show', '1087d97ff7e329b50d5ccbbcb89358f538e898b5:menu/authoritative-checkout.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
   const controller = fs.readFileSync(path.join(__dirname, '../menu/authoritative-checkout.js'), 'utf8');
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   let assertions = 0;
@@ -29,6 +30,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       };
     }, { mode, pending, preserve });
     let body = html;
+    if (mode === 'old-html-new-js') body = body.replace("const CURV_CHECKOUT_RELEASE = '2026-10-18.1'", "const CURV_CHECKOUT_RELEASE = 'older-page'");
     if (mode === 'optional-global-missing') body = body.replace('const WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE =', 'const UNUSED_CLOSED_MESSAGE =');
     if (preserve) body = body.replace('const bootstrap = {', "cart = [{ key: 'preserved-cart', name: 'Keep me', qty: 1, price: 180 }];\n  const bootstrap = {");
     await page.route('**/*', route => {
@@ -38,11 +40,12 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         requests.push(url.href);
         if (mode === 'both-fail' || (mode === 'first-fails' && requests.length === 1)) return route.abort('failed');
         let script = controller;
+        if (mode === 'legacy-controller' && requests.length === 1) script = legacyController;
         if (mode === 'no-register') script = '/* loaded but no registration */';
         if (mode === 'init-failure' && requests.length === 1) script = "throw Error('Fixture initialization failure');";
         if (mode === 'late-init-failure' && requests.length === 1) script = script.replace('syncOrderBarState();', "throw Error('Fixture late initialization failure');");
-        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-10-14.1';", "const version = 'stale';");
-        if (mode === 'unmarked' && requests.length === 1) script = script.replace('const controller = { version, submit', 'const controller = { submit');
+        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-10-18.1';", "const version = 'stale';");
+        if (mode === 'unmarked' && requests.length === 1) script = script.replace('const controller = { dispose, version, submit', 'const controller = { dispose, submit');
         return route.fulfill({ contentType: 'application/javascript', body: script });
       }
       return route.abort('blockedbyclient');
@@ -53,22 +56,22 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   }
   try {
     let f = await open('normal');
-    equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-14.1', 'controller release');
+    equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-18.1', 'controller release');
     equal(await f.page.evaluate(() => getCompatibleCheckout() === curvCheckout), true, 'page/controller compatibility');
     equal(f.requests.length, 1, 'normal load once');
-    check(f.requests[0].endsWith('?v=2026-10-14.1'), 'explicit stable version URL');
+    check(f.requests[0].endsWith('?v=2026-10-18.1'), 'explicit stable version URL');
     equal(await f.page.evaluate(() => checkoutListenerAdds), 2, 'one listener set');
     await f.page.evaluate(() => {
       window.firstController = curvCheckout;
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'authoritative-checkout.js?v=2026-10-14.1&duplicate=1';
+        script.src = 'authoritative-checkout.js?v=2026-10-18.1&duplicate=1';
         script.onload = resolve; script.onerror = reject; document.body.appendChild(script);
       });
     });
     equal(await f.page.evaluate(() => firstController === curvCheckout && checkoutListenerAdds === 2), true, 'duplicate evaluation does not reinitialize');
     await f.page.close();
-    for (const mode of ['first-fails', 'init-failure', 'late-init-failure']) {
+    for (const mode of ['first-fails', 'init-failure', 'late-init-failure', 'mismatch', 'unmarked', 'legacy-controller']) {
       f = await open(mode, true);
       equal(f.requests.length, 2, mode + ': one recovery');
       check(f.requests[1].endsWith('&recovery=1'), mode + ': deterministic recovery URL');
@@ -80,7 +83,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       if (mode.includes('init')) check(f.logs.some(x => x.includes('initialization failure')), mode + ': initialization diagnostic');
       await f.page.close();
     }
-    for (const mode of ['both-fail', 'no-register', 'mismatch', 'unmarked']) {
+    for (const mode of ['both-fail', 'no-register', 'old-html-new-js']) {
       f = await open(mode, true);
       equal(f.requests.length, 2, mode + ': bounded requests');
       equal(await f.page.evaluate(() => getCompatibleCheckout()), null, mode + ': unusable controller');
