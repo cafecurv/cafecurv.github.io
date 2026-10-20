@@ -3,10 +3,10 @@
   'use strict';
   // This marker identifies the served asset itself; match CURV_CHECKOUT_RELEASE
   // deliberately when releasing, rather than borrowing the page's version.
-  const version = '2026-10-18.1';
+  const version = '2026-10-20.1';
   // Registration is idempotent; bootstrap retires only a known idle controller.
   if (window.curvCheckout) return; // Only bootstrap may retire an incompatible controller.
-  const diagnostic = stage => console.warn('[CURV checkout] ' + stage);
+  const diagnostic = stage => console.warn('[CURV checkout] ' + JSON.stringify({ stage, loadedRelease: version, timestamp: new Date().toISOString() }));
   let disposed = false;
   function acceptedFallback() {
     const node = document.getElementById('submitOrderStatus');

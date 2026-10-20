@@ -1,7 +1,7 @@
 // Actual HTML, asset bootstrap and checkout; all network intercepted. No SQL.
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require('playwright');
-const root = path.resolve(__dirname, '..');
+const root = process.env.CURV_CHECKOUT_TEST_ROOT || path.resolve(__dirname, '..');
 let n = 0;
 const eq = (a,b,m) => { assert.deepEqual(a,b,m); n++; };
 const ok = (v,m) => { assert.ok(v,m); n++; };
@@ -12,6 +12,7 @@ const ok = (v,m) => { assert.ok(v,m); n++; };
     await page.addInitScript(() => {
       localStorage.setItem('curv-hto-seen','1');
       window.calls = [];
+      const realTimer = window.setTimeout; window.setTimeout = (fn,ms,...args) => realTimer(fn,ms===30000?100:ms,...args);
       window.testRpc = async (name,args) => {
         calls.push({name,args:structuredClone(args)});
         const request = args?.p_request;
@@ -83,13 +84,15 @@ const ok = (v,m) => { assert.ok(v,m); n++; };
       if(fault!=='localStorage')ok(result.status.includes('couldn'), 'fallback visible');
       await p.evaluate(()=>submitPublicOrder());eq(await p.evaluate(()=>calls.length),2,'no duplicate network');await p.close();
     }
-    for(const failure of ['network','uncertain','rejection']) {
+    for(const failure of ['network','uncertain','rejection','timeout','rpc-error']) {
       const p=await open();await p.locator('#f-address').fill('Offline test address');
       await p.evaluate(failure=>{
         const original=testRpc;
         publicMenuSupabaseClient.rpc=async(name,args)=>{
           if(!name.startsWith('submit_'))return original(name,args);
           calls.push({name,args:structuredClone(args)});
+          if(failure==='timeout')return new Promise(()=>{});
+          if(failure==='rpc-error')return {error:{code:'fixture',message:'private diagnostic'}};
           if(failure==='network')throw Error('lost response');
           return {data:failure==='uncertain'?{}:{error:{code:'ORDER_CART_INVALID'}}};
         };
@@ -106,6 +109,11 @@ const ok = (v,m) => { assert.ok(v,m); n++; };
       }
       await p.close();
     }
+    const p=await open(); await p.locator('#f-address').fill('Offline test address');
+    await p.evaluate(()=>{publicMenuSupabaseClient.rpc=()=>{throw Error('offline');};});
+    await p.locator('#submitOrderBtn').click(); await p.waitForFunction(()=>!curvCheckout.state.busy);
+    ok((await p.locator('#submitOrderStatus').textContent()).includes('Unable to check current prices'), 'offline quote fails closed');
+    eq(await p.evaluate(()=>curvCheckout.hasPending()), false, 'offline quote creates no submission'); await p.close();
     console.log(n+' incident audit assertions passed; mocked RPC responses, all network intercepted, no SQL.');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
