@@ -10906,7 +10906,7 @@ body.night-mode .public-item-wrap {
     if (bootstrap.attempts >= 2) { showCheckoutUnavailable(); return; }
     bootstrap.status = 'recovering'; load(true);
   };
-  const asset = new URL('authoritative-checkout.js', window.location.href);
+  const asset = new URL('/menu/authoritative-checkout.js', window.location.origin);
   asset.searchParams.set('v', CURV_CHECKOUT_RELEASE);
   function load(recovery) {
     if (getCompatibleCheckout()) { ready(); return; }

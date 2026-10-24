@@ -13,7 +13,8 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   const pending = JSON.stringify({ version: 1, state: 'ambiguous', request: { payload: {
     submission_key: '11111111-1111-4111-8111-111111111111'
   } } });
-  async function open(mode, preserve = false) {
+  async function open(mode, preserve = false, menuPath = '/menu/') {
+    const pageUrl = 'https://curv.test' + menuPath;
     const page = await browser.newPage(), requests = [], logs = [];
     page.on('console', m => { if (m.text().startsWith('[CURV checkout]')) logs.push(m.text()); });
     await page.addInitScript(({ mode, pending, preserve }) => {
@@ -38,9 +39,10 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     if (preserve) body = body.replace('const bootstrap = {', "cart = [{ key: 'preserved-cart', name: 'Keep me', qty: 1, price: 180 }];\n  const bootstrap = {");
     await page.route('**/*', async route => {
       const url = new URL(route.request().url());
-      if (url.href === 'https://curv.test/menu/') return route.fulfill({ contentType: 'text/html', body });
+      if (url.href === pageUrl) return route.fulfill({ contentType: 'text/html', body });
+      if (url.pathname.endsWith('/authoritative-checkout.js')) requests.push(url.href);
+      if (url.pathname === '/authoritative-checkout.js') return route.fulfill({ status: 404, body: 'Not found' });
       if (url.pathname === '/menu/authoritative-checkout.js') {
-        requests.push(url.href);
         if(mode === 'delayed') await new Promise(resolve => setTimeout(resolve, 600));
         if (mode === 'both-fail' || (mode === 'first-fails' && requests.length === 1)) return route.abort('failed');
         let script = controller;
@@ -55,7 +57,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       }
       return route.abort('blockedbyclient');
     });
-    await page.goto('https://curv.test/menu/', { waitUntil: mode === 'delayed' ? 'domcontentloaded' : 'load' });
+    await page.goto(pageUrl, { waitUntil: mode === 'delayed' ? 'domcontentloaded' : 'load' });
     if(mode === 'delayed') {
       await page.evaluate(()=>submitPublicOrder());
       check((await page.locator('#submitOrderStatus').textContent()).includes('Loading secure checkout'), 'delayed asset gets waiting state');
@@ -65,6 +67,28 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     return { page, requests, logs };
   }
   try {
+    // Serve the same HTML without redirecting slashless URLs, as production does.
+    // Browser URL resolution and the actual bootstrap/controller are exercised.
+    for (const menuPath of ['/menu/', '/menu', '/menu?fbclid=test', '/menu/?fbclid=test']) {
+      for (const mode of ['normal', 'first-fails']) {
+        const f = await open(mode, true, menuPath);
+        equal(await f.page.evaluate(() => location.pathname + location.search), menuPath, 'URL stays unnormalized: ' + menuPath);
+        equal(await f.page.evaluate(() => curvCheckoutBootstrap.status), 'ready', mode + ': ready at ' + menuPath);
+        equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-20.1', 'registered expected controller');
+        equal(f.requests.length, mode === 'normal' ? 1 : 2, 'bounded requests');
+        for (const [index, request] of f.requests.entries()) {
+          const url = new URL(request);
+          equal(url.pathname, '/menu/authoritative-checkout.js', 'initial/recovery menu-root pathname');
+          equal(url.searchParams.get('v'), '2026-10-20.1', 'release preserved on every attempt');
+          equal(url.searchParams.has('recovery'), index === 1, 'recovery only on second attempt');
+        }
+        equal(f.requests.some(request => new URL(request).pathname === '/authoritative-checkout.js'), false, 'never request root-level checkout');
+        equal(await f.page.locator('#checkoutLoadHelp').count(), 0, 'no exhausted-recovery fallback');
+        equal(await f.page.evaluate(() => checkoutListenerAdds - checkoutListenerRemoves), 2, 'one listener set');
+        equal(await f.page.evaluate(() => sessionStorage.getItem('curv-pending-order-v2')), pending, 'pending request unchanged');
+        await f.page.close();
+      }
+    }
     let f = await open('normal');
     equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-20.1', 'controller release');
     equal(await f.page.evaluate(() => getCompatibleCheckout() === curvCheckout), true, 'page/controller compatibility');
