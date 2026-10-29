@@ -8715,10 +8715,15 @@ body.night-mode .public-item-wrap {
       // Create header
       const header = document.createElement('div');
       header.className = 'accordion-header';
-      header.innerHTML = `
-        <span class="accordion-label">${groupLabel}</span>
-        <span class="accordion-summary${isPlaceholder ? ' is-placeholder' : ''}">${displayText}</span>
-        <span class="accordion-chevron">▼</span>`;
+      // Labels and prefilled customer notes are text, never HTML.
+      const label = document.createElement('span');
+      label.className = 'accordion-label'; label.textContent = groupLabel;
+      const summary = document.createElement('span');
+      summary.className = 'accordion-summary' + (isPlaceholder ? ' is-placeholder' : '');
+      summary.textContent = displayText;
+      const chevron = document.createElement('span');
+      chevron.className = 'accordion-chevron'; chevron.textContent = '▼';
+      header.append(label, summary, chevron);
       header.addEventListener('click', () => toggleAccordionGroup(header));
 
       // Create body — move existing group content inside
@@ -8801,7 +8806,13 @@ body.night-mode .public-item-wrap {
     }
 
     let total = 0;
-    itemsEl.innerHTML = cart.map(item => {
+    const cartNode = (tag, className, text) => {
+      const node = document.createElement(tag);
+      node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    itemsEl.replaceChildren(...cart.map(item => {
       total += item.price * item.qty;
 
       // Line 1: name · variant · temp
@@ -8822,31 +8833,29 @@ body.night-mode .public-item-wrap {
         return (p > 0) ? `${display} +₱${p.toLocaleString()}` : display;
       }).filter(Boolean);
       if (optsObj.note) optParts.push('Note: ' + optsObj.note);
-      const optsHtml = optParts.length
-        ? `<div class="cart-item-opts">${optParts.join(' · ')}</div>`
-        : '';
-
-      const safeKey = item.key.replace(/'/g, "\\'");
-      const lockedAttr = isOrderSubmittedLocked ? ' disabled' : '';
-      return `
-        <div class="cart-item">
-          <div class="cart-item-left">
-            <div>
-              <div class="cart-item-name">${primaryLabel}</div>
-              ${optsHtml}
-            </div>
-          </div>
-          <div class="cart-item-right">
-            <div class="cart-qty-controls">
-              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', -1)"${lockedAttr}>−</button>
-              <span class="cart-qty-num">${item.qty}</span>
-              <button class="cart-qty-btn" onclick="updateQty('${safeKey}', 1)"${lockedAttr}>+</button>
-            </div>
-            <span class="cart-item-price">₱${(item.price * item.qty).toLocaleString()}</span>
-            <button class="cart-remove" onclick="removeItem('${safeKey}')"${lockedAttr}>×</button>
-          </div>
-        </div>`;
-    }).join('');
+      const row = cartNode('div', 'cart-item');
+      const left = cartNode('div', 'cart-item-left');
+      const description = cartNode('div', '');
+      description.append(cartNode('div', 'cart-item-name', primaryLabel));
+      if (optParts.length) description.append(cartNode('div', 'cart-item-opts', optParts.join(' · ')));
+      left.append(description);
+      const right = cartNode('div', 'cart-item-right');
+      const controls = cartNode('div', 'cart-qty-controls');
+      const action = (className, label, run) => {
+        const button = cartNode('button', className, label);
+        button.type = 'button'; button.disabled = isOrderSubmittedLocked;
+        button.addEventListener('click', run);
+        return button;
+      };
+      // Keys include the literal customer note. Keep them out of HTML/JavaScript attributes.
+      controls.append(action('cart-qty-btn', '−', () => updateQty(item.key, -1)),
+        cartNode('span', 'cart-qty-num', item.qty),
+        action('cart-qty-btn', '+', () => updateQty(item.key, 1)));
+      right.append(controls, cartNode('span', 'cart-item-price', '₱' + (item.price * item.qty).toLocaleString()),
+        action('cart-remove', '×', () => removeItem(item.key)));
+      row.append(left, right);
+      return row;
+    }));
 
     totalAmtEl.textContent = '₱' + total.toLocaleString();
   }
