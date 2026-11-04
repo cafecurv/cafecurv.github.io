@@ -1,0 +1,41 @@
+html.curv-kiosk-pending body { visibility:hidden; }
+body.curv-kiosk > header { position:relative; }
+.kiosk-screen { position:fixed;inset:0;z-index:12000;background:#f7f3ec;color:#322c25;display:grid;place-items:center;padding:24px;overflow:auto; }
+.kiosk-screen[hidden] { display:none; }
+.kiosk-card { width:min(100%,640px);background:#fffaf3;border:1px solid #d8ccbc;border-radius:28px;padding:clamp(24px,5vw,48px);text-align:center;box-shadow:0 12px 60px #33210b12; }
+.kiosk-card h1 { font:600 clamp(28px,5vw,44px)/1.15 Georgia,serif;margin:12px 0 16px; }
+.kiosk-card p { font-size:18px;line-height:1.5;margin:10px 0; }
+.kiosk-card label { display:block;margin-top:16px; }
+.kiosk-card input { box-sizing:border-box;width:100%;font-family:inherit;font-size:24px;line-height:1.5;border:1px solid #a99883;border-radius:14px;padding:16px;margin:16px 0; }
+.kiosk-card button,.kiosk-banner button { min-height:52px;padding:14px 22px;border:1px solid #6f654b;border-radius:14px;background:#4e5c3a;color:#fff;font-family:inherit;font-weight:600;font-size:18px;line-height:1.3;cursor:pointer; }
+.kiosk-card button:disabled { opacity:.55;cursor:wait; }
+.kiosk-choices { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0; }
+.kiosk-choices button { min-height:150px;display:grid;align-content:center;gap:8px; }
+.kiosk-choices small { display:block;font-weight:400;font-size:15px; }
+.kiosk-error { color:#8e332b;min-height:1.5em; }
+.kiosk-card .kiosk-order-number { font-size:clamp(44px,8vw,72px);font-weight:700;overflow-wrap:anywhere;margin:24px 0; }
+.kiosk-banner { position:sticky;top:0;z-index:1000;background:#f5eddf;padding:10px 20px;display:flex;gap:16px;justify-content:space-between;align-items:center; }
+body.curv-kiosk #formBody > .form-group { display:none; }
+body.curv-kiosk #formBody > .form-group:has(#cartBox),body.curv-kiosk #special-requests-field { display:block; }
+body.curv-kiosk #delivery-fields,body.curv-kiosk #delivery-fee-info,body.curv-kiosk #recentOrderReminder,
+body.curv-kiosk #copyBtn,body.curv-kiosk #openMessengerBtn,body.curv-kiosk #htoOverlay { display:none!important; }
+body.curv-kiosk #formFloat { max-height:85dvh; }
+.kiosk-card a { color:#414f2f; }
+@media(max-width:480px) { .kiosk-screen { padding:16px; }.kiosk-card { padding:24px 18px; }.kiosk-choices { gap:10px; }.kiosk-choices button { font-size:16px;padding:12px; }.kiosk-banner { font-size:14px; } }
+
+/* Shared-tablet presentation only; ordinary customer pages are unaffected. */
+body.curv-kiosk #siteNav,
+body.curv-kiosk .site-mobile-nav,
+body.curv-kiosk .site-footer,
+body.curv-kiosk .faq-btn,
+body.curv-kiosk .faq-overlay,
+body.curv-kiosk .faq-sheet,
+body.curv-kiosk .order-confirm-website-copy { display:none!important; }
+body.curv-kiosk .add-btn { min-width:48px;min-height:48px; }
+body.curv-kiosk .item-desc { font-weight:400; }
+body.curv-kiosk .item-desc,
+body.curv-kiosk .item-desc * { font-size:15px!important; }
+body.curv-kiosk .nav-tab,
+body.curv-kiosk .temp-tab { font-size:14px; }
+body.curv-kiosk .submit-btn,
+body.curv-kiosk .order-btn { font-size:18px; }

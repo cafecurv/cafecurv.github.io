@@ -155,8 +155,11 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       renderFixture();ok(getFixturePanel(7).querySelector('.panel-add-btn').disabled,'missing temperature compatibility fails closed');
       menuFixture.configurationCompatibility=[{product_id:fixtureId(7),product_size_id:fixtureId(1060),option_choice_id:fixtureId(610),is_active:true},{product_id:fixtureId(7),product_size_id:fixtureId(1061),option_choice_id:fixtureId(610),is_active:true},{product_id:fixtureId(7),product_size_id:fixtureId(1062),option_choice_id:fixtureId(611),is_active:true}];
       renderPublicMenuFromSupabase(menuFixture);cart.length=0;add(7);ok(cart[0].temp==='ICED'&&cart[0].option_choice_ids[0]===fixtureId(610),'ICED stable identity');
-      openFixture(7);pick(7,'temperature','hot');ok(getFixturePanel(7).querySelector('.panel-add-btn').disabled,'HOT regular forbidden');
-      getFixturePanel(7).querySelector('[data-size-id="'+fixtureId(1062)+'"]').click();add(7);
+      openFixture(7);pick(7,'temperature','hot');
+      ok(!getFixturePanel(7).querySelector('.panel-add-btn').disabled,'Spanish Latte HOT automatically selects a compatible serving');
+      ok(getFixturePanel(7).querySelector('[data-size-id].selected').dataset.sizeId===fixtureId(1062),'Spanish Latte HOT selects the existing Hot 12oz UUID');
+      ok([1060,1061].every(n=>{const chip=getFixturePanel(7).querySelector('[data-size-id="'+fixtureId(n)+'"]');return chip.style.display==='none'&&!chip.classList.contains('selected');}),'Spanish Latte incompatible iced sizes are hidden and unselected');
+      add(7);
       ok(cart.length===2 && cart[1].temp==='HOT' && cart[1].product_size_id===fixtureId(1062)&&cart[1].option_choice_ids[0]===fixtureId(611),'HOT distinct size/choice identity');
       cart.length=0;addItem('Fake','',1,null);ok(cart.length===0,'legacy helper blocked');
       publicItemPanels.clear();document.getElementById('espresso').innerHTML='<div id="espresso-panels-mount"></div>';renderAllEspressoPanels();updatePanelPrice('spanish-latte');panelAddToCart('spanish-latte','Spanish Latte');ok(cart.length===0,'pre-hydration fallback cannot add');

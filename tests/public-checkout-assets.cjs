@@ -5,6 +5,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
   const root = process.env.CURV_CHECKOUT_TEST_ROOT || path.resolve(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'menu/index.html'), 'utf8').replace(/\r\n/g, '\n');
   const legacyController = require('node:child_process').execFileSync('git', ['show', '1087d97ff7e329b50d5ccbbcb89358f538e898b5:menu/authoritative-checkout.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
+  const deployedController = require('node:child_process').execFileSync('git', ['show', '9c1dec0f6d1113e91ec0915e49613e1f0341ff6f:menu/authoritative-checkout.js'], { cwd: path.join(__dirname, '..'), encoding: 'utf8' });
   const controller = fs.readFileSync(path.join(root, 'menu/authoritative-checkout.js'), 'utf8');
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   let assertions = 0;
@@ -34,24 +35,26 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       };
     }, { mode, pending, preserve });
     let body = html;
-    if (mode === 'old-html-new-js') body = body.replace("const CURV_CHECKOUT_RELEASE = '2026-10-20.1'", "const CURV_CHECKOUT_RELEASE = 'older-page'");
+    if (mode === 'old-html-new-js') body = body.replace("const CURV_CHECKOUT_RELEASE = '2026-10-28.2'", "const CURV_CHECKOUT_RELEASE = '2026-10-20.1'");
     if (mode === 'optional-global-missing') body = body.replace('const WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE =', 'const UNUSED_CLOSED_MESSAGE =');
     if (preserve) body = body.replace('const bootstrap = {', "cart = [{ key: 'preserved-cart', name: 'Keep me', qty: 1, price: 180 }];\n  const bootstrap = {");
     await page.route('**/*', async route => {
       const url = new URL(route.request().url());
-      if (url.href === pageUrl) return route.fulfill({ contentType: 'text/html', body });
+      if (mode === 'kiosk-entry' && url.pathname === '/kiosk/') return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, 'kiosk/index.html'), 'utf8') });
+      if (url.href === pageUrl || (mode === 'kiosk-entry' && url.pathname === '/menu/' && url.search === '?kiosk=1')) return route.fulfill({ contentType: 'text/html', body });
       if (url.pathname.endsWith('/authoritative-checkout.js')) requests.push(url.href);
       if (url.pathname === '/authoritative-checkout.js') return route.fulfill({ status: 404, body: 'Not found' });
       if (url.pathname === '/menu/authoritative-checkout.js') {
         if(mode === 'delayed') await new Promise(resolve => setTimeout(resolve, 600));
         if (mode === 'both-fail' || (mode === 'first-fails' && requests.length === 1)) return route.abort('failed');
         let script = controller;
+        if (mode === 'deployed-only' || mode === 'deployed-first' && requests.length === 1) script = deployedController;
         if (mode === 'legacy-controller' && requests.length === 1) script = legacyController;
         if (mode === 'no-register') script = '/* loaded but no registration */';
         if (mode === 'init-failure' && requests.length === 1) script = "throw Error('Fixture initialization failure');";
         if (mode === 'late-init-failure' && requests.length === 1) script = script.replace('syncOrderBarState();', "throw Error('Fixture late initialization failure');");
-        if (mode === 'active-stale') script = script.replace("const version = '2026-10-20.1';", "const version = 'stale';") + '\nwindow.curvCheckout.state.busy = true;';
-        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-10-20.1';", "const version = 'stale';");
+        if (mode === 'active-stale') script = script.replace("const version = '2026-10-28.2';", "const version = 'stale';") + '\nwindow.curvCheckout.state.busy = true;';
+        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-10-28.2';", "const version = 'stale';");
         if (mode === 'unmarked' && requests.length === 1) script = script.replace('const controller = { dispose, version, submit', 'const controller = { dispose, submit');
         return route.fulfill({ contentType: 'application/javascript', body: script });
       }
@@ -74,12 +77,12 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const f = await open(mode, true, menuPath);
         equal(await f.page.evaluate(() => location.pathname + location.search), menuPath, 'URL stays unnormalized: ' + menuPath);
         equal(await f.page.evaluate(() => curvCheckoutBootstrap.status), 'ready', mode + ': ready at ' + menuPath);
-        equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-20.1', 'registered expected controller');
+        equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-28.2', 'registered expected controller');
         equal(f.requests.length, mode === 'normal' ? 1 : 2, 'bounded requests');
         for (const [index, request] of f.requests.entries()) {
           const url = new URL(request);
           equal(url.pathname, '/menu/authoritative-checkout.js', 'initial/recovery menu-root pathname');
-          equal(url.searchParams.get('v'), '2026-10-20.1', 'release preserved on every attempt');
+          equal(url.searchParams.get('v'), '2026-10-28.2', 'release preserved on every attempt');
           equal(url.searchParams.has('recovery'), index === 1, 'recovery only on second attempt');
         }
         equal(f.requests.some(request => new URL(request).pathname === '/authoritative-checkout.js'), false, 'never request root-level checkout');
@@ -89,23 +92,24 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         await f.page.close();
       }
     }
+    // Protected kiosk bootstrap is covered by public-kiosk-v2-browser.cjs.
     let f = await open('normal');
-    equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-20.1', 'controller release');
+    equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-28.2', 'controller release');
     equal(await f.page.evaluate(() => getCompatibleCheckout() === curvCheckout), true, 'page/controller compatibility');
     equal(f.requests.length, 1, 'normal load once');
-    check(f.requests[0].endsWith('?v=2026-10-20.1'), 'explicit stable version URL');
+    check(f.requests[0].endsWith('?v=2026-10-28.2'), 'explicit stable version URL');
     equal(await f.page.evaluate(() => checkoutListenerAdds), 2, 'one listener set');
     await f.page.evaluate(() => {
       window.firstController = curvCheckout;
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'authoritative-checkout.js?v=2026-10-20.1&duplicate=1';
+        script.src = 'authoritative-checkout.js?v=2026-10-28.2&duplicate=1';
         script.onload = resolve; script.onerror = reject; document.body.appendChild(script);
       });
     });
     equal(await f.page.evaluate(() => firstController === curvCheckout && checkoutListenerAdds === 2), true, 'duplicate evaluation does not reinitialize');
     await f.page.close();
-    for (const mode of ['first-fails', 'init-failure', 'late-init-failure', 'mismatch', 'unmarked', 'legacy-controller', 'pre-registered']) {
+    for (const mode of ['first-fails', 'init-failure', 'late-init-failure', 'mismatch', 'unmarked', 'legacy-controller', 'pre-registered', 'deployed-first']) {
       f = await open(mode, true);
       equal(f.requests.length, 2, mode + ': one recovery');
       check(new URL(f.requests[1]).searchParams.get('recovery') === '1' && !!new URL(f.requests[1]).searchParams.get('attempt'), mode + ': deterministic recovery URL');
@@ -117,7 +121,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       if (mode.includes('init')) check(f.logs.some(x => x.includes('initialization failure')), mode + ': initialization diagnostic');
       await f.page.close();
     }
-    for (const mode of ['both-fail', 'no-register', 'old-html-new-js']) {
+    for (const mode of ['both-fail', 'no-register', 'old-html-new-js', 'deployed-only']) {
       f = await open(mode, true);
       equal(f.requests.length, 2, mode + ': bounded requests');
       equal(await f.page.evaluate(() => getCompatibleCheckout()), null, mode + ': unusable controller');
