@@ -8159,6 +8159,7 @@
 
   const setSignedInState = (isSignedIn, email = '') => {
     isOwnerSignedIn = isSignedIn;
+    if (!isSignedIn) resetKioskControls();
     signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
     updateOwnerAccountUi();
     if (orderSearchInput) orderSearchInput.disabled = !isOwnerSignedIn;
@@ -9908,6 +9909,189 @@
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+  const kioskControls = ordersRoot.querySelector('[data-kiosk-controls]');
+  const kioskMode = kioskControls?.querySelector('[data-kiosk-mode-status]');
+  const kioskDevices = kioskControls?.querySelector('[data-kiosk-devices]');
+  const kioskMessage = kioskControls?.querySelector('[data-kiosk-message]');
+  const kioskError = kioskControls?.querySelector('[data-kiosk-error]');
+  const kioskModeButtons = kioskControls?.querySelectorAll('[data-kiosk-mode]') ?? [];
+  const kioskRefresh = kioskControls?.querySelector('[data-kiosk-refresh]');
+  let kioskOwnerId = null;
+  let kioskSessionGeneration = 0;
+  let kioskBusy = false;
+  let kioskSnapshot = null;
+
+  const renderKioskControls = () => {
+    const mode = kioskSnapshot?.mode;
+    kioskMode.textContent = mode ? mode.toUpperCase() : 'Unknown';
+    kioskMode.classList.toggle('is-paused', mode === 'off' || mode === 'drain');
+    kioskMode.classList.toggle('is-loading', !mode);
+    kioskModeButtons.forEach(button => {
+      button.disabled = kioskBusy || !mode || button.dataset.kioskMode === mode;
+    });
+    kioskRefresh.disabled = kioskBusy;
+    kioskDevices.replaceChildren();
+
+    if (kioskSnapshot?.devices.length === 0) {
+      kioskDevices.textContent = 'No kiosk devices enrolled.';
+    }
+
+    for (const device of kioskSnapshot?.devices ?? []) {
+      const item = document.createElement('div');
+      item.className = 'kiosk-device';
+      const label = document.createElement('strong');
+      label.textContent = 'Device ' + device.device_id;
+      const details = document.createElement('p');
+      details.textContent = device.state[0].toUpperCase() + device.state.slice(1)
+        + ' · Authorization expires ' + new Date(device.valid_until).toLocaleString();
+      const actions = document.createElement('div');
+      actions.className = 'website-ordering-state-row';
+      for (const [action, active] of [['Renew authorization', true], ['Revoke authorization', false]]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'auth-button auth-button-secondary website-ordering-toggle';
+        button.textContent = action;
+        button.disabled = kioskBusy || !device.active;
+        button.addEventListener('click', () => changeKioskDevice(device, active));
+        actions.append(button);
+      }
+      item.append(label, details, actions);
+      kioskDevices.append(item);
+    }
+  };
+
+  const resetKioskControls = () => {
+    kioskSessionGeneration += 1;
+    kioskOwnerId = null;
+    kioskSnapshot = null;
+    kioskBusy = false;
+    if (!kioskControls) return;
+    kioskControls.hidden = true;
+    kioskControls.setAttribute('aria-busy', 'false');
+    kioskMessage.textContent = '';
+    kioskError.hidden = true;
+    kioskError.textContent = '';
+    renderKioskControls();
+  };
+
+  const requestKioskStatus = async (change) => {
+    if (kioskBusy || !kioskOwnerId || kioskControls.hidden || (change && !kioskSnapshot)) return;
+    const generation = kioskSessionGeneration;
+    kioskBusy = true;
+    kioskControls.setAttribute('aria-busy', 'true');
+    kioskMessage.textContent = change ? 'Saving kiosk changes…' : 'Loading kiosk status…';
+    kioskError.hidden = true;
+    renderKioskControls();
+
+    try {
+      if (change) {
+        const { data, error } = await client.rpc(change.rpc, change.args);
+        if (generation !== kioskSessionGeneration) return;
+        if (error || !change.accepted(data)) throw error || new Error('Unconfirmed change');
+      }
+      const { data, error } = await client.rpc('kiosk_owner_status');
+      if (generation !== kioskSessionGeneration) return;
+      if (error) throw error;
+      if (!['on', 'off', 'drain'].includes(data?.mode) || !Array.isArray(data.devices)
+        || !data.devices.every(device => typeof device?.device_id === 'string'
+          && typeof device.principal === 'string' && typeof device.active === 'boolean'
+          && typeof device.drain === 'boolean' && Number.isFinite(Date.parse(device.valid_until))
+          && ['authorized', 'draining', 'expired', 'revoked'].includes(device.state))) {
+        throw new Error('Incomplete kiosk status');
+      }
+
+      kioskSnapshot = data;
+      if (change && !change.confirmed(data)) throw new Error('Change not reflected in kiosk status');
+      kioskMessage.textContent = change ? change.success : '';
+    } catch (error) {
+      if (generation !== kioskSessionGeneration) return;
+      if (error?.details === 'KIOSK_OWNER_REQUIRED') {
+        resetKioskControls();
+        return;
+      }
+      kioskSnapshot = null;
+      kioskMessage.textContent = '';
+      kioskError.textContent = change
+        ? 'Could not confirm the change. Refresh kiosk status before trying again.'
+        : 'Could not load kiosk status. Refresh to try again.';
+      kioskError.hidden = false;
+    } finally {
+      if (generation === kioskSessionGeneration) {
+        kioskBusy = false;
+        kioskControls.setAttribute('aria-busy', 'false');
+        renderKioskControls();
+      }
+    }
+  };
+
+  const changeKioskDevice = (device, active) => {
+    if (kioskBusy || !kioskSnapshot?.devices.includes(device) || !device.active) return;
+    const prompt = active ? 'Renew this device for 23 hours and 55 minutes?'
+      : 'Revoke this device’s kiosk authorization?';
+    if (!window.confirm(prompt)) return;
+    const validUntil = active
+      ? new Date(Date.now() + (24 * 60 - 5) * 60000).toISOString()
+      : device.valid_until;
+
+    void requestKioskStatus({
+      rpc: 'kiosk_owner_device',
+      args: {
+        p_principal: device.principal, p_active: active,
+        p_valid_until: validUntil, p_drain: device.drain,
+      },
+      accepted: data => data?.device_id === device.device_id,
+      confirmed: data => data.devices.some(row => row.device_id === device.device_id
+        && row.active === active && row.drain === device.drain
+        && Date.parse(row.valid_until) === Date.parse(validUntil)),
+      success: active ? 'Device authorization renewed.' : 'Device authorization revoked.',
+    });
+  };
+
+  kioskModeButtons.forEach(button => button.addEventListener('click', () => {
+    if (kioskBusy || !kioskSnapshot) return;
+    const mode = button.dataset.kioskMode;
+    const label = mode.toUpperCase();
+    if (mode === kioskSnapshot.mode || !window.confirm('Turn customer kiosk ordering ' + label + '?')) return;
+    void requestKioskStatus({
+      rpc: 'kiosk_owner_mode',
+      args: { p_mode: mode },
+      accepted: data => data?.mode === mode,
+      confirmed: data => data.mode === mode,
+      success: 'Kiosk mode set to ' + label + '.',
+    });
+  }));
+  kioskRefresh?.addEventListener('click', () => void requestKioskStatus());
+
+  const loadKioskControls = async (user) => {
+    if (!kioskControls || !user?.id || kioskOwnerId === user.id) return;
+    resetKioskControls();
+    const generation = kioskSessionGeneration;
+    kioskOwnerId = user.id;
+    try {
+      const { data, error } = await client.rpc('is_admin');
+      if (generation !== kioskSessionGeneration || error || data !== true) return;
+      kioskControls.hidden = false;
+      await requestKioskStatus();
+    } catch {
+      if (generation === kioskSessionGeneration) resetKioskControls();
+    }
+  };
+
+  if (kioskControls) {
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (kioskOwnerId && session?.user?.id !== kioskOwnerId)) {
+        resetKioskControls();
+      }
+    });
+    window.addEventListener('pagehide', resetKioskControls);
+    window.addEventListener('pageshow', async event => {
+      if (!event.persisted) return;
+      const generation = kioskSessionGeneration;
+      const { data } = await client.auth.getSession();
+      if (generation === kioskSessionGeneration) void loadKioskControls(data?.session?.user);
+    });
+  }
+
   const getOrderAlertKey = (order) => String(order && (order.id || order.order_number || order.created_at) || '').trim();
 
   const getCancellationRequestKey = (order) => {
@@ -10254,6 +10438,7 @@
     const isSignedIn = Boolean(data && data.session && data.session.user);
     setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
     if (isSignedIn) {
+      void loadKioskControls(data.session.user);
       await loadWebsiteOrderingStatus();
       await loadOrderSummary();
       await loadOrders();
@@ -10397,7 +10582,7 @@
 
       setStatus('Signing in...');
       setFormDisabled(true);
-      const { error } = await client.auth.signInWithPassword({ email, password });
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
       setFormDisabled(false);
       if (error) {
         setSignedInState(false);
@@ -10411,6 +10596,7 @@
 
       if (passwordInput) passwordInput.value = '';
       setSignedInState(true, email);
+      void loadKioskControls(data?.user ?? data?.session?.user);
       closeOwnerAccountMenu();
       await loadWebsiteOrderingStatus();
       await loadOrderSummary();

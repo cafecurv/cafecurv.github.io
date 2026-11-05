@@ -6325,6 +6325,34 @@ body.more-drawer-open {
   color: var(--accent);
 }
 
+.ordering-controls {
+  display: none;
+  max-width: 100%;
+}
+
+.ordering-controls:has(> :not([hidden])) {
+  display: grid;
+  gap: 0.5rem;
+}
+
+[data-kiosk-controls] .website-ordering-state-row {
+  flex-wrap: wrap;
+}
+
+.kiosk-devices {
+  display: grid;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.kiosk-device p {
+  margin: 0.25rem 0;
+}
+
+.kiosk-device .website-ordering-state-row {
+  justify-content: flex-start;
+}
+
 .website-ordering-control {
   min-height: 34px;
   border: 1px solid rgba(200, 184, 154, 0.18);
@@ -8164,6 +8192,7 @@ body.more-drawer-open {
     justify-content: center;
   }
 
+  .ordering-controls,
   .website-ordering-control {
     width: 100%;
   }

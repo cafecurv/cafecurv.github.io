@@ -14,9 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Jost:wght@300;400;500;600&family=Raleway:ital,wght@1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=c2-customers">
+  <link rel="stylesheet" href="admin.css?v=kiosk-controls-1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=orders-schema-compat" defer></script>
+  <script src="admin.js?v=kiosk-controls-1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -135,39 +135,53 @@
       <section class="incoming-order-meta-row" aria-label="Incoming order quick controls">
         <span class="incoming-order-today-pill">Today: <strong data-orders-today-total>PHP 0</strong></span>
         <button type="button" class="order-sound-toggle" data-order-sound-toggle aria-pressed="false">Sound off</button>
-        <section
-          class="website-ordering-control"
-          data-website-ordering-control
-          role="group"
-          aria-labelledby="website-ordering-label"
-          hidden
-        >
-          <p
-            id="website-ordering-label"
-            class="website-ordering-label"
-          >
-            Website Ordering
-          </p>
-
-          <div
-            class="website-ordering-state-row"
-            data-website-ordering-state-row
-          ></div>
-
-          <p
-            class="website-ordering-live"
-            data-website-ordering-live
-            role="status"
-            aria-live="polite"
-          ></p>
-
-          <p
-            class="website-ordering-error"
-            data-website-ordering-error
-            role="alert"
+        <div class="ordering-controls">
+          <section
+            class="website-ordering-control"
+            data-website-ordering-control
+            role="group"
+            aria-labelledby="website-ordering-label"
             hidden
-          ></p>
-        </section>
+          >
+            <p
+              id="website-ordering-label"
+              class="website-ordering-label"
+            >
+              Website Ordering
+            </p>
+
+            <div
+              class="website-ordering-state-row"
+              data-website-ordering-state-row
+            ></div>
+
+            <p
+              class="website-ordering-live"
+              data-website-ordering-live
+              role="status"
+              aria-live="polite"
+            ></p>
+
+            <p
+              class="website-ordering-error"
+              data-website-ordering-error
+              role="alert"
+              hidden
+            ></p>
+          </section>
+          <section class="website-ordering-control" data-kiosk-controls aria-labelledby="kiosk-controls-label" hidden>
+            <h2 id="kiosk-controls-label" class="website-ordering-label">Kiosk Controls</h2>
+            <div class="website-ordering-state-row">
+              <span class="website-ordering-status" data-kiosk-mode-status>Unknown</span>
+              <button type="button" class="auth-button website-ordering-toggle" data-kiosk-mode="on" disabled>Turn kiosk ON</button>
+              <button type="button" class="auth-button auth-button-secondary website-ordering-toggle" data-kiosk-mode="off" disabled>Turn kiosk OFF</button>
+              <button type="button" class="auth-button auth-button-secondary website-ordering-toggle" data-kiosk-refresh aria-label="Refresh kiosk status">Refresh</button>
+            </div>
+            <p class="website-ordering-live" data-kiosk-message role="status"></p>
+            <p class="website-ordering-error" data-kiosk-error role="alert" hidden></p>
+            <div class="website-ordering-live kiosk-devices" data-kiosk-devices></div>
+          </section>
+        </div>
       </section>
 
       <section class="order-search-shell" data-order-search-shell aria-label="Universal order search">
