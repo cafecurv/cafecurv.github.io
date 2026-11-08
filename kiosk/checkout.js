@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   if (window.curvCheckout) return;
-  const version = '2026-10-29.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
+  const version = '2026-11-08.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
   const state = { status: 'loading', busy: false, reviewing: false, accepted: null };
   let admittedReview, pendingSave = 'N';
   let generation, device, nickname = '', fulfillment = '', pending, corrupt = false, epoch = 0, idle = Date.now(), deadline = 0, releaseLock, ownsLock = false, authSubscribed = false;
