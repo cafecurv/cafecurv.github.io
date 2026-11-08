@@ -11,10 +11,12 @@
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
   function isolate(on) { for (const element of document.body.children) if (element !== root && element instanceof HTMLElement) element.inert = on; }
   const make = (tag, text, attrs = {}) => Object.assign(document.createElement(tag), text === undefined ? attrs : { textContent: text, ...attrs });
-  function screen(title, copy) {
+  function screen(title, copy, view = 'loading') {
+    root.dataset.kioskView = view;
     root.hidden = false; root.replaceChildren(); isolate(true);
     const card = make('div', undefined, { className: 'kiosk-card' });
-    card.append(make('p', 'CURV ♡'), make('h1', title)); if (copy) card.append(make('p', copy)); root.append(card);
+    card.append(make('img', undefined, { className: 'kiosk-logo', src: '/kiosk/curv-kiosk-logo.svg', alt: 'The CURV Café' }));
+    card.append(make('h1', title)); if (copy) card.append(make('p', copy)); root.append(card);
     document.documentElement.classList.remove('curv-kiosk-pending'); return card;
   }
   function button(card, label, run) { const b = make('button', label, { type: 'button' }); b.addEventListener('click', run); card.append(b); return b; }
@@ -28,14 +30,14 @@
   function locked(message = 'Ask CURV staff to restore this kiosk. Any previous request is still protected.') {
     deadline = 0; state.accepted = null;
     state.status = 'locked'; root.hidden = false;
-    const card = screen('A little help from CURV');
+    const card = screen('A little help from CURV', undefined, 'locked');
     card.append(make('p', 'Please ask a CURV team member for help.'), make('p', message));
     button(card, 'Check kiosk again', () => initialize());
     syncButton();
   }
   function uncertain() {
     state.status = 'uncertain';
-    const card = screen('Let’s check that order');
+    const card = screen('Let’s check that order', undefined, 'uncertain');
     card.append(make('p', 'Please wait while we check your order.'), make('p', 'The result is not confirmed yet. Keep this tab open and ask staff if needed. We will reuse the same request.'));
     button(card, 'Recover previous order', recover); syncButton();
   }
@@ -92,7 +94,7 @@
     } catch (_) { if (current === epoch) locked(); }
   }
   function nameScreen(error = '') {
-    const card = screen("hey, what's your name?", "we'll call you when your order is ready! ♡");
+    const card = screen("hey, what's your name?", "We'll call you when your order is ready.", 'name');
     const form = make('form'); const label = make('label', 'Your nickname', { htmlFor: 'kioskNickname' });
     const input = make('input', undefined, { id: 'kioskNickname', type: 'text', autocomplete: 'off', value: nickname });
     input.setAttribute('aria-describedby', 'kioskNameError'); form.append(label, input);
@@ -106,17 +108,20 @@
     input.focus();
   }
   function modeScreen() {
-    const card = screen('For here or to go?', 'Made for you, ' + nickname + ' ♡');
+    const card = screen('where are you enjoying it?', undefined, 'mode');
+    card.append(make('p', nickname, { className: 'kiosk-nickname' }));
     const choices = make('div', undefined, { className: 'kiosk-choices' }); card.append(choices);
-    for (const [label, copy, type] of [['FOR HERE','enjoy it at CURV','dine_in'],['TO GO','take it with you','pickup']]) {
+    for (const [label, copy, type] of [['FOR HERE','stay and sip in the café','dine_in'],['TO GO','we pack it up for you','pickup']]) {
       const b = button(choices, label, () => { fulfillment = type; state.status = 'menu'; root.hidden = true; isolate(false); idle = Date.now();
         document.getElementById('f-name').value = nickname; document.getElementById('f-delivery').value = type === 'dine_in' ? 'dine-in' : 'pickup';
         syncOrderMethodFields(); document.getElementById('f-payment').value = 'counter';
         const banner = make('div', undefined, { className: 'kiosk-banner', id: 'kioskBanner' }); banner.append(make('span', nickname + ' · ' + label + ' · Pay at counter'));
         document.body.prepend(banner); syncButton(); });
-      b.setAttribute('aria-label', label); b.append(make('small', copy));
+      b.setAttribute('aria-label', label);
+      b.replaceChildren(make('span', label.toLowerCase(), { className: 'kiosk-choice-title' }), make('small', copy));
     }
-    button(card, 'Back', () => { state.status = 'name'; nameScreen(); });
+    card.append(make('p', 'Pay at the counter after ordering.', { className: 'kiosk-payment-hint' }));
+    button(card, 'Back', () => { state.status = 'name'; nameScreen(); }).className = 'kiosk-back';
   }
   function items() {
     if (!cart.length || cart.length > 30) throw Error('cart');
@@ -247,9 +252,19 @@
     sessionStorage.setItem(deadlineKey, String(deadline));
     if (deadline <= Date.now()) { queueMicrotask(done); return; }
     setSubmittedFormLocked(true);
-    const card = screen('Order received ♡', 'Go to the counter, tell us ' + result.receipt.order_number + ', and pay. ' + (nickname ? "We'll call " + nickname + '.' : "We'll call your order number."));
-    card.append(make('p', result.receipt.order_number, { className: 'kiosk-order-number' }));
-    button(card, 'Done / New Customer', done); card.append(make('p', 'This screen resets after 60 seconds without activity.'));
+    const card = screen('order received!', undefined, 'accepted');
+    const orderNumber = make('p', undefined, { className: 'kiosk-order-number' });
+    orderNumber.style.setProperty('--kiosk-reference-length', result.receipt.order_number.length);
+    orderNumber.append(make('span', result.receipt.order_number));
+    card.append(orderNumber);
+    const instructions = make('p', undefined, { className: 'kiosk-receipt-copy' });
+    instructions.append('Go to the counter, tell us ', make('strong', result.receipt.order_number), ', and pay. ');
+    if (nickname) instructions.append('We will call ', make('strong', nickname), '.');
+    else instructions.append('We will call your order number.');
+    card.append(instructions);
+    const doneButton = button(card, 'Done · New customer', done);
+    doneButton.className = 'kiosk-done';
+    card.append(make('p', 'This screen resets after 60 seconds without activity.', { className: 'kiosk-reset-copy' }));
   }
   function finish() {
     try {

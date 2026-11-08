@@ -66,7 +66,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
  }
  async function review(f){await f.page.locator('#submitOrderBtn').click();await f.page.getByRole('button',{name:'Continue & Submit'}).waitFor();}
  async function confirm(f){await f.page.getByRole('button',{name:'Continue & Submit'}).click();}
- async function success(f){await f.page.getByRole('heading',{name:'Order received ♡'}).waitFor();}
+ async function success(f){await f.page.getByRole('heading',{name:'order received!'}).waitFor();}
 
  try{
   const names=['<svg onload="window.textProbe=1">', '\" onfocus=\"window.textProbe=2', "O’Malley & café 日本語 ♡ 🧋"];
@@ -85,7 +85,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    check(f.db.attempt.payload.customer_name===name&&f.db.attempt.payload.items[0].item_note===note&&f.db.attempt.payload.customer_notes===note,'frozen payload retains text','submit');
    check((await p.locator('.kiosk-order-number').textContent())==='C-9001','receipt retains actual verified number','receipt');
    check(await p.evaluate(()=>window.textProbe===0)&&f.probeRequests.length===0,'no payload script or network activation','execution');
-   await p.getByRole('button',{name:'Done / New Customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+   await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
    check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'next customer isolated after hostile text','privacy');await f.context.close();
   }
   const f=await open(),p=f.page;await onboard(f);await p.evaluate(()=>{window.textProbe=0;});

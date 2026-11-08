@@ -3560,6 +3560,7 @@ body.night-mode .public-item-wrap {
 <!-- ORDER BAR -->
 <div class="order-bar" id="orderBar">
   <button class="order-btn" id="orderBarButton" onclick="toggleForm()">
+    <span data-kiosk-order-summary hidden></span>
     <span data-order-bar-label>Place an Order</span>
     <span class="cart-badge" id="cartBadge">0</span>
   </button>
@@ -5399,7 +5400,7 @@ body.night-mode .public-item-wrap {
       <span class="product-card-info">
         <span class="item-name">${renderMenuItemNameWithBadges(item)}</span>
         ${item.desc ? `<span class="item-desc">${escapeMenuHtml(item.desc)}</span>` : ''}
-        <span class="product-card-action">${disabled ? status : 'Customize'}</span>
+        <span class="product-card-action">${disabled ? status : CURV_KIOSK_MODE ? '+' : 'Customize'}</span>
       </span>
       ${price === null ? '' : `<span class="product-card-price">${prices.length > 1 ? 'From ' : ''}₱${price}</span>`}
     </button>`;
@@ -7684,9 +7685,41 @@ body.night-mode .public-item-wrap {
       close.addEventListener('click', () => setPublicPanelOpen(id, false, true));
       const header = document.createElement('div');
       header.className = 'public-panel-header';
-      header.append(title, close);
+      const inner = panel.querySelector('.panel-inner');
       panel.querySelector('.public-panel-header')?.remove();
-      panel.querySelector('.panel-inner').prepend(header);
+      if (CURV_KIOSK_MODE) {
+        inner.querySelector('.kiosk-product-info')?.remove();
+        const info = document.createElement('div');
+        info.className = 'kiosk-product-info';
+        const logo = document.createElement('img');
+        logo.className = 'kiosk-product-logo';
+        logo.src = '/kiosk/curv-kiosk-logo.svg';
+        logo.alt = 'CURV Cafe';
+        info.append(logo);
+        const photo = wrap.querySelector('.product-card-thumb img')?.cloneNode();
+        if (photo) {
+          photo.className = 'kiosk-product-photo';
+          photo.alt = '';
+          info.append(photo);
+        }
+        info.append(title);
+        if (item.desc) {
+          const description = document.createElement('p');
+          description.className = 'kiosk-product-description';
+          description.textContent = item.desc;
+          info.append(description);
+        }
+        const heading = document.createElement('h3');
+        heading.className = 'kiosk-customize-heading';
+        heading.textContent = 'make it yours';
+        close.textContent = '×';
+        close.setAttribute('aria-label', 'Close');
+        header.append(heading, close);
+        inner.prepend(info, header);
+      } else {
+        header.append(title, close);
+        inner.prepend(header);
+      }
       const options = panel.querySelector('.panel-options');
       const approvedRecipeKeys = getApprovedPublicRecipeKeys(product);
       // A generic rendering fallback must not silently drop a known recipe's
@@ -8034,7 +8067,15 @@ body.night-mode .public-item-wrap {
     activePanel = open ? id : null;
     if (open) {
       wrap.querySelector('.public-panel-title')?.focus({ preventScroll: true });
-      setTimeout(() => { if (activePanel === id) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+      setTimeout(() => {
+        if (activePanel !== id) return;
+        const kioskPanel = CURV_KIOSK_MODE && wrap.querySelector(':scope > .expansion-panel:has(.kiosk-product-info)');
+        if (kioskPanel) {
+          kioskPanel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+        } else {
+          wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
     }
   }
 
@@ -8784,6 +8825,13 @@ body.night-mode .public-item-wrap {
 
   function renderCart() {
     getCompatibleCheckout()?.changed();
+    if (CURV_KIOSK_MODE) {
+      const count = cart.reduce((sum, item) => sum + item.qty, 0);
+      const summary = document.querySelector('[data-kiosk-order-summary]');
+      summary.hidden = false;
+      summary.textContent =
+        count + (count === 1 ? ' item' : ' items') + ' · ₱' + getCartSubtotal().toLocaleString();
+    }
     // Clear only the obsolete cart error, not other validation or submission feedback.
     const submitStatus = document.getElementById('submitOrderStatus');
     if (cart.length > 0 && submitStatus?.textContent === 'Please add at least one item to your order.') {
@@ -8886,6 +8934,7 @@ body.night-mode .public-item-wrap {
   const arrowRight = document.getElementById('arrowRight');
   const menuSearch = document.getElementById('menuSearch');
   const menuSearchInput = document.getElementById('menuSearchInput');
+  if (CURV_KIOSK_MODE) menuSearchInput.placeholder = 'Search menu';
   const menuSearchClear = document.getElementById('menuSearchClear');
   const menuSearchResults = document.getElementById('menuSearchResults');
   const MENU_SEARCH_MIN_QUERY_LENGTH = 2;
@@ -9549,7 +9598,7 @@ body.night-mode .public-item-wrap {
           ? 'Website Ordering Paused'
           : isWebsiteOrderingEnabled === null
             ? 'Checking Ordering...'
-            : 'Place an Order';
+            : CURV_KIOSK_MODE ? 'Review Order' : 'Place an Order';
     }
     if (orderStatus) {
       orderStatus.textContent = statusMessage.message;
@@ -10893,6 +10942,29 @@ body.night-mode .public-item-wrap {
     document.getElementById('remember-customer-details').checked = false;
     document.getElementById('remember-customer-details').disabled = true;
     document.getElementById('customer-details-memory').hidden = true;
+
+    const cartBody = document.getElementById('formBody');
+    const cartActions = document.createElement('div');
+    cartActions.className = 'kiosk-cart-actions';
+    cartActions.append(document.getElementById('submitOrderBtn'), document.getElementById('submitOrderStatus'));
+    cartBody.after(cartActions);
+    document.querySelector('#formFloat .form-top-title').textContent = 'Your cart';
+    document.querySelector('#special-requests-field label').htmlFor = 'f-notes';
+
+    const viewport = window.visualViewport;
+    if (viewport) {
+      const fitOrderPanels = () => {
+        document.body.style.setProperty('--kiosk-order-viewport-height', viewport.height + 'px');
+        document.body.style.setProperty('--kiosk-order-viewport-top', viewport.offsetTop + 'px');
+      };
+      viewport.addEventListener('resize', () => {
+        fitOrderPanels();
+        const notes = document.getElementById('f-notes');
+        if (document.activeElement === notes) notes.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+      });
+      viewport.addEventListener('scroll', fitOrderPanels);
+      fitOrderPanels();
+    }
   }
 
   initializeCustomerDetails();

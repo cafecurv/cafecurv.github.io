@@ -56,7 +56,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    const u=new URL(r.request().url());if(u.origin!=='https://curv.test')return r.abort();
    if(u.pathname==='/menu/'||u.pathname==='/menu')return r.fulfill({contentType:'text/html',body:html});
    if(u.pathname==='/blank')return r.fulfill({contentType:'text/html',body:'<!doctype html><title>Other page</title>'});
-   if(u.pathname.startsWith('/kiosk/')){const file=path.join(root,u.pathname);if(fs.existsSync(file))return r.fulfill({path:file,contentType:file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html'});}
+   if(u.pathname.startsWith('/kiosk/')){const file=path.join(root,u.pathname);if(fs.existsSync(file))return r.fulfill({path:file});}
    return r.abort();
   });
   await page.goto('https://curv.test/menu/?kiosk=1');
@@ -70,7 +70,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
  }
  async function review(f){await f.page.locator('#submitOrderBtn').click();await f.page.getByRole('button',{name:'Continue & Submit'}).waitFor();}
  async function confirm(f){await f.page.getByRole('button',{name:'Continue & Submit'}).click();}
- async function success(f){await f.page.getByRole('heading',{name:'Order received ♡'}).waitFor();}
+ async function success(f){await f.page.getByRole('heading',{name:'order received!'}).waitFor();}
  try{
   let f=await open();let p=f.page;
   await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
@@ -80,7 +80,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   await p.getByLabel('Your nickname').fill('Alex <&> ♡');await p.getByRole('button',{name:'Continue',exact:true}).click();
   if(process.env.CURV_KIOSK_SCREENSHOTS)await p.screenshot({path:path.join(process.env.CURV_KIOSK_SCREENSHOTS,'kiosk-mode.png')});
   check(await p.getByRole('button',{name:'FOR HERE',exact:true}).count()===1&&await p.getByRole('button',{name:'TO GO',exact:true}).count()===1,'exactly two fulfillment choices');
-  check((await p.locator('#kioskRoot').textContent()).includes('Alex <&> ♡')&&await p.locator('#kioskRoot img').count()===0,'nickname rendered as safe text','validation');
+  check((await p.locator('.kiosk-nickname').textContent())==='Alex <&> ♡'&&await p.locator('.kiosk-nickname *').count()===0,'nickname rendered as safe text','validation');
   await p.getByRole('button',{name:'Back',exact:true}).click();
   await onboard(f);await review(f);
   check((await p.locator('#orderConfirmBody').textContent()).includes('Server coffee')&&(await p.locator('#orderConfirmBody').textContent()).includes('150.00'),'authoritative review excludes forged local price','checkout');
@@ -91,7 +91,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   const sent=f.db.attempt.payload;check(sent.fulfillment_type==='pickup','TO GO maps to pickup','checkout');
   check(!('customer_phone'in sent)&&!('delivery_address'in sent)&&!('customer_email'in sent),'no fabricated personal fields','checkout');
   check(await p.evaluate(()=>!JSON.parse(sessionStorage.getItem(curvCheckout.storageKey)).payload),'personal frozen body removed after verified success','privacy');
-  await p.getByRole('button',{name:'Done / New Customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+  await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
   check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'manual reset fresh customer','privacy');
   check(await p.evaluate(()=>localStorage.getItem('curv-latest-public-order')==='personal recent sentinel'&&sessionStorage.getItem('curv-pending-order-v2')==='personal recovery sentinel'),'normal browser stores unchanged','privacy');
   await onboard(f,'Second customer','FOR HERE');await review(f);await confirm(f);await success(f);check(f.db.attempt.payload.fulfillment_type==='dine_in','FOR HERE maps to dine_in','checkout');
@@ -101,11 +101,11 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    if(mode==='held'){await p.waitForFunction(()=>!!sessionStorage.getItem('curv-kiosk-v2:pending'));await p.clock.fastForward(30001);}
    await p.locator('#kioskRoot').getByRole('button',{name:'Recover previous order',exact:true}).waitFor();const saved=await p.evaluate(()=>sessionStorage.getItem(curvCheckout.storageKey));
    await p.clock.fastForward(180000);check(await p.evaluate(()=>sessionStorage.getItem(curvCheckout.storageKey))===saved,'uncertain inactivity preserves frozen request '+mode,'recovery');
-   if(mode==='held'){f.db.release();await p.waitForTimeout(50);check(await p.getByRole('heading',{name:'Order received ♡'}).count()===0,'late timed-out response cannot fabricate local success','recovery');}
-   await p.reload();await p.waitForFunction(()=>/hey, what's your name\?|Order received|Let’s check that order/.test(document.getElementById('kioskRoot')?.textContent||''));
+   if(mode==='held'){f.db.release();await p.waitForTimeout(50);check(await p.getByRole('heading',{name:'order received!'}).count()===0,'late timed-out response cannot fabricate local success','recovery');}
+   await p.reload();await p.waitForFunction(()=>/hey, what's your name\?|order received|Let’s check that order/.test(document.getElementById('kioskRoot')?.textContent||''));
    const recoverButton=p.locator('#kioskRoot').getByRole('button',{name:'Recover previous order',exact:true});
    if(await recoverButton.isVisible())await recoverButton.click();
-   await p.waitForFunction(()=>/hey, what's your name\?|Order received/.test(document.getElementById('kioskRoot')?.textContent||''));
+   await p.waitForFunction(()=>/hey, what's your name\?|order received/.test(document.getElementById('kioskRoot')?.textContent||''));
    check(f.db.orders===1,'uncertain replay creates one order '+mode,'recovery');
    check(f.db.calls.filter(c=>c.name==='kiosk_admit').every(c=>c.args.p_payload.submission_key===JSON.parse(saved).key),'same key through reload/recovery '+mode,'recovery');
    await f.context.close();
@@ -121,7 +121,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   f=await open();p=f.page;await onboard(f,'Cached customer');await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(!(await p.locator('#kioskRoot').textContent()).includes('Cached customer'),'BFCache-event restoration revalidates before showing data','privacy');await f.context.close();
   f=await open();p=f.page;await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();const second=await f.context.newPage();await second.goto('https://curv.test/menu/?kiosk=1');await second.getByRole('heading',{name:'A little help from CURV'}).waitFor();check((await second.locator('#kioskRoot').textContent()).includes('already open'),'second tab cannot share active customer controls','privacy');await f.context.close();
   f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'success remains before inactivity deadline','privacy');await p.locator('#kioskRoot').dispatchEvent('pointerdown');await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'activity extends success deadline','privacy');await p.clock.fastForward(1001);await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(await p.getByLabel('Your nickname').inputValue()==='','extended inactivity eventually resets','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.evaluate(()=>{Storage.prototype.removeItem=function(){throw Error('denied');};});await p.getByRole('button',{name:'Done / New Customer'}).click();await p.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await p.getByLabel('Your nickname').count()===0,'cleanup failure cannot expose a new customer screen','privacy');await f.context.close();
+  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.evaluate(()=>{Storage.prototype.removeItem=function(){throw Error('denied');};});await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await p.getByLabel('Your nickname').count()===0,'cleanup failure cannot expose a new customer screen','privacy');await f.context.close();
 
 
   // Actual recovered review: server intent stays fixed while volatile UI is rebuilt.
@@ -143,7 +143,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    check(new Set(f.db.calls.filter(c=>c.name==='kiosk_submit').map(c=>c.args.p_key)).size===1&&f.db.attempt.key===JSON.parse(frozen).key,'same key '+type+' '+transition,'recovery-label');
    check(JSON.stringify(f.db.attempt.payload)===JSON.stringify(original),'admitted request unchanged '+type+' '+transition,'recovery-label');
    check((await p.locator('.kiosk-order-number').textContent())==='C-9001','server receipt '+type+' '+transition,'recovery-label');
-   await p.getByRole('button',{name:'Done / New Customer'}).click();await p.getByLabel('Your nickname').waitFor();
+   await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByLabel('Your nickname').waitFor();
    check(await p.evaluate(()=>sessionStorage.getItem('curv-kiosk-v2:pending')===null&&cart.length===0),'closed customer isolated '+type+' '+transition,'recovery-label');
    await onboard(f,'Fresh guest',type==='pickup'?'FOR HERE':'TO GO');await review(f);
    check((await p.locator('#orderConfirmBody').textContent()).includes(type==='pickup'?'FOR HERE':'TO GO'),'next customer own mode '+type+' '+transition,'recovery-label');await f.context.close();
