@@ -328,6 +328,12 @@ body.curv-kiosk .order-btn { font-size:18px; }
   color: var(--kiosk-navy);
 }
 
+body.curv-kiosk .kiosk-diagnostic {
+  display: block;
+  margin-block-start: .5rem;
+  font-size: 16px;
+}
+
 @media (min-width: 760px) and (min-height: 620px) {
   #kioskRoot:is([data-kiosk-view="mode"], [data-kiosk-view="accepted"]) .kiosk-card::before {
     content: "";
