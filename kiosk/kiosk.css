@@ -880,6 +880,10 @@ body.curv-kiosk .section.active .unified-product-card .item-name {
   letter-spacing: 0;
 }
 
+body.curv-kiosk .section.active .unified-product-card .menu-item-badge {
+  color: var(--kiosk-menu-navy);
+}
+
 body.curv-kiosk .section.active .unified-product-card .product-card-price {
   grid-area: price;
   justify-self: start;
