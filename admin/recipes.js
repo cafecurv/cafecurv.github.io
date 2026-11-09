@@ -2170,19 +2170,28 @@
     });
   };
 
+  let accessGeneration = 0;
+  const verifyAccess = async (session, generation) => {
+    const role = await window.curvControlAccess.check(client, session?.user);
+    if (generation !== accessGeneration) return;
+    if (!window.curvControlAccess.restrictNavigation(role)) return;
+    handleAuthState(role === 'owner', session?.user?.email);
+    if (role === 'denied') setStatus('Access denied. An owner account is required to view Recipes.');
+  };
+
   const refreshSession = async () => {
     if (!client) {
       setPageState(STATES.ERROR);
       return;
     }
+    const generation = ++accessGeneration;
     setPageState(STATES.AUTH_LOADING);
     try {
-      const { data } = await client.auth.getSession();
-      const user = data && data.session && data.session.user;
-      handleAuthState(Boolean(user), user ? user.email : '');
-    } catch (error) {
-      console.error('Recipes auth check failed:', error);
-      setPageState(STATES.ERROR);
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (generation === accessGeneration) await verifyAccess(data?.session, generation);
+    } catch (_) {
+      if (generation === accessGeneration) setPageState(STATES.ERROR);
     }
   };
 
@@ -2427,10 +2436,13 @@
   }
 
   client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  // This client-side session check is a UX gate only; database RLS remains the actual security control.
-  client.auth.onAuthStateChange((_event, session) => {
-    const user = session && session.user;
-    handleAuthState(Boolean(user), user ? user.email : '');
+  client.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED') return;
+    const generation = ++accessGeneration;
+    if (session?.user?.email !== signedInOwnerEmail) handleAuthState(false);
+    window.setTimeout(() => {
+      if (generation === accessGeneration) void verifyAccess(session, generation);
+    }, 0);
   });
   refreshSession();
 })();

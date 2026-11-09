@@ -19,6 +19,7 @@ const root = path.resolve(__dirname,'..');
      submitted_order_count:21,completed_order_count:1,repeat_customer:i!==1}));
    window.customersFixture=customers;
    const rpc=async(name,args={})=>{
+     if(name==='curv_control_access')return {data:'owner',error:null};
      if(!name.startsWith('customer_admin_'))return {data:[],error:null};
      const call={name,args};window.calls.push(call);
      let data;

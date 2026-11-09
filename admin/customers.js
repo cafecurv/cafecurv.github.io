@@ -9,7 +9,7 @@
   const status = $('customers-status'), locked = $('customers-locked');
   const retryAuth = $('customers-auth-retry');
   const account = document.querySelector('[data-owner-account]');
-  let client, sessionKey = null, epoch = 0, listRequest = 0, detailRequest = 0;
+  let client, sessionKey = null, ownerAccess = false, epoch = 0, listRequest = 0, detailRequest = 0;
   let authorized = false, selected = null, offset = 0, historyOffset = 0;
   let filter = 'all', timer, listData = null, listScroll = 0, returnId = null;
   const itemsCache = new Map();
@@ -100,7 +100,7 @@
     pagination(pages, data, 25, next => { offset = next; loadList(); });
   }
   async function loadList() {
-    if (!sessionKey) return;
+    if (!sessionKey || !ownerAccess) return;
     clearTimeout(timer);
     const token = epoch, request = ++listRequest;
     const args = { p_search: search.value, p_filter: filter, p_sort: sort.value, p_limit: 25, p_offset: offset };
@@ -230,16 +230,26 @@
     document.querySelector('[data-owner-signed-out]').hidden = signedIn;
     document.querySelector('[data-owner-account-label]').textContent = signedIn ? 'Account' : 'Owner Login';
   }
-  function applySession(session) {
+  async function applySession(session) {
     const key = session?.user?.id ? session.user.id + ':' + (session.access_token || '') : null;
     if (key === sessionKey) {
       if (!key) { lock('Sign in with an authorized owner account to view customer records.'); accountUI(false); }
       return;
     }
-    sessionKey = key; clearPrivate(); accountUI(!!key); closeMenu();
+    sessionKey = key; ownerAccess = false; clearPrivate(); accountUI(!!key); closeMenu();
     $('owner-password').value = '';
-    if (key) { $('customers-lock-message').textContent = 'Checking owner access…'; loadList(); }
-    else lock('Sign in with an authorized owner account to view customer records.');
+    if (!key) {
+      lock('Sign in with an authorized owner account to view customer records.');
+      return;
+    }
+    const generation = authEvents;
+    $('customers-lock-message').textContent = 'Checking owner access…';
+    const role = await window.curvControlAccess.check(client, session.user);
+    if (generation !== authEvents || key !== sessionKey) return;
+    if (!window.curvControlAccess.restrictNavigation(role)) return;
+    ownerAccess = role === 'owner';
+    if (ownerAccess) loadList();
+    else lock('Access denied. An owner account is required to view customer records.');
   }
   document.querySelector('[data-auth-form]').addEventListener('submit',async e => {
     e.preventDefault(); if (!client) return;
@@ -276,7 +286,7 @@
       authEvents++;
       // Clear synchronously; defer Supabase work outside the auth callback.
       const key = session?.user?.id ? session.user.id + ':' + (session.access_token || '') : null;
-      if (key !== sessionKey) { clearPrivate(); sessionKey = null; }
+      if (key !== sessionKey || !ownerAccess) { clearPrivate(); sessionKey = null; ownerAccess = false; }
       const generation = authEvents;
       setTimeout(() => { if (generation === authEvents) applySession(session); },0);
     });

@@ -1,4 +1,41 @@
 (() => {
+  const cashierPages = new Set(['incoming-orders.html', 'inventory.html']);
+  const hiddenLinks = new Map();
+  const page = location.pathname.split('/').pop();
+  const check = async (client, user) => {
+    if (!user?.id) return 'signed-out';
+    try {
+      const { data, error } = await client.rpc('curv_control_access');
+      return !error && ['owner', 'cashier'].includes(data) ? data : 'denied';
+    } catch (_) {
+      return 'denied';
+    }
+  };
+  const restrictNavigation = role => {
+    if (role === 'cashier' && !cashierPages.has(page)) {
+      location.replace('/admin/incoming-orders.html');
+      return false;
+    }
+    for (const [link, display] of hiddenLinks) {
+      if (display.value) link.style.setProperty('display', display.value, display.priority);
+      else link.style.removeProperty('display');
+    }
+    hiddenLinks.clear();
+    if (role === 'cashier') {
+      document.querySelectorAll('.admin-nav-link, .mobile-nav-item, .mobile-more-item').forEach(link => {
+        if (link.matches('.mobile-more-button')) return;
+        if (!link.matches('a') || !cashierPages.has(new URL(link.href).pathname.split('/').pop())) {
+          hiddenLinks.set(link, { value: link.style.getPropertyValue('display'), priority: link.style.getPropertyPriority('display') });
+          link.style.setProperty('display', 'none', 'important');
+        }
+      });
+    }
+    return true;
+  };
+  window.curvControlAccess = { check, restrictNavigation };
+})();
+
+(() => {
   const yearTarget = document.getElementById('current-year');
   if (yearTarget) {
     yearTarget.textContent = new Date().getFullYear();
@@ -151,9 +188,11 @@
   let badgeRealtimeChannel = null;
   let orderToast = null;
   let orderToastTimer = null;
-  const unseenOrderStorageKey = 'curvIncomingOrdersUnseen';
-  const unseenOrderSummaryStorageKey = 'curvIncomingOrdersUnseenSummaries';
-  const notificationTargetStorageKey = 'curvIncomingOrdersNotificationTarget';
+  const legacyNotificationKeys = [
+    'curvIncomingOrdersUnseen', 'curvIncomingOrdersUnseenSummaries', 'curvIncomingOrdersNotificationTarget',
+  ];
+  const notificationTargetStorageKey = 'curvIncomingOrdersOpenId';
+  const isOrderUuid = id => typeof id === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
   const orderSoundStorageKey = 'curvIncomingOrdersSoundEnabled';
   let orderSoundEnabled = false;
   let alertAudioUnlocked = false;
@@ -166,29 +205,10 @@
 
   const getAdminPageName = () => (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
-  const readUnseenOrderKeys = () => {
-    try {
-      const stored = window.sessionStorage.getItem(unseenOrderStorageKey);
-      const keys = stored ? JSON.parse(stored) : [];
-      return new Set(Array.isArray(keys) ? keys.filter(Boolean) : []);
-    } catch (error) {
-      return new Set();
-    }
-  };
-
-  let unseenOrderKeys = readUnseenOrderKeys();
-
-  const readUnseenOrderSummaries = () => {
-    try {
-      const stored = window.sessionStorage.getItem(unseenOrderSummaryStorageKey);
-      const parsed = stored ? JSON.parse(stored) : {};
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-    } catch (error) {
-      return {};
-    }
-  };
-
-  let unseenOrderSummaries = readUnseenOrderSummaries();
+  const unseenOrderKeys = new Set();
+  let unseenOrderSummaries = {};
+  let notificationOwnerId = null;
+  const ownerTargetKey = uid => notificationTargetStorageKey + ':' + uid;
 
   try {
     orderSoundEnabled = window.localStorage.getItem(orderSoundStorageKey) === 'true';
@@ -196,22 +216,6 @@
     orderSoundEnabled = false;
   }
   alertAudioUnlocked = orderSoundEnabled;
-
-  const persistUnseenOrderKeys = () => {
-    try {
-      window.sessionStorage.setItem(unseenOrderStorageKey, JSON.stringify(Array.from(unseenOrderKeys)));
-    } catch (error) {
-      // Session-only badge state is best-effort.
-    }
-  };
-
-  const persistUnseenOrderSummaries = () => {
-    try {
-      window.sessionStorage.setItem(unseenOrderSummaryStorageKey, JSON.stringify(unseenOrderSummaries));
-    } catch (error) {
-      // Session-only notification summaries are best-effort.
-    }
-  };
 
   const getOrderAlertKey = (order) => {
     if (!order) return '';
@@ -326,30 +330,26 @@
   const hideIncomingOrderBadge = () => {
     unseenOrderKeys.clear();
     unseenOrderSummaries = {};
-    persistUnseenOrderKeys();
-    persistUnseenOrderSummaries();
     setIncomingOrderBadge(0);
   };
 
   const clearSubmittedOrderNotifications = () => {
+    if (!notificationOwnerId) return;
     Array.from(unseenOrderKeys).forEach((key) => {
       if (!String(key).startsWith('cancel:')) {
         unseenOrderKeys.delete(key);
         delete unseenOrderSummaries[key];
       }
     });
-    persistUnseenOrderKeys();
-    persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
   };
 
   const removeUnseenIncomingOrder = (key) => {
+    if (!notificationOwnerId) return;
     const cleanKey = String(key || '').trim();
     if (!cleanKey) return;
     unseenOrderKeys.delete(cleanKey);
     delete unseenOrderSummaries[cleanKey];
-    persistUnseenOrderKeys();
-    persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
   };
 
@@ -363,13 +363,12 @@
     unseenOrderKeys.add(key);
     const summary = getOrderSummary(order);
     if (summary) unseenOrderSummaries[key] = summary;
-    persistUnseenOrderKeys();
-    persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
     return isNewUnseen;
   };
 
-  const handleIncomingOrderDetected = (order) => {
+  const handleIncomingOrderDetected = (order, ownerId) => {
+    if (!notificationOwnerId || ownerId !== notificationOwnerId) return;
     if (noteUnseenIncomingOrder(order)) {
       showNewOrderToast(order);
     }
@@ -383,13 +382,12 @@
     unseenOrderKeys.add(key);
     const summary = getCancellationRequestSummary(order);
     if (summary) unseenOrderSummaries[key] = summary;
-    persistUnseenOrderKeys();
-    persistUnseenOrderSummaries();
     setIncomingOrderBadge(unseenOrderKeys.size);
     return isNewUnseen;
   };
 
-  const handleCancellationRequestDetected = (order) => {
+  const handleCancellationRequestDetected = (order, ownerId) => {
+    if (!notificationOwnerId || ownerId !== notificationOwnerId) return;
     if (noteUnseenCancellationRequest(order)) {
       showCancellationRequestToast(order);
     }
@@ -402,7 +400,7 @@
   };
 
   const openIncomingOrderNotification = (summary) => {
-    if (!summary) return;
+    if (!notificationOwnerId || !summary) return;
     stopNewOrderAlert();
     closeNotificationPanel();
     removeUnseenIncomingOrder(summary.key);
@@ -412,13 +410,12 @@
       status: summary.status || 'submitted',
     };
     if (getAdminPageName() === 'incoming-orders.html' && typeof window.curvOpenIncomingOrderNotification === 'function') {
-      window.curvOpenIncomingOrderNotification(target);
+      window.curvOpenIncomingOrderNotification(target, notificationOwnerId);
       return;
     }
-    try {
-      window.sessionStorage.setItem(notificationTargetStorageKey, JSON.stringify(target));
-    } catch (error) {
-      // Navigation still works even if the target cannot be stored.
+    if (isOrderUuid(summary.id)) {
+      try { window.sessionStorage.setItem(ownerTargetKey(notificationOwnerId), summary.id); }
+      catch (_) { /* The Incoming Orders queue is still available. */ }
     }
     window.location.href = 'incoming-orders.html';
   };
@@ -464,7 +461,7 @@
     if (!notificationList || !notificationEmpty) return;
 
     notificationList.innerHTML = '';
-    const summaries = Array.from(unseenOrderKeys)
+    const summaries = Array.from(notificationOwnerId ? unseenOrderKeys : [])
       .map(key => unseenOrderSummaries[key])
       .filter(Boolean)
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -712,19 +709,8 @@
     orderToastTimer = window.setTimeout(dismissOrderToast, 8000);
   };
 
-  const refreshIncomingOrderBadge = async () => {
-    if (!badgeClient) return false;
-    try {
-      const { data: sessionData } = await badgeClient.auth.getSession();
-      const isSignedIn = Boolean(sessionData && sessionData.session && sessionData.session.user);
-      if (!isSignedIn) {
-        hideIncomingOrderBadge();
-        return isSignedIn;
-      }
-    } catch (error) {
-      hideIncomingOrderBadge();
-      return false;
-    }
+  const refreshIncomingOrderBadge = () => {
+    if (!notificationOwnerId) return false;
     setIncomingOrderBadge(unseenOrderKeys.size);
     return true;
   };
@@ -738,23 +724,26 @@
 
   const subscribeToBadgeRealtime = () => {
     if (!badgeClient || badgeRealtimeChannel) return;
-    badgeRealtimeChannel = badgeClient
-      .channel('incoming-orders-nav-badge')
+    const ownerId = notificationOwnerId;
+    const channel = badgeClient.channel('incoming-orders-nav-badge');
+    badgeRealtimeChannel = channel;
+    channel
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
+          if (channel !== badgeRealtimeChannel || ownerId !== notificationOwnerId) return;
           const eventType = String(payload && payload.eventType || '').toUpperCase();
           if (eventType === 'INSERT') {
-            handleIncomingOrderDetected(payload.new);
-            handleCancellationRequestDetected(payload.new);
+            handleIncomingOrderDetected(payload.new, ownerId);
+            handleCancellationRequestDetected(payload.new, ownerId);
           } else if (eventType === 'UPDATE') {
             const oldStatus = String(payload && payload.old && payload.old.customer_cancel_status || '').toLowerCase();
             const newStatus = String(payload && payload.new && payload.new.customer_cancel_status || '').toLowerCase();
             const oldRequestedAt = String(payload && payload.old && payload.old.customer_cancel_requested_at || '');
             const newRequestedAt = String(payload && payload.new && payload.new.customer_cancel_requested_at || '');
             if (newStatus === 'requested' && (oldStatus !== 'requested' || oldRequestedAt !== newRequestedAt)) {
-              handleCancellationRequestDetected(payload.new);
+              handleCancellationRequestDetected(payload.new, ownerId);
             } else {
               refreshIncomingOrderBadge();
             }
@@ -772,17 +761,19 @@
   window.curvClearIncomingOrderNotification = removeUnseenIncomingOrder;
   window.curvHandleIncomingOrderDetected = handleIncomingOrderDetected;
   window.curvHandleCancellationRequestDetected = handleCancellationRequestDetected;
-  window.curvGetIncomingOrderNotificationTarget = () => {
+  window.curvGetIncomingOrderNotificationTarget = ownerId => {
+    if (!notificationOwnerId || ownerId !== notificationOwnerId) return null;
     try {
-      const stored = window.sessionStorage.getItem(notificationTargetStorageKey);
-      return stored ? JSON.parse(stored) : null;
+      const id = window.sessionStorage.getItem(ownerTargetKey(ownerId));
+      return isOrderUuid(id) ? { id } : null;
     } catch (error) {
       return null;
     }
   };
   window.curvClearIncomingOrderNotificationTarget = () => {
+    if (!notificationOwnerId) return;
     try {
-      window.sessionStorage.removeItem(notificationTargetStorageKey);
+      window.sessionStorage.removeItem(ownerTargetKey(notificationOwnerId));
     } catch (error) {
       // Session-only target state is best-effort.
     }
@@ -791,6 +782,7 @@
   window.curvGetIncomingOrderSoundEnabled = getOrderSoundEnabled;
   window.curvStopIncomingOrderAlert = stopNewOrderAlert;
   window.curvTestNewOrderToast = () => {
+    if (!notificationOwnerId) return;
     showNewOrderToast({
       status: 'submitted',
       order_number: 'C-TEST',
@@ -803,6 +795,7 @@
     renderNotificationPanel();
     notificationButton.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (!notificationOwnerId) return;
       const panel = ensureNotificationPanel();
       if (!panel) return;
       const shouldOpen = panel.hidden;
@@ -835,35 +828,86 @@
     ownerTeamNavLinks.forEach(link => { link.hidden = !isVisible; });
   };
 
-  setOwnerTeamNavVisible(false);
+  const clearStoredNotifications = (storageName, shouldRemove) => {
+    try {
+      const storage = window[storageName];
+      const keysToRemove = Object.keys(storage).filter(shouldRemove);
+      for (const key of keysToRemove) storage.removeItem(key);
+    } catch (_) { /* Blocked storage is never needed to render notifications. */ }
+  };
 
-  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-    hideIncomingOrderBadge();
-    return;
-  }
+  const clearNotificationTargets = keepOwnerId => {
+    clearStoredNotifications('sessionStorage', key => key.startsWith(notificationTargetStorageKey + ':')
+      && (!keepOwnerId || key !== ownerTargetKey(keepOwnerId)));
+  };
 
-  badgeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  badgeClient.auth.onAuthStateChange((_event, session) => {
-    setOwnerTeamNavVisible(Boolean(session && session.user));
-    if (session && session.user) {
-      refreshIncomingOrderBadge();
-      subscribeToBadgeRealtime();
-    } else {
-      unsubscribeFromBadgeRealtime();
-      hideIncomingOrderBadge();
-      dismissOrderToast();
-    }
-  });
-  refreshIncomingOrderBadge().then((isSignedIn) => {
-    if (isSignedIn) subscribeToBadgeRealtime();
-  });
-  badgeClient.auth.getSession().then(({ data }) => {
-    setOwnerTeamNavVisible(Boolean(data && data.session && data.session.user));
-  });
-  window.addEventListener('pagehide', () => {
+  const clearNotificationView = () => {
+    notificationOwnerId = null;
     unsubscribeFromBadgeRealtime();
+    hideIncomingOrderBadge();
+    closeNotificationPanel();
     stopNewOrderAlert();
     dismissOrderToast();
+    if (orderToast) {
+      orderToast.hidden = true;
+      orderToast.curvNotificationSummary = null;
+      orderToast.querySelector('[data-order-toast-detail]').textContent = '';
+    }
+    setOwnerTeamNavVisible(false);
+  };
+
+  for (const storageName of ['sessionStorage', 'localStorage']) {
+    clearStoredNotifications(storageName, key => legacyNotificationKeys.some(prefix =>
+      key === prefix || key.startsWith(prefix + ':')));
+  }
+  clearNotificationView();
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') return;
+
+  badgeClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let badgeAccessGeneration = 0;
+  window.curvClearIncomingOrderNotificationSession = ownerId => {
+    clearStoredNotifications('sessionStorage', key => key === ownerTargetKey(ownerId));
+    if (notificationOwnerId !== ownerId) return;
+    ++badgeAccessGeneration;
+    clearNotificationView();
+  };
+
+  const checkNotificationSession = session => {
+    const generation = ++badgeAccessGeneration;
+    const user = session?.user;
+    clearNotificationTargets(user?.id);
+    if (notificationOwnerId && notificationOwnerId !== user?.id) clearNotificationView();
+    window.setTimeout(async () => {
+      if (generation !== badgeAccessGeneration) return;
+      const role = await window.curvControlAccess.check(badgeClient, user);
+      if (generation !== badgeAccessGeneration) return;
+      window.curvControlAccess.restrictNavigation(role);
+      if (role !== 'owner') {
+        clearNotificationTargets();
+        clearNotificationView();
+        return;
+      }
+      notificationOwnerId = user.id;
+      setOwnerTeamNavVisible(true);
+      refreshIncomingOrderBadge();
+      subscribeToBadgeRealtime();
+      window.dispatchEvent(new CustomEvent('curv-owner-notifications-ready', { detail: user.id }));
+    }, 0);
+  };
+  const refreshNotificationSession = async () => {
+    const generation = badgeAccessGeneration;
+    const { data, error } = await badgeClient.auth.getSession().catch(() => ({}));
+    if (generation === badgeAccessGeneration) checkNotificationSession(error ? null : data?.session);
+  };
+  window.curvRefreshIncomingOrderNotificationSession = refreshNotificationSession;
+  badgeClient.auth.onAuthStateChange((_event, session) => checkNotificationSession(session));
+  if (badgeAccessGeneration === 0) void refreshNotificationSession();
+  window.addEventListener('pagehide', () => {
+    ++badgeAccessGeneration;
+    clearNotificationView();
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) void refreshNotificationSession();
   });
 })();
 
@@ -1808,6 +1852,12 @@
       return true;
     } catch (error) {
       if (authToken !== authGeneration || loadToken !== loadGeneration) return false;
+      if (isForbiddenError(error) || error?.status === 401 || error?.status === 403) {
+        ++sessionCheckGeneration;
+        applyVerifiedSession(null);
+        setStatus(friendlyLoadError(error), true);
+        return false;
+      }
       hasOwnerAccess = false;
       clearRenderedData({ clearStaff: true });
       if (content) content.hidden = true;
@@ -1981,8 +2031,7 @@
     else if (correctionEditor && !correctionEditor.hidden && !correctionBusy) closeCorrectionEditor();
   });
 
-  const applySession = session => {
-    const nextUser = session && session.user;
+  const applyVerifiedSession = nextUser => {
     const previousId = sessionUser && sessionUser.id;
     if (!nextUser) {
       sessionUser = null;
@@ -1993,6 +2042,23 @@
     sessionUser = nextUser;
     if (!isConsolidated) updateAccountUi();
     if (attendanceViewActive && (nextUser.id !== previousId || !hasOwnerAccess)) loadAttendance({ announce: false });
+  };
+
+
+  let sessionCheckGeneration = 0;
+  const checkOwnerSession = (session) => {
+    const generation = ++sessionCheckGeneration;
+    const user = session?.user;
+    if (!user?.id || (sessionUser && sessionUser.id !== user.id)) applyVerifiedSession(null);
+    if (!user?.id) return;
+    // Check outside the Supabase auth callback, which holds the client auth lock.
+    window.setTimeout(async () => {
+      if (generation !== sessionCheckGeneration) return;
+      const role = await window.curvControlAccess.check(supabaseClient, user);
+      if (generation !== sessionCheckGeneration) return;
+      applyVerifiedSession(role === 'owner' ? user : null);
+      if (role !== 'owner') setStatus('Owner access is required to view Attendance.', true);
+    }, 0);
   };
 
   document.addEventListener('visibilitychange', () => {
@@ -2036,7 +2102,7 @@
       return true;
     };
     attendanceRoot.addEventListener('curv-owner-session-change', event => {
-      applySession(event.detail && event.detail.user ? { user: event.detail.user } : null);
+      applyVerifiedSession(event.detail?.user || null);
     });
   } else {
     ownerAccountToggle?.addEventListener('click', event => {
@@ -2056,11 +2122,9 @@
       try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
         if (error) throw error;
-        sessionUser = data.user;
         passwordInput.value = '';
-        updateAccountUi();
         closeAccountMenu();
-        await loadAttendance({ announce: false });
+        checkOwnerSession(data.session || { user: data.user });
       } catch (error) {
         passwordInput.value = '';
         setStatus('Owner sign in failed. Check the account details and try again.', true);
@@ -2070,21 +2134,25 @@
     });
     signOutButton?.addEventListener('click', async () => {
       signOutButton.disabled = true;
-      sessionUser = null;
-      clearPrivateState();
+      ++sessionCheckGeneration;
+      applyVerifiedSession(null);
       setDefaultDates();
       updateAccountUi();
       closeAccountMenu();
       await supabaseClient.auth.signOut({ scope: 'local' });
     });
     updateAccountUi();
-    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      window.setTimeout(() => applySession(session), 0);
-    });
+    const initialCheck = sessionCheckGeneration;
+    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => checkOwnerSession(session));
     authSubscription = data;
-    supabaseClient.auth.getSession().then(({ data: sessionData }) => applySession(sessionData && sessionData.session));
+    supabaseClient.auth.getSession().then(({ data: sessionData, error }) => {
+      if (initialCheck === sessionCheckGeneration) checkOwnerSession(error ? null : sessionData?.session);
+    }).catch(() => {
+      if (initialCheck === sessionCheckGeneration) checkOwnerSession(null);
+    });
   }
   window.addEventListener('pagehide', () => {
+    ++sessionCheckGeneration;
     authGeneration += 1;
     loadGeneration += 1;
     correctionGeneration += 1;
@@ -2433,6 +2501,12 @@
     } catch (error) {
       if (authToken !== authGeneration || loadToken !== loadGeneration) return;
       const failure = readRpcFailure(null, error);
+      if (failure.code === 'TIMEKEEPING_FORBIDDEN' || error?.status === 401 || error?.status === 403) {
+        ++sessionCheckGeneration;
+        applyVerifiedSession(null);
+        setStatus(failure.message, true);
+        return;
+      }
       hasOwnerAccess = false;
       staff = [];
       clearElement(list);
@@ -2579,12 +2653,9 @@
     try {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email: emailInput.value.trim(), password: passwordInput.value });
       if (error) throw error;
-      sessionUser = data.user;
-      updateAccountUi();
-      broadcastOwnerSession(sessionUser);
       clearPins();
       closeAccountMenu();
-      await loadStaff({ announce: false });
+      checkOwnerSession(data.session || { user: data.user });
     } catch (error) {
       clearPins();
       setStatus(error.message || 'Owner sign in failed.', true);
@@ -2595,17 +2666,14 @@
 
   signOutButton?.addEventListener('click', async () => {
     signOutButton.disabled = true;
-    clearPrivateState();
-    sessionUser = null;
-    updateAccountUi();
-    broadcastOwnerSession(null);
+    ++sessionCheckGeneration;
+    applyVerifiedSession(null);
     setStatus('Signed out.');
     closeAccountMenu();
     await supabaseClient.auth.signOut({ scope: 'local' });
   });
 
-  const applySession = (session) => {
-    const nextUser = session && session.user;
+  const applyVerifiedSession = nextUser => {
     const previousId = sessionUser && sessionUser.id;
     if (!nextUser) {
       sessionUser = null;
@@ -2616,17 +2684,38 @@
     }
     sessionUser = nextUser;
     updateAccountUi();
-    broadcastOwnerSession(sessionUser);
+    if (nextUser.id !== previousId) broadcastOwnerSession(sessionUser);
     if (nextUser.id !== previousId || !hasOwnerAccess) loadStaff({ announce: false });
+  };
+
+
+  let sessionCheckGeneration = 0;
+  const checkOwnerSession = (session) => {
+    const generation = ++sessionCheckGeneration;
+    const user = session?.user;
+    if (!user?.id || (sessionUser && sessionUser.id !== user.id)) applyVerifiedSession(null);
+    if (!user?.id) return;
+    // Check outside the Supabase auth callback, which holds the client auth lock.
+    window.setTimeout(async () => {
+      if (generation !== sessionCheckGeneration) return;
+      const role = await window.curvControlAccess.check(supabaseClient, user);
+      if (generation !== sessionCheckGeneration) return;
+      applyVerifiedSession(role === 'owner' ? user : null);
+      if (role !== 'owner') setStatus('Owner access is required to view Team.', true);
+    }, 0);
   };
 
   clearPrivateState();
   updateAccountUi();
-  supabaseClient.auth.getSession().then(({ data }) => applySession(data && data.session));
-  const { data: authSubscription } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-    window.setTimeout(() => applySession(session), 0);
+  const initialCheck = sessionCheckGeneration;
+  const { data: authSubscription } = supabaseClient.auth.onAuthStateChange((_event, session) => checkOwnerSession(session));
+  supabaseClient.auth.getSession().then(({ data, error }) => {
+    if (initialCheck === sessionCheckGeneration) checkOwnerSession(error ? null : data?.session);
+  }).catch(() => {
+    if (initialCheck === sessionCheckGeneration) checkOwnerSession(null);
   });
   window.addEventListener('pagehide', () => {
+    ++sessionCheckGeneration;
     authGeneration += 1;
     loadGeneration += 1;
     actionGeneration += 1;
@@ -2654,7 +2743,8 @@
   const ownerAccountLabel = document.querySelector('[data-owner-account-label]');
   const ownerAccountEmail = document.querySelector('[data-owner-account-email]');
   const ownerAccountInitials = document.querySelector('[data-owner-account-initials]');
-  let isOwnerSignedIn = false;
+  let role = 'signed-out';
+  let authGeneration = 0;
   let signedInOwnerEmail = '';
 
   const hasSupabaseConfig = SUPABASE_URL !== 'SUPABASE_URL'
@@ -2699,18 +2789,19 @@
   };
 
   const updateOwnerAccountUi = () => {
-    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
-    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
-    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    const hasSession = role !== 'signed-out';
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = hasSession;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !hasSession;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = role === 'owner' ? 'Owner' : hasSession ? 'Access denied' : 'Sign in';
     if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
     if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
-    if (signInButton) signInButton.disabled = isOwnerSignedIn;
-    if (signOutButton) signOutButton.disabled = !isOwnerSignedIn;
+    if (signInButton) signInButton.disabled = hasSession;
+    if (signOutButton) signOutButton.disabled = !hasSession;
   };
 
-  const setSignedInState = (isSignedIn, email = '') => {
-    isOwnerSignedIn = isSignedIn;
-    signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
+  const setSignedInState = (nextRole, email = '') => {
+    role = nextRole;
+    signedInOwnerEmail = email;
     updateOwnerAccountUi();
   };
 
@@ -2734,6 +2825,11 @@
   if (!hasSupabaseConfig || !window.supabase) return;
 
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const verifyAccess = async (user, generation) => {
+    const nextRole = await window.curvControlAccess.check(supabaseClient, user);
+    if (generation !== authGeneration || !window.curvControlAccess.restrictNavigation(nextRole)) return;
+    setSignedInState(nextRole, user?.email);
+  };
 
   authForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -2745,7 +2841,7 @@
         password: passwordInput.value,
       });
       if (error) throw error;
-      setSignedInState(true, data && data.user ? data.user.email : emailInput.value.trim());
+      await verifyAccess(data?.user, ++authGeneration);
       passwordInput.value = '';
       closeOwnerAccountMenu();
     } catch (error) {
@@ -2758,18 +2854,20 @@
   signOutButton?.addEventListener('click', async () => {
     signOutButton.disabled = true;
     await supabaseClient.auth.signOut({ scope: 'local' });
-    setSignedInState(false);
+    ++authGeneration;
+    setSignedInState('signed-out');
     closeOwnerAccountMenu();
   });
 
+  const initialGeneration = authGeneration;
   supabaseClient.auth.getSession().then(({ data }) => {
-    const user = data && data.session && data.session.user;
-    setSignedInState(Boolean(user), user ? user.email : '');
+    if (initialGeneration === authGeneration) void verifyAccess(data?.session?.user, initialGeneration);
   });
-
   supabaseClient.auth.onAuthStateChange((_event, session) => {
-    const user = session && session.user;
-    setSignedInState(Boolean(user), user ? user.email : '');
+    const generation = ++authGeneration;
+    window.setTimeout(() => {
+      if (generation === authGeneration) void verifyAccess(session?.user, generation);
+    }, 0);
   });
 })();
 (() => {
@@ -8045,7 +8143,15 @@
 
   let activeFilter = 'active';
   let isHistoryFilterExpanded = false;
-  let isOwnerSignedIn = false;
+  let hasOrdersAccess = false;
+  let orderRole = 'signed-out';
+  let orderAuthGeneration = 0;
+  let orderSessionCheck = 0;
+  const isCurrentOrderSession = generation => generation === orderAuthGeneration && hasOrdersAccess;
+  let orderActor = null;
+  let orderNotificationsReady = false;
+  const isCashier = () => orderRole === 'cashier';
+  const isOwner = () => orderRole === 'owner';
   let signedInOwnerEmail = '';
   let latestOrders = [];
   let itemCountByOrderId = new Map();
@@ -8148,24 +8254,29 @@
   };
 
   const updateOwnerAccountUi = () => {
-    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
-    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
-    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    const hasSession = orderRole !== 'signed-out';
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = hasSession;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !hasSession;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwner() ? 'Owner' : isCashier() ? 'Cashier' : hasSession ? 'Access denied' : 'Sign in';
     if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail ? 'Signed in as ' + signedInOwnerEmail : 'Owner access active.';
     if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
-    if (signInButton) signInButton.disabled = isOwnerSignedIn;
-    if (signOutButton) signOutButton.disabled = !isOwnerSignedIn;
+    if (signInButton) signInButton.disabled = hasSession;
+    if (signOutButton) signOutButton.disabled = !hasSession;
   };
 
-  const setSignedInState = (isSignedIn, email = '') => {
-    isOwnerSignedIn = isSignedIn;
-    if (!isSignedIn) resetKioskControls();
-    signedInOwnerEmail = isSignedIn ? (email || signedInOwnerEmail) : '';
+  const setSignedInState = (role, email = '') => {
+    orderRole = role || 'signed-out';
+    hasOrdersAccess = isOwner() || isCashier();
+    if (!isOwner()) resetKioskControls();
+    signedInOwnerEmail = orderRole === 'signed-out' ? '' : email;
     updateOwnerAccountUi();
-    if (orderSearchInput) orderSearchInput.disabled = !isOwnerSignedIn;
+    window.curvControlAccess.restrictNavigation(orderRole);
+    const totals = ordersRoot.querySelector('.incoming-order-today-pill');
+    if (totals) totals.style.display = isCashier() ? 'none' : '';
+    if (orderSearchInput) orderSearchInput.disabled = !hasOrdersAccess;
   };
 
-  if (orderSearchInput) orderSearchInput.disabled = !isOwnerSignedIn;
+  if (orderSearchInput) orderSearchInput.disabled = !hasOrdersAccess;
 
   const formatCurrency = (value, currency = 'PHP') => {
     const amount = Number(value || 0);
@@ -8698,7 +8809,7 @@
   };
 
   const loadOrderSearchIndex = async ({ force = false } = {}) => {
-    if (!isOwnerSignedIn) return false;
+    if (!hasOrdersAccess) return false;
     if (!force && isSearchIndexFresh()) return true;
     if (searchIndexLoadPromise) return searchIndexLoadPromise;
 
@@ -8708,11 +8819,10 @@
     renderOrderSearchResults();
 
     const loadPromise = (async () => {
-      const { data, error } = await client
-        .from('orders')
-        .select(ORDER_SEARCH_SELECT)
-        .order('created_at', { ascending: false })
-        .limit(ORDER_SEARCH_INDEX_LIMIT);
+      const { data, error } = await (isCashier()
+        ? cashierOrders({ p_limit: ORDER_SEARCH_INDEX_LIMIT })
+        : client.from('orders').select(ORDER_SEARCH_SELECT)
+          .order('created_at', { ascending: false }).limit(ORDER_SEARCH_INDEX_LIMIT));
 
       if (generation !== searchIndexGeneration) return false;
 
@@ -8740,9 +8850,10 @@
   };
 
   const updateOrderSearchResults = async ({ forceIndex = false } = {}) => {
+    const generation = orderAuthGeneration;
     searchQuery = orderSearchInput ? orderSearchInput.value.trim() : '';
     searchActiveResultIndex = -1;
-    if (!isOwnerSignedIn || searchQuery.length < ORDER_SEARCH_MIN_QUERY_LENGTH) {
+    if (!hasOrdersAccess || searchQuery.length < ORDER_SEARCH_MIN_QUERY_LENGTH) {
       closeOrderSearchResults();
       return;
     }
@@ -8750,7 +8861,7 @@
 
     if (!isSearchIndexFresh() || forceIndex) {
       const loaded = await loadOrderSearchIndex({ force: forceIndex });
-      if (!loaded && !searchIndex.length) return;
+      if (!isCurrentOrderSession(generation) || (!loaded && !searchIndex.length)) return;
     }
 
     const matches = searchIndex
@@ -8779,7 +8890,7 @@
   const renderOrderSearchResults = () => {
     if (!orderSearchInput || !orderSearchResultsPanel) return;
     const hasQuery = searchQuery.trim().length >= ORDER_SEARCH_MIN_QUERY_LENGTH;
-    const shouldOpen = searchResultsOpen && isOwnerSignedIn && hasQuery;
+    const shouldOpen = searchResultsOpen && hasOrdersAccess && hasQuery;
     orderSearchInput.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     orderSearchInput.setAttribute('aria-busy', searchIndexLoading ? 'true' : 'false');
     if (searchActiveResultIndex >= 0 && searchResults[searchActiveResultIndex]) {
@@ -8894,8 +9005,8 @@
 
   const renderWebsiteOrderingControl = () => {
     if (!websiteOrderingControl) return;
-    websiteOrderingControl.hidden = !isOwnerSignedIn;
-    if (!isOwnerSignedIn) {
+    websiteOrderingControl.hidden = !isOwner();
+    if (!isOwner()) {
       if (websiteOrderingStateRow) websiteOrderingStateRow.replaceChildren();
       if (websiteOrderingLive) websiteOrderingLive.textContent = '';
       if (websiteOrderingError) {
@@ -8981,7 +9092,7 @@
 
   const loadWebsiteOrderingStatus = async () => {
     const loadGeneration = ++websiteOrderingLoadGeneration;
-    if (!isOwnerSignedIn) {
+    if (!isOwner()) {
       resetWebsiteOrderingControl();
       return;
     }
@@ -9019,7 +9130,7 @@
   };
 
   const handleWebsiteOrderingUpdate = async (nextEnabled) => {
-    if (!isOwnerSignedIn || websiteOrderingLoading || websiteOrderingSaving) return;
+    if (!isOwner() || websiteOrderingLoading || websiteOrderingSaving) return;
     const actionLabel = nextEnabled ? 'resume Website Ordering' : 'pause Website Ordering';
 
     const loadGeneration = ++websiteOrderingLoadGeneration;
@@ -9287,7 +9398,9 @@
     );
 
     const helper = makeElement('p', 'order-payment-note', 'Use only after payment is verified or COD is received.');
-    section.append(statusRow, helper);
+    section.appendChild(statusRow);
+    if (isCashier()) return section;
+    section.appendChild(helper);
 
     if (paymentStatus === 'unpaid' || paymentStatus === 'pending' || paymentStatus === 'paid') {
       const nextStatus = paymentStatus === 'paid' ? 'unpaid' : 'paid';
@@ -9332,11 +9445,16 @@
   const renderOrderStatusActions = (order) => {
     const statusKey = normalizeOrderStatus(order.status);
     const paymentStatus = normalizePaymentStatus(order && order.payment_status);
-    const actions = ORDER_STATUS_ACTIONS[statusKey] || [];
+    const availableActions = ORDER_STATUS_ACTIONS[statusKey] || [];
+    const actions = isCashier() ? availableActions.filter(action => action.nextStatus !== 'cancelled') : availableActions;
     const canShowPaymentShortcut = statusKey !== 'cancelled' && ['unpaid', 'pending'].includes(paymentStatus);
     const canShowPaidConfirmation = statusKey !== 'cancelled' && paymentStatus === 'paid';
 
     const actionRow = makeElement('div', 'order-action-row');
+    if (isCashier() && cashierNeedsOwnerReview(order)) {
+      actionRow.appendChild(makeElement('p', 'order-payment-note', 'Owner review required for this order.'));
+      return actionRow;
+    }
     const createPaymentShortcut = () => {
       const isSaving = activePaymentAction
         && activePaymentAction.orderId === order.id
@@ -9371,9 +9489,9 @@
       actionRow.appendChild(button);
     });
 
-    if (canShowPaymentShortcut) {
+    if (isOwner() && canShowPaymentShortcut) {
       actionRow.appendChild(createPaymentShortcut());
-    } else if (canShowPaidConfirmation) {
+    } else if (isOwner() && canShowPaidConfirmation) {
       const paidButton = makeElement('button', 'auth-button order-action-button order-payment-shortcut-button', 'Paid ✓');
       paidButton.type = 'button';
       paidButton.disabled = true;
@@ -9381,6 +9499,7 @@
       actionRow.appendChild(paidButton);
     }
 
+    if (isCashier()) return actionRow;
     const printButton = makeElement('button', 'auth-button auth-button-secondary order-action-button order-print-ticket-button', 'Print Ticket');
     printButton.type = 'button';
     printButton.addEventListener('click', (event) => {
@@ -9488,8 +9607,9 @@
 
   const renderOrders = () => {
     if (!orderList) return;
-    if (!isOwnerSignedIn) {
-      renderOrderEmptyState('Owner sign-in required', 'Sign in to continue.');
+    if (!hasOrdersAccess) {
+      renderOrderEmptyState(orderRole === 'denied' ? 'Access denied' : 'Sign in required',
+        orderRole === 'denied' ? 'This account is not authorized for Incoming Orders.' : 'Sign in to continue.');
       renderOrderDetailPlaceholder('Select an order', 'Sign in to load order details.');
       return;
     }
@@ -9649,18 +9769,18 @@
   };
 
   const loadOrderSummary = async () => {
-    if (!isOwnerSignedIn) {
+    if (!hasOrdersAccess) {
       resetSummary();
       return;
     }
 
-    const { data, error } = await client
-      .from('orders')
-      .select('status,payment_status,total,currency,created_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    const generation = orderAuthGeneration;
+    const { data, error } = await (isCashier()
+      ? cashierOrders({ p_limit: 500 })
+      : client.from('orders').select('status,payment_status,total,currency,created_at')
+        .order('created_at', { ascending: false }).limit(500));
 
-    if (error) return;
+    if (error || !isCurrentOrderSession(generation)) return;
 
     const nextCounts = {
       active: 0,
@@ -9716,11 +9836,11 @@
       };
     }
 
-    const { data, error } = await client
-      .from('order_items')
-      .select('order_id,product_name,category_name,variant_label,quantity,unit_price,line_total,options,item_note,sort_order')
-      .in('order_id', orderIds)
-      .order('sort_order', { ascending: true });
+    const { data, error } = await (isCashier()
+      ? cashierRpc('control_cashier_order_items', { p_order_ids: orderIds })
+      : client.from('order_items')
+        .select('order_id,product_name,category_name,variant_label,quantity,unit_price,line_total,options,item_note,sort_order')
+        .in('order_id', orderIds).order('sort_order', { ascending: true }));
 
     if (error) {
       return {
@@ -9745,8 +9865,14 @@
     };
   };
 
+  const cashierNeedsOwnerReview = order => hasCustomerCancelRequest(order) || (
+    normalizeOrderStatus(order.status) === 'submitted' && getFulfillmentType(order) === 'delivery'
+      && String(order.delivery_fee_status || '').trim().toLowerCase() === 'to_confirm'
+  );
+
   const handleOrderStatusAction = async (order, action) => {
-    if (!order || !order.id || !action || !action.nextStatus || !action.timestampField) return;
+    if (!hasOrdersAccess || !order || !order.id || !action || !action.nextStatus || !action.timestampField) return;
+    if (isCashier() && (action.nextStatus === 'cancelled' || cashierNeedsOwnerReview(order))) return;
     if (activeOrderAction || activePaymentAction || ordersLoading) return;
 
     if (action.nextStatus === 'cancelled') {
@@ -9754,7 +9880,9 @@
       if (!shouldCancel) return;
     }
 
-    activeOrderAction = { orderId: order.id, nextStatus: action.nextStatus };
+    const request = { orderId: order.id, nextStatus: action.nextStatus };
+    const generation = orderAuthGeneration;
+    activeOrderAction = request;
     renderOrders();
     renderOrderDetail(order);
     setStatus(action.label + ' in progress...');
@@ -9776,11 +9904,16 @@
       payload.delivery_fee_status = 'confirmed';
     }
 
-    const { error } = await client
-      .from('orders')
-      .update(payload)
-      .eq('id', order.id);
+    const ownerAction = isOwner();
+    const { data, error } = await (ownerAction
+      ? client.from('orders').update(payload).eq('id', order.id).eq('status', order.status).select('id')
+      : cashierRpc('control_cashier_advance_order', { p_order_id: order.id, p_expected: order.status, p_next: action.nextStatus }));
 
+    if (activeOrderAction !== request) return;
+    if (generation !== orderAuthGeneration) {
+      activeOrderAction = null;
+      return;
+    }
     if (error) {
       activeOrderAction = null;
       renderOrders();
@@ -9791,6 +9924,16 @@
 
     activeOrderAction = null;
     searchIndexFetchedAt = 0;
+    if (ownerAction && (data?.length !== 1 || data[0]?.id !== order.id)) {
+      const current = await fetchExactOrderById(order.id).catch(() => null);
+      if (generation !== orderAuthGeneration || !isOwner()) return;
+      if (current) await routeToOrder(current, { highlight: true });
+      else await loadOrders();
+      if (generation === orderAuthGeneration && isOwner()) {
+        setStatus((order.order_number || 'Order') + ' changed before your update. Review its current status before trying again.');
+      }
+      return;
+    }
     if (hasCustomerCancelRequest(order) && payload.customer_cancel_status && typeof window.curvClearIncomingOrderNotification === 'function') {
       window.curvClearIncomingOrderNotification(getCancellationRequestKey(order));
     }
@@ -9798,16 +9941,21 @@
     if (HISTORY_FILTERS.has(activeFilter)) isHistoryFilterExpanded = true;
     updateFilterUi();
     await loadOrderSummary();
-    if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
+    if (!isCurrentOrderSession(generation)) return;
+    window.curvRefreshIncomingOrderBadge?.();
     await loadOrders();
-    setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
+    if (isCurrentOrderSession(generation)) {
+      setStatus((order.order_number || 'Order') + ' moved to ' + String(STATUS_LABELS[action.nextStatus] || action.nextStatus).toLowerCase() + '.');
+    }
   };
 
   const handlePaymentStatusAction = async (order, nextStatus) => {
-    if (!order || !order.id || !nextStatus) return;
+    if (!isOwner() || !order || !order.id || !nextStatus) return;
     if (activePaymentAction || activeOrderAction || ordersLoading) return;
 
-    activePaymentAction = { orderId: order.id, nextStatus };
+    const request = { orderId: order.id, nextStatus };
+    const generation = orderAuthGeneration;
+    activePaymentAction = request;
     renderOrders();
     renderOrderDetail(order);
     setStatus((nextStatus === 'paid' ? 'Marking payment paid' : 'Marking payment unpaid') + '...');
@@ -9817,6 +9965,7 @@
       .update({ payment_status: nextStatus })
       .eq('id', order.id);
 
+    if (activePaymentAction !== request || !isCurrentOrderSession(generation)) return;
     if (error) {
       activePaymentAction = null;
       renderOrders();
@@ -9828,12 +9977,14 @@
     activePaymentAction = null;
     searchIndexFetchedAt = 0;
     await loadOrders({ preserveSelection: true });
-    setStatus((order.order_number || 'Order') + ' payment marked ' + formatPaymentStatus(nextStatus).toLowerCase() + '.');
+    if (isCurrentOrderSession(generation)) {
+      setStatus((order.order_number || 'Order') + ' payment marked ' + formatPaymentStatus(nextStatus).toLowerCase() + '.');
+    }
   };
 
   const loadOrders = async ({ preserveSelection = false } = {}) => {
     const loadGeneration = ++orderLoadGeneration;
-    if (!isOwnerSignedIn) {
+    if (!hasOrdersAccess) {
       latestOrders = [];
       itemCountByOrderId = new Map();
       orderItemsByOrderId = new Map();
@@ -9841,7 +9992,7 @@
       selectedOrderId = '';
       activePaymentAction = null;
       renderOrders();
-      setStatus('Ready for owner sign in.');
+      setStatus(orderRole === 'denied' ? 'Access denied.' : 'Ready for sign in.');
       return;
     }
 
@@ -9864,7 +10015,9 @@
     }
     if (activeFilter === 'unpaid') query = query.or('payment_status.in.(unpaid,pending),payment_status.is.null');
 
-    const { data, error } = await query;
+    const { data, error } = await (isCashier()
+      ? cashierOrders({ p_statuses: filterStatuses, p_unpaid: activeFilter === 'unpaid' })
+      : query);
 
     if (loadGeneration !== orderLoadGeneration) return;
 
@@ -9908,6 +10061,18 @@
   }
 
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const cashierRpc = async (name, args) => {
+    const generation = orderAuthGeneration;
+    const result = await client.rpc(name, args);
+    if (isCurrentOrderSession(generation) && isCashier() && result.error?.details === 'CASHIER_ACCESS_DENIED') {
+      clearOrderSession();
+      setStatus('Checking order access...');
+      void refreshSession();
+    }
+    return result;
+  };
+  const cashierOrders = args => cashierRpc('control_cashier_orders', args);
 
   const kioskControls = ordersRoot.querySelector('[data-kiosk-controls]');
   const kioskMode = kioskControls?.querySelector('[data-kiosk-mode-status]');
@@ -10121,7 +10286,7 @@
     if (!shouldAlert || !isNew || !submittedOrderBaselineReady) return false;
     markRecentlyReceivedOrder(order);
     if (typeof window.curvHandleIncomingOrderDetected === 'function') {
-      window.curvHandleIncomingOrderDetected(order);
+      window.curvHandleIncomingOrderDetected(order, orderActor);
     }
     return true;
   };
@@ -10135,7 +10300,7 @@
     if (!shouldAlert || !isNew || !cancellationRequestBaselineReady) return false;
     markRecentlyReceivedOrder(order);
     if (typeof window.curvHandleCancellationRequestDetected === 'function') {
-      window.curvHandleCancellationRequestDetected(order);
+      window.curvHandleCancellationRequestDetected(order, orderActor);
     }
     return true;
   };
@@ -10165,21 +10330,16 @@
   };
 
   const initializeSubmittedOrderBaseline = async () => {
-    if (!isOwnerSignedIn) return;
-    try {
-      const submittedOrders = await fetchRecentSubmittedOrders();
-      submittedOrders.forEach((order) => addKnownSubmittedOrder(order));
-      submittedOrderBaselineReady = true;
-    } catch (error) {
-      submittedOrderBaselineReady = true;
-    }
-    try {
-      const cancellationRequests = await fetchRecentCancellationRequests();
-      cancellationRequests.forEach((order) => addKnownCancellationRequest(order));
-      cancellationRequestBaselineReady = true;
-    } catch (error) {
-      cancellationRequestBaselineReady = true;
-    }
+    const generation = orderAuthGeneration;
+    if (!isOwner()) return;
+    const submittedOrders = await fetchRecentSubmittedOrders().catch(() => []);
+    if (!isCurrentOrderSession(generation)) return;
+    submittedOrders.forEach(addKnownSubmittedOrder);
+    submittedOrderBaselineReady = true;
+    const cancellationRequests = await fetchRecentCancellationRequests().catch(() => []);
+    if (!isCurrentOrderSession(generation)) return;
+    cancellationRequests.forEach(addKnownCancellationRequest);
+    cancellationRequestBaselineReady = true;
   };
 
   const markRecentlyReceivedOrder = (order) => {
@@ -10199,8 +10359,8 @@
     updateFilterUi();
   };
 
-  const refreshOrdersFromRealtime = async (incomingOrder) => {
-    if (!isOwnerSignedIn) return;
+  const refreshOrdersFromRealtime = async (incomingOrder, ownerId, channel) => {
+    if (!isOwner() || orderActor !== ownerId || ordersRealtimeChannel !== channel) return;
     detectSubmittedOrder(incomingOrder);
     detectCancellationRequest(incomingOrder);
     if (realtimeRefreshInFlight) {
@@ -10209,35 +10369,41 @@
     }
 
     realtimeRefreshInFlight = true;
+    const generation = orderAuthGeneration;
     const incomingStatus = normalizeOrderStatus(incomingOrder && incomingOrder.status);
     try {
       if (incomingOrder && incomingOrder.id) searchIndexFetchedAt = 0;
       markRecentlyReceivedOrder(incomingOrder);
       await loadOrderSummary();
-      if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
+      if (!isCurrentOrderSession(generation)) return;
+      window.curvRefreshIncomingOrderBadge?.();
       if (!incomingStatus || doesOrderMatchFilter(incomingOrder, activeFilter)) {
         await loadOrders({ preserveSelection: true });
       }
-      setStatus(incomingStatus === 'submitted' ? 'New order received.' : 'Order queue refreshed.');
+      if (isCurrentOrderSession(generation)) {
+        setStatus(incomingStatus === 'submitted' ? 'New order received.' : 'Order queue refreshed.');
+      }
     } catch (error) {
-      setStatus('Realtime refresh failed. ' + (error && error.message ? error.message : 'Manual refresh still works.'));
+      if (isCurrentOrderSession(generation)) {
+        setStatus('Realtime refresh failed. ' + (error && error.message ? error.message : 'Manual refresh still works.'));
+      }
     } finally {
-      realtimeRefreshInFlight = false;
-      if (realtimeRefreshQueued) {
-        realtimeRefreshQueued = false;
-        await refreshOrdersFromRealtime(incomingOrder);
+      if (ordersRealtimeChannel === channel) {
+        realtimeRefreshInFlight = false;
+        if (realtimeRefreshQueued) {
+          realtimeRefreshQueued = false;
+          await refreshOrdersFromRealtime(incomingOrder, ownerId, channel);
+        }
       }
     }
   };
 
   const fetchExactOrderById = async (orderId) => {
-    const { data, error } = await client
-      .from('orders')
-      .select(ORDER_LIST_SELECT)
-      .eq('id', orderId)
-      .maybeSingle();
+    const { data, error } = await (isCashier()
+      ? cashierOrders({ p_order_id: orderId, p_limit: 1 })
+      : client.from('orders').select(ORDER_LIST_SELECT).eq('id', orderId).maybeSingle());
     if (error) throw error;
-    return data || null;
+    return (Array.isArray(data) ? data[0] : data) || null;
   };
 
   const integrateExactOrderIntoCurrentList = async (order, routeGeneration, loadGeneration) => {
@@ -10247,7 +10413,7 @@
     if (
       routeGeneration !== orderRouteGeneration
       || loadGeneration !== orderLoadGeneration
-      || !isOwnerSignedIn
+      || !hasOrdersAccess
     ) return false;
     if (!doesOrderMatchFilter(order, activeFilter) && !(activeFilter === 'active' && routeFilter === 'active')) return false;
 
@@ -10277,7 +10443,7 @@
 
   const routeToOrder = async (target, { highlight = false, clearNotificationKey = '', allowReroute = true } = {}) => {
     const targetId = String(target && (target.id || target.key) || '').trim();
-    if (!targetId || !isOwnerSignedIn) return false;
+    if (!targetId || !hasOrdersAccess) return false;
     const routeGeneration = ++orderRouteGeneration;
     const nextFilter = getSearchOrderFilterForStatus(target && target.status);
 
@@ -10289,13 +10455,13 @@
     } else if (!latestOrders.length && !ordersLoading) {
       await loadOrders({ preserveSelection: true });
     }
-    if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+    if (routeGeneration !== orderRouteGeneration || !hasOrdersAccess) return false;
 
     let orderToOpen = latestOrders.find(order => order.id === targetId) || null;
     if (!orderToOpen) {
       try {
         const exactOrder = await fetchExactOrderById(targetId);
-        if (routeGeneration !== orderRouteGeneration || !isOwnerSignedIn) return false;
+        if (routeGeneration !== orderRouteGeneration || !hasOrdersAccess) return false;
         if (!exactOrder) {
           setStatus('This order is no longer available.');
           return false;
@@ -10309,7 +10475,7 @@
         if (
           routeGeneration !== orderRouteGeneration
           || loadGeneration !== orderLoadGeneration
-          || !isOwnerSignedIn
+          || !hasOrdersAccess
         ) return false;
         if (!integrated) {
           setStatus('This order is no longer available in the selected queue.');
@@ -10317,7 +10483,9 @@
         }
         orderToOpen = exactOrder;
       } catch (error) {
-        setStatus('Unable to open order. ' + (error && error.message ? error.message : 'Try again.'));
+        if (routeGeneration === orderRouteGeneration && hasOrdersAccess) {
+          setStatus('Unable to open order. ' + (error && error.message ? error.message : 'Try again.'));
+        }
         return false;
       }
     }
@@ -10340,7 +10508,7 @@
 
   const openOrderFromSearchResult = async (index) => {
     const order = searchResults[index];
-    if (!order || !order.id || !isOwnerSignedIn) return;
+    if (!order || !order.id || !hasOrdersAccess) return;
     searchResults = [];
     searchResultsOpen = false;
     searchActiveResultIndex = -1;
@@ -10349,10 +10517,10 @@
     await routeToOrder(order, { highlight: true, allowReroute: true });
   };
 
-  const openOrderFromNotification = async (target) => {
+  const openOrderFromNotification = async (target, ownerId) => {
     const targetId = String(target && (target.id || target.key) || '').trim();
     const targetKey = String(target && target.key || targetId).trim();
-    if (!targetId || !isOwnerSignedIn) return;
+    if (!targetId || !isOwner() || orderActor !== ownerId) return;
     stopIncomingOrderAlert();
     await routeToOrder(
       Object.assign({}, target, { status: normalizeOrderStatus(target && target.status) || 'submitted' }),
@@ -10363,14 +10531,19 @@
   window.curvOpenIncomingOrderNotification = openOrderFromNotification;
 
   const consumePendingNotificationTarget = async () => {
-    if (typeof window.curvGetIncomingOrderNotificationTarget !== 'function') return;
-    const target = window.curvGetIncomingOrderNotificationTarget();
+    if (!orderNotificationsReady || !isOwner() || typeof window.curvGetIncomingOrderNotificationTarget !== 'function') return;
+    const ownerId = orderActor;
+    const target = window.curvGetIncomingOrderNotificationTarget(ownerId);
     if (!target) return;
     if (typeof window.curvClearIncomingOrderNotificationTarget === 'function') {
       window.curvClearIncomingOrderNotificationTarget();
     }
-    await openOrderFromNotification(target);
+    await openOrderFromNotification(target, ownerId);
   };
+
+  window.addEventListener('curv-owner-notifications-ready', event => {
+    if (event.detail === orderActor) void consumePendingNotificationTarget();
+  });
 
   const unsubscribeFromOrdersRealtime = () => {
     if (!ordersRealtimeChannel) return;
@@ -10380,18 +10553,20 @@
   };
 
   const subscribeToOrdersRealtime = () => {
-    if (ordersRealtimeChannel || !isOwnerSignedIn) return;
-    ordersRealtimeChannel = client
-      .channel('incoming-orders-admin')
+    if (ordersRealtimeChannel || !isOwner()) return;
+    const ownerId = orderActor;
+    const channel = client.channel('incoming-orders-admin');
+    ordersRealtimeChannel = channel;
+    channel
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
-          refreshOrdersFromRealtime(payload && payload.new);
+          void refreshOrdersFromRealtime(payload?.new, ownerId, channel);
         },
       )
       .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (channel === ordersRealtimeChannel && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT')) {
           setStatus('Realtime refresh unavailable. Manual refresh still works.');
         }
       });
@@ -10403,10 +10578,21 @@
   };
 
   const pollForNewSubmittedOrders = async () => {
-    if (!isOwnerSignedIn) return;
+    if (!hasOrdersAccess) return;
+    const generation = orderAuthGeneration;
     try {
+      if (isCashier()) {
+        searchIndexFetchedAt = 0;
+        await loadOrderSummary();
+        if (isCurrentOrderSession(generation) && ACTIVE_WORK_FILTERS.has(activeFilter)) {
+          await loadOrders({ preserveSelection: true });
+        }
+        return;
+      }
       const submittedOrders = await fetchRecentSubmittedOrders();
+      if (generation !== orderAuthGeneration || !isOwner()) return;
       const cancellationRequests = await fetchRecentCancellationRequests();
+      if (generation !== orderAuthGeneration || !isOwner()) return;
       const newOrders = [];
       const newCancellationRequests = [];
       submittedOrders.forEach((order) => {
@@ -10416,8 +10602,10 @@
         if (detectCancellationRequest(order)) newCancellationRequests.push(order);
       });
       await loadOrderSummary();
-      if (typeof window.curvRefreshIncomingOrderBadge === 'function') await window.curvRefreshIncomingOrderBadge();
+      if (!isCurrentOrderSession(generation)) return;
+      window.curvRefreshIncomingOrderBadge?.();
       if (['active', 'submitted', 'unpaid'].includes(activeFilter)) await loadOrders({ preserveSelection: true });
+      if (!isCurrentOrderSession(generation)) return;
       if (newCancellationRequests.length) {
         setStatus(newCancellationRequests.length === 1 ? 'Cancellation request received.' : 'Cancellation requests received.');
       } else if (newOrders.length) {
@@ -10429,42 +10617,93 @@
   };
 
   const startOrdersFallbackPolling = () => {
-    if (orderFallbackPollTimer || !isOwnerSignedIn) return;
+    if (orderFallbackPollTimer || !hasOrdersAccess) return;
     orderFallbackPollTimer = window.setInterval(pollForNewSubmittedOrders, 25000);
   };
 
-  const refreshSession = async () => {
-    const { data } = await client.auth.getSession();
-    const isSignedIn = Boolean(data && data.session && data.session.user);
-    setSignedInState(isSignedIn, data && data.session && data.session.user ? data.session.user.email : '');
-    if (isSignedIn) {
-      void loadKioskControls(data.session.user);
-      await loadWebsiteOrderingStatus();
-      await loadOrderSummary();
-      await loadOrders();
-      await initializeSubmittedOrderBaseline();
-      await consumePendingNotificationTarget();
-      subscribeToOrdersRealtime();
-      startOrdersFallbackPolling();
-    } else {
-      unsubscribeFromOrdersRealtime();
-      stopOrdersFallbackPolling();
-      knownSubmittedOrderKeys.clear();
-      knownCancellationRequestKeys.clear();
-      submittedOrderBaselineReady = false;
-      cancellationRequestBaselineReady = false;
-      latestOrders = [];
-      itemCountByOrderId = new Map();
-      orderItemsByOrderId = new Map();
-      orderItemsLoadError = '';
-      selectedOrderId = '';
-      resetOrderSearch();
-      resetWebsiteOrderingControl();
-      resetSummary();
-      updateFilterUi();
-      renderOrders();
-      setStatus('Ready for owner sign in.');
+  const clearOrderSession = ({ keepNotificationTarget = false } = {}) => {
+    ++orderAuthGeneration;
+    ++orderLoadGeneration;
+    if (isOwner() && !keepNotificationTarget) window.curvClearIncomingOrderNotificationSession?.(orderActor);
+    orderActor = null;
+    orderNotificationsReady = false;
+    setSignedInState('signed-out');
+    unsubscribeFromOrdersRealtime();
+    stopOrdersFallbackPolling();
+    realtimeRefreshInFlight = false;
+    realtimeRefreshQueued = false;
+    knownSubmittedOrderKeys.clear();
+    knownCancellationRequestKeys.clear();
+    submittedOrderBaselineReady = false;
+    cancellationRequestBaselineReady = false;
+    recentlyReceivedOrderTimers.forEach(timer => window.clearTimeout(timer));
+    recentlyReceivedOrderTimers.clear();
+    recentlyReceivedOrderIds.clear();
+    latestOrders = [];
+    itemCountByOrderId = new Map();
+    orderItemsByOrderId = new Map();
+    orderItemsLoadError = '';
+    selectedOrderId = '';
+    ordersLoading = false;
+    activeOrderAction = null;
+    activePaymentAction = null;
+    activeFilter = 'active';
+    isHistoryFilterExpanded = false;
+    resetOrderSearch();
+    resetWebsiteOrderingControl();
+    resetSummary();
+    updateFilterUi();
+    renderOrders();
+    setStatus('Ready for sign in.');
+  };
+
+  const refreshSession = async (session) => {
+    const check = ++orderSessionCheck;
+    if (session === undefined) {
+      try {
+        const { data, error } = await client.auth.getSession();
+        session = error ? null : data?.session;
+      } catch (_) {
+        session = null;
+      }
+      if (check !== orderSessionCheck) return;
     }
+    const user = session?.user;
+    const uid = user?.id || null;
+    if (orderActor && orderActor !== uid) clearOrderSession();
+    if (!uid) return;
+
+    const role = await window.curvControlAccess.check(client, user);
+    if (check !== orderSessionCheck) return;
+    if (orderActor === uid && orderRole === role) return;
+    if (orderActor) clearOrderSession();
+    orderActor = uid;
+    setSignedInState(role, user.email);
+    if (!hasOrdersAccess) {
+      renderOrders();
+      setStatus('Access denied.');
+      return;
+    }
+
+    const generation = orderAuthGeneration;
+    if (isOwner()) {
+      void loadKioskControls(user);
+      await loadWebsiteOrderingStatus();
+      if (!isCurrentOrderSession(generation)) return;
+    }
+    await loadOrderSummary();
+    if (!isCurrentOrderSession(generation)) return;
+    await loadOrders();
+    if (!isCurrentOrderSession(generation)) return;
+    if (isOwner()) {
+      orderNotificationsReady = true;
+      await initializeSubmittedOrderBaseline();
+      if (!isCurrentOrderSession(generation)) return;
+      await consumePendingNotificationTarget();
+      if (!isCurrentOrderSession(generation)) return;
+      subscribeToOrdersRealtime();
+    }
+    startOrdersFallbackPolling();
   };
 
   if (ownerAccountToggle) {
@@ -10493,7 +10732,7 @@
 
   if (orderSearchInput) {
     orderSearchInput.addEventListener('focus', () => {
-      if (!isOwnerSignedIn) return;
+      if (!hasOrdersAccess) return;
       searchQuery = orderSearchInput.value.trim();
       if (searchQuery.length >= ORDER_SEARCH_MIN_QUERY_LENGTH) updateOrderSearchResults();
     });
@@ -10582,76 +10821,55 @@
 
       setStatus('Signing in...');
       setFormDisabled(true);
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      const { error } = await client.auth.signInWithPassword({ email, password });
       setFormDisabled(false);
       if (error) {
-        setSignedInState(false);
-        resetOrderSearch();
-        resetWebsiteOrderingControl();
-        resetSummary();
-        renderOrders();
+        ++orderSessionCheck;
+        clearOrderSession();
         setStatus('Sign in failed. ' + error.message);
         return;
       }
 
       if (passwordInput) passwordInput.value = '';
-      setSignedInState(true, email);
-      void loadKioskControls(data?.user ?? data?.session?.user);
       closeOwnerAccountMenu();
-      await loadWebsiteOrderingStatus();
-      await loadOrderSummary();
-      await loadOrders();
-      await initializeSubmittedOrderBaseline();
-      subscribeToOrdersRealtime();
-      startOrdersFallbackPolling();
+      await refreshSession();
     });
   }
 
   if (signOutButton) {
     signOutButton.addEventListener('click', async () => {
+      ++orderSessionCheck;
+      clearOrderSession();
+      closeOwnerAccountMenu();
       setStatus('Signing out...');
-      setSignedInState(false);
-      setDraftFormDisabled(true);
       const { error } = await client.auth.signOut({ scope: 'local' });
       if (error) {
+        void window.curvRefreshIncomingOrderNotificationSession?.();
         await refreshSession();
         setStatus('Sign out failed. ' + error.message);
         return;
       }
-      setSignedInState(false);
-      unsubscribeFromOrdersRealtime();
-      stopOrdersFallbackPolling();
-      knownSubmittedOrderKeys.clear();
-      knownCancellationRequestKeys.clear();
-      submittedOrderBaselineReady = false;
-      cancellationRequestBaselineReady = false;
-      closeOwnerAccountMenu();
-      recentlyReceivedOrderTimers.forEach((timer) => window.clearTimeout(timer));
-      recentlyReceivedOrderTimers.clear();
-      recentlyReceivedOrderIds.clear();
-      latestOrders = [];
-      itemCountByOrderId = new Map();
-      orderItemsByOrderId = new Map();
-      orderItemsLoadError = '';
-      selectedOrderId = '';
-      activeFilter = 'active';
-      isHistoryFilterExpanded = false;
-      resetOrderSearch();
-      resetWebsiteOrderingControl();
-      resetSummary();
-      updateFilterUi();
-      if (typeof window.curvHideIncomingOrderBadge === 'function') window.curvHideIncomingOrderBadge();
-      renderOrders();
-      setStatus('Signed out.');
+      if (!orderActor) setStatus('Signed out.');
     });
   }
 
   window.addEventListener('pagehide', () => {
-    unsubscribeFromOrdersRealtime();
-    stopOrdersFallbackPolling();
-    resetOrderSearch();
+    ++orderSessionCheck;
+    clearOrderSession({ keepNotificationTarget: true });
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) void refreshSession();
   });
 
+  client.auth.onAuthStateChange((_event, session) => {
+    const check = ++orderSessionCheck;
+    const uid = session?.user?.id || null;
+    if (orderActor !== uid) clearOrderSession();
+    if (!uid) return;
+    window.setTimeout(() => {
+      if (check === orderSessionCheck) void refreshSession(session);
+    }, 0);
+  });
   updateFilterUi();
   syncOrderSoundToggle();
   renderWebsiteOrderingControl();

@@ -211,6 +211,12 @@
   let client = null;
   let pageState = STATES.AUTH_LOADING;
   let isOwnerSignedIn = false;
+  let inventoryRole = 'signed-out';
+  let inventoryAuthGeneration = 0;
+  let inventorySessionGeneration = 0;
+  let inventoryActor = null;
+  const isCashier = () => inventoryRole === 'cashier';
+  const ownerInventoryOnly = new Set(['add-item', 'opening-balance']);
   let signedInOwnerEmail = '';
   let loadSequence = 0;
   let movementLoadSequence = 0;
@@ -456,13 +462,14 @@
 
   const updateOwnerAccountUi = () => {
     if (ownerAccount) ownerAccount.classList.toggle('is-signed-in', isOwnerSignedIn);
-    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = isOwnerSignedIn;
-    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !isOwnerSignedIn;
-    if (ownerAccountLabel) ownerAccountLabel.textContent = isOwnerSignedIn ? 'Owner' : 'Owner Login';
+    const hasSession = inventoryRole !== 'signed-out';
+    if (ownerSignedOutPanel) ownerSignedOutPanel.hidden = hasSession;
+    if (ownerSignedInPanel) ownerSignedInPanel.hidden = !hasSession;
+    if (ownerAccountLabel) ownerAccountLabel.textContent = inventoryRole === 'owner' ? 'Owner' : isCashier() ? 'Cashier' : hasSession ? 'Access denied' : 'Sign in';
     if (ownerAccountEmail) ownerAccountEmail.textContent = signedInOwnerEmail || 'Owner access active.';
     if (ownerAccountInitials) ownerAccountInitials.textContent = getOwnerInitials(signedInOwnerEmail);
-    if (signInButton) signInButton.disabled = isOwnerSignedIn;
-    if (signOutButton) signOutButton.disabled = !isOwnerSignedIn;
+    if (signInButton) signInButton.disabled = hasSession;
+    if (signOutButton) signOutButton.disabled = !hasSession;
   };
 
   const setSignedInState = (isSignedIn, email = '') => {
@@ -535,6 +542,7 @@
     .filter((element) => element.offsetParent !== null || element === document.activeElement);
 
   const openDrawer = (drawerName, trigger) => {
+    if (isCashier() && ownerInventoryOnly.has(drawerName)) return;
     if (!canUseInventoryControls()) {
       setStatus('Sign in to continue.');
       return;
@@ -549,6 +557,7 @@
     drawerLayer.hidden = false;
     backdrop.hidden = false;
     requestAnimationFrame(() => {
+      if (activeDrawer !== drawer) return;
       drawerLayer.classList.add('is-open');
       backdrop.classList.add('is-open');
     });
@@ -1350,6 +1359,7 @@
       itemId: item.itemId,
       itemName: item.itemName,
       unitAbbreviation: item.unitAbbreviation,
+      stockRevision: item.stockRevision,
       recordedUsable: delta.recordedUsable,
       physicalCount: delta.physicalCount,
       difference: delta.difference,
@@ -1623,6 +1633,7 @@
       categoryName: row.category_name || 'Uncategorized',
       unitAbbreviation: row.unit_abbreviation || '',
       usableStock,
+      stockRevision: row.stock_revision,
       expiredStock,
       currentStock,
       lowStockThreshold,
@@ -2538,6 +2549,11 @@
     }
 
     const notes = countStockNotesInput ? countStockNotesInput.value.trim() : '';
+    if (isCashier() && !notes) {
+      setCountStockStatus('Enter a reason for this stock correction.');
+      countStockNotesInput?.focus();
+      return null;
+    }
     if (notes.length > 500) {
       setCountStockStatus('Notes must be 500 characters or fewer.');
       countStockNotesInput?.focus();
@@ -2663,6 +2679,24 @@
     if (movementPeriodFilter) movementPeriodFilter.value = '7';
   };
 
+  const handleInventoryReadFailure = async (isCurrent, setState) => {
+    if (!isCurrent()) return { ok: false, reason: 'stale' };
+    try {
+      const { data } = await client.auth.getSession();
+      if (!isCurrent()) return { ok: false, reason: 'stale' };
+      const session = data?.session ?? null;
+      if (inventoryActor !== (session?.user?.id || null)) {
+        void refreshSession(session);
+        return { ok: false, reason: session ? 'stale' : 'signed_out' };
+      }
+    } catch (error) {
+      if (!isCurrent()) return { ok: false, reason: 'stale' };
+      console.error('Inventory session check failed:', error);
+    }
+    setState(STATES.ERROR);
+    return { ok: false, reason: 'error' };
+  };
+
   const loadInventoryData = async () => {
     if (!client || !isOwnerSignedIn) return { ok: false, reason: 'signed_out' };
     const sessionKey = getOwnerSessionKey();
@@ -2678,7 +2712,7 @@
         unitResult,
         lowStockResult,
         expiryResult,
-      ] = await Promise.all([
+      ] = await (isCashier() ? loadCashierInventory() : Promise.all([
         client
           .from('inventory_stock_summary')
           .select('item_id,item_name,category_id,category_name,unit_abbreviation,usable_stock,expired_stock,current_stock,low_stock_threshold,is_low_stock,nearest_non_expired_expiry_date,track_expiry,storage_location,is_active')
@@ -2703,7 +2737,7 @@
           .select('item_id,item_name,expiry_date,expiry_status,quantity_remaining,unit_abbreviation')
           .in('expiry_status', ['expired', 'urgent'])
           .order('expiry_date', { ascending: true }),
-      ]);
+      ]));
 
       const failedResult = [stockResult, categoryResult, unitResult, lowStockResult, expiryResult].find((result) => result.error);
       if (failedResult) throw failedResult.error;
@@ -2732,29 +2766,8 @@
       setPageState(STATES.READY);
       return { ok: true };
     } catch (error) {
-      console.error('Inventory read failed:', error);
-      if (sequence !== loadSequence) return { ok: false, reason: 'stale' };
-      try {
-        const { data } = await client.auth.getSession();
-        const user = data && data.session && data.session.user;
-        if (!user) {
-          invalidateInventoryMutations();
-          openingBalanceOperationSequence += 1;
-          pendingOpeningBalance = null;
-          openingBalanceRefreshFailed = false;
-          isSettingOpeningBalance = false;
-          resetOpeningBalanceForm();
-          resetCountStockForm();
-          clearInventoryState();
-          setSignedInState(false);
-          setPageState(STATES.SIGNED_OUT);
-          return { ok: false, reason: 'signed_out' };
-        }
-      } catch (sessionError) {
-        console.error('Inventory session check failed:', sessionError);
-      }
-      setPageState(STATES.ERROR);
-      return { ok: false, reason: 'error' };
+      if (sequence === loadSequence) console.error('Inventory read failed:', error);
+      return await handleInventoryReadFailure(() => sequence === loadSequence, setPageState);
     } finally {
       if (sequence === loadSequence) activeLoadSessionKey = '';
     }
@@ -2779,7 +2792,9 @@
 
       if (periodStart) query = query.gte('created_at', periodStart);
 
-      const { data, error } = await query;
+      const { data, error } = await (isCashier()
+        ? cashierInventoryRpc('control_cashier_movements', { p_since: periodStart || null, p_limit: movementHistoryLimit })
+        : query);
       if (error) throw error;
       if (sequence !== movementLoadSequence || !isOwnerSignedIn) return { ok: false, reason: 'stale' };
 
@@ -2787,31 +2802,8 @@
       setMovementHistoryState(STATES.READY);
       return { ok: true };
     } catch (error) {
-      console.error('Inventory movement history read failed:', error);
-      if (sequence !== movementLoadSequence) return { ok: false, reason: 'stale' };
-      try {
-        const { data } = await client.auth.getSession();
-        const user = data && data.session && data.session.user;
-        if (!user) {
-          invalidateInventoryMutations();
-          openingBalanceOperationSequence += 1;
-          pendingOpeningBalance = null;
-          openingBalanceRefreshFailed = false;
-          isSettingOpeningBalance = false;
-          resetOpeningBalanceForm();
-          resetCountStockForm();
-          clearInventoryState();
-          clearMovementHistoryState();
-          setSignedInState(false);
-          setPageState(STATES.SIGNED_OUT);
-          setMovementHistoryState(STATES.SIGNED_OUT);
-          return { ok: false, reason: 'signed_out' };
-        }
-      } catch (sessionError) {
-        console.error('Inventory movement history session check failed:', sessionError);
-      }
-      setMovementHistoryState(STATES.ERROR);
-      return { ok: false, reason: 'error' };
+      if (sequence === movementLoadSequence) console.error('Inventory movement history read failed:', error);
+      return await handleInventoryReadFailure(() => sequence === movementLoadSequence, setMovementHistoryState);
     } finally {
       if (sequence === movementLoadSequence) activeMovementLoadSessionKey = '';
     }
@@ -2821,43 +2813,154 @@
     return loadMovementHistory({ silent: true });
   };
 
-  const handleAuthState = (isSignedIn, email = '') => {
-    setSignedInState(isSignedIn, email);
+  const cashierInventoryRpc = async (name, args) => {
+    const generation = inventorySessionGeneration;
+    const result = await client.rpc(name, args);
+    if (generation === inventorySessionGeneration && result.error?.details === 'CASHIER_ACCESS_DENIED') {
+      window.setTimeout(() => {
+        if (generation === inventorySessionGeneration) void refreshSession();
+      }, 0);
+    }
+    return result;
+  };
+
+  const loadCashierInventory = async () => {
+    const { data, error } = await cashierInventoryRpc('control_cashier_inventory');
+    return ['stock', 'categories', 'units', 'low', 'expiry'].map(key => ({ data: data?.[key], error }));
+  };
+
+  const changeStock = async (ownerRpc, operation, payload, countSnapshot) => {
+    if (!isCashier()) return client.rpc(ownerRpc, payload);
+    const input = { ...payload };
+    delete input.p_cost_per_unit;
+    if (countSnapshot) {
+      input.expected_stock = countSnapshot.recordedUsable;
+      input.expected_revision = countSnapshot.stockRevision;
+      input.p_notes = countSnapshot.notes;
+    }
+    const generation = inventorySessionGeneration;
+    let storageKey;
+    let requestId;
+    try {
+      const signature = new TextEncoder().encode(JSON.stringify([inventoryActor, operation, input]));
+      const digest = await crypto.subtle.digest('SHA-256', signature);
+      if (generation !== inventorySessionGeneration) {
+        return { error: { message: 'Inventory access changed. Check your sign-in.' } };
+      }
+      const hex = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      storageKey = 'curv-control-cashier:stock:' + hex;
+      requestId = sessionStorage.getItem(storageKey);
+      if (!requestId) {
+        requestId = crypto.randomUUID();
+        sessionStorage.setItem(storageKey, requestId);
+      }
+    } catch (_) {
+      const message = 'This tab could not protect your stock request. Review movement history before trying again.';
+      return { error: { message, hint: message } };
+    }
+    const result = await cashierInventoryRpc('control_cashier_stock', { p_operation: operation, p_request_id: requestId, p_input: input });
+    if (!result.error) {
+      try { sessionStorage.removeItem(storageKey); } catch (_) { /* Keep a successful receipt valid. */ }
+    }
+    if (result.error?.details?.startsWith('CASHIER_')) {
+      const reasons = {
+        CASHIER_REASON_REQUIRED: 'Enter a reason or reference for this stock change.',
+        CASHIER_COUNT_STALE: 'Stock changed since review. Refresh and recount.',
+        CASHIER_QUANTITY_INVALID: 'Enter a valid stock quantity.',
+        CASHIER_REQUEST_CONFLICT: 'The previous request needs checking. Review movement history.',
+        CASHIER_ACCESS_DENIED: 'This account is not authorized to change inventory.',
+      };
+      if (generation === inventorySessionGeneration && result.error.details === 'CASHIER_COUNT_STALE') {
+        resetCountStockForm();
+        await loadInventoryData();
+      }
+      const message = reasons[result.error.details] || 'This stock change is unavailable.';
+      result.error = { ...result.error, message, hint: message };
+    }
+    return result;
+  };
+
+  const clearInventorySession = (nextState) => {
+    inventorySessionGeneration += 1;
+    loadSequence += 1;
+    movementLoadSequence += 1;
+    invalidateInventoryMutations();
+    openingBalanceOperationSequence += 1;
+    activeLoadSessionKey = '';
+    activeMovementLoadSessionKey = '';
+    window.clearTimeout(searchTimer);
+    window.clearTimeout(movementSearchTimer);
+    isSettingOpeningBalance = false;
+    inventoryRole = 'signed-out';
+    setSignedInState(false);
+    clearInventoryState();
+    clearMovementHistoryState();
+    lastFocusedElement = null;
+    closeDrawer();
+    closeOwnerAccountMenu();
+    resetAddItemForm();
+    resetOpeningBalanceForm();
+    resetReceiveStockForm();
+    resetUseStockForm();
+    resetRecordWasteForm();
+    resetCountStockForm();
+    setPageState(nextState);
+    setMovementHistoryState(nextState);
+  };
+
+  const setInventoryActor = (user) => {
+    const actor = user?.id || null;
+    if (inventoryActor === actor) return;
+    inventoryActor = actor;
+    authForm?.reset();
+    clearInventorySession(actor ? STATES.AUTH_LOADING : STATES.SIGNED_OUT);
+  };
+
+  const handleAuthState = (role, user) => {
+    if (isOwnerSignedIn && inventoryRole === role) {
+      setSignedInState(true, user?.email);
+      return;
+    }
+    if (isOwnerSignedIn) clearInventorySession(STATES.AUTH_LOADING);
+    inventoryRole = role;
+    const isSignedIn = role === 'owner' || isCashier();
+    setSignedInState(isSignedIn, user?.email);
+    window.curvControlAccess.restrictNavigation(role);
+    for (const control of document.querySelectorAll('[data-inventory-drawer-open="add-item"], [data-inventory-drawer-open="opening-balance"], .inventory-setup-panel, label[for="receive-stock-cost"]')) {
+      control.style.display = isCashier() ? 'none' : '';
+    }
     if (!isSignedIn) {
-      loadSequence += 1;
-      movementLoadSequence += 1;
-      invalidateInventoryMutations();
-      openingBalanceOperationSequence += 1;
-      activeLoadSessionKey = '';
-      activeMovementLoadSessionKey = '';
-      pendingOpeningBalance = null;
-      openingBalanceRefreshFailed = false;
-      isSettingOpeningBalance = false;
-      clearInventoryState();
-      clearMovementHistoryState();
-      resetOpeningBalanceForm();
-      resetCountStockForm();
       setPageState(STATES.SIGNED_OUT);
       setMovementHistoryState(STATES.SIGNED_OUT);
+      if (role === 'denied') setStatus('Access denied. This account is not authorized for Inventory.');
       return;
     }
     loadInventoryData();
     loadMovementHistory();
   };
 
-  const refreshSession = async () => {
+  const refreshSession = async (session, generation = ++inventoryAuthGeneration) => {
     if (!client) {
       setPageState(STATES.ERROR);
       return;
     }
-    setPageState(STATES.AUTH_LOADING);
     try {
-      const { data } = await client.auth.getSession();
-      const user = data && data.session && data.session.user;
-      handleAuthState(Boolean(user), user ? user.email : '');
+      if (session === undefined) {
+        const { data, error } = await client.auth.getSession();
+        if (error) throw error;
+        session = data?.session;
+      }
+      if (generation !== inventoryAuthGeneration) return;
+      const user = session?.user;
+      setInventoryActor(user);
+      const role = await window.curvControlAccess.check(client, user);
+      if (generation === inventoryAuthGeneration) handleAuthState(role, user);
     } catch (error) {
+      if (generation !== inventoryAuthGeneration) return;
       console.error('Inventory auth check failed:', error);
+      setInventoryActor(null);
       setPageState(STATES.ERROR);
+      setMovementHistoryState(STATES.ERROR);
     }
   };
 
@@ -2887,7 +2990,7 @@
   };
 
   const retryOpeningBalanceRefresh = async () => {
-    if (!pendingOpeningBalance || isSettingOpeningBalance || !isOwnerSignedIn) return;
+    if (isCashier() || !pendingOpeningBalance || isSettingOpeningBalance || !isOwnerSignedIn) return;
     const sequence = openingBalanceOperationSequence + 1;
     openingBalanceOperationSequence = sequence;
     const ownerKey = getOwnerSessionKey();
@@ -2982,7 +3085,7 @@
     setCountStockConfirmStatus('Saving count...');
     setCountStockBusy(true);
     try {
-      const { data, error } = await client.rpc('inventory_adjust_to_count', snapshot.payload);
+      const { data, error } = await changeStock('inventory_adjust_to_count', 'count', snapshot.payload, snapshot);
       if (error) throw error;
       if (!isCountStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
@@ -3083,7 +3186,7 @@
       closeOwnerAccountMenu();
     } catch (error) {
       console.error('Inventory sign in failed:', error);
-      setStatus('Sign in failed. Check the owner email and password.');
+      setStatus('Sign in failed. Check your email and password.');
     } finally {
       setFormDisabled(false);
       updateOwnerAccountUi();
@@ -3092,7 +3195,7 @@
 
   addItemForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (isCreatingItem) return;
+    if (isCashier() || isCreatingItem) return;
     if (!client || pageState !== STATES.READY || !isOwnerSignedIn) {
       setAddItemStatus('Sign in to continue.');
       return;
@@ -3176,7 +3279,7 @@
     setReceiveStockStatus('Receiving stock...');
     setReceiveStockBusy(true);
     try {
-      const { data, error } = await client.rpc('inventory_stock_in', payload);
+      const { data, error } = await changeStock('inventory_stock_in', 'receive', payload);
       if (error) throw error;
       if (!isReceiveStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
@@ -3232,7 +3335,7 @@
     setUseStockStatus('Recording stock use...');
     setUseStockBusy(true);
     try {
-      const { data, error } = await client.rpc('inventory_stock_out', payload);
+      const { data, error } = await changeStock('inventory_stock_out', 'use', payload);
       if (error) throw error;
       if (!isUseStockOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
@@ -3288,7 +3391,7 @@
     setRecordWasteStatus('Recording waste...');
     setRecordWasteBusy(true);
     try {
-      const { data, error } = await client.rpc('inventory_record_waste', payload);
+      const { data, error } = await changeStock('inventory_record_waste', 'waste', payload);
       if (error) throw error;
       if (!isRecordWasteOperationCurrent(sequence, ownerKey)) return;
       const response = parseRpcResponse(data);
@@ -3447,8 +3550,11 @@
   client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   // This client-side session check is a UX gate only; database RLS remains the actual security control.
   client.auth.onAuthStateChange((_event, session) => {
-    const user = session && session.user;
-    handleAuthState(Boolean(user), user ? user.email : '');
+    const generation = ++inventoryAuthGeneration;
+    setInventoryActor(session?.user);
+    window.setTimeout(() => {
+      if (generation === inventoryAuthGeneration) void refreshSession(session, generation);
+    }, 0);
   });
-  refreshSession();
+  void refreshSession();
 })();

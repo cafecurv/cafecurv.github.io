@@ -1,4 +1,4 @@
-// Protected kiosk contract -> actual persisted SQL -> unchanged independent Incoming Orders.
+// Protected kiosk contract -> actual persisted SQL -> owner Incoming Orders.
 // Browser Auth/read transport mocked. Real Auth/PostgREST is a separate maintained suite.
 const fs=require('fs'),path=require('path'),assert=require('assert/strict');
 const {chromium}=require(process.env.CURV_PLAYWRIGHT_MODULE||'playwright');
@@ -55,7 +55,7 @@ const quoteIdentifier=x=>'"'+x.replaceAll('"','""')+'"';const q=(s,p=[])=>query(
       };
       const channel = { on() { return this; }, subscribe() { return this; }, unsubscribe() {} };
       window.supabase = { createClient: () => ({ from: chain,
-        rpc: async () => ({ data: { website_ordering_enabled: true }, error: null }),
+        rpc: async name => ({ data: name === 'curv_control_access' ? 'owner' : { website_ordering_enabled: true }, error: null }),
         channel: () => channel, removeChannel: async () => {},
         auth: { getSession: async () => ({ data: { session: { user: { id: 'independent-fixture-owner', email: 'owner@example.test' } } } }),
           onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), signOut: async () => ({ error: null }) }
@@ -100,5 +100,5 @@ try{
  }
  // Two P5-only malformed-projection checks are held separately with their failing baseline evidence.
  equal('writes',evidence.adminWrites.length,0,'presentation performs no writes');
- console.log(assertions+' protected kiosk-to-Incoming integration assertions passed; actual disposable SQL, admin source unchanged.');
+ console.log(assertions+' protected kiosk-to-Incoming integration assertions passed; actual disposable SQL, owner queue preserved.');
 }finally{for(const c of contexts)await c.close().catch(()=>{});if(browser)await browser.close();await db.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

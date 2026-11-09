@@ -16,8 +16,8 @@ await page.addInitScript(()=>{
  return Promise.resolve({data:single?(data[0]||null):structuredClone(data),count:data.length,error:null}).then(resolve);};
  return (...args)=>{queries.push({table,method:key,args});if(['eq','in'].includes(key))filters.push([key,...args]);if(key==='update')change=args[0];if(key==='select')columns=args[0];if(['single','maybeSingle'].includes(key))single=true;return proxy;};
  }});return proxy;};
- const channel={on(event,filter,callback){if(filter?.table==='orders')window.realtimeCallback=callback;return this;},subscribe(){return this;},unsubscribe(){}};
- window.supabase={createClient:()=>({from:chain,rpc:async()=>({data:{website_ordering_enabled:true},error:null}),channel:()=>channel,removeChannel:async()=>{},auth:{getSession:async()=>({data:{session:{user:{id:'owner',email:'owner@example.test'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
+ const channel=name=>({on(event,filter,callback){if(name==='incoming-orders-admin'&&filter?.table==='orders')window.realtimeCallback=callback;return this;},subscribe(){return this;},unsubscribe(){}});
+ window.supabase={createClient:()=>({from:chain,rpc:async name=>({data:name==='curv_control_access'?'owner':{website_ordering_enabled:true},error:null}),channel,removeChannel:async()=>{},auth:{getSession:async()=>({data:{session:{user:{id:'owner',email:'owner@example.test'}}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}})};
 });
 const root=path.resolve(__dirname,'..');await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.origin==='https://curv.test'&&['/admin/incoming-orders.html','/admin/admin.js','/admin/admin.css'].includes(u.pathname))return r.fulfill({path:path.join(root,u.pathname.slice(1))});return r.abort();});
 try{
