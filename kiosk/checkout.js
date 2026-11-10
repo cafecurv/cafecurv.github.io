@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   if (window.curvCheckout) return;
-  const version = '2026-11-08.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
+  const version = '2026-11-10.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
   const state = { status: 'loading', busy: false, reviewing: false, accepted: null };
   let admittedReview, pendingSave = 'N';
   let generation, device, nickname = '', fulfillment = '', pending, corrupt = false, epoch = 0, idle = Date.now(), deadline = 0, releaseLock, ownsLock = false, authSubscribed = false;
@@ -15,7 +15,8 @@
     root.dataset.kioskView = view;
     root.hidden = false; root.replaceChildren(); isolate(true);
     const card = make('div', undefined, { className: 'kiosk-card' });
-    card.append(make('img', undefined, { className: 'kiosk-logo', src: '/kiosk/curv-kiosk-logo.svg', alt: 'The CURV Café' }));
+    const logo = ['mode', 'accepted', 'locked'].includes(view) ? 'curv-logo-cream-blob.svg' : 'curv-logo-traced.svg';
+    card.append(make('img', undefined, { className: 'kiosk-logo', src: '/kiosk/' + logo, alt: 'The CURV Café' }));
     card.append(make('h1', title)); if (copy) card.append(make('p', copy)); root.append(card);
     document.documentElement.classList.remove('curv-kiosk-pending'); return card;
   }
@@ -143,9 +144,9 @@
     } catch (error) { if (current === epoch) locked(undefined, failureCode(diagnostic, error)); }
   }
   function nameScreen(error = '') {
-    const card = screen("hey, what's your name?", "We'll call you when your order is ready.", 'name');
-    const form = make('form'); const label = make('label', 'Your nickname', { htmlFor: 'kioskNickname' });
-    const input = make('input', undefined, { id: 'kioskNickname', type: 'text', autocomplete: 'off', value: nickname });
+    const card = screen("hey, what's your name?", "A nickname is all we need.", 'name');
+    const form = make('form', undefined, { className: 'kiosk-name-form' }); const label = make('label', 'Your nickname', { htmlFor: 'kioskNickname' });
+    const input = make('input', undefined, { id: 'kioskNickname', type: 'text', autocomplete: 'off', placeholder: 'Your nickname', value: nickname });
     input.setAttribute('aria-describedby', 'kioskNameError'); form.append(label, input);
     form.append(make('p', error, { id: 'kioskNameError', className: 'kiosk-error', role: 'alert' }));
     form.append(make('button', 'Continue', { type: 'submit' })); card.append(form);
@@ -169,7 +170,7 @@
       b.setAttribute('aria-label', label);
       b.replaceChildren(make('span', label.toLowerCase(), { className: 'kiosk-choice-title' }), make('small', copy));
     }
-    card.append(make('p', 'Pay at the counter after ordering.', { className: 'kiosk-payment-hint' }));
+    card.append(make('p', 'You’ll pay at the counter after ordering.', { className: 'kiosk-payment-hint' }));
     button(card, 'Back', () => { state.status = 'name'; nameScreen(); }).className = 'kiosk-back';
   }
   function items() {

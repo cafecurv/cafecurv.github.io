@@ -5,7 +5,7 @@
 <script>
 if (new URLSearchParams(location.search).get('kiosk') === '1') {
   document.documentElement.classList.add('curv-kiosk-pending');
-  const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/kiosk/kiosk.css?v=2026-11-09.1'; document.head.append(style);
+  const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/kiosk/kiosk.css?v=2026-11-10.1'; document.head.append(style);
 }
 </script>
 <meta charset="UTF-8">
@@ -3700,7 +3700,7 @@ body.night-mode .public-item-wrap {
 <script>
   // Bump deliberately with the controller's own version marker on each checkout release.
   const CURV_CHECKOUT_RELEASE = '2026-10-28.2';
-  const CURV_KIOSK_RELEASE = '2026-11-08.1';
+  const CURV_KIOSK_RELEASE = '2026-11-10.1';
   const CURV_KIOSK_MODE = new URLSearchParams(location.search).get('kiosk') === '1';
   function getCompatibleCheckout() {
     const checkout = window.curvCheckout;
@@ -7518,7 +7518,23 @@ body.night-mode .public-item-wrap {
     if (nextSectionId) showSection(nextSectionId);
   }
 
+  function updateKioskMenuTileTones() {
+    if (!CURV_KIOSK_MODE) return;
+    for (const section of document.querySelectorAll('main .section:not([hidden])')) {
+      let index = 0;
+      for (const card of section.querySelectorAll('.unified-product-card')) {
+        let ancestor = card;
+        while (ancestor !== section && !ancestor.hidden && ancestor.style.display !== 'none') {
+          ancestor = ancestor.parentElement;
+        }
+        if (ancestor === section) card.dataset.kioskTileTone = index++ % 4;
+      }
+    }
+  }
+
   function renderPublicMenuFromSupabase(shapedPublicMenu) {
+    const productSurface = CURV_KIOSK_MODE && document.querySelector('.kiosk-product-dialog');
+    const productOpener = productSurface && publicPanelOpener;
     const categories = Array.isArray(shapedPublicMenu && shapedPublicMenu.categories)
       ? shapedPublicMenu.categories.slice().sort(comparePublicCategoryRows)
       : [];
@@ -7564,6 +7580,8 @@ body.night-mode .public-item-wrap {
     reconcilePublicMenuNavigation(visibleEntries);
     activateFirstVisiblePublicSection('seasonal');
     rebuildPublicMenuSearchIndex(shapedPublicMenu);
+    updateKioskMenuTileTones();
+    if (productSurface) reconcileKioskCatalogSurface(productSurface, productOpener);
   }
   // ── EXPANSION PANEL SYSTEM ──
   let activePanel = null;
@@ -7599,12 +7617,37 @@ body.night-mode .public-item-wrap {
     if (panel) {
       if (open) organizePublicCustomization(panel);
       panel.inert = !open;
+      if (CURV_KIOSK_MODE) {
+        panel.classList.toggle('kiosk-product-dialog', open);
+        panel.setAttribute('role', open ? 'dialog' : 'region');
+        if (open) {
+          panel.setAttribute('aria-modal', 'true');
+          if (!panel.hasAttribute('aria-label')) panel.setAttribute('aria-label', 'Customize product');
+          if (!panel.querySelector('.public-panel-close')) {
+            const back = document.createElement('button');
+            back.type = 'button';
+            back.className = 'public-panel-close kiosk-fallback-back';
+            back.textContent = '← Back to menu';
+            back.addEventListener('click', () => setPublicPanelOpen(id, false, true));
+            panel.prepend(back);
+          }
+          panel.scrollTop = 0;
+          const options = panel.querySelector('.panel-options');
+          if (options) options.scrollTop = 0;
+        } else {
+          panel.removeAttribute('aria-modal');
+        }
+        syncKioskSurface();
+      }
     }
     document.querySelectorAll('button[aria-controls]').forEach(button => {
       if (button.getAttribute('aria-controls') === 'panel-' + id) button.setAttribute('aria-expanded', String(open));
     });
     if (!open && activePanel === id) activePanel = null;
     if (!open && restoreFocus) {
+      if (CURV_KIOSK_MODE && publicPanelOpener?.classList.contains('curv-pick-card')
+        && !document.querySelector('#seasonal.active')
+        && !document.getElementById('seasonal').hidden) jumpToPanel('seasonal', null);
       const target = publicPanelOpener && document.body.contains(publicPanelOpener) && isPanelNodeVisible(publicPanelOpener)
         ? publicPanelOpener : wrap.querySelector('.product-card');
       target?.focus({ preventScroll: true });
@@ -7688,21 +7731,27 @@ body.night-mode .public-item-wrap {
       const inner = panel.querySelector('.panel-inner');
       panel.querySelector('.public-panel-header')?.remove();
       if (CURV_KIOSK_MODE) {
+        panel.querySelector('.kiosk-fallback-back')?.remove();
         inner.querySelector('.kiosk-product-info')?.remove();
         const info = document.createElement('div');
         info.className = 'kiosk-product-info';
         const logo = document.createElement('img');
         logo.className = 'kiosk-product-logo';
-        logo.src = '/kiosk/curv-kiosk-logo.svg';
+        logo.src = '/kiosk/curv-logo-cream-blob.svg';
         logo.alt = 'CURV Cafe';
-        info.append(logo);
+        const top = document.createElement('div');
+        top.className = 'kiosk-product-top';
+        close.textContent = '← Back to menu';
+        top.append(close, logo);
+        const media = document.createElement('div');
+        media.className = 'kiosk-product-arch';
         const photo = wrap.querySelector('.product-card-thumb img')?.cloneNode();
         if (photo) {
           photo.className = 'kiosk-product-photo';
           photo.alt = '';
-          info.append(photo);
+          media.append(photo);
         }
-        info.append(title);
+        info.append(top, media, title);
         if (item.desc) {
           const description = document.createElement('p');
           description.className = 'kiosk-product-description';
@@ -7712,9 +7761,7 @@ body.night-mode .public-item-wrap {
         const heading = document.createElement('h3');
         heading.className = 'kiosk-customize-heading';
         heading.textContent = 'make it yours';
-        close.textContent = '×';
-        close.setAttribute('aria-label', 'Close');
-        header.append(heading, close);
+        header.append(heading);
         inner.prepend(info, header);
       } else {
         header.append(title, close);
@@ -8066,16 +8113,15 @@ body.night-mode .public-item-wrap {
     setPublicPanelOpen(id, open, !open);
     activePanel = open ? id : null;
     if (open) {
-      wrap.querySelector('.public-panel-title')?.focus({ preventScroll: true });
-      setTimeout(() => {
-        if (activePanel !== id) return;
-        const kioskPanel = CURV_KIOSK_MODE && wrap.querySelector(':scope > .expansion-panel:has(.kiosk-product-info)');
-        if (kioskPanel) {
-          kioskPanel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
-        } else {
-          wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 50);
+      const title = wrap.querySelector('.public-panel-title');
+      if (CURV_KIOSK_MODE) {
+        (title || wrap.querySelector('.public-panel-close'))?.focus({ preventScroll: true });
+      } else {
+        title?.focus({ preventScroll: true });
+        setTimeout(() => {
+          if (activePanel === id) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+      }
     }
   }
 
@@ -8354,9 +8400,9 @@ body.night-mode .public-item-wrap {
     renderCart();
     updateBadge();
 
-    // Open order form if closed
+    // The website opens its order form after Add. The kiosk returns to the menu.
     const f = document.getElementById('formFloat');
-    if (!f.classList.contains('open') && isPublicOrderSubmitEnabled() && isPublicOrderTechnicalAvailable) {
+    if (!CURV_KIOSK_MODE && !f.classList.contains('open') && isPublicOrderSubmitEnabled() && isPublicOrderTechnicalAvailable) {
       f.classList.add('open');
       document.getElementById('formBody').classList.remove('minimized');
       document.getElementById('minimizedBar').classList.remove('show');
@@ -8913,7 +8959,7 @@ body.night-mode .public-item-wrap {
         cartNode('span', 'cart-qty-num', item.qty),
         action('cart-qty-btn', '+', () => updateQty(item.key, 1)));
       right.append(controls, cartNode('span', 'cart-item-price', '₱' + (item.price * item.qty).toLocaleString()),
-        action('cart-remove', '×', () => removeItem(item.key)));
+        action('cart-remove', CURV_KIOSK_MODE ? 'Remove' : '×', () => removeItem(item.key)));
       row.append(left, right);
       return row;
     }));
@@ -9282,6 +9328,59 @@ body.night-mode .public-item-wrap {
   }
 
   // ── FORM ──
+  const kioskSurfaceSiblings = new Set();
+
+  function syncKioskSurface() {
+    if (!CURV_KIOSK_MODE) return;
+    const root = document.getElementById('kioskRoot');
+    const protectedScreen = root && !root.hidden;
+    for (const sibling of kioskSurfaceSiblings) {
+      // The protected controller owns body-level inert state while its screen is visible.
+      if (!protectedScreen || sibling.parentElement !== document.body) sibling.inert = false;
+    }
+    kioskSurfaceSiblings.clear();
+
+    const surface = !protectedScreen && (
+      document.querySelector('#orderConfirmOverlay:not([hidden])')
+      || document.querySelector('#formFloat.open')
+      || document.querySelector('.kiosk-product-dialog')
+    );
+    document.body.classList.toggle('kiosk-surface-open', Boolean(surface));
+    for (let node = surface; node && node !== document.body; node = node.parentElement) {
+      for (const sibling of node.parentElement.children) {
+        if (sibling === node || sibling === root || sibling.inert) continue;
+        sibling.inert = true;
+        kioskSurfaceSiblings.add(sibling);
+      }
+    }
+  }
+
+  function reconcileKioskCatalogSurface(previousPanel, opener) {
+    const panel = document.querySelector('.kiosk-product-dialog');
+    if (panel && panel !== previousPanel) return;
+
+    const id = previousPanel.id.slice('panel-'.length);
+    if (panel?.matches('.open > .kiosk-product-dialog') && isPanelNodeVisible(panel)
+      && !publicItemPanels.get(id)?.item.is_sold_out) {
+      activePanel = id;
+      publicPanelOpener = opener?.isConnected ? opener : null;
+      if (panel.inert) setPublicPanelOpen(id, true);
+      else syncKioskSurface();
+      if (!panel.contains(document.activeElement) && !panel.closest('[inert]')) {
+        panel.querySelector('.public-panel-title, .public-panel-close')?.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    if (panel) setPublicPanelOpen(id, false);
+    else syncKioskSurface();
+
+    if (document.body.classList.contains('kiosk-surface-open') || !document.getElementById('kioskRoot')?.hidden) return;
+    const focusTarget = opener?.isConnected && !opener.disabled && isPanelNodeVisible(opener)
+      ? opener : navTabs.querySelector('.nav-tab.active:not([hidden])') || menuSearchInput;
+    focusTarget?.focus({ preventScroll: true });
+  }
+
   function setOrderBar(visible) {
     document.getElementById('orderBar').style.display = visible ? 'block' : 'none';
   }
@@ -9303,13 +9402,24 @@ body.night-mode .public-item-wrap {
       document.getElementById('minimizeBtn').textContent = 'Minimize';
       minimized = false;
       setOrderBar(false);
+      if (CURV_KIOSK_MODE) {
+        f.querySelector('.kiosk-cart-customer').textContent = document.querySelector('#kioskBanner > span')?.textContent || '';
+        document.getElementById('formBody').scrollTop = 0;
+        syncKioskSurface();
+        f.querySelector('.form-top-title').focus({ preventScroll: true });
+      }
     }
   }
 
-  function closeForm() {
+  function closeForm(restoreFocus = true) {
+    const wasOpen = document.getElementById('formFloat').classList.contains('open');
     document.getElementById('formFloat').classList.remove('open');
     minimized = false;
     setOrderBar(true);
+    if (CURV_KIOSK_MODE) {
+      syncKioskSurface();
+      if (wasOpen && restoreFocus) document.getElementById('orderBarButton').focus({ preventScroll: true });
+    }
   }
 
   let minimized = false;
@@ -9997,14 +10107,23 @@ body.night-mode .public-item-wrap {
     }
   }
 
-  function closeOrderConfirmModal() {
+  function closeOrderConfirmModal(restoreFocus = true) {
     const overlay = document.getElementById('orderConfirmOverlay');
     if (!overlay) return;
+    const wasOpen = !overlay.hidden;
     overlay.hidden = true;
     overlay.dataset.mode = '';
     if (pendingOrderConfirmResolve) {
       pendingOrderConfirmResolve(false);
       pendingOrderConfirmResolve = null;
+    }
+    if (CURV_KIOSK_MODE && wasOpen) {
+      syncKioskSurface();
+      if (restoreFocus) requestAnimationFrame(() => {
+        if (overlay.hidden && document.getElementById('kioskRoot')?.hidden && document.querySelector('#formFloat.open')) {
+          document.getElementById('submitOrderBtn').focus({ preventScroll: true });
+        }
+      });
     }
   }
 
@@ -10028,6 +10147,24 @@ body.night-mode .public-item-wrap {
       actionsEl.appendChild(button);
     });
     overlay.hidden = false;
+    if (CURV_KIOSK_MODE) {
+      for (const title of bodyEl.querySelectorAll('.authoritative-review article > strong')) {
+        const quantity = title.textContent.match(/^\d+× /)?.[0];
+        if (!quantity) continue;
+        const count = document.createElement('span');
+        count.className = 'kiosk-review-quantity';
+        count.textContent = quantity;
+        title.replaceChildren(count, title.textContent.slice(quantity.length));
+      }
+      const total = bodyEl.querySelector('.authoritative-review > p:last-child > strong');
+      if (total?.textContent.startsWith('Total: ')) {
+        const label = document.createElement('span');
+        label.textContent = 'Total: ';
+        total.replaceChildren(label, total.textContent.slice('Total: '.length));
+      }
+      bodyEl.scrollTop = 0;
+      syncKioskSurface();
+    }
     const firstTarget = actionsEl.querySelector('button') || bodyEl.querySelector('a, button') || titleEl;
     if (firstTarget && typeof firstTarget.focus === 'function') {
       window.setTimeout(() => firstTarget.focus(), 0);
@@ -10046,6 +10183,9 @@ body.night-mode .public-item-wrap {
     const overlay = document.getElementById('orderConfirmOverlay');
     if (event.key === 'Escape' && overlay && !overlay.hidden) {
       closeOrderConfirmModal();
+    } else if (event.key === 'Escape' && CURV_KIOSK_MODE && document.getElementById('kioskRoot')?.hidden
+      && document.querySelector('#formFloat.open')) {
+      closeForm();
     }
   });
 
@@ -10053,7 +10193,7 @@ body.night-mode .public-item-wrap {
     return new Promise((resolve) => {
       pendingOrderConfirmResolve = resolve;
       setOrderConfirmModal(
-        changed ? 'Confirm your updated order' : 'Review your order',
+        changed ? 'Confirm your updated order' : CURV_KIOSK_MODE ? 'Check your order' : 'Review your order',
         `
           ${getCompatibleCheckout().reviewHtml(quote, payload)}
           <p>Please double-check your order details before submitting.</p>
@@ -10073,7 +10213,7 @@ body.night-mode .public-item-wrap {
             label: changed ? 'Confirm Updated Order' : 'Continue & Submit',
             onClick: () => {
               pendingOrderConfirmResolve = null;
-              closeOrderConfirmModal();
+              closeOrderConfirmModal(false);
               resolve(true);
             }
           }
@@ -10943,13 +11083,63 @@ body.night-mode .public-item-wrap {
     document.getElementById('remember-customer-details').disabled = true;
     document.getElementById('customer-details-memory').hidden = true;
 
+    const cartWindow = document.getElementById('formFloat');
     const cartBody = document.getElementById('formBody');
     const cartActions = document.createElement('div');
     cartActions.className = 'kiosk-cart-actions';
-    cartActions.append(document.getElementById('submitOrderBtn'), document.getElementById('submitOrderStatus'));
+    const payment = document.createElement('p');
+    payment.className = 'kiosk-cart-payment';
+    payment.textContent = 'You’ll pay at the counter after you place your order.';
+    const estimate = document.createElement('p');
+    estimate.className = 'kiosk-cart-estimate';
+    estimate.textContent = 'We double-check prices on the next screen.';
+    cartActions.append(payment, document.getElementById('cartTotal'), estimate, document.getElementById('submitOrderBtn'), document.getElementById('submitOrderStatus'));
     cartBody.after(cartActions);
-    document.querySelector('#formFloat .form-top-title').textContent = 'Your cart';
-    document.querySelector('#special-requests-field label').htmlFor = 'f-notes';
+    cartWindow.setAttribute('role', 'dialog');
+    cartWindow.setAttribute('aria-modal', 'true');
+    cartWindow.setAttribute('aria-labelledby', 'kioskCartTitle');
+    const cartTitle = document.createElement('h2');
+    cartTitle.className = 'form-top-title';
+    cartTitle.id = 'kioskCartTitle';
+    cartTitle.tabIndex = -1;
+    cartTitle.textContent = 'Your order';
+    const cartTop = cartWindow.querySelector('.form-top-bar');
+    cartTop.querySelector('.form-top-title').replaceWith(cartTitle);
+    const browse = document.createElement('button');
+    browse.type = 'button';
+    browse.className = 'kiosk-cart-browse';
+    browse.textContent = '← Keep Browsing';
+    browse.addEventListener('click', () => closeForm());
+    const customer = document.createElement('p');
+    customer.className = 'kiosk-cart-customer';
+    cartTop.prepend(browse, customer);
+    const cartClose = cartWindow.querySelector('.form-close-btn');
+    cartClose.textContent = '×';
+    cartClose.setAttribute('aria-label', 'Close cart');
+    document.getElementById('minimizeBtn').hidden = true;
+    document.getElementById('minimizedBar').hidden = true;
+    const notesLabel = document.querySelector('#special-requests-field label');
+    notesLabel.htmlFor = 'f-notes';
+    const optional = document.createElement('small');
+    optional.textContent = '· optional';
+    notesLabel.replaceChildren('Notes for the barista ', optional);
+
+    new MutationObserver(() => {
+      if (!root.hidden) {
+        if (activePanel) setPublicPanelOpen(activePanel, false);
+        if (cartWindow.classList.contains('open')) closeForm(false);
+        customer.textContent = '';
+        // The existing customer reset removes the banner. Clear leftover product-note UI too.
+        if (!document.getElementById('kioskBanner')) {
+          for (const note of document.querySelectorAll('.panel-note-input')) {
+            if (!note.value) continue;
+            note.value = '';
+            note.dispatchEvent(new Event('input'));
+          }
+        }
+      }
+      syncKioskSurface();
+    }).observe(root, { attributes: true, attributeFilter: ['hidden'] });
 
     const viewport = window.visualViewport;
     if (viewport) {
@@ -10959,8 +11149,10 @@ body.night-mode .public-item-wrap {
       };
       viewport.addEventListener('resize', () => {
         fitOrderPanels();
-        const notes = document.getElementById('f-notes');
-        if (document.activeElement === notes) notes.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        const field = document.activeElement;
+        if (field.matches('#f-notes, .kiosk-product-dialog .panel-note-input')) {
+          field.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        }
       });
       viewport.addEventListener('scroll', fitOrderPanels);
       fitOrderPanels();
@@ -10980,6 +11172,7 @@ body.night-mode .public-item-wrap {
     renderAllTakoyakiPanels();
     renderAllSavoryPanels();
     renderHardcodedCurvPicksFallback();
+    updateKioskMenuTileTones();
     document.querySelectorAll('.expansion-panel').forEach(organizePublicCustomization);
     document.querySelectorAll('.panel-add-btn, .add-btn, .add-btn-pill').forEach(button => {
       button.disabled = true; button.title = 'Waiting for catalog details';
