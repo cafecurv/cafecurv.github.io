@@ -5,7 +5,7 @@ const root=process.env.CURV_KIOSK_SOURCE_ROOT||path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
 (async()=>{let count=0;const groups={};const check=(v,m,g='flow')=>{assert.ok(v,m);count++;groups[g]=(groups[g]||0)+1;};
  const browser=await chromium.launch({channel:'msedge',headless:true});
- async function open({legacy=false,authorized=true,mode='normal',storageDenied=false,touch=false,delayCatalog=false}={}){
+ async function open({legacy=false,authorized=true,mode='normal',storageDenied=false,touch=false,delayCatalog=false,holdController=false}={}){
   const context=await browser.newContext(touch?{hasTouch:true,reducedMotion:'reduce',serviceWorkers:'block'}:{});const page=await context.newPage();await page.clock.install();
   const db={generation:id(100),device:id(200),attempt:null,closed:false,orders:0,mode,authorized,calls:[]};
   const quote=p=>({pricing_contract_version:2,pricing_fingerprint_version:1,pricing_policy_version:'fixture',currency:'PHP',review_fingerprint:'a'.repeat(64),subtotal:p.items.reduce((n,i)=>n+150*i.quantity,0).toFixed(2),items:p.items.map(i=>({...i,product_name:i.product_id===id(2)?'Sea Salt Cream Matcha Latte with Vanilla Sweet Cream Cold Foam':'Server coffee',category_name:'Coffee',size_label:'Regular',base_price:'150.00',option_total:'0.00',unit_price:'150.00',line_total:(150*i.quantity).toFixed(2),options:i.option_choice_ids.includes(id(80))?[{group_name:'Milk',label:'Oat milk'}]:[]}))});
@@ -72,15 +72,18 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    window.kioskSignOut=()=>callback?.('SIGNED_OUT');
    window.supabase={createClient:url=>url==='https://device.test'?device:publicClient};
   },{legacy,storageDenied,delayCatalog});
-  await context.route('**/*',r=>{
+  let releaseController;
+  const controllerReady=holdController&&new Promise(resolve=>{releaseController=resolve;});
+  await context.route('**/*',async r=>{
    const u=new URL(r.request().url());if(u.origin!=='https://curv.test')return r.abort();
+   if(holdController&&u.pathname==='/kiosk/checkout.js')await controllerReady;
    if(u.pathname==='/menu/'||u.pathname==='/menu')return r.fulfill({contentType:'text/html',body:html});
    if(u.pathname==='/blank')return r.fulfill({contentType:'text/html',body:'<!doctype html><title>Other page</title>'});
    if(u.pathname.startsWith('/kiosk/')){const file=path.join(root,u.pathname);if(fs.existsSync(file))return r.fulfill({path:file});}
    return r.abort();
   });
-  await page.goto('https://curv.test/menu/?kiosk=1');
-  return {context,page,db};
+  await page.goto('https://curv.test/menu/?kiosk=1',holdController?{waitUntil:'domcontentloaded'}:undefined);
+  return {context,page,db,releaseController};
  }
  async function onboard(f,name='Alex <&> ♡',mode='TO GO'){
   const p=f.page;await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
@@ -103,7 +106,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
     public_menu_option_choices:[{product_id:product.id,option_group_id:id(630),option_choice_id:id(631),label:'Oat milk',value:'oat',price_delta:5}]
    };
   };
-  for(const [width,height] of [[1180,820],[768,1024]]){
+  for(const [width,height] of [[1180,820],[1024,768],[820,1180],[768,1024]]){
    const size=width+'x'+height;
    const race=(ok,message)=>check(ok,message+' '+size,'catalog-surface-races');
    const ready=async()=>{
@@ -138,18 +141,19 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
      cart:cartWindow.getClientRects().length>0,cartInert:cartWindow.inert,
      confirm:!confirm.hidden,confirmInert:confirm.inert,protectedScreen:!document.getElementById('kioskRoot').hidden,
      mainInert:document.querySelector('main').inert,locked:document.body.classList.contains('kiosk-surface-open'),
+     scrollLocked:getComputedStyle(document.documentElement).overflowY==='hidden',
      menuInert:['#navTabs','#menuSearchInput','#orderBarButton'].map(selector=>Boolean(document.querySelector(selector).closest('[inert]'))),
      menuFocus:document.activeElement.matches('.nav-tab.active, .product-card'),
      note:document.getElementById('f-notes').value,draft:JSON.stringify(cart)
     };
    });
-   const unlocked=s=>!s.dialog&&!s.locked&&s.menuInert.every(value=>!value);
+   const unlocked=s=>!s.dialog&&!s.locked&&!s.scrollLocked&&s.menuInert.every(value=>!value);
    const checkoutCalls=f=>f.db.calls.filter(call=>['kiosk_quote','kiosk_admit','kiosk_submit','kiosk_recover','kiosk_confirm_price'].includes(call.name)).map(call=>call.name);
    let f=await ready(),p=f.page;
    const draft=(await state(p)).draft;
    await openFallback(p);
    let ui=await state(p);
-   race(ui.dialog&&ui.locked&&ui.menuInert.every(Boolean),'pending catalog leaves fallback product in charge of input');
+   race(ui.dialog&&ui.locked&&ui.scrollLocked&&ui.menuInert.every(Boolean),'pending catalog leaves fallback product in charge of input');
    await complete(p,0,1);
    ui=await state(p);
    race(unlocked(ui),'replacing the open fallback releases its input lock');
@@ -211,7 +215,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    const recovering=await start(p);
    await complete(p,recovering,7);
    ui=await state(p);
-   race(ui.protectedScreen&&!ui.cart&&!ui.confirm&&ui.mainInert&&ui.menuInert.every(Boolean),'catalog response preserves the recovery screen and controller-owned lock');
+   race(ui.protectedScreen&&!ui.cart&&!ui.confirm&&ui.mainInert&&ui.locked&&ui.scrollLocked&&ui.menuInert.every(Boolean),'catalog response preserves the recovery screen and controller-owned lock');
    race(Boolean(frozen)&&await pending()===frozen&&JSON.stringify(checkoutCalls(f))===calls,'catalog response leaves the protected request and RPC counts intact');
    await f.context.close();
 
@@ -329,7 +333,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   }
   // Exercise the real catalog, product controls and checkout surfaces at tablet sizes.
   for(const [width,height] of [[1180,820],[1024,768],[820,1180],[768,1024]]){
-   f=await open({touch:true});p=f.page;await p.setViewportSize({width,height});
+   f=await open({touch:true,holdController:true});p=f.page;await p.setViewportSize({width,height});
    const size=width+'x'+height;
    const gate=(ok,message)=>check(ok,message+' '+size,'full-screen-surfaces');
    const shot=async name=>{
@@ -352,15 +356,75 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
     await p.keyboard.press('Tab');
     gate(await locator.evaluate(el=>el.contains(document.activeElement)),'keyboard focus stays on active surface');
    };
-   await p.getByLabel('Your nickname').fill('Mellow Hojicha');
+   const viewport=p.locator('#kioskRoot');
+   const menuOffset=()=>p.evaluate(()=>Math.round(-document.body.getBoundingClientRect().top) || 0);
+   const documentLocked=()=>p.evaluate(()=>getComputedStyle(document.documentElement).overflowY==='hidden');
+   const wheelInside=async area=>{
+    const box=await area.boundingBox();
+    await p.mouse.move(box.x+box.width/2,box.y+box.height/2);
+    await p.mouse.wheel(0,400);
+    const element=await area.elementHandle();
+    try { await p.waitForFunction(el=>el.scrollTop>0,element,{timeout:5000}); }
+    finally { await element.dispose(); }
+   };
+   const cdp=await f.context.newCDPSession(p);
+   const swipe=async (x,y,distance,finish='touchEnd')=>{
+    const point=position=>[{x:Math.round(x),y:Math.round(position)}];
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:point(y)});
+    for(let step=1;step<=5;step++){
+     await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:point(y-distance*step/5)});
+    }
+    await cdp.send('Input.dispatchTouchEvent',{type:finish,touchPoints:[]});
+   };
+   const assertFrozen=async (surface,offset,label)=>{
+    const locked=await documentLocked(),currentOffset=await menuOffset();
+    gate(locked&&currentOffset===offset,label+' locks the document and keeps menu position ('+currentOffset+' vs '+offset+')');
+    await p.mouse.move(6,8);
+    await p.mouse.wheel(0,400);
+    await swipe(8,110,90);
+    await p.keyboard.press('PageDown');
+    await p.evaluate(()=>window.scrollTo({top:700,behavior:'instant'}));
+    gate(await menuOffset()===offset,label+' absorbs edge wheel, touch and keyboard scrolling');
+    const foreground=await surface.evaluate(el=>el.contains(document.elementFromPoint(innerWidth/2,innerHeight/2)));
+    await p.evaluate(()=>document.getElementById('menuSearchInput').focus({preventScroll:true}));
+    gate(foreground&&await p.evaluate(()=>document.activeElement.id!=='menuSearchInput'),label+' blocks background hit testing and focus');
+   };
+   await viewport.getByText('Loading protected in-store ordering').waitFor();
+   try { await assertFrozen(viewport,0,'initial loading'); }
+   finally { f.releaseController(); }
+   const nickname=p.getByLabel('Your nickname');
+   await nickname.waitFor();
+   const design=await viewport.evaluate(root=>{
+    const card=root.querySelector('.kiosk-card'),field=card.querySelector('input'),button=card.querySelector('button');
+    const r=card.getBoundingClientRect();
+    return {
+     palette:[root,card,button].map(el=>getComputedStyle(el).backgroundColor),
+     logo:new URL(card.querySelector('img').src).pathname,
+     composition:Math.abs(r.left+r.width/2-innerWidth/2)<2&&Math.abs(r.top+r.height/2-innerHeight/2)<2
+      &&card.querySelector('label').getBoundingClientRect().width>100&&field.placeholder==='',
+     sizing:[r.width,field.getBoundingClientRect().height,button.getBoundingClientRect().height],
+     focused:document.activeElement===field
+    };
+   });
+   gate(JSON.stringify(design.palette)===JSON.stringify(['rgb(16, 26, 44)','rgb(244, 239, 226)','rgb(14, 79, 47)'])
+    &&design.logo==='/kiosk/curv-kiosk-logo.svg'&&design.composition&&design.focused
+    &&design.sizing[0]===640&&design.sizing.slice(1).every(height=>height>=56),'restored nickname palette, logo, centered card, visible label, touch sizing and autofocus');
+   await shot('nickname-restored');
+   await assertFrozen(viewport,0,'nickname');
    await p.getByRole('button',{name:'Continue',exact:true}).tap();
+   gate(await p.getByText('Please use a nickname of 1–80 characters.').isVisible()
+    &&await nickname.evaluate(el=>el===document.activeElement),'nickname validation and autofocus remain intact');
+   await assertFrozen(viewport,0,'nickname validation error');
+   await nickname.fill('Mellow Hojicha');
+   await p.getByRole('button',{name:'Continue',exact:true}).tap();
+   await assertFrozen(viewport,0,'fulfillment');
    await p.getByRole('button',{name:'FOR HERE',exact:true}).tap();
    await p.evaluate(()=>{
     const uuid=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
     const category={id:uuid(1),name:'Tablet Drinks',sort_order:0};
     const products=[
      {id:uuid(2),name:'Sea Salt Cream Matcha Latte with Vanilla Sweet Cream Cold Foam',description:'Matcha and sweet cream over ice.',image_url:'/images/menu/matcha/strawberry-matcha-latte.jpg'},
-     {id:uuid(3),name:'Backup brew'}
+     ...Array.from({length:16},(_,i)=>({id:uuid(1000+i),name:'Backup brew '+i}))
     ].map(product=>({...product,category_id:category.id,is_published:true,is_available:true,is_curv_pick:true}));
     const sizes=products.map((product,i)=>({id:uuid(10+i),product_id:product.id,label:'Regular',price:145,sort_order:0}));
     const groups=Array.from({length:9},(_,i)=>({product_id:products[0].id,option_group_id:uuid(40+i),group_key:'extra-'+i,
@@ -369,10 +433,39 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
      option_choice_id:uuid(80+i),label:i===0?'Oat milk':'Extra '+i,value:i===0?'oat':'extra-'+i,price_delta:5,sort_order:0}));
     const menu=shapePublicMenuData([category],products,sizes);
     menu.options=buildSupabaseOptionsMap(groups,choices,[],products);
-    menu.productsWithoutOptionGroups=new Set([products[1].id]);
+    menu.productsWithoutOptionGroups=new Set(products.slice(1).map(product=>product.id));
     renderPublicMenuFromSupabase(menu);
     isWebsiteOrderingEnabled=true;isPublicOrderTechnicalAvailable=true;renderCart();syncPublicOrderSubmitGate();
    });
+   const header=p.locator('.kiosk-menu-header');
+   const headerStrip=async()=>{
+    const {height}=await header.boundingBox();
+    return p.screenshot({clip:{x:40,y:Math.floor(height)-8,width:width-80,height:6}});
+   };
+   gate(await header.evaluate(el=>getComputedStyle(el).position==='sticky'
+    &&getComputedStyle(el).backgroundColor==='rgb(16, 26, 44)'
+    &&el.contains(document.getElementById('kioskBanner'))&&el.contains(document.querySelector('.nav-wrap'))),
+    'banner and categories share one opaque sticky backing');
+   const idleHeader=await headerStrip();
+   // Cancel the emulated gesture after the drag so fling cannot race the pixel capture.
+   await swipe(width-8,height*.65,270,'touchCancel');
+   await p.waitForFunction(()=>window.scrollY>=100,null,{timeout:5000});
+   await header.evaluate(el=>{
+    const card=document.querySelector('.section.active .unified-product-card');
+    const top=window.scrollY+card.getBoundingClientRect().top-el.getBoundingClientRect().bottom+40;
+    window.scrollTo({top,behavior:'instant'});
+    return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   });
+   const scrolledHeader=await headerStrip();
+   gate(await header.evaluate(el=>{
+    const rect=el.getBoundingClientRect();
+    const card=document.querySelector('.section.active .unified-product-card').getBoundingClientRect();
+    return Math.abs(rect.top)<1&&el.contains(document.elementFromPoint(card.left+20,rect.bottom-5))
+     &&card.top<rect.bottom-8&&card.bottom>rect.bottom-2;
+   }),'the sticky header covers a product as it passes beneath');
+   gate(idleHeader.equals(scrolledHeader),'header backing pixels stay unchanged where cards scroll underneath');
+   await shot('menu-scrolled-header');
+   await p.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
    const trigger=p.locator('#curv-picks-supabase-mount').getByRole('button',{name:/Customize Sea Salt Cream/});
    await trigger.tap();
    const product=p.locator('.kiosk-product-dialog');
@@ -405,13 +498,19 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    }
    await product.getByRole('button',{name:/Back to menu/}).tap();
    gate(await product.count()===0&&await trigger.evaluate(el=>el===document.activeElement),'Back returns to menu and restores the product trigger');
+   const productOffset=await menuOffset();
    await trigger.tap();
+   await assertFrozen(product,productOffset,'customization');
    await product.locator('.public-customize > button').tap();
    await product.locator('[data-customize-group="extra-0"] > button').tap();
    await product.getByRole('button',{name:/Oat milk/}).tap();
    const itemNote=product.locator('.panel-note-input');
    if(!await itemNote.isVisible()) await product.locator('.customize-note > button').tap();
    await itemNote.fill('Less ice, please');
+   const optionsArea=product.locator('.panel-options');
+   await optionsArea.evaluate(el=>{el.scrollTop=0;});
+   await wheelInside(optionsArea);
+   gate(await menuOffset()===productOffset,'scrolling product options keeps the menu stationary');
    await p.evaluate(()=>{
     document.body.style.setProperty('--kiosk-order-viewport-height','420px');
     document.body.style.setProperty('--kiosk-order-viewport-top','32px');
@@ -431,15 +530,20 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    await add.tap();
    const cartWindow=p.locator('#formFloat');
    gate(await product.count()===0&&!await cartWindow.isVisible(),'Add returns to menu without opening the cart');
+   gate(!await documentLocked()&&await menuOffset()===productOffset,'product close restores the previous menu scroll position');
    gate(await p.locator('#orderBarButton').isVisible()&&await trigger.evaluate(el=>el===document.activeElement),'order bar is available and product focus restored after Add');
    gate(rpcCount('quote')===0&&rpcCount('admit')===0&&rpcCount('submit')===0,'adding to the draft does not call checkout');
    const bar=p.locator('#orderBarButton');
+   await p.evaluate(()=>window.scrollTo({top:160,behavior:'instant'}));
+   const savedMenuOffset=await menuOffset();
+   gate(savedMenuOffset===160,'fixture has a non-zero menu scroll position');
    await bar.tap();
    gate(await fillsViewport(cartWindow)&&await cartWindow.getByRole('heading',{name:'Your order'}).count()===1,'one full-screen editable cart');
    gate(await cartWindow.locator('textarea:visible').count()===1&&!await cartWindow.locator('#minimizeBtn').isVisible()
      &&!await cartWindow.locator('#minimizedBar').isVisible(),'one order notes field and no Expand or Minimize interaction');
    gate(await p.locator('main').evaluate(el=>el.inert)&&!await p.locator('#orderConfirmOverlay').isVisible(),'cart blocks menu and stands alone');
    await assertForeground(cartWindow);
+   await assertFrozen(cartWindow,savedMenuOffset,'editable cart');
    const row=cartWindow.locator('.cart-item').first(),note=cartWindow.locator('#f-notes');
    gate((await row.textContent()).includes('oat')&&(await row.textContent()).includes('Less ice, please'),'item option and request are displayed as text');
    await row.getByRole('button',{name:'+',exact:true}).tap();
@@ -450,6 +554,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    await shot('cart');
    await cartWindow.getByRole('button',{name:'Close cart',exact:true}).tap();
    gate(!await cartWindow.isVisible()&&await bar.evaluate(el=>el===document.activeElement),'X closes cart and restores order-bar focus');
+   gate(!await documentLocked()&&await menuOffset()===savedMenuOffset,'cart close restores the previous menu scroll position');
    await bar.tap();
    gate(await note.inputValue()==='Counter order note'&&await row.locator('.cart-qty-num').textContent()==='1','X and reopen preserve note and quantity');
    await cartWindow.getByRole('button',{name:/Keep Browsing/}).tap();
@@ -463,7 +568,11 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
     renderCart();
    });
    gate(await cartWindow.locator('#formBody').evaluate(el=>el.scrollHeight>el.clientHeight),'long cart scrolls independently');
-   await cartWindow.locator('#formBody').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+   const cartScroll=cartWindow.locator('#formBody');
+   await cartScroll.evaluate(el=>{el.scrollTop=0;});
+   await wheelInside(cartScroll);
+   gate(await menuOffset()===savedMenuOffset,'scrolling a long cart keeps the menu stationary');
+   await cartScroll.evaluate(el=>{el.scrollTop=el.scrollHeight;});
    await shot('cart-scrolled');
    await cartWindow.getByRole('button',{name:'Remove',exact:true}).last().tap();
    gate(await cartWindow.locator('.cart-item').count()===15,'Remove deletes only the selected row');
@@ -491,6 +600,14 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
      &&(await confirmation.textContent()).includes('Oat milk'),
      'confirmation displays existing payment reminder and authoritative total');
    await assertForeground(confirmation);
+   await assertFrozen(confirmation,savedMenuOffset,'server-priced confirmation');
+   await confirmation.locator('.authoritative-review article').evaluate(el=>{
+    for(let i=0;i<15;i++)el.parentElement.insertBefore(el.cloneNode(true),el);
+   });
+   const reviewBody=confirmation.locator('.order-confirm-body');
+   await wheelInside(reviewBody);
+   gate(await menuOffset()===savedMenuOffset&&await confirmation.getByRole('button',{name:'Continue & Submit'}).evaluate(el=>
+    el.getBoundingClientRect().bottom<=innerHeight),'long confirmation scrolls independently and its action stays reachable');
    await shot('confirmation');
    await confirmation.getByRole('button',{name:'Close order confirmation'}).tap();
    gate(await cartWindow.isVisible()&&!await confirmation.isVisible()&&await note.inputValue()==='Counter order note'
@@ -499,12 +616,20 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    await confirmation.getByRole('button',{name:'Edit Order',exact:true}).tap();
    gate(await cartWindow.isVisible()&&await note.inputValue()==='Counter order note','Edit Order returns to the same draft');
    await review(f);await confirm(f);await success(f);
+   await assertFrozen(viewport,savedMenuOffset,'Order Received');
    gate(f.db.orders===1&&rpcCount('admit')===1&&rpcCount('submit')===1,'one explicit confirmation follows the protected admission and submission path');
    await p.getByRole('button',{name:'Done · New customer'}).tap();
    await p.getByLabel('Your nickname').waitFor();
    gate(!await cartWindow.isVisible()&&await p.evaluate(()=>cart.length===0&&document.getElementById('f-notes').value===''
      &&[...document.querySelectorAll('.panel-note-input')].every(field=>!field.value)),
      'customer reset clears cart, order note and product-note UI');
+   await f.context.close();
+
+   f=await open({touch:true,authorized:false});p=f.page;
+   await p.setViewportSize({width,height});
+   await p.getByRole('heading',{name:'A little help from CURV'}).waitFor();
+   const locked=await p.evaluate(()=>getComputedStyle(document.documentElement).overflowY==='hidden'&&document.querySelector('main').inert);
+   gate(locked,'staff-help screen locks the menu document and background focus');
    await f.context.close();
   }
   console.log(JSON.stringify({suite:'protected-kiosk-browser',assertions:count,groups,network:'all intercepted'}));

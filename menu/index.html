@@ -5,7 +5,7 @@
 <script>
 if (new URLSearchParams(location.search).get('kiosk') === '1') {
   document.documentElement.classList.add('curv-kiosk-pending');
-  const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/kiosk/kiosk.css?v=2026-11-10.1'; document.head.append(style);
+  const style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/kiosk/kiosk.css?v=2026-11-11.1'; document.head.append(style);
 }
 </script>
 <meta charset="UTF-8">
@@ -3700,7 +3700,7 @@ body.night-mode .public-item-wrap {
 <script>
   // Bump deliberately with the controller's own version marker on each checkout release.
   const CURV_CHECKOUT_RELEASE = '2026-10-28.2';
-  const CURV_KIOSK_RELEASE = '2026-11-10.1';
+  const CURV_KIOSK_RELEASE = '2026-11-11.1';
   const CURV_KIOSK_MODE = new URLSearchParams(location.search).get('kiosk') === '1';
   function getCompatibleCheckout() {
     const checkout = window.curvCheckout;
@@ -9329,23 +9329,36 @@ body.night-mode .public-item-wrap {
 
   // ── FORM ──
   const kioskSurfaceSiblings = new Set();
+  let kioskMenuScrollTop = 0;
 
   function syncKioskSurface() {
     if (!CURV_KIOSK_MODE) return;
     const root = document.getElementById('kioskRoot');
     const protectedScreen = root && !root.hidden;
+    const banner = document.getElementById('kioskBanner');
+    if (banner && banner.parentElement !== navWrap.parentElement) navWrap.before(banner);
     for (const sibling of kioskSurfaceSiblings) {
       // The protected controller owns body-level inert state while its screen is visible.
       if (!protectedScreen || sibling.parentElement !== document.body) sibling.inert = false;
     }
     kioskSurfaceSiblings.clear();
 
-    const surface = !protectedScreen && (
+    const surface = protectedScreen ? root : (
       document.querySelector('#orderConfirmOverlay:not([hidden])')
       || document.querySelector('#formFloat.open')
       || document.querySelector('.kiosk-product-dialog')
     );
-    document.body.classList.toggle('kiosk-surface-open', Boolean(surface));
+    const body = document.body;
+    const wasLocked = body.classList.contains('kiosk-surface-open');
+    if (surface && !wasLocked) {
+      kioskMenuScrollTop = window.scrollY;
+      body.style.setProperty('--kiosk-menu-scroll-top', (-kioskMenuScrollTop) + 'px');
+    }
+    body.classList.toggle('kiosk-surface-open', Boolean(surface));
+    if (!surface && wasLocked) {
+      body.style.removeProperty('--kiosk-menu-scroll-top');
+      window.scrollTo({ top: kioskMenuScrollTop, behavior: 'instant' });
+    }
     for (let node = surface; node && node !== document.body; node = node.parentElement) {
       for (const sibling of node.parentElement.children) {
         if (sibling === node || sibling === root || sibling.inert) continue;
@@ -11075,6 +11088,10 @@ body.night-mode .public-item-wrap {
   if (CURV_KIOSK_MODE) {
     document.title = 'CURV · In-store ordering';
     document.body.classList.add('curv-kiosk');
+    const kioskHeader = document.createElement('div');
+    kioskHeader.className = 'kiosk-menu-header';
+    navWrap.before(kioskHeader);
+    kioskHeader.append(navWrap);
     const root = document.createElement('section'); root.id = 'kioskRoot'; root.className = 'kiosk-screen';
     root.textContent = 'Loading protected in-store ordering…'; document.body.append(root);
     document.documentElement.classList.remove('curv-kiosk-pending');
@@ -11140,6 +11157,7 @@ body.night-mode .public-item-wrap {
       }
       syncKioskSurface();
     }).observe(root, { attributes: true, attributeFilter: ['hidden'] });
+    syncKioskSurface();
 
     const viewport = window.visualViewport;
     if (viewport) {

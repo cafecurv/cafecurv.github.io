@@ -86,7 +86,6 @@ body.curv-kiosk .order-btn { font-size:18px; }
 
 #kioskRoot[hidden] { display: none; }
 #kioskRoot:not(:has(.kiosk-card)) { justify-content: center; text-align: center; }
-#kioskRoot[data-kiosk-view="name"] { background: var(--kiosk-pink); }
 #kioskRoot[data-kiosk-view="mode"] { background: var(--kiosk-blue); }
 #kioskRoot[data-kiosk-view="accepted"] { background: var(--kiosk-forest); }
 
@@ -135,29 +134,27 @@ body.curv-kiosk .order-btn { font-size:18px; }
   box-shadow: 0 0 0 6px var(--kiosk-navy);
 }
 
-#kioskRoot:is([data-kiosk-view="name"], [data-kiosk-view="mode"], [data-kiosk-view="accepted"]) .kiosk-card {
+#kioskRoot:is([data-kiosk-view="mode"], [data-kiosk-view="accepted"]) .kiosk-card {
   width: min(100%, 708px);
   padding: 0;
   background: transparent;
 }
 
-#kioskRoot[data-kiosk-view="name"] .kiosk-card,
 #kioskRoot[data-kiosk-view="mode"] .kiosk-card {
   gap: clamp(16px, 2.2dvh, 26px);
 }
 
-#kioskRoot[data-kiosk-view="name"] .kiosk-logo { height: clamp(68px, 10.17dvh, 120px); }
-#kioskRoot[data-kiosk-view="name"] h1 { font-size: clamp(40px, 10.25vw, 84px); line-height: .95; text-wrap: wrap; }
-#kioskRoot[data-kiosk-view="name"] .kiosk-card > p { font-size: clamp(18px, 3.17vw, 26px); font-weight: 600; }
-
-#kioskRoot .kiosk-name-form {
-  display: grid;
-  gap: clamp(16px, 2.2dvh, 26px);
-  width: 100%;
+#kioskRoot[data-kiosk-view="name"] .kiosk-card {
+  gap: 16px;
+  padding: clamp(24px, 5vw, 48px);
+  border-radius: 28px;
 }
 
-/* Keep the accessible form label while following the reference's visible placeholder. */
-#kioskRoot :is(.kiosk-name-form label, .kiosk-nickname) {
+#kioskRoot[data-kiosk-view="name"] h1 { text-wrap: initial; }
+#kioskRoot .kiosk-name-form { width: min(100%, 420px); }
+#kioskRoot .kiosk-name-form label { margin: 0; font-size: 18px; text-align: left; }
+
+#kioskRoot .kiosk-nickname {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -169,23 +166,29 @@ body.curv-kiosk .order-btn { font-size:18px; }
 }
 
 #kioskRoot #kioskNickname {
-  min-height: clamp(64px, 7.46dvh, 88px);
-  margin: 0;
-  padding: 10px 24px;
-  border: 3px solid var(--kiosk-navy);
-  border-radius: 24px;
+  min-height: 56px;
+  margin: 8px 0;
+  padding: 12px 16px;
+  border: 2px solid var(--kiosk-line);
+  border-radius: 16px;
   background: #fff;
   color: var(--kiosk-navy);
-  font: 600 clamp(24px, 4.39vw, 36px)/1.25 Jost, sans-serif;
-  text-align: center;
+  font-size: 20px;
   scroll-margin-block: 12px;
 }
 
 #kioskRoot .kiosk-name-form button {
-  min-height: clamp(64px, 7.12dvh, 84px);
-  border-radius: 24px;
-  font-size: clamp(22px, 3.66vw, 30px);
+  padding: 12px 28px;
+  border-radius: 18px;
+  font-weight: 600;
 }
+
+#kioskRoot .kiosk-name-form :is(button, input):focus-visible {
+  outline: 3px solid var(--kiosk-navy);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--kiosk-cream);
+}
+#kioskRoot .kiosk-name-form .kiosk-error:empty { display: block; }
 
 #kioskRoot .kiosk-error { color: #781d2e; }
 #kioskRoot .kiosk-error:empty { display: none; }
@@ -298,8 +301,9 @@ body.curv-kiosk .kiosk-diagnostic {
 
 @media (max-height: 570px) {
   #kioskRoot .kiosk-logo,
-  #kioskRoot:is([data-kiosk-view="name"], [data-kiosk-view="mode"]) .kiosk-logo { height: 64px; }
-  #kioskRoot:is([data-kiosk-view="name"], [data-kiosk-view="mode"], [data-kiosk-view="accepted"]) h1 { font-size: clamp(36px, 6.5vw, 60px); }
+  #kioskRoot[data-kiosk-view="mode"] .kiosk-logo { height: 64px; }
+  #kioskRoot:is([data-kiosk-view="mode"], [data-kiosk-view="accepted"]) h1 { font-size: clamp(36px, 6.5vw, 60px); }
+  #kioskRoot[data-kiosk-view="name"] .kiosk-card { padding: 24px; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -310,7 +314,17 @@ body.curv-kiosk .kiosk-diagnostic {
 @keyframes kiosk-screen-in { from { opacity: .4; } to { opacity: 1; } }
 
 /* Gate 3 · product customization */
-body.curv-kiosk.kiosk-surface-open { overflow: hidden; }
+html:has(> body.curv-kiosk.kiosk-surface-open) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.curv-kiosk.kiosk-surface-open {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--kiosk-menu-scroll-top, 0px);
+  overflow: hidden;
+}
 
 body.curv-kiosk .kiosk-product-dialog,
 body.curv-kiosk :is(#formFloat.open, #orderConfirmOverlay) {
@@ -337,6 +351,7 @@ body.curv-kiosk :is(#formFloat.open, #orderConfirmOverlay) {
 body.curv-kiosk .kiosk-product-dialog {
   z-index: 1030;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--kiosk-menu-orange);
   transition: none;
 }
@@ -604,13 +619,21 @@ body.curv-kiosk .nav-menu-label {
   display: none;
 }
 
+body.curv-kiosk .kiosk-menu-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: var(--kiosk-menu-navy);
+}
+
 body.curv-kiosk .kiosk-banner {
+  position: static;
   box-sizing: border-box;
   height: var(--kiosk-menu-banner-height);
   justify-content: space-between;
   gap: 12px;
   padding: var(--kiosk-menu-top) var(--kiosk-menu-right) 0 var(--kiosk-menu-left);
-  background: var(--kiosk-menu-navy);
+  background: transparent;
   color: var(--kiosk-menu-cream);
   font: 600 21px/1.2 Jost, sans-serif;
 }
@@ -638,10 +661,12 @@ body.curv-kiosk .nav-wrap {
   grid-template-columns: minmax(0, 1fr) clamp(156px, 23.4vw, 192px);
   align-items: center;
   gap: 12px;
-  top: var(--kiosk-menu-banner-height);
+  position: relative;
+  top: auto;
+  z-index: auto;
   padding: 16px var(--kiosk-menu-right) 16px var(--kiosk-menu-left);
   border: 0;
-  background: var(--kiosk-menu-navy);
+  background: transparent;
 }
 
 body.curv-kiosk .nav-inner {
@@ -1037,6 +1062,7 @@ body.curv-kiosk #orderConfirmOverlay .order-confirm-body {
   min-height: min(106px, 32dvh);
   max-height: none;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 10px var(--kiosk-sheet-right) 16px var(--kiosk-sheet-left);
   scroll-padding-block: 12px;
 }
