@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   if (window.curvCheckout) return;
-  const version = '2026-11-11.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
+  const version = '2026-11-12.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
   const state = { status: 'loading', busy: false, reviewing: false, accepted: null };
   let admittedReview, pendingSave = 'N';
   let generation, device, nickname = '', fulfillment = '', pending, corrupt = false, epoch = 0, idle = Date.now(), deadline = 0, releaseLock, ownsLock = false, authSubscribed = false;
@@ -141,8 +141,51 @@
       const begun = await call('kiosk_begin'); if (current !== epoch) return;
       generation = begun.generation_id; device = begun.device_id;
       if (!getSafeSubmissionKey(generation)) throw diagnosticError('generation', 'RESPONSE');
-      state.status = 'name'; idle = Date.now(); nameScreen(); syncButton();
+      welcomeScreen(); syncButton();
     } catch (error) { if (current === epoch) locked(undefined, failureCode(diagnostic, error)); }
+  }
+  function welcomeScreen() {
+    state.status = 'welcome';
+    const card = screen('Welcome to Curv!', 'Tap anywhere to start', 'welcome');
+    const arches = make('div', undefined, { className: 'kiosk-welcome-arches' });
+    arches.setAttribute('aria-hidden', 'true');
+    root.prepend(arches);
+
+    let renderedCatalog;
+    function renderArches() {
+      // The search index is populated only from catalog rows, even if the menu shows fallback cards.
+      const catalog = typeof publicMenuSearchIndex === 'undefined' ? [] : publicMenuSearchIndex;
+      if (catalog === renderedCatalog) return;
+      renderedCatalog = catalog;
+      const names = [...new Set(catalog.filter(entry => entry.productId).map(entry => entry.productName))];
+      arches.replaceChildren(...Array.from({ length: 24 }, (_, index) => {
+        const tile = make('div', undefined, { className: 'kiosk-welcome-arch' });
+        if (names.length) {
+          const name = names[index % names.length];
+          const label = make('span', name);
+          label.style.setProperty('--kiosk-arch-name-length', [...name].length);
+          tile.append(label);
+        }
+        return tile;
+      }));
+    }
+    renderArches();
+    const menu = document.querySelector('main');
+    if (menu) {
+      const observer = new MutationObserver(() => {
+        if (arches.parentNode === root) renderArches();
+        else observer.disconnect();
+      });
+      observer.observe(menu, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-public-menu-search-product-id'] });
+      observer.observe(root, { childList: true });
+    }
+
+    const startButton = button(card, 'Tap to order', () => {
+      if (state.status !== 'welcome') return;
+      state.status = 'name'; idle = Date.now(); nameScreen();
+    });
+    startButton.className = 'kiosk-welcome-start';
+    startButton.focus({ preventScroll: true });
   }
   function nameScreen(error = '') {
     const card = screen("hey, what's your name?", "We'll call you when your order is ready.", 'name');

@@ -75,7 +75,12 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   let releaseController;
   const controllerReady=holdController&&new Promise(resolve=>{releaseController=resolve;});
   await context.route('**/*',async r=>{
-   const u=new URL(r.request().url());if(u.origin!=='https://curv.test')return r.abort();
+   const u=new URL(r.request().url());
+   const jost=process.env.CURV_KIOSK_WELCOME_JOST;
+   if(jost&&u.href==='https://fonts.gstatic.com/s/jost/v20/92zatBhPNqw73oTd4g.woff2'){
+    return r.fulfill({path:jost,contentType:'font/woff2',headers:{'access-control-allow-origin':'https://curv.test'}});
+   }
+   if(u.origin!=='https://curv.test')return r.abort();
    if(holdController&&u.pathname==='/kiosk/checkout.js')await controllerReady;
    if(u.pathname==='/menu/'||u.pathname==='/menu')return r.fulfill({contentType:'text/html',body:html});
    if(u.pathname==='/blank')return r.fulfill({contentType:'text/html',body:'<!doctype html><title>Other page</title>'});
@@ -85,8 +90,16 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   await page.goto('https://curv.test/menu/?kiosk=1',holdController?{waitUntil:'domcontentloaded'}:undefined);
   return {context,page,db,releaseController};
  }
+ const welcomeHeading = p => p.getByRole('heading', { name: 'Welcome to Curv!' });
+ async function startWelcome(p) {
+  await welcomeHeading(p).waitFor();
+  await p.getByRole('button', { name: 'Tap to order' }).click();
+  await p.getByLabel('Your nickname').waitFor();
+ }
  async function onboard(f,name='Alex <&> ♡',mode='TO GO'){
-  const p=f.page;await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+  const p=f.page, nickname=p.getByLabel('Your nickname');
+  await nickname.or(welcomeHeading(p)).waitFor();
+  if (await welcomeHeading(p).isVisible()) await startWelcome(p);
   await p.getByLabel('Your nickname').fill(name);await p.getByRole('button',{name:'Continue',exact:true}).click();
   await p.getByRole('button',{name:mode,exact:true}).click();
   await p.evaluate(()=>{isWebsiteOrderingEnabled=true;isPublicOrderTechnicalAvailable=true;cart=[{key:'fixture',name:'Local estimate coffee',price:.01,qty:1,product_id:'00000000-0000-4000-8000-000000001000',product_size_id:'00000000-0000-4000-8000-000000001100',option_choice_ids:[],options:{note:'Less ice'}}];renderCart();if(!document.getElementById('formFloat').classList.contains('open'))toggleForm();});
@@ -149,7 +162,87 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    });
    const unlocked=s=>!s.dialog&&!s.locked&&!s.scrollLocked&&s.menuInert.every(value=>!value);
    const checkoutCalls=f=>f.db.calls.filter(call=>['kiosk_quote','kiosk_admit','kiosk_submit','kiosk_recover','kiosk_confirm_price'].includes(call.name)).map(call=>call.name);
-   let f=await ready(),p=f.page;
+   let f=await open({touch:true,delayCatalog:true}),p=f.page;
+   await p.setViewportSize({width,height});
+   await p.waitForFunction(()=>fixtureCatalogStarted(0));
+   const welcome = p.getByRole('heading', { name: 'Welcome to Curv!' });
+   const startButton = p.getByRole('button', { name: 'Tap to order' });
+   const arches = p.locator('.kiosk-welcome-arch');
+   const verify = (ok, message) => check(ok, message + ' ' + size, 'welcome');
+
+   await welcome.waitFor();
+   verify(await p.locator('.kiosk-welcome-arches').getAttribute('aria-hidden') === 'true'
+     && (await arches.allTextContents()).every(text => text === '') && await arches.count() === 24,
+     'loading shows decorative arches without sample product names');
+   verify(await p.locator('#kioskRoot').evaluate(root => {
+     const viewport = root.getBoundingClientRect();
+     const card = root.querySelector('.kiosk-card').getBoundingClientRect();
+     const title = root.querySelector('h1').getBoundingClientRect();
+     const button = root.querySelector('button').getBoundingClientRect();
+     const titleInset = Math.min(title.left - card.left, card.right - title.right);
+     const center = (card.left + card.right) / 2;
+     const hit = document.elementFromPoint(8, 8);
+     return Math.abs(viewport.width - innerWidth) < 1 && Math.abs(viewport.height - innerHeight) < 1
+       && Math.abs(center - innerWidth / 2) < 2 && Math.abs((card.top + card.bottom) / 2 - innerHeight / 2) < 2
+       && titleInset >= 28 && title.top >= card.top + 24 && button.bottom <= card.bottom - 24
+       && button.width >= 56 && button.height >= 56 && root.scrollWidth <= root.clientWidth
+       && root.scrollHeight <= root.clientHeight && hit?.matches('.kiosk-welcome-start')
+       && getComputedStyle(document.documentElement).overflowY === 'hidden' && document.querySelector('main').inert;
+   }), 'welcome fills the viewport, centers its padded card and captures edge taps');
+   verify(await startButton.evaluate(button => button === document.activeElement), 'start has keyboard focus');
+   const screenshots = process.env.CURV_KIOSK_WELCOME_SCREENSHOTS;
+   if (screenshots) {
+    await p.evaluate(() => document.fonts.ready.then(() => true));
+    verify(await p.locator('#kioskRoot .kiosk-logo').evaluate(async img => {
+     await img.decode();
+     return img.naturalWidth > 0 && new URL(img.src).pathname === '/kiosk/curv-logo-traced.svg';
+    }), 'original logo loads');
+    verify(await p.evaluate(async checkJost => {
+     const display = await document.fonts.load('76px Poppin', 'Welcome to Curv!');
+     const ui = checkJost ? await document.fonts.load('700 24px Jost', 'Tap to order') : display;
+     return display.some(face => face.status === 'loaded') && ui.some(face => face.status === 'loaded');
+    }, Boolean(process.env.CURV_KIOSK_WELCOME_JOST)), 'welcome fonts load from the offline fixture');
+    if (width === 1180) await p.screenshot({ path: path.join(screenshots, size + '-welcome-loading.png') });
+   }
+   const catalog = catalogRows('welcome');
+   catalog.public_menu_products[0].name = 'Americano';
+   catalog.public_menu_products[1].name = 'Banana Pudding';
+   const names = ['Iced Café Latte', 'Vanilla Cream Cold Brew', 'Hojicha Latte', 'Cocoa Matcha',
+     'Sea Salt Cream Matcha Latte with Vanilla Sweet Cream Cold Foam', 'Citrus Fizz', 'Cold Brew <Blend>'];
+   names.forEach((name, index) => {
+    const productId = id(710 + index);
+    catalog.public_menu_products.push({ id: productId, name, category_id: id(600), is_published: true, is_available: true });
+    catalog.public_menu_product_sizes.push({ id: id(720 + index), product_id: productId, label: 'Regular', price: 150 });
+   });
+   await p.evaluate(rows => releaseFixtureCatalog(0, rows), catalog);
+   await p.waitForFunction(() => [...document.querySelectorAll('.kiosk-welcome-arch')].some(el => el.textContent === 'Cold Brew <Blend>'));
+   const tiles = await arches.allTextContents();
+   verify(names.every(name => tiles.includes(name)) && tiles.every(name => catalog.public_menu_products.some(product => product.name === name))
+     && await arches.locator(':scope > :not(span), span *').count() === 0, 'late live-catalog labels render as text');
+   verify(await arches.evaluateAll(tiles => tiles.filter(tile => tile.getClientRects().length).every(tile => {
+    const tileBounds = tile.getBoundingClientRect(), label = tile.firstElementChild.getBoundingClientRect();
+    return label.top >= tileBounds.top && label.bottom <= tileBounds.bottom && label.width <= tileBounds.width;
+   })), 'long catalog labels stay inside their arches');
+   if (screenshots) await p.screenshot({ path: path.join(screenshots, size + '-welcome.png') });
+
+   if (width === 1180) {
+    await p.touchscreen.tap(8, 8);
+    await p.touchscreen.tap(8, 8);
+   } else if (width === 1024) {
+    await p.keyboard.press('Enter');
+   } else {
+    await startButton.tap();
+   }
+   const input = p.getByLabel('Your nickname');
+   await input.waitFor();
+   verify(await input.inputValue() === '' && await welcome.count() === 0
+     && await p.getByRole('button', { name: 'FOR HERE', exact: true }).count() === 0,
+     'touch, repeated taps or keyboard advance only to nickname');
+   verify(JSON.stringify(f.db.calls.map(call => call.name)) === JSON.stringify(['kiosk_context', 'kiosk_begin'])
+     && await p.evaluate(() => sessionStorage.getItem(curvCheckout.storageKey) === null),
+     'welcome and start create no checkout or protected request');
+   await f.context.close();
+   f=await ready();p=f.page;
    const draft=(await state(p)).draft;
    await openFallback(p);
    let ui=await state(p);
@@ -231,7 +324,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
  try{
   await catalogSurfaceRaces();
   let f=await open();let p=f.page;
-  await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+  await startWelcome(p);
   if(process.env.CURV_KIOSK_SCREENSHOTS)await p.screenshot({path:path.join(process.env.CURV_KIOSK_SCREENSHOTS,'kiosk-name.png')});
   check(await p.locator('#kioskNickname').inputValue()==='','name-first has no saved profile');
   for(const bad of ['', '   ', 'x'.repeat(81)]){await p.getByLabel('Your nickname').fill(bad);await p.getByRole('button',{name:'Continue',exact:true}).click();check((await p.locator('#kioskNameError').textContent()).includes('1–80'),'nickname invalid input rejected','validation');}
@@ -249,37 +342,47 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   const sent=f.db.attempt.payload;check(sent.fulfillment_type==='pickup','TO GO maps to pickup','checkout');
   check(!('customer_phone'in sent)&&!('delivery_address'in sent)&&!('customer_email'in sent),'no fabricated personal fields','checkout');
   check(await p.evaluate(()=>!JSON.parse(sessionStorage.getItem(curvCheckout.storageKey)).payload),'personal frozen body removed after verified success','privacy');
-  await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+  await p.getByRole('button',{name:'Done · New customer'}).click();await welcomeHeading(p).waitFor();
+  check(await p.getByLabel('Your nickname').count()===0,'manual receipt reset stops at welcome','welcome');
+  await startWelcome(p);
   check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'manual reset fresh customer','privacy');
   check(await p.evaluate(()=>localStorage.getItem('curv-latest-public-order')==='personal recent sentinel'&&sessionStorage.getItem('curv-pending-order-v2')==='personal recovery sentinel'),'normal browser stores unchanged','privacy');
   await onboard(f,'Second customer','FOR HERE');await review(f);await confirm(f);await success(f);check(f.db.attempt.payload.fulfillment_type==='dine_in','FOR HERE maps to dine_in','checkout');
-  await p.clock.fastForward(60001);await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(await p.getByLabel('Your nickname').inputValue()==='','60-second reset fresh name','privacy');await f.context.close();
+  await p.clock.fastForward(60001);await welcomeHeading(p).waitFor();check(await p.getByLabel('Your nickname').count()===0,'receipt timer resets to welcome','welcome');await startWelcome(p);check(await p.getByLabel('Your nickname').inputValue()==='','60-second reset fresh name','privacy');await f.context.close();
   for(const mode of ['lost-response','lost-admit','held']){
    f=await open({mode});p=f.page;await onboard(f);await review(f);await confirm(f);
    if(mode==='held'){await p.waitForFunction(()=>!!sessionStorage.getItem('curv-kiosk-v2:pending'));await p.clock.fastForward(30001);}
    await p.locator('#kioskRoot').getByRole('button',{name:'Recover previous order',exact:true}).waitFor();const saved=await p.evaluate(()=>sessionStorage.getItem(curvCheckout.storageKey));
+   check(await welcomeHeading(p).count()===0,'protected recovery takes priority over welcome '+mode,'welcome');
    await p.clock.fastForward(180000);check(await p.evaluate(()=>sessionStorage.getItem(curvCheckout.storageKey))===saved,'uncertain inactivity preserves frozen request '+mode,'recovery');
    if(mode==='held'){f.db.release();await p.waitForTimeout(50);check(await p.getByRole('heading',{name:'order received!'}).count()===0,'late timed-out response cannot fabricate local success','recovery');}
-   await p.reload();await p.waitForFunction(()=>/hey, what's your name\?|order received|Let’s check that order/.test(document.getElementById('kioskRoot')?.textContent||''));
+   await p.reload();await p.waitForFunction(()=>/Welcome to Curv!|order received|Let’s check that order/.test(document.getElementById('kioskRoot')?.textContent||''));
    const recoverButton=p.locator('#kioskRoot').getByRole('button',{name:'Recover previous order',exact:true});
    if(await recoverButton.isVisible())await recoverButton.click();
-   await p.waitForFunction(()=>/hey, what's your name\?|order received/.test(document.getElementById('kioskRoot')?.textContent||''));
+   await p.waitForFunction(()=>/Welcome to Curv!|order received/.test(document.getElementById('kioskRoot')?.textContent||''));
    check(f.db.orders===1,'uncertain replay creates one order '+mode,'recovery');
    check(f.db.calls.filter(c=>c.name==='kiosk_admit').every(c=>c.args.p_payload.submission_key===JSON.parse(saved).key),'same key through reload/recovery '+mode,'recovery');
    await f.context.close();
   }
-  f=await open({authorized:false});await f.page.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await f.page.getByLabel('Your nickname').count()===0,'unauthorized device cannot enter ordering','authorization');await f.context.close();
+  f=await open({authorized:false});await f.page.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await f.page.getByLabel('Your nickname').count()===0&&await welcomeHeading(f.page).count()===0,'unauthorized device cannot enter ordering','authorization');await f.context.close();
   f=await open({mode:'price-change'});p=f.page;await onboard(f);await review(f);await confirm(f);await p.getByRole('button',{name:'Confirm Updated Order'}).waitFor();check(f.db.orders===0,'changed price requires another explicit review','checkout');await p.getByRole('button',{name:'Confirm Updated Order'}).click();await success(f);check(f.db.orders===1&&new Set(f.db.calls.filter(c=>c.name==='kiosk_submit').map(c=>c.args.p_key)).size===1,'updated review retains one key and one order','checkout');await f.context.close();
   f=await open({legacy:true});await f.page.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await f.page.evaluate(()=>sessionStorage.getItem('curv-kiosk:curv-pending-order-v2'))==='legacy unresolved sentinel','legacy recovery never discarded','recovery');await f.context.close();
   f=await open({storageDenied:true});await onboard(f);await review(f);await confirm(f);await f.page.waitForTimeout(50);check(f.db.calls.every(c=>c.name!=='kiosk_admit'&&c.name!=='kiosk_submit'),'storage failure blocks all mutation transport','recovery');await f.context.close();
   f=await open();await onboard(f);await f.page.evaluate(()=>kioskSignOut());await f.page.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await f.page.locator('#kioskBanner').count()===0,'signout masks nickname/cart immediately','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f);await p.reload();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'draft reload does not restore previous customer','privacy');
-  await p.clock.fastForward(120001);await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(f.db.calls.some(c=>c.name==='kiosk_close'&&c.args.p_draft),'abandoned pre-admission draft closes safely','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f,'Back privacy');await p.goto('https://curv.test/blank');await p.goBack();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(await p.evaluate(()=>cart.length===0&&!document.getElementById('kioskBanner')),'ordinary Back starts private fresh name screen','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f,'Cached customer');await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(!(await p.locator('#kioskRoot').textContent()).includes('Cached customer'),'BFCache-event restoration revalidates before showing data','privacy');await f.context.close();
-  f=await open();p=f.page;await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();const second=await f.context.newPage();await second.goto('https://curv.test/menu/?kiosk=1');await second.getByRole('heading',{name:'A little help from CURV'}).waitFor();check((await second.locator('#kioskRoot').textContent()).includes('already open'),'second tab cannot share active customer controls','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'success remains before inactivity deadline','privacy');await p.locator('#kioskRoot').dispatchEvent('pointerdown');await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'activity extends success deadline','privacy');await p.clock.fastForward(1001);await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();check(await p.getByLabel('Your nickname').inputValue()==='','extended inactivity eventually resets','privacy');await f.context.close();
-  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.evaluate(()=>{Storage.prototype.removeItem=function(){throw Error('denied');};});await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await p.getByLabel('Your nickname').count()===0,'cleanup failure cannot expose a new customer screen','privacy');await f.context.close();
+  f=await open();p=f.page;await onboard(f);await p.reload();await startWelcome(p);check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'draft reload does not restore previous customer','privacy');
+  const abandonedGeneration=f.db.generation, beforeIdle=f.db.calls.length;
+  await p.clock.fastForward(121001);await welcomeHeading(p).waitFor();
+  const idleCalls=f.db.calls.slice(beforeIdle);
+  check(idleCalls.some(c=>c.name==='kiosk_close'&&c.args.p_draft&&c.args.p_generation===abandonedGeneration)
+    &&f.db.generation!==abandonedGeneration,'abandoned pre-admission draft closes safely before welcome','privacy');
+  check(idleCalls.every(c=>['kiosk_close','kiosk_context','kiosk_begin'].includes(c.name))
+    &&await p.getByLabel('Your nickname').count()===0,'idle reset shows welcome without checkout calls','welcome');
+  await f.context.close();
+  f=await open();p=f.page;await onboard(f,'Back privacy');await p.goto('https://curv.test/blank');await p.goBack();await welcomeHeading(p).waitFor();check(await p.evaluate(()=>cart.length===0&&!document.getElementById('kioskBanner')),'ordinary Back starts private fresh welcome screen','privacy');await f.context.close();
+  f=await open();p=f.page;await onboard(f,'Cached customer');await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));await p.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await welcomeHeading(p).waitFor();check(!(await p.locator('#kioskRoot').textContent()).includes('Cached customer'),'BFCache-event restoration revalidates before showing data','privacy');await f.context.close();
+  f=await open();p=f.page;await welcomeHeading(p).waitFor();const second=await f.context.newPage();await second.goto('https://curv.test/menu/?kiosk=1');await second.getByRole('heading',{name:'A little help from CURV'}).waitFor();check((await second.locator('#kioskRoot').textContent()).includes('already open'),'second tab cannot share active customer controls','privacy');await f.context.close();
+  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'success remains before inactivity deadline','privacy');await p.locator('#kioskRoot').dispatchEvent('pointerdown');await p.clock.fastForward(59000);check(await p.locator('.kiosk-order-number').isVisible(),'activity extends success deadline','privacy');await p.clock.fastForward(1001);await startWelcome(p);check(await p.getByLabel('Your nickname').inputValue()==='','extended inactivity eventually resets','privacy');await f.context.close();
+  f=await open();p=f.page;await onboard(f);await review(f);await confirm(f);await success(f);await p.evaluate(()=>{Storage.prototype.removeItem=function(){throw Error('denied');};});await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:'A little help from CURV'}).waitFor();check(await p.getByLabel('Your nickname').count()===0&&await welcomeHeading(p).count()===0,'cleanup failure cannot expose a new customer screen','privacy');await f.context.close();
 
 
   // Actual recovered review: server intent stays fixed while volatile UI is rebuilt.
@@ -302,7 +405,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    check(new Set(f.db.calls.filter(c=>c.name==='kiosk_submit').map(c=>c.args.p_key)).size===1&&f.db.attempt.key===JSON.parse(frozen).key,'same key '+type+' '+transition,'recovery-label');
    check(JSON.stringify(f.db.attempt.payload)===JSON.stringify(original),'admitted request unchanged '+type+' '+transition,'recovery-label');
    check((await p.locator('.kiosk-order-number').textContent())==='C-9001','server receipt '+type+' '+transition,'recovery-label');
-   await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByLabel('Your nickname').waitFor();
+   await p.getByRole('button',{name:'Done · New customer'}).click();await welcomeHeading(p).waitFor();
    check(await p.evaluate(()=>sessionStorage.getItem('curv-kiosk-v2:pending')===null&&cart.length===0),'closed customer isolated '+type+' '+transition,'recovery-label');
    await onboard(f,'Fresh guest',type==='pickup'?'FOR HERE':'TO GO');await review(f);
    check((await p.locator('#orderConfirmBody').textContent()).includes(type==='pickup'?'FOR HERE':'TO GO'),'next customer own mode '+type+' '+transition,'recovery-label');await f.context.close();
@@ -392,8 +495,8 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    await viewport.getByText('Loading protected in-store ordering').waitFor();
    try { await assertFrozen(viewport,0,'initial loading'); }
    finally { f.releaseController(); }
+   await startWelcome(p);
    const nickname=p.getByLabel('Your nickname');
-   await nickname.waitFor();
    const design=await viewport.evaluate(root=>{
     const card=root.querySelector('.kiosk-card'),field=card.querySelector('input'),button=card.querySelector('button');
     const r=card.getBoundingClientRect();
@@ -487,7 +590,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
      Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});
      document.dispatchEvent(new Event('visibilitychange'));
     });
-    await p.getByLabel('Your nickname').waitFor();
+    await startWelcome(p);
     gate(await product.count()===0&&await p.evaluate(()=>[...document.querySelectorAll('.panel-note-input')].every(el=>!el.value)),
       'same-tab privacy reset closes the product and clears the previous request');
     await p.getByLabel('Your nickname').fill('Mellow Hojicha');
@@ -619,7 +722,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    await assertFrozen(viewport,savedMenuOffset,'Order Received');
    gate(f.db.orders===1&&rpcCount('admit')===1&&rpcCount('submit')===1,'one explicit confirmation follows the protected admission and submission path');
    await p.getByRole('button',{name:'Done · New customer'}).tap();
-   await p.getByLabel('Your nickname').waitFor();
+   await welcomeHeading(p).waitFor();
    gate(!await cartWindow.isVisible()&&await p.evaluate(()=>cart.length===0&&document.getElementById('f-notes').value===''
      &&[...document.querySelectorAll('.panel-note-input')].every(field=>!field.value)),
      'customer reset clears cart, order note and product-note UI');

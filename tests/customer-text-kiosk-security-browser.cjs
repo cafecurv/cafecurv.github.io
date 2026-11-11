@@ -59,7 +59,7 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
   return {context,page,db,probeRequests};
  }
  async function onboard(f,name='Alex <&> ♡',mode='TO GO'){
-  const p=f.page;await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+  const p=f.page;await p.getByRole('button',{name:'Tap to order'}).click();
   await p.getByLabel('Your nickname').fill(name);await p.getByRole('button',{name:'Continue',exact:true}).click();
   await p.getByRole('button',{name:mode,exact:true}).click();
   await p.evaluate(()=>{isWebsiteOrderingEnabled=true;isPublicOrderTechnicalAvailable=true;cart=[{key:'fixture',name:'Local estimate coffee',price:.01,qty:1,product_id:'00000000-0000-4000-8000-000000001000',product_size_id:'00000000-0000-4000-8000-000000001100',option_choice_ids:[],options:{note:'Less ice'}}];renderCart();if(!document.getElementById('formFloat').classList.contains('open'))toggleForm();});
@@ -85,7 +85,9 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    check(f.db.attempt.payload.customer_name===name&&f.db.attempt.payload.items[0].item_note===note&&f.db.attempt.payload.customer_notes===note,'frozen payload retains text','submit');
    check((await p.locator('.kiosk-order-number').textContent())==='C-9001','receipt retains actual verified number','receipt');
    check(await p.evaluate(()=>window.textProbe===0)&&f.probeRequests.length===0,'no payload script or network activation','execution');
-   await p.getByRole('button',{name:'Done · New customer'}).click();await p.getByRole('heading',{name:"hey, what's your name?"}).waitFor();
+   await p.getByRole('button',{name:'Done · New customer'}).click();
+   await p.getByRole('heading',{name:'Welcome to Curv!'}).waitFor();
+   await p.getByRole('button',{name:'Tap to order'}).click();
    check(await p.evaluate(()=>cart.length===0&&document.getElementById('kioskNickname').value===''),'next customer isolated after hostile text','privacy');await f.context.close();
   }
   const f=await open(),p=f.page;await onboard(f);await p.evaluate(()=>{window.textProbe=0;});

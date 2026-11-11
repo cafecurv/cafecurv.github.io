@@ -1,6 +1,111 @@
-// Production-base independence and disabled-by-default tests; every browser request is intercepted.
-const fs=require('fs'),path=require('path'),cp=require('child_process'),assert=require('assert/strict');
-const {chromium}=require(process.env.CURV_PLAYWRIGHT_MODULE||'playwright');const root=path.resolve(__dirname,'..'),base='79e8ff59cc978da586f311f1d392d145f2d14cf1';const git=(...a)=>cp.execFileSync('git',['--no-optional-locks','-C',root,...a],{encoding:'utf8'}).replace(/\r\n/g,'\n');const read=p=>fs.readFileSync(root+'/'+p,'utf8').replace(/\r\n/g,'\n');let n=0;const check=(v,s)=>{assert.ok(v,s);n++;};const eq=(a,b,s)=>{assert.deepEqual(a,b,s);n++;};
-(async()=>{let browser;try{eq(git('rev-parse','HEAD').trim(),base,'exact production hotfix base');eq(git('diff','--cached','--name-only').trim(),'','index empty');for(const p of ['admin/admin.js','admin/incoming-orders.html','admin/admin.css','track/index.html'])eq(read(p),git('show',base+':'+p),'production application unchanged '+p);check(!fs.existsSync(root+'/menu/delivery-pin.js')&&!fs.existsSync(root+'/admin/delivery-courier.js'),'no new D1/P5 runtime modules');check(!fs.existsSync(root+'/admin/WEBSITE_DELIVERY_D1A_FOUNDATION.sql')&&!fs.existsSync(root+'/supabase/functions/delivery-quote'),'no new D1 migration/Edge runtime');eq(read('menu/authoritative-checkout.js').replace("const version = '2026-10-28.2';","const version = '2026-10-20.1';"),git('show',base+':menu/authoritative-checkout.js'),'public controller business code identical');const html=read('menu/index.html'),oldHtml=git('show',base+':menu/index.html');eq(html.match(/<select[^>]+id="f-delivery"[\s\S]*?<\/select>/)[0],oldHtml.match(/<select[^>]+id="f-delivery"[\s\S]*?<\/select>/)[0],'ordinary fulfillment markup identical');for(const p of ['menu/index.html','kiosk/setup.html']){check(read(p).includes('@supabase/supabase-js@2.118.0/dist/umd/supabase.js'),'exact SDK pin '+p);check(read(p).includes('integrity="sha384-')&&read(p).includes('crossorigin="anonymous"'),'SDK integrity '+p);}check(read('kiosk/config.js').includes('enabled: false')&&read('kiosk/config.js').includes("supabaseUrl: ''"),'production config disabled/unconfigured');
- browser=await chromium.launch({channel:'msedge',headless:true});async function open(html,controller,url){const ctx=await browser.newContext(),page=await ctx.newPage();const external=[];await page.addInitScript(()=>{const result={data:[],error:null};let q;q=new Proxy({}, {get:(_,k)=>k==='then'?Promise.resolve(result).then.bind(Promise.resolve(result)):()=>q});window.supabase={createClient:()=>({from:()=>q,rpc:async()=>({data:{website_ordering_enabled:true},error:null})})};});await ctx.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='https://curv.test'){external.push(u.origin);return route.abort();}if(u.pathname==='/menu/'||u.pathname==='/menu')return route.fulfill({contentType:'text/html',body:html});if(u.pathname==='/menu/authoritative-checkout.js')return route.fulfill({contentType:'application/javascript',body:controller});if(u.pathname.startsWith('/kiosk/')){const p=path.join(root,u.pathname);if(fs.existsSync(p))return route.fulfill({path:p});}return route.abort();});await page.goto('https://curv.test'+url);return {ctx,page,external};}
- const old=await open(oldHtml,git('show',base+':menu/authoritative-checkout.js'),'/menu/'),fresh=await open(html,read('menu/authoritative-checkout.js'),'/menu/');for(const f of [old,fresh])await f.page.waitForFunction(()=>curvCheckoutBootstrap.status==='ready');const state=page=>page.evaluate(()=>({fulfillment:document.getElementById('f-delivery').value,payment:document.getElementById('f-payment').value,choices:[...document.querySelectorAll('#f-delivery option')].map(o=>({value:o.value,disabled:o.disabled,hidden:o.hidden})),kiosk:document.body.classList.contains('curv-kiosk')}));eq(await state(fresh.page),await state(old.page),'normal checkout defaults and all choices unchanged');eq((await state(fresh.page)).fulfillment,'dine-in','actual production default retained; no delivery-first redesign');eq(await fresh.page.evaluate(()=>curvCheckout.version),'2026-10-28.2','matched normal asset release');await old.ctx.close();await fresh.ctx.close();const locked=await open(html,read('menu/authoritative-checkout.js'),'/menu/?kiosk=1');await locked.page.getByRole('heading',{name:'A little help from CURV'}).waitFor();eq(await locked.page.getByLabel('Your nickname').count(),0,'disabled kiosk cannot onboard');eq(await locked.page.evaluate(()=>{try{curvKioskAuth.getClient();return false;}catch(e){return e.message==='KIOSK_SETUP_REQUIRED';}}),true,'disabled setup denies device client');await locked.ctx.close();console.log(n+' kiosk-only release scope assertions passed.');}finally{if(browser)await browser.close();}})().catch(e=>{console.error(e.stack);process.exitCode=1;});
+// Gate 4 release scope and fail-closed kiosk checks; every browser request is intercepted.
+const fs = require('node:fs');
+const path = require('node:path');
+const cp = require('node:child_process');
+const assert = require('node:assert/strict');
+const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright');
+
+const root = path.resolve(__dirname, '..');
+const base = 'ea9b452a14a917adcc6663c452a90123759d0df0';
+const git = (...args) => cp.execFileSync('git', ['--no-optional-locks', '-C', root, ...args], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
+const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const baseline = file => git('show', base + ':' + file);
+let count = 0;
+const check = (value, message) => { assert.ok(value, message); count++; };
+const equal = (actual, expected, message) => { assert.deepEqual(actual, expected, message); count++; };
+
+async function open(browser, html, controller, url, config) {
+  const context = await browser.newContext({ serviceWorkers: 'block' });
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    const result = Promise.resolve({ data: [], error: null });
+    let query;
+    query = new Proxy({}, { get: (_, key) => key === 'then' ? result.then.bind(result) : () => query });
+    window.supabase = {
+      createClient: () => ({ from: () => query, rpc: async () => ({ data: { website_ordering_enabled: true }, error: null }) })
+    };
+  });
+  await context.route('**/*', route => {
+    const request = new URL(route.request().url());
+    if (request.origin !== 'https://curv.test') return route.abort();
+    if (request.pathname === '/menu/' || request.pathname === '/menu') {
+      return route.fulfill({ contentType: 'text/html', body: html });
+    }
+    if (request.pathname === '/menu/authoritative-checkout.js') {
+      return route.fulfill({ contentType: 'application/javascript', body: controller });
+    }
+    if (request.pathname === '/kiosk/config.js' && config) {
+      return route.fulfill({ contentType: 'application/javascript', body: 'window.CURV_KIOSK_CONFIG = ' + JSON.stringify(config) });
+    }
+    if (request.pathname.startsWith('/kiosk/')) {
+      const file = path.join(root, request.pathname);
+      if (fs.existsSync(file)) return route.fulfill({ path: file });
+    }
+    return route.abort();
+  });
+  await page.goto('https://curv.test' + url);
+  return { context, page };
+}
+
+async function run() {
+  equal(git('rev-parse', 'HEAD').trim(), base, 'exact approved Round 1 baseline');
+  equal(git('diff', '--cached', '--name-only').trim(), '', 'index empty');
+  for (const file of ['admin/admin.js', 'admin/incoming-orders.html', 'admin/admin.css', 'track/index.html',
+    'menu/authoritative-checkout.js', 'kiosk/config.js', 'kiosk/auth.js', 'kiosk/setup.html', 'kiosk/setup.js']) {
+    check(read(file) === baseline(file), 'unchanged from approved baseline: ' + file);
+  }
+  check(!fs.existsSync(root + '/menu/delivery-pin.js') && !fs.existsSync(root + '/admin/delivery-courier.js'), 'no new D1/P5 runtime modules');
+  check(!fs.existsSync(root + '/admin/WEBSITE_DELIVERY_D1A_FOUNDATION.sql') && !fs.existsSync(root + '/supabase/functions/delivery-quote'), 'no new D1 migration or Edge runtime');
+  const html = read('menu/index.html');
+  const oldHtml = baseline('menu/index.html');
+  const fulfillment = /<select[^>]+id="f-delivery"[\s\S]*?<\/select>/;
+  equal(html.match(fulfillment)[0], oldHtml.match(fulfillment)[0], 'ordinary fulfillment markup identical');
+  for (const file of ['menu/index.html', 'kiosk/setup.html']) {
+    check(read(file).includes('@supabase/supabase-js@2.118.0/dist/umd/supabase.js'), 'exact SDK pin ' + file);
+    check(read(file).includes('integrity="sha384-') && read(file).includes('crossorigin="anonymous"'), 'SDK integrity ' + file);
+  }
+
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  try {
+    const publicController = read('menu/authoritative-checkout.js');
+    const old = await open(browser, oldHtml, baseline('menu/authoritative-checkout.js'), '/menu/');
+    const fresh = await open(browser, html, publicController, '/menu/');
+    for (const fixture of [old, fresh]) {
+      await fixture.page.waitForFunction(() => curvCheckoutBootstrap.status === 'ready');
+    }
+    const state = page => page.evaluate(() => ({
+      fulfillment: document.getElementById('f-delivery').value,
+      payment: document.getElementById('f-payment').value,
+      choices: [...document.querySelectorAll('#f-delivery option')].map(option => ({
+        value: option.value, disabled: option.disabled, hidden: option.hidden
+      })),
+      kiosk: document.body.classList.contains('curv-kiosk')
+    }));
+    equal(await state(fresh.page), await state(old.page), 'normal checkout defaults and all choices unchanged');
+    equal((await state(fresh.page)).fulfillment, 'dine-in', 'production dine-in default retained');
+    equal(await fresh.page.evaluate(() => curvCheckout.version), '2026-10-28.2', 'matched normal asset release');
+    await old.context.close();
+    await fresh.context.close();
+
+    // The real config is now intentionally enabled. Test both original safeguards with offline fixtures.
+    for (const [label, config] of [
+      ['disabled', { enabled: false, supabaseUrl: 'https://device.test', publishableKey: 'fixture-only' }],
+      ['unconfigured', { enabled: true, supabaseUrl: '', publishableKey: '' }]
+    ]) {
+      const { context, page } = await open(browser, html, publicController, '/menu/?kiosk=1', config);
+      await page.getByRole('heading', { name: 'A little help from CURV' }).waitFor();
+      equal(await page.getByRole('heading', { name: 'Welcome to Curv!' }).count(), 0, label + ' kiosk cannot show Welcome');
+      equal(await page.getByLabel('Your nickname').count(), 0, label + ' kiosk cannot onboard');
+      equal(await page.evaluate(() => {
+        try { curvKioskAuth.getClient(); return false; }
+        catch (error) { return error.message === 'KIOSK_SETUP_REQUIRED'; }
+      }), true, label + ' kiosk denies device client');
+      await context.close();
+    }
+    console.log(count + ' kiosk-only release scope assertions passed; all requests intercepted.');
+  } finally {
+    await browser.close();
+  }
+}
+
+run().catch(error => { console.error(error.stack); process.exitCode = 1; });

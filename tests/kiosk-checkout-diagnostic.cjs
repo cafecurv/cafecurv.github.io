@@ -107,7 +107,7 @@ async function fixture({ storage = new Map(), storageDenied = false, storageErro
     CURV_KIOSK_CONFIG: { enabled: true, supabaseUrl: 'https://kiosk.invalid', publishableKey: 'fixture-only' },
     supabase: { createClient: () => mockClient },
     document: { body, documentElement: new Element('html'), getElementById: byId,
-      createElement: tagName => new Element(tagName), querySelectorAll: () => [], addEventListener() {} },
+      createElement: tagName => new Element(tagName), querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
     HTMLElement: Element, navigator: { locks: { request: (_name, _options, run) => run({}) } },
     location: { replace: url => navigations.push(url) },
     sessionStorage: {
@@ -153,6 +153,8 @@ async function fixture({ storage = new Map(), storageDenied = false, storageErro
   calls.length = 0;
 
   function onboard() {
+    assert.equal(sandbox.curvCheckout.state.status, 'welcome');
+    root.find(el => el.className === 'kiosk-welcome-start').fire('click');
     assert.equal(sandbox.curvCheckout.state.status, 'name');
     byId('kioskNickname').value = 'Fixture customer';
     root.find(el => el.tagName === 'form').fire('submit');
