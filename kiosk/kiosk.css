@@ -146,16 +146,41 @@ body.curv-kiosk .order-btn { font-size:18px; }
 
 #kioskRoot[data-kiosk-view="welcome"] { cursor: pointer; }
 #kioskRoot .kiosk-welcome-arches {
+  --kiosk-arch-gap: clamp(10px, 2vw, 22px);
+  --kiosk-arch-inset: clamp(12px, 2vw, 28px);
+  --kiosk-arch-columns: 6;
+  --kiosk-arch-width: calc((100vw - 2 * var(--kiosk-arch-inset) - (var(--kiosk-arch-columns) - 1) * var(--kiosk-arch-gap)) / var(--kiosk-arch-columns));
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template: repeat(4, minmax(0, 1fr)) / repeat(6, minmax(0, 1fr));
-  gap: clamp(10px, 2vw, 22px);
-  padding: clamp(12px, 2vw, 28px);
+  grid-template: repeat(4, minmax(0, 1fr)) / minmax(0, 1fr);
+  gap: var(--kiosk-arch-gap);
+  padding: var(--kiosk-arch-inset);
   overflow: hidden;
   pointer-events: none;
 }
+#kioskRoot .kiosk-welcome-row { overflow: hidden; }
+#kioskRoot .kiosk-welcome-track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+}
+#kioskRoot .kiosk-welcome-cycle {
+  display: flex;
+  flex: none;
+  gap: var(--kiosk-arch-gap);
+  /* The trailing gap makes the two copies tile at the same spacing as their products. */
+  padding-inline-end: var(--kiosk-arch-gap);
+}
+@media (prefers-reduced-motion: no-preference) {
+  #kioskRoot .kiosk-welcome-track { animation: kiosk-welcome-marquee 46s linear infinite; }
+  #kioskRoot .kiosk-welcome-row:nth-child(odd) .kiosk-welcome-track { animation-direction: reverse; }
+}
+@keyframes kiosk-welcome-marquee { to { transform: translateX(-50%); } }
 #kioskRoot .kiosk-welcome-arch {
+  box-sizing: border-box;
+  flex: none;
+  width: var(--kiosk-arch-width);
   display: grid;
   align-items: end;
   padding: 12px;
@@ -173,11 +198,11 @@ body.curv-kiosk .order-btn { font-size:18px; }
   -webkit-line-clamp: 5;
   font: 400 clamp(18px, calc(var(--kiosk-arch-label-size, min(2.1vw, 24px)) - max(0, var(--kiosk-arch-name-length) - 28) * .24px), 28px)/1.05 Poppin, Jost, sans-serif;
 }
-#kioskRoot .kiosk-welcome-arch:nth-child(6n+2) { background: var(--kiosk-lime); }
-#kioskRoot .kiosk-welcome-arch:nth-child(6n+3) { background: var(--kiosk-blue); color: #fff; }
-#kioskRoot .kiosk-welcome-arch:nth-child(6n+4) { background: var(--kiosk-orange); }
-#kioskRoot .kiosk-welcome-arch:nth-child(6n+5) { background: var(--kiosk-forest); color: var(--kiosk-cream); }
-#kioskRoot .kiosk-welcome-arch:nth-child(6n+6) { background: var(--kiosk-cream); }
+#kioskRoot .kiosk-welcome-arch[data-tone="1"] { background: var(--kiosk-lime); }
+#kioskRoot .kiosk-welcome-arch[data-tone="2"] { background: var(--kiosk-blue); color: #fff; }
+#kioskRoot .kiosk-welcome-arch[data-tone="3"] { background: var(--kiosk-orange); }
+#kioskRoot .kiosk-welcome-arch[data-tone="4"] { background: var(--kiosk-forest); color: var(--kiosk-cream); }
+#kioskRoot .kiosk-welcome-arch[data-tone="5"] { background: var(--kiosk-cream); }
 
 #kioskRoot[data-kiosk-view="welcome"] .kiosk-card {
   z-index: 1;
@@ -213,10 +238,10 @@ body.curv-kiosk .order-btn { font-size:18px; }
 @media (orientation: portrait) {
   #kioskRoot .kiosk-welcome-arches {
     --kiosk-arch-label-size: min(3vw, 26px);
-    grid-template: repeat(4, min(20dvh, 220px)) / repeat(4, minmax(0, 1fr));
+    --kiosk-arch-columns: 4;
+    grid-template-rows: repeat(4, min(20dvh, 220px));
     align-content: space-between;
   }
-  #kioskRoot .kiosk-welcome-arch:nth-child(n+17) { display: none; }
 }
 
 #kioskRoot[data-kiosk-view="name"] .kiosk-card {

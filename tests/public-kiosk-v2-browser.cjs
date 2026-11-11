@@ -107,6 +107,92 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
  async function review(f){await f.page.locator('#submitOrderBtn').click();await f.page.getByRole('button',{name:'Continue & Submit'}).waitFor();}
  async function confirm(f){await f.page.getByRole('button',{name:'Continue & Submit'}).click();}
  async function success(f){await f.page.getByRole('heading',{name:'order received!'}).waitFor();}
+ async function verifyWelcomeMarquee(page, screenshots, size, verify){
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const tracks = page.locator('.kiosk-welcome-track');
+  await page.locator('#kioskRoot .kiosk-card').evaluate(card => Promise.all(card.getAnimations().map(animation => animation.finished)));
+  const liveMotion = await tracks.evaluateAll(async tracks => {
+   const positions = () => tracks.map(track => track.getBoundingClientRect().left);
+   const before = positions();
+   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+   return positions().map((x, index) => x - before[index]);
+  });
+  const directions = [1, -1, 1, -1];
+  verify(liveMotion.length === 4 && liveMotion.every((delta, index) => delta * directions[index] > 0),
+    'live animation moves right, left, right, left');
+
+  const capture = async elapsed => {
+   const frame = await tracks.evaluateAll((tracks, time) => {
+    for (const track of tracks) {
+     const animation = track.getAnimations()[0];
+     animation.pause();
+     animation.currentTime = time;
+    }
+    const bounds = element => {
+     const { x, y, width, height } = element.getBoundingClientRect();
+     return [x, y, width, height];
+    };
+    const root = document.getElementById('kioskRoot');
+    return {
+     elapsedMs: time,
+     card: bounds(root.querySelector('.kiosk-card')),
+     logo: bounds(root.querySelector('.kiosk-logo')),
+     scroll: [scrollX, scrollY, root.scrollWidth, root.clientWidth],
+     rows: tracks.map(track => {
+      const style = getComputedStyle(track), row = track.parentElement.getBoundingClientRect();
+      const [first, second] = track.children;
+      const gap = parseFloat(getComputedStyle(first).columnGap);
+      const visible = [...track.querySelectorAll('.kiosk-welcome-arch')].flatMap(tile => {
+       const rect = tile.getBoundingClientRect();
+       return rect.right > row.left + .1 && rect.left < row.right - .1
+        ? [{ left: rect.left - row.left, right: rect.right - row.left, tone: tile.dataset.tone, name: tile.textContent }]
+        : [];
+      });
+      const spans = [visible[0].left, ...visible.slice(1).map((tile, index) => tile.left - visible[index].right),
+       row.width - visible.at(-1).right];
+      return {
+       translation: style.transform === 'none' ? 0 : new DOMMatrixReadOnly(style.transform).m41,
+       cycleWidth: first.getBoundingClientRect().width,
+       duplicate: first.innerHTML === second.innerHTML && Math.abs(first.getBoundingClientRect().width - second.getBoundingClientRect().width) < .1,
+       maxGap: Math.max(...spans), gap, visible,
+       timing: [style.animationDuration, style.animationTimingFunction, style.animationIterationCount, style.animationDirection]
+      };
+     })
+    };
+   }, elapsed);
+   if (screenshots) await page.screenshot({ path: path.join(screenshots, size + '-marquee-t' + String(elapsed).padStart(5, '0') + 'ms.png') });
+   return frame;
+  };
+
+  const frames = [];
+  for (const elapsed of [0, 1000, 45900, 46000, 46100]) frames.push(await capture(elapsed));
+  const [start, moving, beforeLoop, loop, afterLoop] = frames;
+  const near = (a, b) => Math.abs(a - b) < .2;
+  function hasLinearMotion(from, to, elapsed) {
+   return to.rows.every((row, index) => {
+    const delta = row.translation - from.rows[index].translation;
+    const wrappedDelta = delta - Math.round(delta / row.cycleWidth) * row.cycleWidth;
+    return near(wrappedDelta, directions[index] * row.cycleWidth * elapsed / 46000);
+   });
+  }
+  verify(start.rows.every((row, index) => row.duplicate && row.timing.join(' ') ===
+    '46s linear infinite ' + (index % 2 ? 'normal' : 'reverse')), 'four matched cycles use the prototype’s linear 46-second timing');
+  verify(hasLinearMotion(start, moving, 1000) && hasLinearMotion(beforeLoop, loop, 100)
+    && hasLinearMotion(loop, afterLoop, 100), 'all four rows keep direction and speed through the loop boundary');
+  verify(start.rows.every((row, index) => {
+   const next = loop.rows[index].visible;
+   return row.visible.length === next.length && row.visible.every((tile, i) =>
+    tile.name === next[i].name && tile.tone === next[i].tone && near(tile.left, next[i].left) && near(tile.right, next[i].right));
+  }), 'full loop reproduces the original visible tiles and positions');
+  verify(frames.every(frame => frame.rows.every(row => row.maxGap <= row.gap + .2)),
+    'every frame keeps the normal tile spacing through the loop seam');
+  verify(frames.every(frame => frame.card.every((value, index) => near(value, start.card[index]))
+    && frame.logo.every((value, index) => near(value, start.logo[index]))
+    && frame.scroll[0] === 0 && frame.scroll[1] === 0 && frame.scroll[2] <= frame.scroll[3]),
+    'card and logo stay fixed without horizontal page scrolling');
+  if (screenshots) fs.writeFileSync(path.join(screenshots, size + '-marquee-timing.json'), JSON.stringify(frames, null, 2) + '\n');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+ }
  async function catalogSurfaceRaces(){
   const catalogRows=revision=>{
    const product={id:id(610),name:'Race Brew '+revision,category_id:id(600),is_published:true,is_available:true,is_curv_pick:true};
@@ -172,8 +258,11 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
 
    await welcome.waitFor();
    verify(await p.locator('.kiosk-welcome-arches').getAttribute('aria-hidden') === 'true'
-     && (await arches.allTextContents()).every(text => text === '') && await arches.count() === 24,
+     && (await arches.allTextContents()).every(text => text === '') && await arches.count() === 96,
      'loading shows decorative arches without sample product names');
+   verify(await p.locator('.kiosk-welcome-track').evaluateAll(tracks => tracks.length === 4
+     && tracks.every(track => track.getAnimations().length === 0)), 'reduced motion keeps all four rows still');
+   await p.evaluate(() => { window.welcomeTracksBeforeCatalog = [...document.querySelectorAll('.kiosk-welcome-track')]; });
    verify(await p.locator('#kioskRoot').evaluate(root => {
      const viewport = root.getBoundingClientRect();
      const card = root.querySelector('.kiosk-card').getBoundingClientRect();
@@ -219,11 +308,15 @@ const html=fs.readFileSync(path.join(root,'menu/index.html'),'utf8');const id=n=
    const tiles = await arches.allTextContents();
    verify(names.every(name => tiles.includes(name)) && tiles.every(name => catalog.public_menu_products.some(product => product.name === name))
      && await arches.locator(':scope > :not(span), span *').count() === 0, 'late live-catalog labels render as text');
+   verify(await p.locator('.kiosk-welcome-track').evaluateAll(tracks =>
+     tracks.every((track, index) => track === window.welcomeTracksBeforeCatalog[index])),
+     'catalog hydration preserves the existing tracks');
    verify(await arches.evaluateAll(tiles => tiles.filter(tile => tile.getClientRects().length).every(tile => {
     const tileBounds = tile.getBoundingClientRect(), label = tile.firstElementChild.getBoundingClientRect();
     return label.top >= tileBounds.top && label.bottom <= tileBounds.bottom && label.width <= tileBounds.width;
    })), 'long catalog labels stay inside their arches');
    if (screenshots) await p.screenshot({ path: path.join(screenshots, size + '-welcome.png') });
+   await verifyWelcomeMarquee(p, screenshots, size, verify);
 
    if (width === 1180) {
     await p.touchscreen.tap(8, 8);

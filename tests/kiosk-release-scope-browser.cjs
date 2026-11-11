@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright');
 
 const root = path.resolve(__dirname, '..');
-const base = 'ea9b452a14a917adcc6663c452a90123759d0df0';
+const base = '03dd91902eeb65e0ac37f1af258c6423d2ed9515';
 const git = (...args) => cp.execFileSync('git', ['--no-optional-locks', '-C', root, ...args], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const baseline = file => git('show', base + ':' + file);
@@ -48,8 +48,12 @@ async function open(browser, html, controller, url, config) {
 }
 
 async function run() {
-  equal(git('rev-parse', 'HEAD').trim(), base, 'exact approved Round 1 baseline');
+  equal(git('rev-parse', 'HEAD').trim(), base, 'exact approved public footer baseline');
   equal(git('diff', '--cached', '--name-only').trim(), '', 'index empty');
+  equal(git('diff', '--name-only', 'HEAD').trim().split('\n'), [
+    'kiosk/checkout.js', 'kiosk/kiosk.css', 'menu/index.html',
+    'tests/kiosk-release-scope-browser.cjs', 'tests/public-kiosk-v2-browser.cjs'
+  ], 'only the five approved marquee release files changed');
   for (const file of ['admin/admin.js', 'admin/incoming-orders.html', 'admin/admin.css', 'track/index.html',
     'menu/authoritative-checkout.js', 'kiosk/config.js', 'kiosk/auth.js', 'kiosk/setup.html', 'kiosk/setup.js']) {
     check(read(file) === baseline(file), 'unchanged from approved baseline: ' + file);
@@ -58,6 +62,10 @@ async function run() {
   check(!fs.existsSync(root + '/admin/WEBSITE_DELIVERY_D1A_FOUNDATION.sql') && !fs.existsSync(root + '/supabase/functions/delivery-quote'), 'no new D1 migration or Edge runtime');
   const html = read('menu/index.html');
   const oldHtml = baseline('menu/index.html');
+  const versionedHtml = oldHtml
+    .replace('/kiosk/kiosk.css?v=2026-11-12.1', '/kiosk/kiosk.css?v=2026-11-12.2')
+    .replace("const CURV_KIOSK_RELEASE = '2026-11-12.1';", "const CURV_KIOSK_RELEASE = '2026-11-12.2';");
+  check(versionedHtml !== oldHtml && html === versionedHtml, 'menu HTML changes only the approved kiosk cache references');
   const fulfillment = /<select[^>]+id="f-delivery"[\s\S]*?<\/select>/;
   equal(html.match(fulfillment)[0], oldHtml.match(fulfillment)[0], 'ordinary fulfillment markup identical');
   for (const file of ['menu/index.html', 'kiosk/setup.html']) {

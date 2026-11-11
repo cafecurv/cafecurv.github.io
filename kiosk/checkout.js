@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   if (window.curvCheckout) return;
-  const version = '2026-11-12.1', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
+  const version = '2026-11-12.2', storageKey = 'curv-kiosk-v2:pending', deadlineKey = 'curv-kiosk-v2:deadline';
   const state = { status: 'loading', busy: false, reviewing: false, accepted: null };
   let admittedReview, pendingSave = 'N';
   let generation, device, nickname = '', fulfillment = '', pending, corrupt = false, epoch = 0, idle = Date.now(), deadline = 0, releaseLock, ownsLock = false, authSubscribed = false;
@@ -151,23 +151,39 @@
     arches.setAttribute('aria-hidden', 'true');
     root.prepend(arches);
 
+    const tilesPerCycle = 12;
+    const labels = [];
+    [0, 2, 4, 1].forEach((colorOffset, rowIndex) => {
+      const row = make('div', undefined, { className: 'kiosk-welcome-row' });
+      const track = make('div', undefined, { className: 'kiosk-welcome-track' });
+      for (let copy = 0; copy < 2; copy++) {
+        const cycle = make('div', undefined, { className: 'kiosk-welcome-cycle' });
+        for (let index = 0; index < tilesPerCycle; index++) {
+          const tile = make('div', undefined, { className: 'kiosk-welcome-arch' });
+          tile.dataset.tone = (index + colorOffset) % 6;
+          const label = make('span');
+          labels.push({ label, index: rowIndex * tilesPerCycle + index });
+          tile.append(label);
+          cycle.append(tile);
+        }
+        track.append(cycle);
+      }
+      row.append(track);
+      arches.append(row);
+    });
+
     let renderedCatalog;
     function renderArches() {
-      // The search index is populated only from catalog rows, even if the menu shows fallback cards.
+      // Refresh labels in place so a delayed catalog does not restart the tracks.
       const catalog = typeof publicMenuSearchIndex === 'undefined' ? [] : publicMenuSearchIndex;
       if (catalog === renderedCatalog) return;
       renderedCatalog = catalog;
       const names = [...new Set(catalog.filter(entry => entry.productId).map(entry => entry.productName))];
-      arches.replaceChildren(...Array.from({ length: 24 }, (_, index) => {
-        const tile = make('div', undefined, { className: 'kiosk-welcome-arch' });
-        if (names.length) {
-          const name = names[index % names.length];
-          const label = make('span', name);
-          label.style.setProperty('--kiosk-arch-name-length', [...name].length);
-          tile.append(label);
-        }
-        return tile;
-      }));
+      for (const { label, index } of labels) {
+        const name = names[index % names.length] || '';
+        label.textContent = name;
+        label.style.setProperty('--kiosk-arch-name-length', [...name].length);
+      }
     }
     renderArches();
     const menu = document.querySelector('main');
