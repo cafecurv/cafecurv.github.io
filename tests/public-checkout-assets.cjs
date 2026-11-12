@@ -35,7 +35,7 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
       };
     }, { mode, pending, preserve });
     let body = html;
-    if (mode === 'old-html-new-js') body = body.replace("const CURV_CHECKOUT_RELEASE = '2026-10-28.2'", "const CURV_CHECKOUT_RELEASE = '2026-10-20.1'");
+    if (mode === 'old-html-new-js') body = body.replace("const CURV_CHECKOUT_RELEASE = '2026-11-13.1'", "const CURV_CHECKOUT_RELEASE = '2026-10-20.1'");
     if (mode === 'optional-global-missing') body = body.replace('const WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE =', 'const UNUSED_CLOSED_MESSAGE =');
     if (preserve) body = body.replace('const bootstrap = {', "cart = [{ key: 'preserved-cart', name: 'Keep me', qty: 1, price: 180 }];\n  const bootstrap = {");
     await page.route('**/*', async route => {
@@ -53,8 +53,8 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         if (mode === 'no-register') script = '/* loaded but no registration */';
         if (mode === 'init-failure' && requests.length === 1) script = "throw Error('Fixture initialization failure');";
         if (mode === 'late-init-failure' && requests.length === 1) script = script.replace('syncOrderBarState();', "throw Error('Fixture late initialization failure');");
-        if (mode === 'active-stale') script = script.replace("const version = '2026-10-28.2';", "const version = 'stale';") + '\nwindow.curvCheckout.state.busy = true;';
-        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-10-28.2';", "const version = 'stale';");
+        if (mode === 'active-stale') script = script.replace("const version = '2026-11-13.1';", "const version = 'stale';") + '\nwindow.curvCheckout.state.busy = true;';
+        if (mode === 'mismatch' && requests.length === 1) script = script.replace("const version = '2026-11-13.1';", "const version = 'stale';");
         if (mode === 'unmarked' && requests.length === 1) script = script.replace('const controller = { dispose, version, submit', 'const controller = { dispose, submit');
         return route.fulfill({ contentType: 'application/javascript', body: script });
       }
@@ -77,12 +77,12 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
         const f = await open(mode, true, menuPath);
         equal(await f.page.evaluate(() => location.pathname + location.search), menuPath, 'URL stays unnormalized: ' + menuPath);
         equal(await f.page.evaluate(() => curvCheckoutBootstrap.status), 'ready', mode + ': ready at ' + menuPath);
-        equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-28.2', 'registered expected controller');
+        equal(await f.page.evaluate(() => curvCheckout.version), '2026-11-13.1', 'registered expected controller');
         equal(f.requests.length, mode === 'normal' ? 1 : 2, 'bounded requests');
         for (const [index, request] of f.requests.entries()) {
           const url = new URL(request);
           equal(url.pathname, '/menu/authoritative-checkout.js', 'initial/recovery menu-root pathname');
-          equal(url.searchParams.get('v'), '2026-10-28.2', 'release preserved on every attempt');
+          equal(url.searchParams.get('v'), '2026-11-13.1', 'release preserved on every attempt');
           equal(url.searchParams.has('recovery'), index === 1, 'recovery only on second attempt');
         }
         equal(f.requests.some(request => new URL(request).pathname === '/authoritative-checkout.js'), false, 'never request root-level checkout');
@@ -94,16 +94,16 @@ const { chromium } = require(process.env.CURV_PLAYWRIGHT_MODULE || 'playwright')
     }
     // Protected kiosk bootstrap is covered by public-kiosk-v2-browser.cjs.
     let f = await open('normal');
-    equal(await f.page.evaluate(() => curvCheckout.version), '2026-10-28.2', 'controller release');
+    equal(await f.page.evaluate(() => curvCheckout.version), '2026-11-13.1', 'controller release');
     equal(await f.page.evaluate(() => getCompatibleCheckout() === curvCheckout), true, 'page/controller compatibility');
     equal(f.requests.length, 1, 'normal load once');
-    check(f.requests[0].endsWith('?v=2026-10-28.2'), 'explicit stable version URL');
+    check(f.requests[0].endsWith('?v=2026-11-13.1'), 'explicit stable version URL');
     equal(await f.page.evaluate(() => checkoutListenerAdds), 2, 'one listener set');
     await f.page.evaluate(() => {
       window.firstController = curvCheckout;
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'authoritative-checkout.js?v=2026-10-28.2&duplicate=1';
+        script.src = 'authoritative-checkout.js?v=2026-11-13.1&duplicate=1';
         script.onload = resolve; script.onerror = reject; document.body.appendChild(script);
       });
     });

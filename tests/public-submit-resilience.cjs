@@ -84,7 +84,7 @@ const ok = (v,m) => { assert.ok(v,m); n++; };
       if(fault!=='localStorage')ok(result.status.includes('couldn'), 'fallback visible');
       await p.evaluate(()=>submitPublicOrder());eq(await p.evaluate(()=>calls.length),2,'no duplicate network');await p.close();
     }
-    for(const failure of ['network','uncertain','rejection','timeout','rpc-error']) {
+    for(const failure of ['network','uncertain','rejection','minimum','timeout','rpc-error']) {
       const p=await open();await p.locator('#f-address').fill('Offline test address');
       await p.evaluate(failure=>{
         const original=testRpc;
@@ -94,13 +94,27 @@ const ok = (v,m) => { assert.ok(v,m); n++; };
           if(failure==='timeout')return new Promise(()=>{});
           if(failure==='rpc-error')return {error:{code:'fixture',message:'private diagnostic'}};
           if(failure==='network')throw Error('lost response');
+          if(failure==='minimum')return {data:{ok:false,error:{code:'DELIVERY_MINIMUM_NOT_MET'}}};
           return {data:failure==='uncertain'?{}:{error:{code:'ORDER_CART_INVALID'}}};
         };
       },failure);
       await p.locator('#submitOrderBtn').click();await p.getByRole('button',{name:'Continue & Submit'}).click();await p.waitForFunction(()=>!curvCheckout.state.busy);
       eq(await p.evaluate(()=>isOrderSubmittedLocked),false,'not falsely accepted');
       eq(await p.evaluate(()=>curvCheckout.hasPending()),true,'request retained');
-      if(failure!=='rejection') {
+      if(failure==='minimum') {
+        const result=await p.evaluate(()=>({
+          pending:JSON.parse(sessionStorage.getItem(curvCheckout.storageKey)),
+          status:curvCheckout.state.status,
+          calls:calls.map(c=>c.name)
+        }));
+        eq(result.pending.state,'validation','minimum rejection is definite');
+        eq(result.status,'error','minimum rejection leaves reviewable error');
+        eq(result.calls,['quote_public_cart','submit_public_order_v2'],'no automatic retry or duplicate submission');
+        ok((await p.locator('#submitOrderStatus').textContent()).includes('Please update your cart'),'actionable minimum error');
+        ok(!(await p.locator('#submitOrderBtn').textContent()).includes('Recover Previous Order'),'no uncertain recovery action');
+        await p.evaluate(()=>updateQty('fixture',1));
+        eq(await p.evaluate(()=>curvCheckout.hasPending()),false,'cart edit clears rejected attempt');
+      } else if(failure!=='rejection') {
         const key=await p.evaluate(()=>calls[1].args.p_request.payload.submission_key);
         await p.evaluate(()=>{publicMenuSupabaseClient.rpc=testRpc;});
         await p.locator('#submitOrderBtn').click();await p.waitForFunction(()=>!curvCheckout.state.busy);

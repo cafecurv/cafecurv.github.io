@@ -3,7 +3,7 @@
   'use strict';
   // This marker identifies the served asset itself; match CURV_CHECKOUT_RELEASE
   // deliberately when releasing, rather than borrowing the page's version.
-  const version = '2026-10-28.2';
+  const version = '2026-11-13.1';
   // Registration is idempotent; bootstrap retires only a known idle controller.
   if (window.curvCheckout) return; // Only bootstrap may retire an incompatible controller.
   const diagnostic = stage => console.warn('[CURV checkout] ' + JSON.stringify({ stage, loadedRelease: version, timestamp: new Date().toISOString() }));
@@ -38,6 +38,7 @@
     OPTION_INVALID: 'One of the selected options is no longer available.', OPTION_REQUIRED: 'Please complete the required options.',
     OPTION_SELECTION_INVALID: 'Please review the selected options.', CONFIGURATION_INVALID: 'This item is temporarily unavailable. Please refresh the menu.',
     CLIENT_UPDATE_REQUIRED: 'Please refresh before starting a new order.',
+    DELIVERY_MINIMUM_NOT_MET: 'Your items no longer meet the delivery minimum. Please update your cart.',
     CURV_ORDERING_CLOSED: typeof WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE === 'string'
       ? WEBSITE_ORDERING_CLOSED_REJECTION_MESSAGE
       : 'Website ordering was paused before your order could be submitted. Your cart is still saved.',
