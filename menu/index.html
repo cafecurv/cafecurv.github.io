@@ -1987,6 +1987,9 @@ if (new URLSearchParams(location.search).get('kiosk') === '1') {
     color: var(--gray-mid);
   }
 
+  .delivery-minimum { margin-top: 0.5rem; color: var(--navy); font-size: 0.875rem; line-height: 1.45; }
+  .delivery-minimum p { margin: 0.25rem 0 0; }
+
   .delivery-fee-note {
     font-family: 'Raleway', sans-serif;
     font-style: italic;
@@ -3616,6 +3619,11 @@ body.night-mode .public-item-wrap {
           <option value="delivery-curv-rider">Delivery — CURV Rider (within Brgy. Santiago/San Francisco)</option>
           <option value="delivery-lalamove">Delivery — Lalamove</option>
         </select>
+        <div class="delivery-minimum" id="delivery-minimum" hidden>
+          <strong id="delivery-minimum-label"></strong>
+          <p>Delivery fees vary depending on your location. Pick-up orders have no minimum.</p>
+          <p id="delivery-minimum-remaining" role="status"></p>
+        </div>
       </div>
 
       <div id="delivery-fields">
@@ -3695,7 +3703,7 @@ body.night-mode .public-item-wrap {
 
 <script>
   // Bump deliberately with the controller's own version marker on each checkout release.
-  const CURV_CHECKOUT_RELEASE = '2026-11-13.1';
+  const CURV_CHECKOUT_RELEASE = '2026-11-14.1';
   const CURV_KIOSK_RELEASE = '2026-11-12.2';
   const CURV_KIOSK_MODE = new URLSearchParams(location.search).get('kiosk') === '1';
   function getCompatibleCheckout() {
@@ -8866,6 +8874,7 @@ body.night-mode .public-item-wrap {
   }
 
   function renderCart() {
+    syncDeliveryMinimumNotice();
     getCompatibleCheckout()?.changed();
     if (CURV_KIOSK_MODE) {
       const count = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -9732,6 +9741,31 @@ body.night-mode .public-item-wrap {
     statusEl.textContent = message || '';
     statusEl.classList.toggle('success', tone === 'success');
     statusEl.classList.toggle('error', tone === 'error');
+  }
+
+  const DELIVERY_MINIMUM_CENTS = 20000;
+
+  function formatDeliveryMinimumAmount(cents) {
+    return "₱" + (cents / 100).toFixed(2).replace(/\.00$/, "");
+  }
+
+  function getDeliveryMinimumMessage(fulfillment, subtotal) {
+    if (fulfillment !== "delivery") return "";
+    const remaining = DELIVERY_MINIMUM_CENTS - Math.round(Number(subtotal) * 100);
+    return remaining > 0 ? "Add " + formatDeliveryMinimumAmount(remaining) + " more in items for delivery." : "";
+  }
+
+  function syncDeliveryMinimumNotice() {
+    const notice = document.getElementById("delivery-minimum");
+    if (!notice) return;
+    const fulfillment = getOrderMethod();
+    notice.hidden = CURV_KIOSK_MODE || fulfillment !== "delivery";
+    if (notice.hidden) return;
+    document.getElementById("delivery-minimum-label").textContent = "Minimum order: " + formatDeliveryMinimumAmount(DELIVERY_MINIMUM_CENTS) + " (excluding delivery fee).";
+    const remaining = document.getElementById("delivery-minimum-remaining");
+    const message = getDeliveryMinimumMessage(fulfillment, getCartSubtotal());
+    const estimate = message ? "Based on your cart estimate: " + message : "";
+    if (remaining.textContent !== estimate) remaining.textContent = estimate;
   }
 
   function getCartSubtotal() {

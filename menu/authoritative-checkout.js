@@ -3,7 +3,7 @@
   'use strict';
   // This marker identifies the served asset itself; match CURV_CHECKOUT_RELEASE
   // deliberately when releasing, rather than borrowing the page's version.
-  const version = '2026-11-13.1';
+  const version = '2026-11-14.1';
   // Registration is idempotent; bootstrap retires only a known idle controller.
   if (window.curvCheckout) return; // Only bootstrap may retire an incompatible controller.
   const diagnostic = stage => console.warn('[CURV checkout] ' + JSON.stringify({ stage, loadedRelease: version, timestamp: new Date().toISOString() }));
@@ -23,6 +23,7 @@
   };
   const state = { status: 'idle', quote: null, intentKey: '', generation: 0, reviewing: false, busy: false };
   let pending = null, recovery = false, storageCorrupt = false;
+  let minimumMessage = '';
   try {
     const raw = sessionStorage.getItem(storageKey);
     if (raw) {
@@ -138,6 +139,8 @@
     } catch (_) { if (generation === state.generation) { state.status = 'error'; setSubmitOrderStatus('Unable to check current prices. Please retry.', 'error'); } return null; }
   }
   function changed() {
+    if (minimumMessage && document.getElementById('submitOrderStatus')?.textContent === minimumMessage) setSubmitOrderStatus('');
+    minimumMessage = '';
     if (isOrderSubmittedLocked) return;
     let current; try { current = payload(); } catch (_) { current = null; }
     if (pending && !uncertain() && current && semantic(current) !== semantic(pending.request.payload)) {
@@ -181,6 +184,8 @@
         if (pending && semantic(p) !== semantic(pending.request.payload)) { pending = null; write(); }
         let q = pending?.state === 'price_changed' && state.status === 'ready' && state.intentKey === JSON.stringify(p.items) ? state.quote : await quote(p);
         if (!q) return;
+        minimumMessage = p.fulfillment_type === 'delivery' ? getDeliveryMinimumMessage(p.fulfillment_type, q.subtotal) : '';
+        if (minimumMessage) { setSubmitOrderStatus(minimumMessage, 'error'); return; }
         state.orderKey = semantic(p); state.intentKey = JSON.stringify(p.items); state.reviewing = true; syncButton();
         const confirmed = await confirmOrderBeforeSubmit(q, p, pending?.state === 'price_changed'); state.reviewing = false;
         if (!confirmed || state.status !== 'ready') return;
